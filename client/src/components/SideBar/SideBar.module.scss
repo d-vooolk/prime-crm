@@ -1,0 +1,12 @@
+@use '../../styles/theme' as theme;
+
+.list {
+  margin: 0;
+  padding: 0;
+}
+
+.sideBarWrapper {
+  width: 20%;
+  background-color: theme.$color-dark-side-bar;
+  color: theme.$color-inactive-text
+}
