@@ -13,6 +13,14 @@ const App = () => {
                 token: {
                     colorBgContainer: '#06131d', // borders & background color calendar
                     colorText: '#f2f2f2', // color active month text
+                },
+                components: {
+                    Calendar: {
+                        // Цвета для дней за пределами месяца
+                        colorTextDisabled: 'rgba(151,166,190,0.5)',
+                        // Цвета для сегодняшнего дня
+                        colorPrimary: '#1677ff',
+                    }
                 }
             }}
         >
