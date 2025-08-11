@@ -16,7 +16,7 @@ const App = () => {
                 }
             }}
         >
-            <div className={styles?.app}>
+            <div className={styles.app}>
                 <Index/>
                 <Schedule/>
             </div>
