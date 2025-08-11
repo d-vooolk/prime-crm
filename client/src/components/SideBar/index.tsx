@@ -1,15 +1,21 @@
 import React from "react";
 import styles from './SideBar.module.scss';
+import logoWhite from '../../assets/logo-white.svg';
+import SvgImage from "../SvgImage";
 
 const SideBar = () => {
     return (
         <div className={styles.sideBarWrapper}>
-            <ul className={styles.list}>
-                <li>1</li>
-                <li>2</li>
-                <li>3</li>
-                <li>4</li>
-            </ul>
+            <div className={styles.sideBarHeader}>
+                <div>
+                    <SvgImage
+                        src={logoWhite}
+                        alt="logo"
+                        className={styles.sideBarLogo}
+                    />
+                </div>
+                <div><span className={styles.greenText}>Prime</span> Auto</div>
+            </div>
         </div>
     )
 }

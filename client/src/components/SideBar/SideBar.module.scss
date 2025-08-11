@@ -1,12 +1,25 @@
 @use '../../styles/theme' as theme;
 
-.list {
-  margin: 0;
-  padding: 0;
-}
-
 .sideBarWrapper {
-  width: 20%;
+  width: 15%;
   background-color: theme.$color-dark-side-bar;
   color: theme.$color-inactive-text
+}
+
+.sideBarHeader {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  padding: 1rem 1rem;
+  gap: 2rem;
+  color: theme.$text-color-1;
+  font-weight: 600;
+}
+
+.sideBarLogo {
+  width: 3rem;
+}
+
+.greenText {
+  color: theme.$text-green-color-1;
 }
