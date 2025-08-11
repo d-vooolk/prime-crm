@@ -3,7 +3,10 @@
 .sideBarWrapper {
   width: 15%;
   background-color: theme.$color-dark-side-bar;
-  color: theme.$color-inactive-text
+  color: theme.$color-inactive-text;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .sideBarHeader {

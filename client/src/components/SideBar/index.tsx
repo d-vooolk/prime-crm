@@ -2,6 +2,7 @@ import React from "react";
 import styles from './SideBar.module.scss';
 import logoWhite from '../../assets/logo-white.svg';
 import SvgImage from "../SvgImage";
+import Calendar from "../Calendar";
 
 const SideBar = () => {
     return (
@@ -16,6 +17,8 @@ const SideBar = () => {
                 </div>
                 <div><span className={styles.greenText}>Prime</span> Auto</div>
             </div>
+
+            <Calendar />
         </div>
     )
 }
