@@ -7,13 +7,14 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 10px;
 }
 
 .sideBarHeader {
   display: flex;
   justify-content: flex-start;
   align-items: center;
-  padding: 1rem 1rem;
+  padding: 2rem 1rem;
   gap: 2rem;
   color: theme.$text-color-1;
   font-weight: 600;

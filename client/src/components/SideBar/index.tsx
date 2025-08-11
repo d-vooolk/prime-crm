@@ -15,7 +15,7 @@ const SideBar = () => {
                         className={styles.sideBarLogo}
                     />
                 </div>
-                <div><span className={styles.greenText}>Prime</span> Auto</div>
+                <div><span className={styles.greenText}>Prime</span> CRM</div>
             </div>
 
             <Calendar />
