@@ -28,11 +28,10 @@ const Calendar: React.FC = () => {
             <AntCalendar
                 fullscreen={false}
                 style={{
-                    '--ant-color-bg-container': '#0f2231',
-                    '--ant-color-bg-elevated': '#0f2231',
-                    '--ant-color-bg-layout': '#0f2231',
+                    border: 'none',
+                    outline: 'none',
+                    boxShadow: 'none'
                 } as React.CSSProperties}
-                className={styles.customCalendar}
                 headerRender={({ value, onChange }) => {
                     const year = value.year();
                     const month = value.month();
@@ -54,7 +53,15 @@ const Calendar: React.FC = () => {
                     }
 
                     return (
-                        <div className={styles.calendarHeader} style={{ position: 'relative', padding: 8, display: 'flex', justifyContent: 'center' }}>
+                        <div 
+                            className={styles.calendarHeader} 
+                            style={{ 
+                                position: 'relative', 
+                                padding: 8, 
+                                display: 'flex', 
+                                justifyContent: 'center',
+                            }}
+                        >
                             <Flex gap={8} justify="space-between" style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', width: '100%' }}>
                                 <LeftOutlined disabled={month - 1 < 0} onClick={() => navigateMonthHandler(month - 1)} />
                                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center', fontWeight: '600' }}>

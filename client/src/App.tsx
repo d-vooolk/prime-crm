@@ -11,11 +11,8 @@ const App = () => {
             locale={ruRU}
             theme={{
                 token: {
-                    colorBgContainer: '#0f2231',
-                    colorBgElevated: '#0f2231',
-                    colorBgLayout: '#0f2231',
-                    colorBorderSecondary: '#97a6be',
-                    colorText: '#f2f2f2',
+                    colorBgContainer: '#06131d', // borders & background color calendar
+                    colorText: '#f2f2f2', // color active month text
                 }
             }}
         >

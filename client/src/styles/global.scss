@@ -2,173 +2,29 @@
 
 // Глобальные стили для календаря Ant Design
 .ant-picker-calendar {
-  background-color: theme.$background-color-1 !important;
-  
-  .ant-picker-calendar-header {
-    background-color: theme.$background-color-1 !important;
-  }
-  
-  .ant-picker-calendar-body {
-    background-color: theme.$background-color-1 !important;
-  }
-  
   .ant-picker-content {
-    background-color: theme.$background-color-1 !important;
-    
-    table {
-      background-color: theme.$background-color-1 !important;
-    }
-    
     thead {
-      background-color: theme.$background-color-1 !important;
-      
       tr {
-        background-color: theme.$background-color-1 !important;
-        
         th {
-          background-color: theme.$background-color-1 !important; // список дней недели
-          color: theme.$text-color-1 !important; // цвет текста списка дней недели
-          border-color: theme.$color-inactive-text !important;
+          background-color: theme.$color-dark-side-bar !important; // строка дней недели
+          color: theme.$text-color-1 !important; // текст дней недели
+          border: none !important;
         }
       }
     }
     
     tbody {
-      background-color: theme.$background-color-1 !important;
-      
       tr {
-        background-color: theme.$background-color-1 !important;
-        
         td {
-          background-color: theme.$background-color-1 !important; // фон чисел месяца
-          border-color: theme.$color-inactive-text !important;
-          
-                      .ant-picker-cell {
-              background-color: theme.$background-color-1 !important;
-              
-              &:hover {
-                background-color: theme.$text-green-color-1 !important;
-                opacity: 0.8;
-              }
-              
-              .ant-picker-cell-inner {
-                background-color: theme.$background-color-1 !important;
-                color: theme.$text-color-1 !important;
-              }
-              
-              // Дни в текущем месяце
-              &.ant-picker-cell-in-view {
-                .ant-picker-cell-inner {
-                  color: theme.$text-color-1 !important;
-                }
-              }
-              
-              // Дни за пределами текущего месяца (прошлый и следующий месяц)
-              &:not(.ant-picker-cell-in-view) {
-                .ant-picker-cell-inner {
-                  color: theme.$color-inactive-text !important;
-                  opacity: 0.6;
-                }
-              }
-              
-              // Альтернативный способ - дни не в текущем месяце
-              &.ant-picker-cell-outside {
-                .ant-picker-cell-inner {
-                  color: theme.$color-inactive-text !important;
-                  opacity: 0.6;
-                }
-              }
-              
-              // Дни в прошлом месяце
-              &.ant-picker-cell-prev-month {
-                .ant-picker-cell-inner {
-                  color: theme.$color-inactive-text !important;
-                  opacity: 0.6;
-                }
-              }
-              
-              // Дни в следующем месяце
-              &.ant-picker-cell-next-month {
-                .ant-picker-cell-inner {
-                  color: theme.$color-inactive-text !important;
-                  opacity: 0.6;
-                }
-              }
-              
-              // Дополнительные стили для дней за пределами месяца
-              &.ant-picker-cell-disabled {
-                .ant-picker-cell-inner {
-                  color: theme.$color-inactive-text !important;
-                  opacity: 0.6;
-                }
-              }
-              
-              // Стили для всех ячеек, которые не в текущем месяце
-              &[class*="outside"],
-              &[class*="prev"],
-              &[class*="next"] {
-                .ant-picker-cell-inner {
-                  color: theme.$color-inactive-text !important;
-                  opacity: 0.6;
-                }
-              }
-              
-              // Максимальный приоритет для дней за пределами месяца
-              &:not(.ant-picker-cell-in-view) .ant-picker-cell-inner {
-                color: theme.$color-inactive-text !important;
-                opacity: 0.6;
-              }
-              
-              // Альтернативный способ с максимальным приоритетом
-              .ant-picker-cell-inner {
-                &[class*="outside"],
-                &[class*="prev"],
-                &[class*="next"] {
-                  color: theme.$color-inactive-text !important;
-                  opacity: 0.6;
-                }
-              }
-              
-              // Сегодняшний день
-              &.ant-picker-cell-today {
-                .ant-picker-cell-inner {
-                  color: theme.$text-green-color-1 !important;
-                  font-weight: bold;
-                }
-              }
-              
-              // Дни в прошлом месяце (слева)
-              &.ant-picker-cell-in-view:first-child,
-              &.ant-picker-cell-in-view:nth-child(2),
-              &.ant-picker-cell-in-view:nth-child(3),
-              &.ant-picker-cell-in-view:nth-child(4),
-              &.ant-picker-cell-in-view:nth-child(5),
-              &.ant-picker-cell-in-view:nth-child(6),
-              &.ant-picker-cell-in-view:nth-child(7) {
-                &:not(.ant-picker-cell-in-view) {
-                  .ant-picker-cell-inner {
-                    color: theme.$color-inactive-text !important;
-                    opacity: 0.6;
-                  }
-                }
-              }
-            }
+          background-color: theme.$color-dark-side-bar !important; // активные дни месяца
+          border: none !important;
         }
       }
     }
   }
 }
 
-// Дополнительные стили с максимальным приоритетом для дней за пределами месяца
-body .ant-picker-calendar .ant-picker-content tbody td .ant-picker-cell:not(.ant-picker-cell-in-view) .ant-picker-cell-inner {
-  color: #97a6be !important;
-  opacity: 0.6 !important;
-}
-
-// Стили для конкретных классов Ant Design
-body .ant-picker-calendar .ant-picker-content tbody td .ant-picker-cell.ant-picker-cell-outside .ant-picker-cell-inner,
-body .ant-picker-calendar .ant-picker-content tbody td .ant-picker-cell.ant-picker-cell-prev-month .ant-picker-cell-inner,
-body .ant-picker-calendar .ant-picker-content tbody td .ant-picker-cell.ant-picker-cell-next-month .ant-picker-cell-inner {
-  color: #97a6be !important;
-  opacity: 0.6 !important;
+// Максимальный приоритет для удаления границ у календаря
+html body .ant-picker-calendar * {
+  border-top: none !important;
 }
