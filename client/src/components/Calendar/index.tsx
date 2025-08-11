@@ -1,9 +1,10 @@
 import React from 'react';
 import dayjs from 'dayjs';
+import styles from './Calendar.module.scss';
 
 import 'dayjs/locale/ru';
 
-import {Calendar as AntCalendar, Flex, Select, theme, Typography} from 'antd';
+import {Calendar as AntCalendar, Flex, Typography} from 'antd';
 import type { CalendarProps } from 'antd';
 import type { Dayjs } from 'dayjs';
 import dayLocaleData from 'dayjs/plugin/localeData';
@@ -13,8 +14,6 @@ dayjs.extend(dayLocaleData);
 dayjs.locale('ru');
 
 const Calendar: React.FC = () => {
-    const { token } = theme.useToken();
-
     const onPanelChange = (value: Dayjs, mode: CalendarProps<Dayjs>['mode']) => {
         console.log(value.format('YYYY-MM-DD'), mode);
     };
@@ -22,15 +21,19 @@ const Calendar: React.FC = () => {
     const wrapperStyle: React.CSSProperties = {
         position: 'relative',
         width: '90%',
-        border: `1px solid ${token.colorBorderSecondary}`,
-        borderRadius: token.borderRadiusLG,
     };
 
     return (
-        <div style={wrapperStyle}>
+        <div className={styles.calendarWrapper} style={wrapperStyle}>
             <AntCalendar
                 fullscreen={false}
-                headerRender={({ value, type, onChange, onTypeChange }) => {
+                style={{
+                    '--ant-color-bg-container': '#0f2231',
+                    '--ant-color-bg-elevated': '#0f2231',
+                    '--ant-color-bg-layout': '#0f2231',
+                } as React.CSSProperties}
+                className={styles.customCalendar}
+                headerRender={({ value, onChange }) => {
                     const year = value.year();
                     const month = value.month();
 
@@ -51,7 +54,7 @@ const Calendar: React.FC = () => {
                     }
 
                     return (
-                        <div style={{ position: 'relative', padding: 8, display: 'flex', justifyContent: 'center' }}>
+                        <div className={styles.calendarHeader} style={{ position: 'relative', padding: 8, display: 'flex', justifyContent: 'center' }}>
                             <Flex gap={8} justify="space-between" style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', width: '100%' }}>
                                 <LeftOutlined disabled={month - 1 < 0} onClick={() => navigateMonthHandler(month - 1)} />
                                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center', fontWeight: '600' }}>

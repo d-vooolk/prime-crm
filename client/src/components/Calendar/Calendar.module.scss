@@ -1,0 +1,150 @@
+@use '../../styles/theme' as theme;
+
+.calendarWrapper {
+  position: relative;
+  width: 90%;
+  border: 1px solid theme.$color-inactive-text;
+  border-radius: 8px;
+  background-color: theme.$background-color-1;
+  
+  // Переопределяем стили Ant Design для календаря
+  :global(.ant-picker-calendar) {
+    background-color: theme.$background-color-1 !important;
+    
+    .ant-picker-calendar-header {
+      background-color: theme.$background-color-1 !important;
+    }
+    
+    .ant-picker-calendar-body {
+      background-color: theme.$background-color-1 !important;
+    }
+    
+    .ant-picker-content {
+      background-color: theme.$background-color-1 !important;
+      
+      table {
+        background-color: theme.$background-color-1 !important;
+      }
+      
+      thead {
+        background-color: theme.$background-color-1 !important;
+        
+        tr {
+          background-color: theme.$background-color-1 !important;
+          
+          th {
+            background-color: theme.$background-color-1 !important;
+            color: theme.$text-color-1 !important;
+            border-color: theme.$color-inactive-text !important;
+          }
+        }
+      }
+      
+      tbody {
+        background-color: theme.$background-color-1 !important;
+        
+        tr {
+          background-color: theme.$background-color-1 !important;
+          
+          td {
+            background-color: theme.$background-color-1 !important;
+            border-color: theme.$color-inactive-text !important;
+            
+            .ant-picker-cell {
+              background-color: theme.$background-color-1 !important;
+              
+              &:hover {
+                background-color: theme.$text-green-color-1 !important;
+                opacity: 0.8;
+              }
+              
+              .ant-picker-cell-inner {
+                background-color: theme.$background-color-1 !important;
+                color: theme.$text-color-1 !important;
+              }
+              
+              // Стили для неактивных дней (прошлый месяц)
+              &.ant-picker-cell-in-view {
+                .ant-picker-cell-inner {
+                  color: theme.$text-color-1 !important;
+                }
+              }
+              
+              // Стили для дней не в текущем месяце
+              &:not(.ant-picker-cell-in-view) {
+                .ant-picker-cell-inner {
+                  color: theme.$color-inactive-text !important;
+                }
+              }
+              
+              // Стили для сегодняшнего дня
+              &.ant-picker-cell-today {
+                .ant-picker-cell-inner {
+                  color: theme.$text-green-color-1 !important;
+                  font-weight: bold;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+.calendarHeader {
+  background-color: theme.$background-color-1;
+  color: theme.$text-color-1;
+  
+  .ant-typography {
+    color: theme.$text-color-1;
+  }
+  
+  .anticon {
+    color: theme.$text-color-1;
+    cursor: pointer;
+    
+    &:hover {
+      color: theme.$text-green-color-1;
+    }
+    
+    &:disabled {
+      color: theme.$color-inactive-text;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.customCalendar {
+  // Стили для календаря с максимальным приоритетом
+  
+  // Дни за пределами текущего месяца
+  :global(.ant-picker-cell:not(.ant-picker-cell-in-view)) {
+    .ant-picker-cell-inner {
+      color: theme.$color-inactive-text !important;
+      opacity: 0.6 !important;
+    }
+  }
+  
+  // Альтернативные классы для дней за пределами месяца
+  :global(.ant-picker-cell.ant-picker-cell-outside) {
+    .ant-picker-cell-inner {
+      color: theme.$color-inactive-text !important;
+      opacity: 0.6 !important;
+    }
+  }
+  
+  :global(.ant-picker-cell.ant-picker-cell-prev-month) {
+    .ant-picker-cell-inner {
+      color: theme.$color-inactive-text !important;
+      opacity: 0.6 !important;
+    }
+  }
+  
+  :global(.ant-picker-cell.ant-picker-cell-next-month) {
+    .ant-picker-cell-inner {
+      color: theme.$color-inactive-text !important;
+      opacity: 0.6 !important;
+    }
+  }
+}
