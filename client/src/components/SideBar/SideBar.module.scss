@@ -6,7 +6,7 @@
   color: theme.$color-inactive-text;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  //align-items: center;
   gap: 10px;
 }
 
@@ -14,8 +14,8 @@
   display: flex;
   justify-content: flex-start;
   align-items: center;
-  padding: 2rem 1rem;
-  gap: 2rem;
+  padding: 1rem 1rem;
+  gap: 1rem;
   color: theme.$text-color-1;
   font-weight: 600;
 }

@@ -1,7 +1,6 @@
 import React from "react";
 import styles from './SideBar.module.scss';
-import logoWhite from '../../assets/logo-white.svg';
-import SvgImage from "../SvgImage";
+import logo from '../../assets/crm-logo.png';
 import Calendar from "../Calendar";
 
 const SideBar = () => {
@@ -9,8 +8,8 @@ const SideBar = () => {
         <div className={styles.sideBarWrapper}>
             <div className={styles.sideBarHeader}>
                 <div>
-                    <SvgImage
-                        src={logoWhite}
+                    <img
+                        src={logo}
                         alt="logo"
                         className={styles.sideBarLogo}
                     />
