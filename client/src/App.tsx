@@ -1,31 +1,19 @@
 import React from 'react';
 import { ConfigProvider } from 'antd';
 import ruRU from 'antd/locale/ru_RU';
-import Index from "./components/SideBar";
+import SideBar from "./components/SideBar";
 import Schedule from "./components/Schedule";
 import styles from './App.module.scss';
+import {themeConfig} from "./config/themeConfig";
 
 const App = () => {
     return (
         <ConfigProvider 
             locale={ruRU}
-            theme={{
-                token: {
-                    colorBgContainer: '#06131d', // borders & background color calendar
-                    colorText: '#f2f2f2', // color active month text
-                },
-                components: {
-                    Calendar: {
-                        // Цвета для дней за пределами месяца
-                        colorTextDisabled: 'rgba(151,166,190,0.5)',
-                        // Цвета для сегодняшнего дня
-                        colorPrimary: '#1677ff',
-                    }
-                }
-            }}
+            theme={themeConfig}
         >
             <div className={styles.app}>
-                <Index/>
+                <SideBar/>
                 <Schedule/>
             </div>
         </ConfigProvider>
