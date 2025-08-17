@@ -14,7 +14,9 @@ const App = () => {
         >
             <div className={styles.app}>
                 <SideBar/>
-                <Schedule/>
+                <div className={styles.mainContent}>
+                    <Schedule/>
+                </div>
             </div>
         </ConfigProvider>
     );

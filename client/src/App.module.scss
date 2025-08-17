@@ -14,3 +14,10 @@ body {
   color: theme.$text-color-1;
   font-family: Inter, sans-serif;
 }
+
+.mainContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0; // Важно для правильного растягивания flex-элементов
+}

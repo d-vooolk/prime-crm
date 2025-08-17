@@ -1,0 +1,14 @@
+@use '../../../styles/theme' as theme;
+
+.primeButton {
+
+}
+
+.primary {
+  background-color: theme.$active-button-1;
+}
+
+.default {
+  background-color: inherit;
+  border: 1px solid theme.$color-inactive-text;
+}
