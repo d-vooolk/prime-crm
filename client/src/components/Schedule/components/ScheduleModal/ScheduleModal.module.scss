@@ -10,24 +10,45 @@
   display: flex;
   flex-direction: row;
   width: 100%;
+  align-items: flex-start;
+  gap: 15px;
 }
 
 .modalCalendar {
   display: flex;
-  width: 30%;
+  width: 100%;
+  flex-grow: 1;
 }
 
 .modalCardContent {
   background-color: #eaeef4;
   color: theme.$text-dark-color-1;
   width: 100%;
-}
-
-.modalCardContentWrapper {
-  display: flex;
-  width: 100%;
+  flex-grow: 1;
 }
 
 .clientsForm {
   color: theme.$text-dark-color-1 !important;
+}
+
+.modalCardContent {
+  :global(.ant-form-item-label > label) {
+    color: theme.$text-dark-color-1 !important;
+    font-weight: 500;
+  }
+
+  :global(.ant-input) {
+    background-color: white !important;
+    color: theme.$text-dark-color-1 !important;
+    border: 1px solid #d9d9d9;
+  }
+
+  :global(.ant-input:focus) {
+    border-color: theme.$text-dark-color-1;
+    box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.2) !important;
+  }
+}
+
+:global(.ant-modal-content) {
+  background-color: white !important;
 }

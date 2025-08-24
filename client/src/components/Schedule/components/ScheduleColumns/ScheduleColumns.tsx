@@ -8,8 +8,8 @@ const ScheduleColumns = () => {
         <div className={styles.scheduleColumnsWrapper}>
             <div className={styles.scheduleColumn}>
                 <div className={cn(styles.scheduleColumnHeader, styles.inWork)}>В работе</div>
-                <ScheduleCard />
-                <ScheduleCard />
+                <ScheduleCard status="success" />
+                <ScheduleCard status="inProgress" />
             </div>
 
             <div className={styles.scheduleColumn}>

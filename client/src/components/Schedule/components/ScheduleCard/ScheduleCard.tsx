@@ -1,8 +1,9 @@
 import React from "react";
 import styles from "./ScheduleCard.module.scss";
-import {Card, Divider, Image, Typography} from "antd";
+import {Card, Divider, Image, Tag, Typography} from "antd";
+import {CheckCircleOutlined, SyncOutlined} from "@ant-design/icons";
 
-const ScheduleCard = () => {
+const ScheduleCard = ({ status }: { status?: string }) => {
     return (
         <Card
             variant="borderless"
@@ -17,6 +18,20 @@ const ScheduleCard = () => {
                 <div className={styles.cardTextContent}>
                     <Typography className={styles.cardText}>BMW 5-er G30 2019-2023</Typography>
                     <Divider className={styles.divider} />
+                    {
+                        status === "success" && (
+                            <Tag icon={<CheckCircleOutlined />} color="success">
+                                Завершено
+                            </Tag>
+                        )
+                    }
+                    {
+                        status === "inProgress" && (
+                            <Tag icon={<SyncOutlined spin />} color="processing">
+                                В процессе
+                            </Tag>
+                        )
+                    }
                     <Typography className={styles.cardText}>18:00</Typography>
                     <Typography className={styles.cardText}>Константин</Typography>
                     <Typography className={styles.cardText}>+375 (29) 820-62-46</Typography>
