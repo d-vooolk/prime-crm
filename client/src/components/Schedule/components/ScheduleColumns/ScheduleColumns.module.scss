@@ -1,0 +1,21 @@
+@use "../../../../styles/_theme.scss" as theme;
+
+.scheduleCardsWrapper {
+  display: flex;
+  padding: 15px 15px 0;
+  justify-content: center;
+  gap: 15px;
+}
+
+.scheduleColumn {
+  display: flex;
+  width: 80%;
+  padding: 15px;
+  justify-content: center;
+  border-bottom: 2px solid theme.$border-1;
+}
+
+.scheduleColumn:first-child {
+  border-bottom: 2px solid theme.$border-2;
+}
+

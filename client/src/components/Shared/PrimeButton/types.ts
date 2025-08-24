@@ -1,6 +1,6 @@
 import React from "react";
 
 export interface PrimeButtonProps {
-    children: React.ReactElement;
+    children: React.ReactElement | string;
     type: "primary" | "default";
 }
