@@ -1,0 +1,33 @@
+@use "../../../../styles/_theme.scss" as theme;
+
+.modalWrapper {
+  display: flex;
+  color: theme.$text-dark-color-1;
+  width: 100%;
+}
+
+.modalContent {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+}
+
+.modalCalendar {
+  display: flex;
+  width: 30%;
+}
+
+.modalCardContent {
+  background-color: #eaeef4;
+  color: theme.$text-dark-color-1;
+  width: 100%;
+}
+
+.modalCardContentWrapper {
+  display: flex;
+  width: 100%;
+}
+
+.clientsForm {
+  color: theme.$text-dark-color-1 !important;
+}

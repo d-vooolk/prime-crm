@@ -3,7 +3,7 @@ import {Button} from "antd";
 import styles from './PrimeButton.module.scss';
 import {PrimeButtonProps} from "./types";
 
-const PrimeButton = ({ children, type }: PrimeButtonProps) => {
+const PrimeButton = ({children, type, onClick}: PrimeButtonProps) => {
     return (
         <Button
             className={
@@ -11,6 +11,7 @@ const PrimeButton = ({ children, type }: PrimeButtonProps) => {
                     ? styles.primary
                     : styles.default
             }
+            onClick={onClick}
         >
             { children }
         </Button>
