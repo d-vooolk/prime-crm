@@ -1,5 +1,5 @@
 import React from 'react';
-import {Button, Card, DatePicker, Form, Image, Input, Modal, TimePicker, Typography} from "antd";
+import {Button, Card, DatePicker, Form, Input, Modal, TimePicker} from "antd";
 import styles from "./ScheduleModal.module.scss";
 import dayjs from "dayjs";
 import TextArea from "antd/es/input/TextArea";
