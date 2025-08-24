@@ -2,6 +2,7 @@ import React from "react";
 import styles from './SideBar.module.scss';
 import logo from '../../assets/crm-logo.png';
 import Calendar from "../Calendar";
+import SideBarItem from "./components/SideBarItem/SideBarItem";
 
 const SideBar = () => {
     return (
@@ -18,6 +19,11 @@ const SideBar = () => {
             </div>
 
             <Calendar />
+
+            <SideBarItem>Отчёты</SideBarItem>
+            <SideBarItem>Клиенты</SideBarItem>
+            <SideBarItem>Услуги</SideBarItem>
+            <SideBarItem>Настройки</SideBarItem>
         </div>
     )
 }

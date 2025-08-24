@@ -1,18 +1,13 @@
-import React, {useState} from 'react';
+import React from 'react';
 import {Button, Card, DatePicker, Form, Image, Input, Modal, TimePicker, Typography} from "antd";
 import styles from "./ScheduleModal.module.scss";
 import dayjs from "dayjs";
-import {DownOutlined} from "@ant-design/icons";
 import TextArea from "antd/es/input/TextArea";
 
 const timeFormat = "HH:mm";
 const defaultTime = '09:00';
 
 const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () => void }) => {
-    const [isOpenRecordDetails, setIsOpenRecordDetails] = useState(false);
-
-    const openRecordDetails = () => setIsOpenRecordDetails(true);
-    const closeRecordDetails = () => setIsOpenRecordDetails(false);
 
     return (
         <Modal
@@ -33,7 +28,7 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                                 name="date"
                                 layout="vertical"
                             >
-                                <DatePicker />
+                                <DatePicker/>
                             </Form.Item>
 
                             <Form.Item
@@ -50,7 +45,7 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                             name="clientName"
                             layout="vertical"
                         >
-                            <Input placeholder="Волк Дмитрий Иванович" />
+                            <Input placeholder="Волк Дмитрий Иванович"/>
                         </Form.Item>
 
                         <Form.Item
@@ -58,7 +53,7 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                             name="phone"
                             layout="vertical"
                         >
-                            <Input placeholder="+375 (29) 999-99-99" />
+                            <Input placeholder="+375 (29) 999-99-99"/>
                         </Form.Item>
 
                         <Form.Item
@@ -92,113 +87,95 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                 </Card>
 
                 <Card className={styles.modalCardContent}>
-                    {
-                        !isOpenRecordDetails && (
-                            <Typography onClick={() => openRecordDetails()} className={styles.modalText}>
-                                Раскрыть данные записи <DownOutlined />
-                            </Typography>
-                        )
-                    }
-                    {
-                        isOpenRecordDetails && (
-                            <Typography onClick={() => closeRecordDetails()} className={styles.modalText}>
-                                Скрыть данные записи <DownOutlined />
-                            </Typography>
-                        )
-                    }
-                    {
-                        isOpenRecordDetails && (
-                            <Form className={styles.formWrapper}>
-                                <Form.Item
-                                    label="Рег знак"
-                                    name="carNumber"
-                                    layout="vertical"
-                                >
-                                    <Input placeholder="1111 MB-1"/>
-                                </Form.Item>
+                    <Form className={styles.formWrapper}>
+                        <Form.Item
+                            label="Рег знак"
+                            name="carNumber"
+                            layout="vertical"
+                        >
+                            <Input placeholder="1111 MB-1"/>
+                        </Form.Item>
 
-                                <Form.Item
-                                    label="Год выпуска"
-                                    name="carYear"
-                                    layout="vertical"
-                                >
-                                    <Input placeholder="2020"/>
-                                </Form.Item>
+                        <Form.Item
+                            label="Год выпуска"
+                            name="carYear"
+                            layout="vertical"
+                        >
+                            <Input placeholder="2020"/>
+                        </Form.Item>
 
-                                <Form.Item
-                                    label="Пробег"
-                                    name="carMilleage"
-                                    layout="vertical"
-                                >
-                                    <Input placeholder="300 000"/>
-                                </Form.Item>
+                        <Form.Item
+                            label="Пробег"
+                            name="carMilleage"
+                            layout="vertical"
+                        >
+                            <Input placeholder="300 000"/>
+                        </Form.Item>
 
-                                <Form.Item
-                                    label="Предв. стоимость"
-                                    name="firstPrice"
-                                    layout="vertical"
-                                >
-                                    <Input placeholder="100"/>
-                                </Form.Item>
+                        <Form.Item
+                            label="Предв. стоимость"
+                            name="firstPrice"
+                            layout="vertical"
+                        >
+                            <Input placeholder="100"/>
+                        </Form.Item>
 
-                                <Form.Item
-                                    label="Мастер-приёмщик"
-                                    name="serviceMan"
-                                    layout="vertical"
-                                >
-                                    <Input placeholder="Волк Дмитрий Иванович"/>
-                                </Form.Item>
+                        <Form.Item
+                            label="Мастер-приёмщик"
+                            name="serviceMan"
+                            layout="vertical"
+                        >
+                            <Input placeholder="Волк Дмитрий Иванович"/>
+                        </Form.Item>
 
-                                <Form.Item
-                                    label="Обнаруженные недостатки"
-                                    name="wrongDetails"
-                                    layout="vertical"
-                                >
-                                    <TextArea rows={4} placeholder="Негерметичность пыльников"/>
-                                </Form.Item>
+                        <Form.Item
+                            label="Обнаруженные недостатки"
+                            name="wrongDetails"
+                            layout="vertical"
+                        >
+                            <TextArea rows={4} placeholder="Негерметичность пыльников"/>
+                        </Form.Item>
 
-                                <Form.Item
-                                    label="Обоснование доб. стоимости"
-                                    name="whyAddPrice"
-                                    layout="vertical"
-                                >
-                                    <TextArea rows={4} placeholder="Герметизация корпуса"/>
-                                </Form.Item>
+                        <Form.Item
+                            label="Обоснование доб. стоимости"
+                            name="whyAddPrice"
+                            layout="vertical"
+                        >
+                            <TextArea rows={4} placeholder="Герметизация корпуса"/>
+                        </Form.Item>
 
-                                <Form.Item
-                                    label="Итоговая стоимость"
-                                    name="fullPrice"
-                                    layout="vertical"
-                                >
-                                    <Input placeholder="100"/>
-                                </Form.Item>
+                        <Form.Item
+                            label="Итоговая стоимость"
+                            name="fullPrice"
+                            layout="vertical"
+                        >
+                            <Input placeholder="100"/>
+                        </Form.Item>
 
-                                <Form.Item
-                                    label="Дата окончания работ"
-                                    name="dateOfWorkDone"
-                                    layout="vertical"
-                                >
-                                    <Input placeholder="30.04.1998"/>
-                                </Form.Item>
+                        <Form.Item
+                            label="Дата окончания работ"
+                            name="dateOfWorkDone"
+                            layout="vertical"
+                        >
+                            <Input placeholder="30.04.1998"/>
+                        </Form.Item>
 
-                                <Form.Item
-                                    label="Гарантия"
-                                    name="warranty"
-                                    layout="vertical"
-                                >
-                                    <Input placeholder="1 год"/>
-                                </Form.Item>
+                        <Form.Item
+                            label="Гарантия"
+                            name="warranty"
+                            layout="vertical"
+                        >
+                            <Input placeholder="1 год"/>
+                        </Form.Item>
 
-                                <Form.Item
-                                    label="Модель модулей"
-                                    name="modulesModel"
-                                    layout="vertical"
-                                >
-                                    <Input placeholder="Sanvi F50"/>
-                                </Form.Item>
-                            </Form>
-                        )
-                    }
+                        <Form.Item
+                            label="Модель модулей"
+                            name="modulesModel"
+                            layout="vertical"
+                        >
+                            <Input placeholder="Sanvi F50"/>
+                        </Form.Item>
+                    </Form>
                 </Card>
             </div>
 

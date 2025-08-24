@@ -1,0 +1,15 @@
+@use '../../../../styles/_theme' as theme;
+
+.sidebarItemWrapper {
+  display: flex;
+  width: 100%;
+  padding: 1rem 1rem;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.sidebarItemWrapper:hover {
+  background-color: theme.$header-background;
+  color: theme.$text-color-1;
+}
