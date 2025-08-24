@@ -4,6 +4,7 @@
   width: 100%;
   display: flex;
   flex-direction: row;
+  gap: 16px;
   background-color: theme.$background-color-5;
   color: theme.$text-dark-color-1;
   font-size: 19px;
@@ -17,8 +18,29 @@
   transition: 0.2s;
 }
 
+.cardContent {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  width: 100%;
+}
+
 .cardImage {
   display: flex;
   width: 200px !important;
   border-radius: 8px;
+}
+
+.cardTextContent {
+  width: 100%;
+}
+
+.cardText {
+  color: theme.$text-dark-color-1;
+}
+
+.divider {
+  border-color: theme.$text-dark-color-1;
+  padding: 0;
+  margin: 0;
 }
