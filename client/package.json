@@ -16,6 +16,7 @@
   "dependencies": {
     "@ant-design/icons": "^5.6.1",
     "antd": "^5.27.0",
+    "classnames": "^2.5.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },
