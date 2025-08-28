@@ -10,7 +10,19 @@ const App = () => {
     return (
         <ConfigProvider 
             locale={ruRU}
-            theme={themeConfig}
+            theme={{
+                ...themeConfig,
+                components: {
+                    ...(themeConfig as any)?.components,
+                    Steps: {
+                        colorPrimary: '#0f2231',
+                        colorText: '#0f2231',
+                        colorTextDescription: '#0f2231',
+                        colorSplit: 'rgba(15, 34, 49, 1)',
+                        colorTextQuaternary: 'rgba(15, 34, 49, 0.5)'
+                    }
+                }
+            }}
         >
             <div className={styles.app}>
                 <SideBar/>
