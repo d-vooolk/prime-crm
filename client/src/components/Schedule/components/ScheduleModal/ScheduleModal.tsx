@@ -15,6 +15,8 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
         percent: 100 / 3,
     });
 
+    const [formData, setFormData] = useState();
+
     const stepHandler = (direction: string) => {
         setStep(
             (prevState) => direction === "next"
