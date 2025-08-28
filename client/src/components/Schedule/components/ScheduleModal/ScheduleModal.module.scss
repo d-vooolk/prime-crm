@@ -177,6 +177,13 @@
   gap: 15px;
 }
 
+// Центрируем Steps и задаём ширину 60%
+.steps {
+  width: 60%;
+  margin: 0 auto;
+  display: block;
+}
+
 .steps {
   width: 60%;
   display: flex;
