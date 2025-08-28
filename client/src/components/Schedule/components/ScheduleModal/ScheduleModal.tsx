@@ -1,5 +1,5 @@
 import React from 'react';
-import {Button, Card, DatePicker, Form, Input, Modal, TimePicker} from "antd";
+import {Button, Card, DatePicker, Divider, Form, Input, Modal, Steps, TimePicker} from "antd";
 import styles from "./ScheduleModal.module.scss";
 import dayjs from "dayjs";
 import TextArea from "antd/es/input/TextArea";
@@ -8,6 +8,7 @@ const timeFormat = "HH:mm";
 const defaultTime = '09:00';
 
 const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () => void }) => {
+    const description = 'This is a description.';
 
     return (
         <Modal
@@ -19,6 +20,27 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
             okText="Сохранить"
             cancelText="Отменить"
         >
+            <Steps
+                className={styles.steps}
+                current={0}
+                items={[
+                    {
+                        title: 'Finished',
+                        description,
+                    },
+                    {
+                        title: 'In Progress',
+                        description,
+                    },
+                    {
+                        title: 'Waiting',
+                        description,
+                    },
+                ]}
+            />
+
+            <Divider />
+
             <div className={styles.modalContent}>
                 <Card className={styles.modalCardContent}>
                     <Form className={styles.formWrapper}>

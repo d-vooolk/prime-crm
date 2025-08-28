@@ -4,6 +4,8 @@
   display: flex;
   color: theme.$text-dark-color-1;
   width: 100%;
+  justify-content: center;
+  align-items: center;
 }
 
 .modalContent {
@@ -173,4 +175,11 @@
 .dateTimeWrapper {
   display: flex;
   gap: 15px;
+}
+
+.steps {
+  width: 60%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
