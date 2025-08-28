@@ -3,13 +3,12 @@ import styles from './Schedule.module.scss';
 import ScheduleHeader from "./components/ScheduleHeader";
 import ScheduleColumns from "./components/ScheduleColumns/ScheduleColumns";
 import ScheduleModal from "./components/ScheduleModal/ScheduleModal";
-import {useStore} from "zustand/react";
-import {useRecordsStore} from "../../state/recordsStore";
+import {useRecordsStore} from "../../store/recordsStore/recordsStore";
 
 const Schedule = () => {
     const [isOpen, setIsOpen] = useState(false);
 
-    const test = useRecordsStore((state: any) => state.test);
+    // const test = useRecordsStore((state: any) => state.test);
 
     const closeModal = () => setIsOpen(false);
     const openModal = () => setIsOpen(true);
