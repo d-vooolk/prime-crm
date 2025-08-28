@@ -1,5 +1,5 @@
 import React, {useState} from 'react';
-import {Button, Card, DatePicker, Divider, Form, Input, Modal, Steps, TimePicker} from "antd";
+import {Button, Card, DatePicker, Divider, Form, Input, Modal, Steps, TimePicker, ConfigProvider} from "antd";
 import styles from "./ScheduleModal.module.scss";
 import dayjs from "dayjs";
 import TextArea from "antd/es/input/TextArea";
@@ -34,26 +34,38 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
             okText="Сохранить"
             cancelText="Отменить"
         >
-            <Steps
-                className={styles.steps}
-                current={step.currentStep}
-                percent={step.percent}
-                items={[
-                    {
-                        title: 'Запись',
-                    },
-                    {
-                        title: 'Оформление',
-                    },
-                    {
-                        title: 'Закрытие',
-                    },
-                ]}
-            />
+            <ConfigProvider
+                theme={{
+                    components: {
+                        DatePicker: {
+                            colorText: '#0f2231',
+                            colorTextDescription: '#0f2231',
+                            colorTextQuaternary: 'rgba(15, 34, 49, 0.5)',
+                            colorSplit: 'rgba(15, 34, 49, 0.5)'
+                        }
+                    }
+                }}
+            >
+                <Steps
+                    className={styles.steps}
+                    current={step.currentStep}
+                    percent={step.percent}
+                    items={[
+                        {
+                            title: 'Запись',
+                        },
+                        {
+                            title: 'Оформление',
+                        },
+                        {
+                            title: 'Закрытие',
+                        },
+                    ]}
+                />
 
-            <Divider/>
+                <Divider/>
 
-            <div className={styles.modalContent}>
+                <div className={styles.modalContent}>
                 {
                     step.currentStep === 0 && (
                         <Card className={styles.modalCardContent}>
@@ -72,7 +84,13 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                                         name="time"
                                         layout="vertical"
                                     >
-                                        <TimePicker defaultValue={dayjs(defaultTime, timeFormat)} format={timeFormat}/>
+                                        <TimePicker
+                                            defaultValue={dayjs(defaultTime, timeFormat)}
+                                            format={timeFormat}
+                                            minuteStep={10}
+                                            disabledHours={() => [0, 1, 2, 3, 4, 5, 6, 7, 8, 20, 21, 22, 23]}
+                                            hideDisabledOptions
+                                        />
                                     </Form.Item>
                                 </div>
 
@@ -261,6 +279,7 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                     </Button>
                 </div>
             </div>
+            </ConfigProvider>
         </Modal>
     )
 }
