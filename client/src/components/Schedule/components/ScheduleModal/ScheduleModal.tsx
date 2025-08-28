@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState} from 'react';
 import {Button, Card, DatePicker, Divider, Form, Input, Modal, Steps, TimePicker} from "antd";
 import styles from "./ScheduleModal.module.scss";
 import dayjs from "dayjs";
@@ -8,7 +8,18 @@ const timeFormat = "HH:mm";
 const defaultTime = '09:00';
 
 const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () => void }) => {
-    const description = 'This is a description.';
+    const [step, setStep] = useState({
+        currentStep: 0,
+        minCount: 0,
+        maxCount: 2,
+    });
+
+    const stepHandler = (direction: string) => {
+        setStep(
+            (prevState) => direction === "next"
+                ? ({...step, currentStep: prevState.currentStep + 1})
+                : ({...step, currentStep: prevState.currentStep - 1}))
+    }
 
     return (
         <Modal
@@ -22,24 +33,21 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
         >
             <Steps
                 className={styles.steps}
-                current={0}
+                current={step.currentStep}
                 items={[
                     {
-                        title: 'Finished',
-                        description,
+                        title: 'Запись',
                     },
                     {
-                        title: 'In Progress',
-                        description,
+                        title: 'Оформление',
                     },
                     {
-                        title: 'Waiting',
-                        description,
+                        title: 'Закрытие',
                     },
                 ]}
             />
 
-            <Divider />
+            <Divider/>
 
             <div className={styles.modalContent}>
                 <Card className={styles.modalCardContent}>
@@ -204,6 +212,18 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
             <div className={styles.printButtons}>
                 <Button>Печать заявки</Button>
                 <Button>Печать акта</Button>
+                <Button
+                    onClick={() => stepHandler('prev')}
+                    disabled={step.currentStep <= step.minCount}
+                >
+                    Назад
+                </Button>
+                <Button
+                    onClick={() => stepHandler('next')}
+                    disabled={step.currentStep >= step.maxCount}
+                >
+                    Далее
+                </Button>
             </div>
         </Modal>
     )
