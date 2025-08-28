@@ -18,7 +18,7 @@ const App = () => {
                         colorPrimary: '#0f2231',
                         colorText: '#0f2231',
                         colorTextDescription: '#0f2231',
-                        colorSplit: 'rgba(15, 34, 49, 1)',
+                        colorSplit: 'rgba(15, 34, 49, 0.2)',
                         colorTextQuaternary: 'rgba(15, 34, 49, 0.5)'
                     }
                 }
