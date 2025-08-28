@@ -12,13 +12,14 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
         currentStep: 0,
         minCount: 0,
         maxCount: 2,
+        percent: 100 / 3,
     });
 
     const stepHandler = (direction: string) => {
         setStep(
             (prevState) => direction === "next"
-                ? ({...step, currentStep: prevState.currentStep + 1})
-                : ({...step, currentStep: prevState.currentStep - 1}))
+                ? ({...step, currentStep: prevState.currentStep + 1, percent: prevState.percent + 100 / 3})
+                : ({...step, currentStep: prevState.currentStep - 1, percent: prevState.percent - 100 / 3}))
     }
 
     return (
@@ -34,6 +35,7 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
             <Steps
                 className={styles.steps}
                 current={step.currentStep}
+                percent={step.percent}
                 items={[
                     {
                         title: 'Запись',
@@ -97,6 +99,14 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                                 </Form.Item>
 
                                 <Form.Item
+                                    label="Год выпуска"
+                                    name="carYear"
+                                    layout="vertical"
+                                >
+                                    <Input placeholder="2020"/>
+                                </Form.Item>
+
+                                <Form.Item
                                     label="Комментарий"
                                     name="comment"
                                     layout="vertical"
@@ -137,14 +147,6 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                                 </Form.Item>
 
                                 <Form.Item
-                                    label="Год выпуска"
-                                    name="carYear"
-                                    layout="vertical"
-                                >
-                                    <Input placeholder="2020"/>
-                                </Form.Item>
-
-                                <Form.Item
                                     label="Пробег"
                                     name="carMilleage"
                                     layout="vertical"
@@ -167,7 +169,15 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                                 >
                                     <Input placeholder="Волк Дмитрий Иванович"/>
                                 </Form.Item>
+                            </Form>
+                        </Card>
+                    )
+                }
 
+                {
+                    step.currentStep === 2 && (
+                        <Card className={styles.modalCardContent}>
+                            <Form className={styles.formWrapper}>
                                 <Form.Item
                                     label="Обнаруженные недостатки"
                                     name="wrongDetails"
@@ -224,10 +234,13 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
             <div className={styles.printButtons}>
                 {
                     step.currentStep === 1 && (
-                        <div>
-                            <Button>Печать заявки</Button>
-                            <Button>Печать акта</Button>
-                        </div>
+                        <Button>Печать заявки</Button>
+                    )
+                }
+
+                {
+                    step.currentStep === 2 && (
+                        <Button>Печать акта</Button>
                     )
                 }
 
