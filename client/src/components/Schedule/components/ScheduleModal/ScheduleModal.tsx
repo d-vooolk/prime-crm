@@ -222,20 +222,29 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
             </div>
 
             <div className={styles.printButtons}>
-                <Button>Печать заявки</Button>
-                <Button>Печать акта</Button>
-                <Button
-                    onClick={() => stepHandler('prev')}
-                    disabled={step.currentStep <= step.minCount}
-                >
-                    Назад
-                </Button>
-                <Button
-                    onClick={() => stepHandler('next')}
-                    disabled={step.currentStep >= step.maxCount}
-                >
-                    Далее
-                </Button>
+                {
+                    step.currentStep === 1 && (
+                        <div>
+                            <Button>Печать заявки</Button>
+                            <Button>Печать акта</Button>
+                        </div>
+                    )
+                }
+
+                <div>
+                    <Button
+                        onClick={() => stepHandler('prev')}
+                        disabled={step.currentStep <= step.minCount}
+                    >
+                        Назад
+                    </Button>
+                    <Button
+                        onClick={() => stepHandler('next')}
+                        disabled={step.currentStep >= step.maxCount}
+                    >
+                        Далее
+                    </Button>
+                </div>
             </div>
         </Modal>
     )
