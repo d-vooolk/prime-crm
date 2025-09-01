@@ -1,8 +1,9 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {Button, Card, DatePicker, Divider, Form, Input, Modal, Steps, TimePicker, ConfigProvider} from "antd";
 import styles from "./ScheduleModal.module.scss";
 import dayjs from "dayjs";
 import TextArea from "antd/es/input/TextArea";
+import {useForm} from "antd/lib/form/Form";
 
 const timeFormat = "HH:mm";
 const defaultTime = '09:00';
@@ -15,9 +16,27 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
         percent: 100 / 3,
     });
 
+    const [recordForm] = useForm();
+    const [jobsForm] = useForm();
+    const [fullClientDataForm] = useForm();
+    const [finishClientDataForm] = useForm();
+
+    // useEffect(() => {
+    //     console.log('recordForm', recordForm.getFieldsValue());
+    //     console.log('jobsForm', jobsForm.getFieldsValue());
+    //     console.log('fullClientDataForm', fullClientDataForm.getFieldsValue());
+    //     console.log('finishClientDataForm', finishClientDataForm.getFieldsValue());
+    // }, [
+    //     recordForm.getFieldsValue(),
+    //     jobsForm.getFieldsValue(),
+    //     fullClientDataForm.getFieldsValue(),
+    //     finishClientDataForm.getFieldsValue()
+    // ]);
+
     const [formData, setFormData] = useState();
 
     const stepHandler = (direction: string) => {
+        // console.log('click form', recordForm.getFieldsValue());
         setStep(
             (prevState) => direction === "next"
                 ? ({...step, currentStep: prevState.currentStep + 1, percent: prevState.percent + 100 / 3})
@@ -69,7 +88,7 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                 {
                     step.currentStep === 0 && (
                         <Card className={styles.modalCardContent}>
-                            <Form className={styles.formWrapper}>
+                            <Form className={styles.formWrapper} form={recordForm}>
                                 <div className={styles.dateTimeWrapper}>
                                     <Form.Item
                                         label="Дата записи"
@@ -141,7 +160,7 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                 {
                     step.currentStep === 0 && (
                         <Card className={styles.modalCardContent}>
-                            <Form className={styles.formWrapper}>
+                            <Form className={styles.formWrapper} form={jobsForm}>
                                 <Form.Item
                                     label="Перечень работ"
                                     name="works"
@@ -157,7 +176,7 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                 {
                     step.currentStep === 1 && (
                         <Card className={styles.modalCardContent}>
-                            <Form className={styles.formWrapper}>
+                            <Form className={styles.formWrapper} form={fullClientDataForm}>
                                 <Form.Item
                                     label="Рег знак"
                                     name="carNumber"
@@ -197,7 +216,7 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                 {
                     step.currentStep === 2 && (
                         <Card className={styles.modalCardContent}>
-                            <Form className={styles.formWrapper}>
+                            <Form className={styles.formWrapper} form={finishClientDataForm}>
                                 <Form.Item
                                     label="Обнаруженные недостатки"
                                     name="wrongDetails"
