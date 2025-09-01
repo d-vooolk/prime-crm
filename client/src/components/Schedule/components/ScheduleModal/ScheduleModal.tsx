@@ -10,19 +10,28 @@ import {
     Steps,
     TimePicker,
     ConfigProvider,
-    Typography, Select, SelectProps
+    Typography, Select, SelectProps, List
 } from "antd";
 import styles from "./ScheduleModal.module.scss";
 import dayjs from "dayjs";
 import TextArea from "antd/es/input/TextArea";
 import {useForm} from "antd/lib/form/Form";
 import {useRecordsStore} from "../../../../store/recordsStore/recordsStore";
+import cn from "classnames";
+import {FaTrash} from "react-icons/fa";
 
 
 const timeFormat = "HH:mm";
 const defaultTime = '09:00';
 
-const jobsList: SelectProps['options'] = [
+interface JobOption {
+    id: number;
+    label: string;
+    value: string;
+    price: number;
+}
+
+const jobsList: JobOption[] = [
     {
         id: 1,
         label: "Установка билед модулей",
@@ -47,7 +56,7 @@ const jobsList: SelectProps['options'] = [
         value: "Снятие бампера",
         price: 100,
     },
-]
+];
 
 const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () => void }) => {
     const [step, setStep] = useState({
@@ -73,7 +82,8 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
         car: "",
         carYear: "",
         comment: "",
-        works: [],
+        works: [] as JobOption[],
+        firstPrice: 0,
         carNumber: "",
         carMileage: "",
         serviceman: "",
@@ -130,6 +140,17 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
         console.log(`selected ${value}`);
     };
 
+    const handleJobsChange = (selectedValues: string[]) => {
+        const selectedJobs = jobsList.filter(job => selectedValues.includes(job.value));
+        const totalPrice = selectedJobs.reduce((sum, job) => sum + job.price, 0);
+        
+        setFormData(prev => ({
+            ...prev,
+            works: selectedJobs,
+            firstPrice: totalPrice
+        }));
+    };
+
     return (
         <Modal
             open={isOpen}
@@ -170,81 +191,77 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
 
                 <Divider/>
 
-                <div className={styles.modalContent}>
-                    {
-                        step.currentStep === 0 && (
-                            <Card className={styles.modalCardContent}>
-                                <Form className={styles.formWrapper} form={recordForm}>
-                                    <div className={styles.dateTimeWrapper}>
-                                        <Form.Item
-                                            label="Дата записи"
-                                            name="date"
-                                            layout="vertical"
-                                        >
-                                            <DatePicker/>
-                                        </Form.Item>
-
-                                        <Form.Item
-                                            label="Время записи"
-                                            name="time"
-                                            layout="vertical"
-                                        >
-                                            <TimePicker
-                                                defaultValue={dayjs(defaultTime, timeFormat)}
-                                                format={timeFormat}
-                                                minuteStep={5}
-                                                disabledHours={() => [0, 1, 2, 3, 4, 5, 6, 7, 8, 20, 21, 22, 23]}
-                                                hideDisabledOptions
-                                            />
-                                        </Form.Item>
-                                    </div>
-
+                {step.currentStep === 0 && (
+                    <div className={styles.modalContent}>
+                        <Card className={styles.modalCardContent}>
+                            <Form className={styles.formWrapper} form={recordForm}>
+                                <div className={styles.dateTimeWrapper}>
                                     <Form.Item
-                                        label="ФИО"
-                                        name="clientName"
+                                        label="Дата записи"
+                                        name="date"
                                         layout="vertical"
                                     >
-                                        <Input placeholder="Волк Дмитрий Иванович"/>
+                                        <DatePicker/>
                                     </Form.Item>
 
                                     <Form.Item
-                                        label="Телефон"
-                                        name="phone"
+                                        label="Время записи"
+                                        name="time"
                                         layout="vertical"
                                     >
-                                        <Input placeholder="+375 (29) 999-99-99"/>
+                                        <TimePicker
+                                            defaultValue={dayjs(defaultTime, timeFormat)}
+                                            format={timeFormat}
+                                            minuteStep={5}
+                                            disabledHours={() => [0, 1, 2, 3, 4, 5, 6, 7, 8, 20, 21, 22, 23]}
+                                            hideDisabledOptions
+                                        />
                                     </Form.Item>
+                                </div>
 
-                                    <Form.Item
-                                        label="Автомобиль"
-                                        name="car"
-                                        layout="vertical"
-                                    >
-                                        <Input placeholder="BMW 5-er E60"/>
-                                    </Form.Item>
+                                <Form.Item
+                                    label="ФИО"
+                                    name="clientName"
+                                    layout="vertical"
+                                >
+                                    <Input placeholder="Волк Дмитрий Иванович"/>
+                                </Form.Item>
 
-                                    <Form.Item
-                                        label="Год выпуска"
-                                        name="carYear"
-                                        layout="vertical"
-                                    >
-                                        <Input placeholder="2020"/>
-                                    </Form.Item>
+                                <Form.Item
+                                    label="Телефон"
+                                    name="phone"
+                                    layout="vertical"
+                                >
+                                    <Input placeholder="+375 (29) 999-99-99"/>
+                                </Form.Item>
 
-                                    <Form.Item
-                                        label="Комментарий"
-                                        name="comment"
-                                        layout="vertical"
-                                    >
-                                        <TextArea rows={4} placeholder="Особенности заказа"/>
-                                    </Form.Item>
-                                </Form>
-                            </Card>
-                        )
-                    }
+                                <Form.Item
+                                    label="Автомобиль"
+                                    name="car"
+                                    layout="vertical"
+                                >
+                                    <Input placeholder="BMW 5-er E60"/>
+                                </Form.Item>
 
-                    {
-                        step.currentStep === 0 && (
+                                <Form.Item
+                                    label="Год выпуска"
+                                    name="carYear"
+                                    layout="vertical"
+                                >
+                                    <Input placeholder="2020"/>
+                                </Form.Item>
+
+                                <Form.Item
+                                    label="Комментарий"
+                                    name="comment"
+                                    layout="vertical"
+                                >
+                                    <TextArea rows={4} placeholder="Особенности заказа"/>
+                                </Form.Item>
+                            </Form>
+                        </Card>
+
+                        <div className={styles.flexColumn}>
                             <Card className={styles.modalCardContent}>
                                 <Form className={styles.formWrapper} form={jobsForm}>
                                     <Form.Item
@@ -255,156 +272,174 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                                         <Select
                                             mode="multiple"
                                             allowClear
-                                            style={{ width: '100%' }}
+                                            style={{width: '100%'}}
                                             placeholder="Выбрать услугу"
-                                            onChange={handleChange}
+                                            onChange={handleJobsChange}
                                             options={jobsList}
                                         />
                                     </Form.Item>
                                 </Form>
                             </Card>
-                        )
-                    }
-
-                    {step.currentStep === 1 && (
-                        <div className={styles.flexRow}>
-                            <div className={styles.flexColumn}>
-                                <Card className={styles.modalCardContent}>
-                                    <div className={styles.flexTextContainer}>
-                                        <div className={styles.flexRow}>
-                                            <div>
-                                                <Typography className={styles.underText}>Дата</Typography>
-                                                <Typography className={styles.dataText}>09.09.2025</Typography>
-                                            </div>
-
-                                            <div>
-                                                <Typography className={styles.underText}>Время</Typography>
-                                                <Typography className={styles.dataText}>09:10</Typography>
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <Typography className={styles.underText}>ФИО</Typography>
-                                            <Typography className={styles.dataText}>Волк Дмитрий Иванович</Typography>
-                                        </div>
-
-                                        <div>
-                                            <Typography className={styles.underText}>Телефон</Typography>
-                                            <Typography className={styles.dataText}>+375 (29) 820-62-46</Typography>
-                                        </div>
-
-                                        <div className={styles.flexRow}>
-                                            <div>
-                                                <Typography className={styles.underText}>Автомобиль</Typography>
-                                                <Typography className={styles.dataText}>BMW 5 E39 1999</Typography>
-                                            </div>
-
-                                            <div>
-                                                <Typography className={styles.underText}>Год выпуска</Typography>
-                                                <Typography className={styles.dataText}>1999</Typography>
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <Typography className={styles.underText}>Комментарий</Typography>
-                                            <Typography className={styles.dataText}>По безналу</Typography>
-                                        </div>
-                                    </div>
-                                </Card>
-
-                                <Card className={styles.modalCardContent}>
-                                    <div>
-                                        <Typography className={styles.underText}>Перечень работ</Typography>
-                                        <Typography className={styles.dataText}>
-                                            С/у бампера 100р <br/>
-                                            установка билед 1200р <br/>
-                                            полировка фар 100р <br/>
-                                            оклейка фар полиуретановой плёнкой 150р <br/>
-                                        </Typography>
-                                        <Typography className={styles.underText}>Итого</Typography>
-                                        <Typography className={styles.dataText}>1550р</Typography>
-                                    </div>
-                                </Card>
-                            </div>
 
                             <Card className={styles.modalCardContent}>
-                                <Form className={styles.formWrapper} form={fullClientDataForm}>
-                                    <Form.Item
-                                        label="Рег знак"
-                                        name="carNumber"
-                                        layout="vertical"
-                                    >
-                                        <Input placeholder="1111 MB-1"/>
-                                    </Form.Item>
+                                <List
+                                    size="large"
+                                    dataSource={formData.works}
+                                    renderItem={
+                                        (item) =>
+                                            <List.Item className={styles.listItemRender}>
+                                                <span>{item?.label}</span>
+                                                <span>{item?.price} руб.</span>
+                                                <FaTrash className={styles.trashIcon} onClick={(e) => console.log("delete trash", e)}/>
+                                            </List.Item>
+                                    }
+                                />
 
-                                    <Form.Item
-                                        label="Пробег"
-                                        name="carMilleage"
-                                        layout="vertical"
-                                    >
-                                        <Input placeholder="300 000"/>
-                                    </Form.Item>
-
-                                    <Form.Item
-                                        label="Мастер-приёмщик"
-                                        name="serviceMan"
-                                        layout="vertical"
-                                    >
-                                        <Input placeholder="Волк Дмитрий Иванович"/>
-                                    </Form.Item>
-                                </Form>
+                                <div className={cn(styles.flexRow, styles.listPriceText)}>
+                                    <Typography className={styles.darkText}>ИТОГО:</Typography>
+                                    <Typography className={styles.darkText}>{ formData?.firstPrice } руб.</Typography>
+                                </div>
                             </Card>
                         </div>
-                    )}
+                    </div>
+                )}
 
-                    {
-                        step.currentStep === 2 && (
+                {step.currentStep === 1 && (
+                    <div className={styles.flexRow}>
+                        <div className={styles.flexColumn}>
                             <Card className={styles.modalCardContent}>
-                                <Form className={styles.formWrapper} form={finishClientDataForm}>
-                                    <Form.Item
-                                        label="Обнаруженные недостатки"
-                                        name="wrongDetails"
-                                        layout="vertical"
-                                    >
-                                        <TextArea rows={4} placeholder="Негерметичность пыльников"/>
-                                    </Form.Item>
+                                <div className={styles.flexTextContainer}>
+                                    <div className={styles.flexRow}>
+                                        <div>
+                                            <Typography className={styles.underText}>Дата</Typography>
+                                            <Typography className={styles.dataText}>09.09.2025</Typography>
+                                        </div>
 
-                                    <Form.Item
-                                        label="Обоснование доб. стоимости"
-                                        name="whyAddPrice"
-                                        layout="vertical"
-                                    >
-                                        <TextArea rows={4} placeholder="Герметизация корпуса"/>
-                                    </Form.Item>
+                                        <div>
+                                            <Typography className={styles.underText}>Время</Typography>
+                                            <Typography className={styles.dataText}>09:10</Typography>
+                                        </div>
+                                    </div>
 
-                                    <Form.Item
-                                        label="Дата окончания работ"
-                                        name="dateOfWorkDone"
-                                        layout="vertical"
-                                    >
-                                        <Input placeholder="30.04.1998"/>
-                                    </Form.Item>
+                                    <div>
+                                        <Typography className={styles.underText}>ФИО</Typography>
+                                        <Typography className={styles.dataText}>Волк Дмитрий Иванович</Typography>
+                                    </div>
 
-                                    <Form.Item
-                                        label="Гарантия"
-                                        name="warranty"
-                                        layout="vertical"
-                                    >
-                                        <Input placeholder="1 год"/>
-                                    </Form.Item>
+                                    <div>
+                                        <Typography className={styles.underText}>Телефон</Typography>
+                                        <Typography className={styles.dataText}>+375 (29) 820-62-46</Typography>
+                                    </div>
 
-                                    <Form.Item
-                                        label="Модель модулей"
-                                        name="modulesModel"
-                                        layout="vertical"
-                                    >
-                                        <Input placeholder="Sanvi F50"/>
-                                    </Form.Item>
-                                </Form>
+                                    <div className={styles.flexRow}>
+                                        <div>
+                                            <Typography className={styles.underText}>Автомобиль</Typography>
+                                            <Typography className={styles.dataText}>BMW 5 E39 1999</Typography>
+                                        </div>
+
+                                        <div>
+                                            <Typography className={styles.underText}>Год выпуска</Typography>
+                                            <Typography className={styles.dataText}>1999</Typography>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <Typography className={styles.underText}>Комментарий</Typography>
+                                        <Typography className={styles.dataText}>По безналу</Typography>
+                                    </div>
+                                </div>
                             </Card>
-                        )
-                    }
-                </div>
+
+                            <Card className={styles.modalCardContent}>
+                                <div>
+                                    <Typography className={styles.underText}>Перечень работ</Typography>
+                                    <Typography className={styles.dataText}>
+                                        С/у бампера 100р <br/>
+                                        установка билед 1200р <br/>
+                                        полировка фар 100р <br/>
+                                        оклейка фар полиуретановой плёнкой 150р <br/>
+                                    </Typography>
+                                    <Typography className={styles.underText}>Итого</Typography>
+                                    <Typography className={styles.dataText}>1550р</Typography>
+                                </div>
+                            </Card>
+                        </div>
+
+                        <Card className={styles.modalCardContent}>
+                            <Form className={styles.formWrapper} form={fullClientDataForm}>
+                                <Form.Item
+                                    label="Рег знак"
+                                    name="carNumber"
+                                    layout="vertical"
+                                >
+                                    <Input placeholder="1111 MB-1"/>
+                                </Form.Item>
+
+                                <Form.Item
+                                    label="Пробег"
+                                    name="carMilleage"
+                                    layout="vertical"
+                                >
+                                    <Input placeholder="300 000"/>
+                                </Form.Item>
+
+                                <Form.Item
+                                    label="Мастер-приёмщик"
+                                    name="serviceMan"
+                                    layout="vertical"
+                                >
+                                    <Input placeholder="Волк Дмитрий Иванович"/>
+                                </Form.Item>
+                            </Form>
+                        </Card>
+                    </div>
+                )}
+
+                {step.currentStep === 2 && (
+                    <Card className={styles.modalCardContent}>
+                        <Form className={styles.formWrapper} form={finishClientDataForm}>
+                            <Form.Item
+                                label="Обнаруженные недостатки"
+                                name="wrongDetails"
+                                layout="vertical"
+                            >
+                                <TextArea rows={4} placeholder="Негерметичность пыльников"/>
+                            </Form.Item>
+
+                            <Form.Item
+                                label="Обоснование доб. стоимости"
+                                name="whyAddPrice"
+                                layout="vertical"
+                            >
+                                <TextArea rows={4} placeholder="Герметизация корпуса"/>
+                            </Form.Item>
+
+                            <Form.Item
+                                label="Дата окончания работ"
+                                name="dateOfWorkDone"
+                                layout="vertical"
+                            >
+                                <Input placeholder="30.04.1998"/>
+                            </Form.Item>
+
+                            <Form.Item
+                                label="Гарантия"
+                                name="warranty"
+                                layout="vertical"
+                            >
+                                <Input placeholder="1 год"/>
+                            </Form.Item>
+
+                            <Form.Item
+                                label="Модель модулей"
+                                name="modulesModel"
+                                layout="vertical"
+                            >
+                                <Input placeholder="Sanvi F50"/>
+                            </Form.Item>
+                        </Form>
+                    </Card>
+                )}
 
                 <div className={styles.printButtons}>
                     {
@@ -412,7 +447,6 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                             <Button>Печать акта</Button>
                         )
                     }
-
 
 
                     {

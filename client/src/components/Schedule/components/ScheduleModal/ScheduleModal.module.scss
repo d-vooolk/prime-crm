@@ -221,3 +221,49 @@
   background-color: #f5f5f5 !important;
 }
 
+.darkText {
+  color: theme.$text-dark-color-1;
+}
+
+// Стили для List компонента
+:global(.ant-list) {
+  color: theme.$text-dark-color-1 !important;
+  border: none !important;
+}
+
+:global(.ant-list .ant-list-item) {
+  color: theme.$text-dark-color-1 !important;
+  background-color: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid #d9d9d9 !important;
+}
+
+:global(.ant-list .ant-list-item:last-child) {
+  border-bottom: none !important;
+}
+
+:global(.ant-list .ant-list-item:hover) {
+  background-color: #f5f5f5 !important;
+}
+
+:global(.ant-list .ant-list-item span) {
+  color: theme.$text-dark-color-1 !important;
+}
+
+.listPriceText {
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 15px;
+}
+
+.listItemRender {
+  position: relative;
+}
+
+.trashIcon {
+  position: absolute;
+  right: 0;
+  top: 35%;
+  cursor: pointer;
+}
+
