@@ -52,6 +52,8 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
             width={1200}
             okText="Сохранить"
             cancelText="Отменить"
+            okType="default"
+            cancelButtonProps={{ type: "text" }}
         >
             <ConfigProvider
                 theme={{
@@ -283,19 +285,21 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                     )
                 }
 
-                <div>
-                    <Button
-                        onClick={() => stepHandler('prev')}
-                        disabled={step.currentStep <= step.minCount}
-                    >
-                        Назад
-                    </Button>
-                    <Button
-                        onClick={() => stepHandler('next')}
-                        disabled={step.currentStep >= step.maxCount}
-                    >
-                        Далее
-                    </Button>
+                <div className={styles.navButtonWrapper}>
+                    {
+                        step.currentStep > step.minCount && (
+                            <Button onClick={() => stepHandler('prev')}>
+                                Назад
+                            </Button>
+                        )
+                    }
+                    {
+                        step.currentStep < step.maxCount && (
+                            <Button onClick={() => stepHandler('next')}>
+                                Далее
+                            </Button>
+                        )
+                    }
                 </div>
             </div>
             </ConfigProvider>
