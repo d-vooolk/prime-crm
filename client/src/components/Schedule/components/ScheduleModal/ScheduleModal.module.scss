@@ -140,4 +140,32 @@
   gap: 15px;
 }
 
+.underText {
+  color: rgba(15, 34, 49, 0.7);
+  font-size: 11px;
+}
+
+.dataText {
+  color: theme.$text-dark-color-1;
+}
+
+.flexTextContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.flexRow {
+  display: flex;
+  flex-direction: row;
+  gap: 35px;
+  width: 100%;
+}
+
+.flexColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: 100%;
+}
 
