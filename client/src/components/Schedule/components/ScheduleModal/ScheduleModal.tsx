@@ -10,7 +10,7 @@ import {
     Steps,
     TimePicker,
     ConfigProvider,
-    Typography, Select, SelectProps, List
+    Typography, Select, List
 } from "antd";
 import styles from "./ScheduleModal.module.scss";
 import dayjs from "dayjs";
@@ -18,7 +18,6 @@ import TextArea from "antd/es/input/TextArea";
 import {useForm} from "antd/lib/form/Form";
 import {useRecordsStore} from "../../../../store/recordsStore/recordsStore";
 import cn from "classnames";
-import {FaTrash} from "react-icons/fa";
 
 
 const timeFormat = "HH:mm";
@@ -290,7 +289,6 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                                             <List.Item className={styles.listItemRender}>
                                                 <span>{item?.label}</span>
                                                 <span>{item?.price} руб.</span>
-                                                <FaTrash className={styles.trashIcon} onClick={(e) => console.log("delete trash", e)}/>
                                             </List.Item>
                                     }
                                 />
