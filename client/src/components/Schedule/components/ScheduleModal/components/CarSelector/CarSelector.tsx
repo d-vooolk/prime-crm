@@ -1,10 +1,17 @@
 import React, {useEffect, useState} from 'react'
 import {Select} from "antd";
-import {Brand} from "../../../../../../api/carsApi/types";
+import {Brand, Generation, Model} from "../../../../../../api/carsApi/types";
 import {carApi} from "../../../../../../api/carsApi/cars.api";
 
 const CarSelector = () => {
+    const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
+    const [selectedModel, setSelectedModel] = useState<string | null>(null);
+    const [selectedGeneration, setSelectedGeneration] = useState<string | null>(null);
+
     const [brands, setBrands] = useState<Brand[]>([]);
+    const [models, setModels] = useState<Model[]>([]);
+    const [generations, setGenerations] = useState<Generation[]>([]);
+
     const [loading, setLoading] = useState({
         brands: false,
         models: false,
@@ -28,6 +35,57 @@ const CarSelector = () => {
         }
     };
 
+    const handleBrandChange = async (brandId: string) => {
+        setSelectedBrand(brandId);
+        setSelectedModel(null);
+        setSelectedGeneration(null);
+        setModels([]);
+        setGenerations([]);
+
+        try {
+            setLoading(prev => ({ ...prev, models: true }));
+            const modelsData = await carApi.fetchModels(brandId);
+            setModels(modelsData);
+        } catch (error) {
+            handleApiError(error, 'Ошибка при загрузке моделей');
+        } finally {
+            setLoading(prev => ({ ...prev, models: false }));
+        }
+    };
+
+    const handleModelChange = async (modelId: string) => {
+        setSelectedModel(modelId);
+        setSelectedGeneration(null);
+        setGenerations([]);
+
+        if (selectedBrand) {
+            try {
+                setLoading(prev => ({ ...prev, generations: true }));
+                const generationsData = await carApi.fetchGenerations(selectedBrand, modelId);
+                setGenerations(generationsData);
+            } catch (error) {
+                handleApiError(error, 'Ошибка при загрузке поколений');
+            } finally {
+                setLoading(prev => ({ ...prev, generations: false }));
+            }
+        }
+    };
+
+    const handleGenerationChange = async (generationId: string) => {
+        setSelectedGeneration(generationId);
+        fetch(`/api/cars/${selectedBrand}/${selectedModel}/${generationId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        })
+            .then(res => res.json())
+            .then(data => {
+                console.log('Полученные данные:', data);
+                setCarInfo(data);
+            });
+    };
+
     return (
         <div>
             <Select
@@ -35,8 +93,8 @@ const CarSelector = () => {
                 placeholder="Выберите марку"
                 style={{ width: '100%' }}
                 loading={loading.brands}
-                // value={selectedBrand || undefined}
-                onChange={(e) => console.log(e)}
+                value={selectedBrand || undefined}
+                onChange={handleBrandChange}
                 filterOption={(input, option) =>
                     option?.['data-brand-name']?.toLowerCase().includes(input.toLowerCase())
                 }
@@ -61,6 +119,34 @@ const CarSelector = () => {
                             )}
                             <span>{brand.name}</span>
                         </div>
+                    </Select.Option>
+                ))}
+            </Select>
+
+            <Select
+                onChange={handleModelChange}
+                value={selectedModel || undefined}
+                disabled={!selectedBrand}
+                loading={loading.models}
+                placeholder="Выберите модель"
+                style={{ width: '100%' }}
+            >
+                {models.map(model => (
+                    <Select.Option key={model.id} value={model.id}>{model.name}</Select.Option>
+                ))}
+            </Select>
+
+            <Select
+                onChange={handleGenerationChange}
+                value={selectedGeneration || undefined}
+                disabled={!selectedModel}
+                loading={loading.generations}
+                placeholder="Выберите поколение"
+                style={{ width: '100%' }}
+            >
+                {generations.map(generation => (
+                    <Select.Option key={generation.id} value={generation.id}>
+                        {`${generation.name} (${generation.year_from}-${generation.year_to})`}
                     </Select.Option>
                 ))}
             </Select>

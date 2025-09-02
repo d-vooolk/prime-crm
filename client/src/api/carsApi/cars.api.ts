@@ -3,7 +3,9 @@ import {Brand, Generation, Model} from "./types";
 
 export const carApi = {
     async fetchBrands(): Promise<Brand[]> {
-        const response = await fetch(`${API_CONFIG.BASE_URL}/marks`, { HEADERS });
+        const response = await fetch(`${API_CONFIG.BASE_URL}/marks`, { 
+            headers: HEADERS 
+        });
         if (!response.ok) {
             throw new Error('Failed to fetch brands');
         }
@@ -16,7 +18,9 @@ export const carApi = {
     },
 
     async fetchModels(markId: string): Promise<Model[]> {
-        const response = await fetch(`${API_CONFIG.BASE_URL}/marks/${markId}/models`, { HEADERS });
+        const response = await fetch(`${API_CONFIG.BASE_URL}/marks/${markId}/models`, { 
+            headers: HEADERS 
+        });
         if (!response.ok) {
             throw new Error('Failed to fetch models');
         }
@@ -27,7 +31,9 @@ export const carApi = {
     async fetchGenerations(markId: string, modelId: string): Promise<Generation[]> {
         const response = await fetch(
             `${API_CONFIG.BASE_URL}/marks/${markId}/models/${modelId}/generations`,
-            { HEADERS }
+            { 
+                headers: HEADERS 
+            }
         );
         if (!response.ok) {
             throw new Error('Failed to fetch generations');
