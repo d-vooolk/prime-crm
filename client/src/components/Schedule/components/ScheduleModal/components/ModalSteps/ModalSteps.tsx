@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from "../ScheduleModal.module.scss";
+import styles from "../../ScheduleModal.module.scss";
 import {Steps} from "antd";
 
 const ModalSteps = ({ step }: { step: number }) => {

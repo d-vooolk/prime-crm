@@ -14,11 +14,11 @@ import styles from "./ScheduleModal.module.scss";
 import dayjs from "dayjs";
 import TextArea from "antd/es/input/TextArea";
 import {useRecordsStore} from "../../../../store/recordsStore/recordsStore";
-import ModalInfoCard from "./ModalInfoCard/ModalInfoCard";
+import ModalInfoCard from "./components/ModalInfoCard/ModalInfoCard";
 import {FormDataInterface} from "./types";
-import PhoneField from "./PhoneField/PhoneField";
-import ModalSteps from "./ModalSteps/ModalSteps";
-import WorkList from "./WorkList/WorkList";
+import PhoneField from "./components/PhoneField/PhoneField";
+import ModalSteps from "./components/ModalSteps/ModalSteps";
+import WorkList from "./components/WorkList/WorkList";
 
 
 const timeFormat = "HH:mm";

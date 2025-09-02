@@ -1,7 +1,7 @@
 import React from "react";
-import styles from "../ScheduleModal.module.scss";
+import styles from "../../ScheduleModal.module.scss";
 import {Card, List, Typography} from "antd";
-import {FormDataInterface} from "../types";
+import {FormDataInterface} from "../../types";
 
 const emptyData = "-";
 

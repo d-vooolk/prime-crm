@@ -1,8 +1,8 @@
 import React from "react";
-import styles from "../ScheduleModal.module.scss";
+import styles from "../../ScheduleModal.module.scss";
 import {Card, Form, InputNumber, List, Select, Typography} from "antd";
 import cn from "classnames";
-import {JobOption} from "../types";
+import {JobOption} from "../../types";
 
 const jobsList: JobOption[] = [
     {
