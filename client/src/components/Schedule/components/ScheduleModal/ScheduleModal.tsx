@@ -96,8 +96,8 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
         closeModal();
     }
 
-    const setFormDataHandler = (key: any, value: any) => {
-        setFormData((prevState) => ({...prevState, [key]: value}))
+    const setFormDataHandler = (key: keyof FormDataInterface, value: any) => {
+        setFormData((prevState: FormDataInterface) => ({...prevState, [key]: value}))
     }
 
 
@@ -257,7 +257,7 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                                 >
                                     <Input
                                         placeholder="300 000"
-                                        onChange={(e) => setFormDataHandler("carMilleage", e.target.value)}
+                                        onChange={(e) => setFormDataHandler("carMileage", e.target.value)}
                                     />
                                 </Form.Item>
 
@@ -268,7 +268,7 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                                 >
                                     <Input
                                         placeholder="Волк Дмитрий Иванович"
-                                        onChange={(e) => setFormDataHandler("serviceMan", e.target.value)}
+                                        onChange={(e) => setFormDataHandler("serviceman", e.target.value)}
                                     />
                                 </Form.Item>
                             </Form>

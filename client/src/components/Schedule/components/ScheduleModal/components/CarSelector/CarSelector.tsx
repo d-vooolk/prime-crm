@@ -1,14 +1,16 @@
 import React, {useEffect, useState} from 'react'
-import {Input, Select} from "antd";
+import {Select} from "antd";
 import {Brand, Generation, Model} from "../../../../../../api/carsApi/types";
 import {carApi} from "../../../../../../api/carsApi/cars.api";
-import {CarSelectorProps} from "./types";
-import styles from "./CarSelector.module.scss";
 
-const CarSelector = ({car, setFormData}: CarSelectorProps) => {
-    const [selectedBrand, setSelectedBrand] = useState<string | null>(car.brand || null);
+interface CarSelectorProps {
+    setFormData: React.Dispatch<React.SetStateAction<any>>;
+}
+
+const CarSelector: React.FC<CarSelectorProps> = ({ setFormData }) => {
+    const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
     const [selectedModel, setSelectedModel] = useState<string | null>(null);
-    const [selectedGenerationId, setSelectedGenerationId] = useState<string | null>(null);
+    const [selectedGeneration, setSelectedGeneration] = useState<string | null>(null);
 
     const [brands, setBrands] = useState<Brand[]>([]);
     const [models, setModels] = useState<Model[]>([]);
@@ -21,15 +23,11 @@ const CarSelector = ({car, setFormData}: CarSelectorProps) => {
         carInfo: false
     });
 
-    const [isOpenOtherField, setIsOpenOtherField] = useState(false);
-
     useEffect(() => {
-        if (brands.length === 0) {
-            fetchBrands()
-                .then(() =>
-                    setLoading((prevState) => ({...prevState, brands: false}))
-                );
-        }
+        fetchBrands()
+            .then(() =>
+                setLoading((prevState) => ({...prevState, brands: false}))
+            );
     }, []);
 
     const fetchBrands = async () => {
@@ -44,21 +42,23 @@ const CarSelector = ({car, setFormData}: CarSelectorProps) => {
         }
     };
 
+    const handleApiError = (error: any, message: string) => {
+        console.error(message, error);
+    };
+
     const handleBrandChange = async (brandId: string) => {
         setSelectedBrand(brandId);
         setSelectedModel(null);
-        setSelectedGenerationId(null);
+        setSelectedGeneration(null);
         setModels([]);
         setGenerations([]);
-
-        setFormData((prevState: { car: any; }) => ({...prevState, car: {...prevState.car, brand: brandId}}));
 
         try {
             setLoading(prev => ({...prev, models: true}));
             const modelsData = await carApi.fetchModels(brandId);
             setModels(modelsData);
         } catch (error) {
-            throw new Error('Ошибка при загрузке моделей');
+            handleApiError(error, 'Ошибка при загрузке моделей');
         } finally {
             setLoading(prev => ({...prev, models: false}));
         }
@@ -66,11 +66,8 @@ const CarSelector = ({car, setFormData}: CarSelectorProps) => {
 
     const handleModelChange = async (modelId: string) => {
         setSelectedModel(modelId);
-        setSelectedGenerationId(null);
+        setSelectedGeneration(null);
         setGenerations([]);
-
-        setFormData((prevState: { car: any; }) => ({...prevState, car: {...prevState.car, model: modelId}}));
-
 
         if (selectedBrand) {
             try {
@@ -78,7 +75,7 @@ const CarSelector = ({car, setFormData}: CarSelectorProps) => {
                 const generationsData = await carApi.fetchGenerations(selectedBrand, modelId);
                 setGenerations(generationsData);
             } catch (error) {
-                throw new Error('Ошибка при загрузке поколений');
+                handleApiError(error, 'Ошибка при загрузке поколений');
             } finally {
                 setLoading(prev => ({...prev, generations: false}));
             }
@@ -86,105 +83,82 @@ const CarSelector = ({car, setFormData}: CarSelectorProps) => {
     };
 
     const handleGenerationChange = async (generationId: string) => {
-        const generationData = generations.filter(gen => gen.id === generationId)[0];
-        setSelectedGenerationId(generationId);
-
-        setFormData((prevState: { car: any; }) => ({...prevState, car: {...prevState.car, generation: generationId}}));
-        setFormData((prevState: { car: any; }) => ({
-            ...prevState,
-            car: {...prevState.car, generationName: generationData.name}
+        setSelectedGeneration(generationId);
+        // Update form data with selected car info
+        setFormData((prev: any) => ({
+            ...prev,
+            car: {
+                ...prev.car,
+                generation: generationId
+            }
         }));
-    }
+    };
 
     return (
-        <div className={styles.carSelectWrapper}>
-            <div className={styles.carSelectFirstRow}>
-                <Select
-                    showSearch
-                    placeholder="Выберите марку"
-                    style={{width: '100%'}}
-                    loading={loading.brands}
-                    disabled={loading.brands}
-                    value={selectedBrand || undefined}
-                    onChange={handleBrandChange}
-                    filterOption={(input, option) =>
-                        option?.['data-brand-name']?.toLowerCase().includes(input.toLowerCase())
-                    }
-                >
-                    {brands.map((brand) => (
-                        <Select.Option
-                            key={brand.id}
-                            value={brand.id}
-                            data-brand-name={brand.name}
-                        >
-                            <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-                                {brand.logo && (
-                                    <img
-                                        src={brand.logo}
-                                        alt={brand.name}
-                                        style={{
-                                            width: '24px',
-                                            height: '24px',
-                                            objectFit: 'contain',
-                                        }}
-                                    />
-                                )}
-                                <span>{brand.name}</span>
-                            </div>
-                        </Select.Option>
-                    ))}
-                </Select>
-
-                <Select
-                    onChange={handleModelChange}
-                    value={selectedModel || undefined}
-                    disabled={!selectedBrand}
-                    loading={loading.models}
-                    placeholder="Выберите модель"
-                    style={{width: '100%'}}
-                >
-                    {models.map(model => (
-                        <Select.Option key={model.id} value={model.id}>{model.name}</Select.Option>
-                    ))}
-                </Select>
-            </div>
-
-            <div className={styles.carSelectSecondRow}>
-                <Select
-                    onChange={handleGenerationChange}
-                    value={selectedGenerationId || undefined}
-                    disabled={!selectedModel}
-                    loading={loading.generations}
-                    placeholder="Выберите поколение"
-                    style={{width: '100%'}}
-                >
-                    {generations.map(generation => (
-                        <Select.Option key={generation.id} value={generation.id}>
-                            {`${generation.name} (${generation.year_from}-${generation.year_to})`}
-                        </Select.Option>
-                    ))}
-                </Select>
-
-                <div className={styles.wikiTextWrapper}>
-                    {!isOpenOtherField && <div className={styles.underText} onClick={() => setIsOpenOtherField(true)}>нет подходящего варианта</div>}
-                    {isOpenOtherField && <div className={styles.underText} onClick={() => setIsOpenOtherField(false)}>скрыть дополнительное поле</div>}
-                </div>
-
-                {
-                    isOpenOtherField && (
-                        <Input
-                            onChange={
-                                (e) => setFormData((prevState: { car: any; }) => ({
-                                    ...prevState,
-                                    car: {...prevState.car, otherData: e.target.value}
-                                }))
-                            }
-                            value={car.otherData}
-                            placeholder="Марка и модель авто"
-                        />
-                    )
+        <div>
+            <Select
+                showSearch
+                placeholder="Выберите марку"
+                style={{width: '100%'}}
+                loading={loading.brands}
+                disabled={loading.brands}
+                value={selectedBrand || undefined}
+                onChange={handleBrandChange}
+                filterOption={(input, option) =>
+                    option?.['data-brand-name']?.toLowerCase().includes(input.toLowerCase())
                 }
-            </div>
+            >
+                {brands.map((brand) => (
+                    <Select.Option
+                        key={brand.id}
+                        value={brand.id}
+                        data-brand-name={brand.name}
+                    >
+                        <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                            {brand.logo && (
+                                <img
+                                    src={brand.logo}
+                                    alt={brand.name}
+                                    style={{
+                                        width: '24px',
+                                        height: '24px',
+                                        objectFit: 'contain',
+                                    }}
+                                />
+                            )}
+                            <span>{brand.name}</span>
+                        </div>
+                    </Select.Option>
+                ))}
+            </Select>
+
+            <Select
+                onChange={handleModelChange}
+                value={selectedModel || undefined}
+                disabled={!selectedBrand}
+                loading={loading.models}
+                placeholder="Выберите модель"
+                style={{width: '100%'}}
+            >
+                {models.map(model => (
+                    <Select.Option key={model.id} value={model.id}>{model.name}</Select.Option>
+                ))}
+            </Select>
+
+            <Select
+                onChange={handleGenerationChange}
+                value={selectedGeneration || undefined}
+                disabled={!selectedModel}
+                loading={loading.generations}
+                placeholder="Выберите поколение"
+                style={{width: '100%'}}
+            >
+                {generations.map(generation => (
+                    <Select.Option key={generation.id} value={generation.id}>
+                        {`${generation.name} (${generation.year_from}-${generation.year_to})`}
+                    </Select.Option>
+                ))}
+            </Select>
         </div>
     )
 }
