@@ -13,25 +13,28 @@ const CarSelector = () => {
     const [generations, setGenerations] = useState<Generation[]>([]);
 
     const [loading, setLoading] = useState({
-        brands: false,
+        brands: true,
         models: false,
         generations: false,
         carInfo: false
     });
 
     useEffect(() => {
-        fetchBrands();
+        fetchBrands()
+            .then(() =>
+                setLoading((prevState) => ({...prevState, brands: false}))
+            );
     }, []);
 
     const fetchBrands = async () => {
         try {
-            setLoading(prev => ({ ...prev, brands: true }));
+            setLoading(prev => ({...prev, brands: true}));
             const brandsData = await carApi.fetchBrands();
             setBrands(brandsData);
         } catch (error) {
-            throw new Error(error, 'Ошибка при загрузке марок');
+            throw new Error('Ошибка при загрузке марок');
         } finally {
-            setLoading(prev => ({ ...prev, brands: false }));
+            setLoading(prev => ({...prev, brands: false}));
         }
     };
 
@@ -43,13 +46,13 @@ const CarSelector = () => {
         setGenerations([]);
 
         try {
-            setLoading(prev => ({ ...prev, models: true }));
+            setLoading(prev => ({...prev, models: true}));
             const modelsData = await carApi.fetchModels(brandId);
             setModels(modelsData);
         } catch (error) {
-            handleApiError(error, 'Ошибка при загрузке моделей');
+            throw new Error(error, 'Ошибка при загрузке моделей');
         } finally {
-            setLoading(prev => ({ ...prev, models: false }));
+            setLoading(prev => ({...prev, models: false}));
         }
     };
 
@@ -60,13 +63,13 @@ const CarSelector = () => {
 
         if (selectedBrand) {
             try {
-                setLoading(prev => ({ ...prev, generations: true }));
+                setLoading(prev => ({...prev, generations: true}));
                 const generationsData = await carApi.fetchGenerations(selectedBrand, modelId);
                 setGenerations(generationsData);
             } catch (error) {
-                handleApiError(error, 'Ошибка при загрузке поколений');
+                throw new Error(error, 'Ошибка при загрузке поколений');
             } finally {
-                setLoading(prev => ({ ...prev, generations: false }));
+                setLoading(prev => ({...prev, generations: false}));
             }
         }
     };
@@ -91,8 +94,9 @@ const CarSelector = () => {
             <Select
                 showSearch
                 placeholder="Выберите марку"
-                style={{ width: '100%' }}
+                style={{width: '100%'}}
                 loading={loading.brands}
+                disabled={loading.brands}
                 value={selectedBrand || undefined}
                 onChange={handleBrandChange}
                 filterOption={(input, option) =>
@@ -105,7 +109,7 @@ const CarSelector = () => {
                         value={brand.id}
                         data-brand-name={brand.name}
                     >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
                             {brand.logo && (
                                 <img
                                     src={brand.logo}
@@ -129,7 +133,7 @@ const CarSelector = () => {
                 disabled={!selectedBrand}
                 loading={loading.models}
                 placeholder="Выберите модель"
-                style={{ width: '100%' }}
+                style={{width: '100%'}}
             >
                 {models.map(model => (
                     <Select.Option key={model.id} value={model.id}>{model.name}</Select.Option>
@@ -142,7 +146,7 @@ const CarSelector = () => {
                 disabled={!selectedModel}
                 loading={loading.generations}
                 placeholder="Выберите поколение"
-                style={{ width: '100%' }}
+                style={{width: '100%'}}
             >
                 {generations.map(generation => (
                     <Select.Option key={generation.id} value={generation.id}>
