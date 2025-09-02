@@ -1,9 +1,9 @@
 export const API_CONFIG = {
     BASE_URL: 'https://auto-data.api-home.ru/api/public/v1',
-    TOKEN: '0rOp2D0cVZXb4mbf1fPtsnefXIzlr9RclhOWTd2BufWGtLIERmakkK1ncLWJ11sp',
+    TOKEN: 'j8zmlGcAdsNnRn5pzDY3ZMfzDQGqSsE8lUpmv9Tej1GKoVq0cFW2ctD82NA7bmuT',
     IMAGE_BASE_URL: 'https://'
 } as const;
 
-export const headers = {
+export const HEADERS = {
     'api-token': API_CONFIG.TOKEN
 };

@@ -19,6 +19,7 @@ import {FormDataInterface} from "./types";
 import PhoneField from "./components/PhoneField/PhoneField";
 import ModalSteps from "./components/ModalSteps/ModalSteps";
 import WorkList from "./components/WorkList/WorkList";
+import CarSelector from "./components/CarSelector/CarSelector";
 
 
 const timeFormat = "HH:mm";
@@ -173,10 +174,7 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                                     name="car"
                                     layout="vertical"
                                 >
-                                    <Input
-                                        placeholder="BMW 5-er E60"
-                                        onChange={(e) => setFormDataHandler("car", e.target.value)}
-                                    />
+                                    <CarSelector />
                                 </Form.Item>
 
                                 <Form.Item
