@@ -9,7 +9,10 @@ const Schedule = () => {
     const [isOpen, setIsOpen] = useState<boolean>(false);
     const [defaultFormData, setDefaultFormData] = useState<FormDataInterface | undefined>(undefined);
 
-    const closeModal = () => setIsOpen(false);
+    const closeModal = () => {
+        setIsOpen(false);
+        setDefaultFormData(undefined);
+    };
     const openModal = () => setIsOpen(true);
 
     return (
@@ -23,6 +26,7 @@ const Schedule = () => {
             />
 
             <ScheduleModal
+                key={JSON.stringify(defaultFormData)}
                 isOpen={isOpen}
                 closeModal={closeModal}
                 defaultFormData={defaultFormData}

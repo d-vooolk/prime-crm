@@ -64,10 +64,15 @@ const ScheduleModal = ({isOpen, closeModal, defaultFormData}: {
         percent: 100 / 3,
     });
 
-    const records = useRecordsStore((state: any) => state.records);
     const addRecord = useRecordsStore((state: any) => state.addRecord);
 
     const [formData, setFormData] = useState<FormDataInterface>(defaultFormData || emptyFormData);
+
+    useEffect(() => {
+        if (defaultFormData) {
+            setFormData(defaultFormData);
+        }
+    }, [defaultFormData]);
 
     const stepHandler = (direction: string) => {
         setStep(
@@ -99,7 +104,7 @@ const ScheduleModal = ({isOpen, closeModal, defaultFormData}: {
     }
 
     const setFormDataHandler = (key: keyof FormDataInterface, value: any) => {
-        setFormData((prevState: FormDataInterface) => ({...prevState, [key]: value}))
+        setFormData((prevState: FormDataInterface) => ({...prevState, [key]: value}));
     }
 
 
@@ -140,6 +145,7 @@ const ScheduleModal = ({isOpen, closeModal, defaultFormData}: {
                                         layout="vertical"
                                     >
                                         <DatePicker
+                                            value={formData.date ? dayjs(formData.date, 'DD.MM.YYYY') : undefined}
                                             onChange={(e) => setFormDataHandler("date", e.toDate().toLocaleDateString())}
                                         />
                                     </Form.Item>
@@ -150,7 +156,7 @@ const ScheduleModal = ({isOpen, closeModal, defaultFormData}: {
                                         layout="vertical"
                                     >
                                         <TimePicker
-                                            defaultValue={dayjs(defaultTime, timeFormat)}
+                                            value={formData.time ? dayjs(formData.time, timeFormat) : dayjs(defaultTime, timeFormat)}
                                             format={timeFormat}
                                             minuteStep={5}
                                             disabledHours={() => [0, 1, 2, 3, 4, 5, 6, 7, 8, 20, 21, 22, 23]}
@@ -166,6 +172,7 @@ const ScheduleModal = ({isOpen, closeModal, defaultFormData}: {
                                     layout="vertical"
                                 >
                                     <Input
+                                        value={formData.clientName}
                                         placeholder="Волк Дмитрий Иванович"
                                         onChange={(e) => setFormDataHandler("clientName", e.target.value)}
                                     />
@@ -199,6 +206,7 @@ const ScheduleModal = ({isOpen, closeModal, defaultFormData}: {
                                     layout="vertical"
                                 >
                                     <Input
+                                        value={formData.car.year}
                                         placeholder="2020"
                                         onChange={(e) =>
                                             setFormData(
@@ -219,6 +227,7 @@ const ScheduleModal = ({isOpen, closeModal, defaultFormData}: {
                                     layout="vertical"
                                 >
                                     <TextArea
+                                        value={formData.comment}
                                         rows={4}
                                         placeholder="Особенности заказа"
                                         onChange={(e) => setFormDataHandler("comment", e.target.value)}
@@ -247,6 +256,7 @@ const ScheduleModal = ({isOpen, closeModal, defaultFormData}: {
                                     layout="vertical"
                                 >
                                     <Input
+                                        value={formData.carNumber}
                                         placeholder="1111 MB-1"
                                         onChange={(e) => setFormDataHandler("carNumber", e.target.value)}
                                     />
@@ -258,6 +268,7 @@ const ScheduleModal = ({isOpen, closeModal, defaultFormData}: {
                                     layout="vertical"
                                 >
                                     <Input
+                                        value={formData.carMileage}
                                         placeholder="300 000"
                                         onChange={(e) => setFormDataHandler("carMileage", e.target.value)}
                                     />
@@ -269,6 +280,7 @@ const ScheduleModal = ({isOpen, closeModal, defaultFormData}: {
                                     layout="vertical"
                                 >
                                     <Input
+                                        value={formData.serviceman}
                                         placeholder="Волк Дмитрий Иванович"
                                         onChange={(e) => setFormDataHandler("serviceman", e.target.value)}
                                     />
@@ -287,6 +299,7 @@ const ScheduleModal = ({isOpen, closeModal, defaultFormData}: {
                                 layout="vertical"
                             >
                                 <TextArea
+                                    value={formData.wrongDetails}
                                     rows={4}
                                     placeholder="Негерметичность пыльников"
                                     onChange={(e) => setFormDataHandler("wrongDetails", e.target.value)}
@@ -299,6 +312,7 @@ const ScheduleModal = ({isOpen, closeModal, defaultFormData}: {
                                 layout="vertical"
                             >
                                 <TextArea
+                                    value={formData.whyAddPrice}
                                     rows={4}
                                     placeholder="Герметизация корпуса"
                                     onChange={(e) => setFormDataHandler("whyAddPrice", e.target.value)}
@@ -321,6 +335,7 @@ const ScheduleModal = ({isOpen, closeModal, defaultFormData}: {
                                 layout="vertical"
                             >
                                 <Input
+                                    value={formData.warranty}
                                     placeholder="1 год"
                                     onChange={(e) => setFormDataHandler("warranty", e.target.value)}
                                 />
@@ -332,6 +347,7 @@ const ScheduleModal = ({isOpen, closeModal, defaultFormData}: {
                                 layout="vertical"
                             >
                                 <Input
+                                    value={formData.modulesModel}
                                     placeholder="Sanvi F50"
                                     onChange={(e) => setFormDataHandler("modulesModel", e.target.value)}
                                 />

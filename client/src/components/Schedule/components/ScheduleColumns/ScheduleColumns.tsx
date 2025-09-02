@@ -38,7 +38,8 @@ const ScheduleColumns: React.FC<ScheduleColumnsProps> = ({setDefaultFormData, se
     };
 
     const handleCardClick = (record: Record) => {
-        setDefaultFormData(convertRecordToFormData(record));
+        const convertedData = convertRecordToFormData(record);
+        setDefaultFormData(convertedData);
         setIsModalOpen(true);
     }
 

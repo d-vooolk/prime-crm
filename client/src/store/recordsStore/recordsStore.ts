@@ -47,7 +47,7 @@ const testRecords: Record[] = [
         date: "09.09.2025",
         time: "10:00",
         clientName: "Волк Дмитрий Иванович",
-        phone: ["+375 (29) 820-62-46"],
+        phone: ["+375 (29) 820-62-48"],
         car: {
             brand: "BMW",
             model: "E39",
