@@ -3,9 +3,11 @@ import styles from './Schedule.module.scss';
 import ScheduleHeader from "./components/ScheduleHeader";
 import ScheduleColumns from "./components/ScheduleColumns/ScheduleColumns";
 import ScheduleModal from "./components/ScheduleModal/ScheduleModal";
+import {FormDataInterface} from "./components/ScheduleModal/types";
 
 const Schedule = () => {
-    const [isOpen, setIsOpen] = useState(false);
+    const [isOpen, setIsOpen] = useState<boolean>(false);
+    const [defaultFormData, setDefaultFormData] = useState<FormDataInterface | undefined>(undefined);
 
     const closeModal = () => setIsOpen(false);
     const openModal = () => setIsOpen(true);
@@ -15,11 +17,15 @@ const Schedule = () => {
             <ScheduleHeader
                 openModal={openModal}
             />
-            <ScheduleColumns />
+            <ScheduleColumns
+                setDefaultFormData={setDefaultFormData}
+                setIsModalOpen={setIsOpen}
+            />
 
             <ScheduleModal
                 isOpen={isOpen}
                 closeModal={closeModal}
+                defaultFormData={defaultFormData}
             />
         </div>
     )

@@ -9,11 +9,12 @@ import {FormDataInterface} from "../ScheduleModal/types";
 import {FaCalendarAlt, FaCar, FaClock, FaList, FaPhoneAlt} from "react-icons/fa";
 import {IoPeopleSharp} from "react-icons/io5";
 
-const ScheduleCard = ({ status, cardData }: { status?: string; cardData: FormDataInterface }) => {
+const ScheduleCard = ({ status, cardData, ...rest }: { status?: string; cardData: FormDataInterface, onClick?: (e?: any) => void }) => {
     return (
         <Card
             variant="borderless"
             className={styles.cardWrapper}
+            {...rest}
         >
             <div className={styles.cardContent}>
                 <Image

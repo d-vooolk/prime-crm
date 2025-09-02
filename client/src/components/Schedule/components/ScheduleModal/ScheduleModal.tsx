@@ -25,7 +25,38 @@ import CarSelector from "./components/CarSelector/CarSelector";
 const timeFormat = "HH:mm";
 const defaultTime = '09:00';
 
-const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () => void }) => {
+const emptyFormData = {
+    date: "",
+    time: "",
+    clientName: "",
+    phone: [""],
+    car: {
+        brand: "",
+        model: "",
+        generation: "",
+        year: "",
+        generationName: "",
+        otherData: "",
+    },
+    comment: "",
+    works: [],
+    firstPrice: 0,
+    resultPrice: 0,
+    carNumber: "",
+    carMileage: "",
+    serviceman: "",
+    wrongDetails: "",
+    whyAddPrice: "",
+    dateOfWorkDone: "",
+    warranty: "",
+    modulesModel: "",
+};
+
+const ScheduleModal = ({isOpen, closeModal, defaultFormData}: { 
+    isOpen: boolean; 
+    closeModal: () => void; 
+    defaultFormData?: FormDataInterface; 
+}) => {
     const [step, setStep] = useState({
         currentStep: 0,
         minCount: 0,
@@ -36,36 +67,7 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
     const records = useRecordsStore((state: any) => state.records);
     const addRecord = useRecordsStore((state: any) => state.addRecord);
 
-    useEffect(() => {
-        console.log("records", records)
-    }, [records]);
-
-    const [formData, setFormData] = useState<FormDataInterface>({
-        date: "",
-        time: "",
-        clientName: "",
-        phone: [""],
-        car: {
-            brand: "",
-            model: "",
-            generation: "",
-            year: "",
-            generationName: "",
-            otherData: "",
-        },
-        comment: "",
-        works: [],
-        firstPrice: 0,
-        resultPrice: 0,
-        carNumber: "",
-        carMileage: "",
-        serviceman: "",
-        wrongDetails: "",
-        whyAddPrice: "",
-        dateOfWorkDone: "",
-        warranty: "",
-        modulesModel: "",
-    });
+    const [formData, setFormData] = useState<FormDataInterface>(defaultFormData || emptyFormData);
 
     const stepHandler = (direction: string) => {
         setStep(
