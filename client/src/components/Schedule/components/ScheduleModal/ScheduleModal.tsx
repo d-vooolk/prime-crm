@@ -7,53 +7,22 @@ import {
     Form,
     Input,
     Modal,
-    Steps,
     TimePicker,
     ConfigProvider,
-    Typography, Select, List, InputNumber
 } from "antd";
-import {MaskedInput} from 'antd-mask-input';
 import styles from "./ScheduleModal.module.scss";
 import dayjs from "dayjs";
 import TextArea from "antd/es/input/TextArea";
-import {useForm} from "antd/lib/form/Form";
 import {useRecordsStore} from "../../../../store/recordsStore/recordsStore";
-import cn from "classnames";
 import ModalInfoCard from "./ModalInfoCard/ModalInfoCard";
-import {FormDataInterface, JobOption} from "./types";
+import {FormDataInterface} from "./types";
 import PhoneField from "./PhoneField/PhoneField";
+import ModalSteps from "./ModalSteps/ModalSteps";
+import WorkList from "./WorkList/WorkList";
 
 
 const timeFormat = "HH:mm";
 const defaultTime = '09:00';
-
-
-const jobsList: JobOption[] = [
-    {
-        id: 1,
-        label: "Установка билед модулей",
-        value: "Установка билед модулей",
-        price: 1200,
-    },
-    {
-        id: 2,
-        label: "Полировка фар",
-        value: "Полировка фар",
-        price: 100,
-    },
-    {
-        id: 3,
-        label: "Оклейка фар",
-        value: "Оклейка фар",
-        price: 150,
-    },
-    {
-        id: 4,
-        label: "Снятие бампера",
-        value: "Снятие бампера",
-        price: 100,
-    },
-];
 
 const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () => void }) => {
     const [step, setStep] = useState({
@@ -65,11 +34,6 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
 
     const records = useRecordsStore((state: any) => state.records);
     const addRecord = useRecordsStore((state: any) => state.addRecord);
-
-    const [recordForm] = useForm();
-    const [jobsForm] = useForm();
-    const [fullClientDataForm] = useForm();
-    const [finishClientDataForm] = useForm();
 
     const [formData, setFormData] = useState<FormDataInterface>({
         date: "",
@@ -99,7 +63,6 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
     }
 
     const createRecord = (continueWork?: boolean) => {
-        // create record functionality
         console.log("formData", formData);
 
         if (continueWork) {
@@ -120,31 +83,6 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
         // save form data
         closeModal();
     }
-
-    const handleJobsChange = (selectedValues: string[]) => {
-        const selectedJobs = jobsList.filter(job => selectedValues.includes(job.value));
-        const totalPrice = selectedJobs.reduce((sum, job) => sum + job.price, 0);
-
-        setFormData(prev => ({
-            ...prev,
-            works: selectedJobs,
-            firstPrice: totalPrice
-        }));
-    };
-
-    const handlePriceChange = (jobId: number, newPrice: number | null) => {
-        if (newPrice === null) return;
-        const updatedWorks = formData?.works?.map(job =>
-            job.id === jobId ? {...job, price: newPrice} : job
-        );
-        const totalPrice = updatedWorks?.reduce((sum, job) => sum + job.price, 0) || 0;
-
-        setFormData(prev => ({
-            ...prev,
-            works: updatedWorks,
-            firstPrice: totalPrice
-        }));
-    };
 
     const setFormDataHandler = (key: any, value: any) => {
         setFormData((prevState) => ({...prevState, [key]: value}))
@@ -172,29 +110,15 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                     }
                 }}
             >
-                <Steps
-                    className={styles.steps}
-                    current={step.currentStep}
-                    percent={step.percent}
-                    items={[
-                        {
-                            title: 'Запись',
-                        },
-                        {
-                            title: 'Оформление',
-                        },
-                        {
-                            title: 'Закрытие',
-                        },
-                    ]}
-                />
+
+                <ModalSteps step={step}/>
 
                 <Divider/>
 
                 {step.currentStep === 0 && (
                     <div className={styles.modalContent}>
                         <Card className={styles.modalCardContent}>
-                            <Form className={styles.formWrapper} form={recordForm}>
+                            <Form className={styles.formWrapper}>
                                 <div className={styles.dateTimeWrapper}>
                                     <Form.Item
                                         label="Дата записи"
@@ -280,49 +204,11 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                             </Form>
                         </Card>
 
-                        <div className={styles.flexColumn}>
-                            <Card className={styles.modalCardContent}>
-                                <Form className={styles.formWrapper} form={jobsForm}>
-                                    <Form.Item
-                                        label="Перечень работ"
-                                        name="works"
-                                        layout="vertical"
-                                    >
-                                        <Select
-                                            mode="multiple"
-                                            allowClear
-                                            style={{width: '100%'}}
-                                            placeholder="Выбрать услугу"
-                                            onChange={handleJobsChange}
-                                            options={jobsList}
-                                        />
-                                    </Form.Item>
-                                </Form>
-                            </Card>
-
-                            <Card className={styles.modalCardContent}>
-                                <List
-                                    size="large"
-                                    dataSource={formData.works}
-                                    renderItem={
-                                        (item) =>
-                                            <List.Item className={styles.listItemRender}>
-                                                <span>{item?.label}</span>
-                                                <InputNumber
-                                                    controls={false}
-                                                    value={item?.price}
-                                                    onChange={(value) => handlePriceChange(item.id, value)}
-                                                />
-                                            </List.Item>
-                                    }
-                                />
-
-                                <div className={cn(styles.flexRow, styles.listPriceText)}>
-                                    <Typography className={styles.darkText}>ИТОГО:</Typography>
-                                    <Typography className={styles.darkText}>{formData?.firstPrice} руб.</Typography>
-                                </div>
-                            </Card>
-                        </div>
+                        <WorkList
+                            works={formData.works}
+                            firstPrice={formData.firstPrice}
+                            setFormData={setFormData}
+                        />
                     </div>
                 )}
 
@@ -331,7 +217,7 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                         <ModalInfoCard formData={formData}/>
 
                         <Card className={styles.modalCardContent}>
-                            <Form className={styles.formWrapper} form={fullClientDataForm}>
+                            <Form className={styles.formWrapper}>
                                 <Form.Item
                                     label="Рег знак"
                                     name="carNumber"
@@ -362,7 +248,7 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
 
                 {step.currentStep === 2 && (
                     <Card className={styles.modalCardContent}>
-                        <Form className={styles.formWrapper} form={finishClientDataForm}>
+                        <Form className={styles.formWrapper}>
                             <Form.Item
                                 label="Обнаруженные недостатки"
                                 name="wrongDetails"
