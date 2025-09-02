@@ -58,6 +58,14 @@ const CarSelector: React.FC<CarSelectorProps> = ({ car, setFormData }) => {
         setModels([]);
         setGenerations([]);
 
+        setFormData((prev: any) => ({
+            ...prev,
+            car: {
+                ...prev.car,
+                brand: brandId
+            }
+        }));
+
         try {
             setLoading(prev => ({...prev, models: true}));
             const modelsData = await carApi.fetchModels(brandId);
@@ -74,6 +82,14 @@ const CarSelector: React.FC<CarSelectorProps> = ({ car, setFormData }) => {
         setSelectedGeneration(null);
         setGenerations([]);
 
+        setFormData((prev: any) => ({
+            ...prev,
+            car: {
+                ...prev.car,
+                model: modelId
+            }
+        }));
+
         if (selectedBrand) {
             try {
                 setLoading(prev => ({...prev, generations: true}));
@@ -89,12 +105,21 @@ const CarSelector: React.FC<CarSelectorProps> = ({ car, setFormData }) => {
 
     const handleGenerationChange = async (generationId: string) => {
         setSelectedGeneration(generationId);
-        // Update form data with selected car info
+        const generationName = generations.filter((gen) => gen.id === generationId)[0].name;
+
         setFormData((prev: any) => ({
             ...prev,
             car: {
                 ...prev.car,
                 generation: generationId
+            }
+        }));
+
+        setFormData((prev: any) => ({
+            ...prev,
+            car: {
+                ...prev.car,
+                generationName: generationName
             }
         }));
     };

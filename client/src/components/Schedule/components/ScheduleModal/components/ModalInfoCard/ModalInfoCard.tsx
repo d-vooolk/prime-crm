@@ -6,6 +6,7 @@ import {FormDataInterface} from "../../types";
 const emptyData = "-";
 
 const ModalInfoCard = ({formData}: { formData: FormDataInterface }) => {
+    console.log('test', formData);
     return (
         <div className={styles.flexColumn}>
             <Card className={styles.modalCardContent}>
