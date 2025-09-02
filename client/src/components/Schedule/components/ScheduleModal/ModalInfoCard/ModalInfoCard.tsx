@@ -29,7 +29,11 @@ const ModalInfoCard = ({formData}: { formData: FormDataInterface }) => {
 
                     <div>
                         <Typography className={styles.underText}>Телефон</Typography>
-                        <Typography className={styles.dataText}>{formData.phone || emptyData}</Typography>
+                        {
+                            formData.phone.map(
+                                phone => <Typography className={styles.dataText}>{phone}</Typography>
+                            ) || emptyData
+                        }
                     </div>
 
                     <div className={styles.flexRow}>

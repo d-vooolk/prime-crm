@@ -9,7 +9,7 @@ export interface FormDataInterface {
     date: string,
     time: string,
     clientName?: string,
-    phone: string,
+    phone: string[],
     car: string,
     carYear?: string | number,
     comment?: string,

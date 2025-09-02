@@ -12,6 +12,7 @@ import {
     ConfigProvider,
     Typography, Select, List, InputNumber
 } from "antd";
+import {MaskedInput} from 'antd-mask-input';
 import styles from "./ScheduleModal.module.scss";
 import dayjs from "dayjs";
 import TextArea from "antd/es/input/TextArea";
@@ -20,11 +21,11 @@ import {useRecordsStore} from "../../../../store/recordsStore/recordsStore";
 import cn from "classnames";
 import ModalInfoCard from "./ModalInfoCard/ModalInfoCard";
 import {FormDataInterface, JobOption} from "./types";
+import PhoneField from "./PhoneField/PhoneField";
 
 
 const timeFormat = "HH:mm";
 const defaultTime = '09:00';
-
 
 
 const jobsList: JobOption[] = [
@@ -74,7 +75,7 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
         date: "",
         time: "",
         clientName: "",
-        phone: "",
+        phone: [""],
         car: "",
         carYear: "",
         comment: "",
@@ -89,19 +90,6 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
         warranty: "",
         modulesModel: "",
     });
-
-    // useEffect(() => {
-    //     console.log('recordForm', recordForm.getFieldsValue());
-    //     console.log('jobsForm', jobsForm.getFieldsValue());
-    //     console.log('fullClientDataForm', fullClientDataForm.getFieldsValue());
-    //     console.log('finishClientDataForm', finishClientDataForm.getFieldsValue());
-    // }, [
-    //     recordForm.getFieldsValue(),
-    //     jobsForm.getFieldsValue(),
-    //     fullClientDataForm.getFieldsValue(),
-    //     finishClientDataForm.getFieldsValue()
-
-    // ]);
 
     const stepHandler = (direction: string) => {
         setStep(
@@ -133,10 +121,6 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
         closeModal();
     }
 
-    const handleChange = (value: string[]) => {
-        console.log(`selected ${value}`);
-    };
-
     const handleJobsChange = (selectedValues: string[]) => {
         const selectedJobs = jobsList.filter(job => selectedValues.includes(job.value));
         const totalPrice = selectedJobs.reduce((sum, job) => sum + job.price, 0);
@@ -165,6 +149,7 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
     const setFormDataHandler = (key: any, value: any) => {
         setFormData((prevState) => ({...prevState, [key]: value}))
     }
+
 
     return (
         <Modal
@@ -253,9 +238,9 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                                     name="phone"
                                     layout="vertical"
                                 >
-                                    <Input
-                                        placeholder="+375 (29) 999-99-99"
-                                        onChange={(e) => setFormDataHandler("phone", e.target.value)}
+                                    <PhoneField
+                                        formData={formData}
+                                        setFormData={setFormData}
                                     />
                                 </Form.Item>
 
@@ -343,7 +328,7 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
 
                 {step.currentStep === 1 && (
                     <div className={styles.flexRow}>
-                        <ModalInfoCard formData={formData} />
+                        <ModalInfoCard formData={formData}/>
 
                         <Card className={styles.modalCardContent}>
                             <Form className={styles.formWrapper} form={fullClientDataForm}>
