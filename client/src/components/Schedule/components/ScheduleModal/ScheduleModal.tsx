@@ -10,7 +10,7 @@ import {
     Steps,
     TimePicker,
     ConfigProvider,
-    Typography, Select, List
+    Typography, Select, List, InputNumber
 } from "antd";
 import styles from "./ScheduleModal.module.scss";
 import dayjs from "dayjs";
@@ -18,17 +18,14 @@ import TextArea from "antd/es/input/TextArea";
 import {useForm} from "antd/lib/form/Form";
 import {useRecordsStore} from "../../../../store/recordsStore/recordsStore";
 import cn from "classnames";
+import ModalInfoCard from "./ModalInfoCard/ModalInfoCard";
+import {FormDataInterface, JobOption} from "./types";
 
 
 const timeFormat = "HH:mm";
 const defaultTime = '09:00';
 
-interface JobOption {
-    id: number;
-    label: string;
-    value: string;
-    price: number;
-}
+
 
 const jobsList: JobOption[] = [
     {
@@ -73,7 +70,7 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
     const [fullClientDataForm] = useForm();
     const [finishClientDataForm] = useForm();
 
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<FormDataInterface>({
         date: "",
         time: "",
         clientName: "",
@@ -81,7 +78,7 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
         car: "",
         carYear: "",
         comment: "",
-        works: [] as JobOption[],
+        works: [],
         firstPrice: 0,
         carNumber: "",
         carMileage: "",
@@ -115,6 +112,7 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
 
     const createRecord = (continueWork?: boolean) => {
         // create record functionality
+        console.log("formData", formData);
 
         if (continueWork) {
             setStep(
@@ -142,13 +140,31 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
     const handleJobsChange = (selectedValues: string[]) => {
         const selectedJobs = jobsList.filter(job => selectedValues.includes(job.value));
         const totalPrice = selectedJobs.reduce((sum, job) => sum + job.price, 0);
-        
+
         setFormData(prev => ({
             ...prev,
             works: selectedJobs,
             firstPrice: totalPrice
         }));
     };
+
+    const handlePriceChange = (jobId: number, newPrice: number | null) => {
+        if (newPrice === null) return;
+        const updatedWorks = formData?.works?.map(job =>
+            job.id === jobId ? {...job, price: newPrice} : job
+        );
+        const totalPrice = updatedWorks?.reduce((sum, job) => sum + job.price, 0) || 0;
+
+        setFormData(prev => ({
+            ...prev,
+            works: updatedWorks,
+            firstPrice: totalPrice
+        }));
+    };
+
+    const setFormDataHandler = (key: any, value: any) => {
+        setFormData((prevState) => ({...prevState, [key]: value}))
+    }
 
     return (
         <Modal
@@ -200,7 +216,9 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                                         name="date"
                                         layout="vertical"
                                     >
-                                        <DatePicker/>
+                                        <DatePicker
+                                            onChange={(e) => setFormDataHandler("date", e.toDate().toLocaleDateString())}
+                                        />
                                     </Form.Item>
 
                                     <Form.Item
@@ -214,6 +232,7 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                                             minuteStep={5}
                                             disabledHours={() => [0, 1, 2, 3, 4, 5, 6, 7, 8, 20, 21, 22, 23]}
                                             hideDisabledOptions
+                                            onChange={(e) => setFormDataHandler("time", e.toDate().toLocaleTimeString())}
                                         />
                                     </Form.Item>
                                 </div>
@@ -223,7 +242,10 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                                     name="clientName"
                                     layout="vertical"
                                 >
-                                    <Input placeholder="Волк Дмитрий Иванович"/>
+                                    <Input
+                                        placeholder="Волк Дмитрий Иванович"
+                                        onChange={(e) => setFormDataHandler("clientName", e.target.value)}
+                                    />
                                 </Form.Item>
 
                                 <Form.Item
@@ -231,7 +253,10 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                                     name="phone"
                                     layout="vertical"
                                 >
-                                    <Input placeholder="+375 (29) 999-99-99"/>
+                                    <Input
+                                        placeholder="+375 (29) 999-99-99"
+                                        onChange={(e) => setFormDataHandler("phone", e.target.value)}
+                                    />
                                 </Form.Item>
 
                                 <Form.Item
@@ -239,7 +264,10 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                                     name="car"
                                     layout="vertical"
                                 >
-                                    <Input placeholder="BMW 5-er E60"/>
+                                    <Input
+                                        placeholder="BMW 5-er E60"
+                                        onChange={(e) => setFormDataHandler("car", e.target.value)}
+                                    />
                                 </Form.Item>
 
                                 <Form.Item
@@ -247,7 +275,10 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                                     name="carYear"
                                     layout="vertical"
                                 >
-                                    <Input placeholder="2020"/>
+                                    <Input
+                                        placeholder="2020"
+                                        onChange={(e) => setFormDataHandler("carYear", e.target.value)}
+                                    />
                                 </Form.Item>
 
                                 <Form.Item
@@ -255,7 +286,11 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                                     name="comment"
                                     layout="vertical"
                                 >
-                                    <TextArea rows={4} placeholder="Особенности заказа"/>
+                                    <TextArea
+                                        rows={4}
+                                        placeholder="Особенности заказа"
+                                        onChange={(e) => setFormDataHandler("comment", e.target.value)}
+                                    />
                                 </Form.Item>
                             </Form>
                         </Card>
@@ -288,14 +323,18 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                                         (item) =>
                                             <List.Item className={styles.listItemRender}>
                                                 <span>{item?.label}</span>
-                                                <span>{item?.price} руб.</span>
+                                                <InputNumber
+                                                    controls={false}
+                                                    value={item?.price}
+                                                    onChange={(value) => handlePriceChange(item.id, value)}
+                                                />
                                             </List.Item>
                                     }
                                 />
 
                                 <div className={cn(styles.flexRow, styles.listPriceText)}>
                                     <Typography className={styles.darkText}>ИТОГО:</Typography>
-                                    <Typography className={styles.darkText}>{ formData?.firstPrice } руб.</Typography>
+                                    <Typography className={styles.darkText}>{formData?.firstPrice} руб.</Typography>
                                 </div>
                             </Card>
                         </div>
@@ -304,64 +343,7 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
 
                 {step.currentStep === 1 && (
                     <div className={styles.flexRow}>
-                        <div className={styles.flexColumn}>
-                            <Card className={styles.modalCardContent}>
-                                <div className={styles.flexTextContainer}>
-                                    <div className={styles.flexRow}>
-                                        <div>
-                                            <Typography className={styles.underText}>Дата</Typography>
-                                            <Typography className={styles.dataText}>09.09.2025</Typography>
-                                        </div>
-
-                                        <div>
-                                            <Typography className={styles.underText}>Время</Typography>
-                                            <Typography className={styles.dataText}>09:10</Typography>
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <Typography className={styles.underText}>ФИО</Typography>
-                                        <Typography className={styles.dataText}>Волк Дмитрий Иванович</Typography>
-                                    </div>
-
-                                    <div>
-                                        <Typography className={styles.underText}>Телефон</Typography>
-                                        <Typography className={styles.dataText}>+375 (29) 820-62-46</Typography>
-                                    </div>
-
-                                    <div className={styles.flexRow}>
-                                        <div>
-                                            <Typography className={styles.underText}>Автомобиль</Typography>
-                                            <Typography className={styles.dataText}>BMW 5 E39 1999</Typography>
-                                        </div>
-
-                                        <div>
-                                            <Typography className={styles.underText}>Год выпуска</Typography>
-                                            <Typography className={styles.dataText}>1999</Typography>
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <Typography className={styles.underText}>Комментарий</Typography>
-                                        <Typography className={styles.dataText}>По безналу</Typography>
-                                    </div>
-                                </div>
-                            </Card>
-
-                            <Card className={styles.modalCardContent}>
-                                <div>
-                                    <Typography className={styles.underText}>Перечень работ</Typography>
-                                    <Typography className={styles.dataText}>
-                                        С/у бампера 100р <br/>
-                                        установка билед 1200р <br/>
-                                        полировка фар 100р <br/>
-                                        оклейка фар полиуретановой плёнкой 150р <br/>
-                                    </Typography>
-                                    <Typography className={styles.underText}>Итого</Typography>
-                                    <Typography className={styles.dataText}>1550р</Typography>
-                                </div>
-                            </Card>
-                        </div>
+                        <ModalInfoCard formData={formData} />
 
                         <Card className={styles.modalCardContent}>
                             <Form className={styles.formWrapper} form={fullClientDataForm}>
