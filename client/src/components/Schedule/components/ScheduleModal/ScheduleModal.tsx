@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
     Button,
     Card,
@@ -36,13 +36,23 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
     const records = useRecordsStore((state: any) => state.records);
     const addRecord = useRecordsStore((state: any) => state.addRecord);
 
+    useEffect(() => {
+        console.log("records", records)
+    }, [records]);
+
     const [formData, setFormData] = useState<FormDataInterface>({
         date: "",
         time: "",
         clientName: "",
         phone: [""],
-        car: "",
-        carYear: "",
+        car: {
+            brand: "",
+            model: "",
+            generation: "",
+            year: "",
+            generationName: "",
+            otherData: "",
+        },
         comment: "",
         works: [],
         firstPrice: 0,
@@ -64,7 +74,7 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
     }
 
     const createRecord = (continueWork?: boolean) => {
-        console.log("formData", formData);
+        addRecord(formData);
 
         if (continueWork) {
             setStep(
@@ -174,7 +184,10 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                                     name="car"
                                     layout="vertical"
                                 >
-                                    <CarSelector />
+                                    <CarSelector
+                                        car={formData.car}
+                                        setFormData={setFormData}
+                                    />
                                 </Form.Item>
 
                                 <Form.Item
@@ -184,7 +197,16 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                                 >
                                     <Input
                                         placeholder="2020"
-                                        onChange={(e) => setFormDataHandler("carYear", e.target.value)}
+                                        onChange={(e) =>
+                                            setFormData(
+                                                (prevState) => (
+                                                    {
+                                                        ...prevState,
+                                                        car: {
+                                                            ...prevState.car, year: e.target.value
+                                                        }
+                                                    }
+                                                ))}
                                     />
                                 </Form.Item>
 
@@ -221,7 +243,10 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                                     name="carNumber"
                                     layout="vertical"
                                 >
-                                    <Input placeholder="1111 MB-1"/>
+                                    <Input
+                                        placeholder="1111 MB-1"
+                                        onChange={(e) => setFormDataHandler("carNumber", e.target.value)}
+                                    />
                                 </Form.Item>
 
                                 <Form.Item
@@ -229,7 +254,10 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                                     name="carMilleage"
                                     layout="vertical"
                                 >
-                                    <Input placeholder="300 000"/>
+                                    <Input
+                                        placeholder="300 000"
+                                        onChange={(e) => setFormDataHandler("carMilleage", e.target.value)}
+                                    />
                                 </Form.Item>
 
                                 <Form.Item
@@ -237,7 +265,10 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                                     name="serviceMan"
                                     layout="vertical"
                                 >
-                                    <Input placeholder="Волк Дмитрий Иванович"/>
+                                    <Input
+                                        placeholder="Волк Дмитрий Иванович"
+                                        onChange={(e) => setFormDataHandler("serviceMan", e.target.value)}
+                                    />
                                 </Form.Item>
                             </Form>
                         </Card>
@@ -252,7 +283,11 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                                 name="wrongDetails"
                                 layout="vertical"
                             >
-                                <TextArea rows={4} placeholder="Негерметичность пыльников"/>
+                                <TextArea
+                                    rows={4}
+                                    placeholder="Негерметичность пыльников"
+                                    onChange={(e) => setFormDataHandler("wrongDetails", e.target.value)}
+                                />
                             </Form.Item>
 
                             <Form.Item
@@ -260,7 +295,11 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                                 name="whyAddPrice"
                                 layout="vertical"
                             >
-                                <TextArea rows={4} placeholder="Герметизация корпуса"/>
+                                <TextArea
+                                    rows={4}
+                                    placeholder="Герметизация корпуса"
+                                    onChange={(e) => setFormDataHandler("whyAddPrice", e.target.value)}
+                                />
                             </Form.Item>
 
                             <Form.Item
@@ -268,7 +307,9 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                                 name="dateOfWorkDone"
                                 layout="vertical"
                             >
-                                <Input placeholder="30.04.1998"/>
+                                <DatePicker
+                                    onChange={(e) => setFormDataHandler("dateOfWorkDone", e.toDate().toLocaleDateString())}
+                                />
                             </Form.Item>
 
                             <Form.Item
@@ -276,7 +317,10 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                                 name="warranty"
                                 layout="vertical"
                             >
-                                <Input placeholder="1 год"/>
+                                <Input
+                                    placeholder="1 год"
+                                    onChange={(e) => setFormDataHandler("warranty", e.target.value)}
+                                />
                             </Form.Item>
 
                             <Form.Item
@@ -284,7 +328,10 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
                                 name="modulesModel"
                                 layout="vertical"
                             >
-                                <Input placeholder="Sanvi F50"/>
+                                <Input
+                                    placeholder="Sanvi F50"
+                                    onChange={(e) => setFormDataHandler("modulesModel", e.target.value)}
+                                />
                             </Form.Item>
                         </Form>
                     </Card>

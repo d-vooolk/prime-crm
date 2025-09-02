@@ -1,0 +1,30 @@
+@use "../../../../../../styles/theme" as theme;
+
+.carSelectWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.carSelectFirstRow {
+  display: flex;
+  gap: 10px;
+}
+
+.carSelectSecondRow {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.wikiTextWrapper {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.underText {
+  color: theme.$text-dark-half-visible;
+  font-size: 12px;
+  cursor: pointer;
+  position: relative;
+}

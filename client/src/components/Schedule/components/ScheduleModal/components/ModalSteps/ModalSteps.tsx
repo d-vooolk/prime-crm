@@ -2,7 +2,7 @@ import React from 'react';
 import styles from "../../ScheduleModal.module.scss";
 import {Steps} from "antd";
 
-const ModalSteps = ({ step }: { step: number }) => {
+const ModalSteps = ({ step }: { step: { currentStep: number; percent: number; } }) => {
     return (
         <Steps
             className={styles.steps}

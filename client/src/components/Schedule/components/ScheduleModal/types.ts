@@ -5,13 +5,21 @@ export interface JobOption {
     price: number;
 }
 
+export interface Car {
+    brand: string;
+    model: string;
+    generation: string;
+    year: number | string;
+    generationName: string;
+    otherData?: string;
+}
+
 export interface FormDataInterface {
     date: string,
     time: string,
     clientName?: string,
     phone: string[],
-    car: string,
-    carYear?: string | number,
+    car: Car,
     comment?: string,
     works?: JobOption[],
     firstPrice: number,

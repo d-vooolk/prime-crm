@@ -39,12 +39,18 @@ const ModalInfoCard = ({formData}: { formData: FormDataInterface }) => {
                     <div className={styles.flexRow}>
                         <div>
                             <Typography className={styles.underText}>Автомобиль</Typography>
-                            <Typography className={styles.dataText}>{formData.car || emptyData}</Typography>
+                            <Typography className={styles.dataText}>
+                                {
+                                    formData.car.brand
+                                        ? `${formData.car.brand} ${formData.car.model} ${formData.car.generationName}`
+                                        : formData.car.otherData
+                                }
+                            </Typography>
                         </div>
 
                         <div>
                             <Typography className={styles.underText}>Год выпуска</Typography>
-                            <Typography className={styles.dataText}>{formData.carYear || emptyData}</Typography>
+                            <Typography className={styles.dataText}>{formData.car.year || emptyData}</Typography>
                         </div>
                     </div>
 
