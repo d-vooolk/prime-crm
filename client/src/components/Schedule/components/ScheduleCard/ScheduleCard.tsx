@@ -2,15 +2,14 @@ import React from "react";
 import styles from "./ScheduleCard.module.scss";
 import {Card, Divider, Image, Tag, Typography} from "antd";
 import {
-    CarOutlined,
     CheckCircleOutlined,
-    FieldTimeOutlined,
     SyncOutlined,
 } from "@ant-design/icons";
-import {FcBusinessman, FcCalendar, FcCellPhone} from "react-icons/fc";
-import {HiOutlinePencilSquare} from "react-icons/hi2";
+import {FormDataInterface} from "../ScheduleModal/types";
+import {FaCalendarAlt, FaCar, FaClock, FaList, FaPhoneAlt} from "react-icons/fa";
+import {IoPeopleSharp} from "react-icons/io5";
 
-const ScheduleCard = ({ status }: { status?: string }) => {
+const ScheduleCard = ({ status, cardData }: { status?: string; cardData: FormDataInterface }) => {
     return (
         <Card
             variant="borderless"
@@ -23,8 +22,15 @@ const ScheduleCard = ({ status }: { status?: string }) => {
                     src="https://avatars.mds.yandex.net/get-verba/1535139/2a0000018f72dd19977950ae68175db58495/auto_main"
                 />
                 <div className={styles.cardTextContent}>
-                    <Typography className={styles.cardText}><CarOutlined /> BMW 5-er G30 2019-2023</Typography>
+                    <Typography className={styles.cardText}>
+                        <FaCar />
+                        <div>
+                            { cardData.car.brand } { cardData.car.model } { cardData.car.generationName } {cardData.car.year}
+                        </div>
+                    </Typography>
+
                     <Divider className={styles.divider} />
+
                     {
                         status === "success" && (
                             <Tag icon={<CheckCircleOutlined />} color="success">
@@ -39,13 +45,34 @@ const ScheduleCard = ({ status }: { status?: string }) => {
                             </Tag>
                         )
                     }
+
                     <Typography className={styles.cardText}>
-                        <FcCalendar /> 19.09.2025
-                        <FieldTimeOutlined /> 18:00
+                        <div className={styles.cardText}>
+                            <FaCalendarAlt/>
+                            <div>{cardData.date}</div>
+                        </div>
+                        <div className={styles.cardText}>
+                            <FaClock/>
+                            <div>{cardData.time}</div>
+                        </div>
                     </Typography>
-                    <Typography className={styles.cardText}><FcBusinessman /> Константин</Typography>
-                    <Typography className={styles.cardText}><FcCellPhone />+375 (29) 820-62-46</Typography>
-                    <Typography className={styles.cardText}><HiOutlinePencilSquare /> Установка Bi-Led модулей, полировка фар, оклейка фар, новые стёкла</Typography>
+
+                    <Typography className={styles.cardText}>
+                        <IoPeopleSharp />
+                        <div>{cardData.clientName}</div>
+                    </Typography>
+
+                    <Typography className={styles.cardText}>
+                        <FaPhoneAlt />
+                        <div>{cardData.phone[0]}</div>
+                    </Typography>
+
+                    <Typography className={styles.cardTextWorks}>
+                        <FaList />
+                        <div>
+                            { cardData.works?.map((work) => <div>{ work.label }</div>) }
+                        </div>
+                    </Typography>
                 </div>
             </div>
         </Card>

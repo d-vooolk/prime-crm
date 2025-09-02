@@ -56,6 +56,7 @@ const ScheduleModal = ({isOpen, closeModal}: { isOpen: boolean, closeModal: () =
         comment: "",
         works: [],
         firstPrice: 0,
+        resultPrice: 0,
         carNumber: "",
         carMileage: "",
         serviceman: "",

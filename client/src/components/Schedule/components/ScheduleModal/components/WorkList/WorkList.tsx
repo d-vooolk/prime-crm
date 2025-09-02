@@ -4,6 +4,12 @@ import {Card, Form, InputNumber, List, Select, Typography} from "antd";
 import cn from "classnames";
 import {JobOption} from "../../types";
 
+interface WorkListProps {
+    works: JobOption[];
+    firstPrice: number;
+    setFormData: React.Dispatch<React.SetStateAction<any>>;
+}
+
 const jobsList: JobOption[] = [
     {
         id: 1,
@@ -31,12 +37,12 @@ const jobsList: JobOption[] = [
     },
 ];
 
-const WorkList = ({ works, firstPrice, setFormData }) => {
+const WorkList: React.FC<WorkListProps> = ({ works, firstPrice, setFormData }) => {
     const handleJobsChange = (selectedValues: string[]) => {
         const selectedJobs = jobsList.filter(job => selectedValues.includes(job.value));
-        const totalPrice = selectedJobs.reduce((sum, job) => sum + job.price, 0);
+        const totalPrice = selectedJobs.reduce((sum: number, job: JobOption) => sum + job.price, 0);
 
-        setFormData(prev => ({
+        setFormData((prev: any) => ({
             ...prev,
             works: selectedJobs,
             firstPrice: totalPrice
@@ -45,12 +51,12 @@ const WorkList = ({ works, firstPrice, setFormData }) => {
 
     const handlePriceChange = (jobId: number, newPrice: number | null) => {
         if (newPrice === null) return;
-        const updatedWorks = works?.map(job =>
+        const updatedWorks = works?.map((job: JobOption) =>
             job.id === jobId ? {...job, price: newPrice} : job
         );
-        const totalPrice = updatedWorks?.reduce((sum, job) => sum + job.price, 0) || 0;
+        const totalPrice = updatedWorks?.reduce((sum: number, job: JobOption) => sum + job.price, 0) || 0;
 
-        setFormData(prev => ({
+        setFormData((prev: any) => ({
             ...prev,
             works: updatedWorks,
             firstPrice: totalPrice
@@ -83,7 +89,7 @@ const WorkList = ({ works, firstPrice, setFormData }) => {
                     size="large"
                     dataSource={works}
                     renderItem={
-                        (item) =>
+                        (item: JobOption) =>
                             <List.Item className={styles.listItemRender}>
                                 <span>{item?.label}</span>
                                 <InputNumber

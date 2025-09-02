@@ -3,48 +3,56 @@ export interface Record {
     id: number;
     date: string;
     time: string;
-    name: string;
-    phone: string;
-    carMark: string;
-    carModel: string;
-    carGeneration: string;
-    carYear: string;
+    clientName: string;
+    phone: string[];
+    car: {
+        brand: string,
+        model: string,
+        generation: string,
+        year: string,
+        generationName: string,
+        otherData: string,
+    },
     comment: string;
-    jobs: string;
+    works: any[];
     carNumber: string;
     carMileage: string;
-    firstPrice: string;
-    serviceMan: string;
-    discoveredFlaws: string;
-    priceJustification: string;
-    resultPrice: string;
-    finishDate: string;
+    firstPrice: string | number;
+    serviceman: string;
+    wrongDetails: string;
+    whyAddPrice: string;
+    resultPrice: string | number;
+    dateOfWorkDone: string;
     warranty: string;
-    moduleModel: string;
+    modulesModel: string;
 }
 
 // Интерфейс для данных новой записи
 export interface NewRecordData {
     date: string;
     time: string;
-    name: string;
-    phone: string;
-    carMark: string;
-    carModel: string;
-    carGeneration: string;
-    carYear: string;
+    clientName: string;
+    phone: string[];
+    car: {
+        brand: string,
+        model: string,
+        generation: string,
+        year: string,
+        generationName: string,
+        otherData: string,
+    },
     comment: string;
-    jobs: string;
+    works: any[];
     carNumber: string;
     carMileage: string;
-    firstPrice: string;
-    serviceMan: string;
-    discoveredFlaws: string;
-    priceJustification: string;
-    resultPrice: string;
-    finishDate: string;
+    firstPrice: string | number;
+    serviceman: string;
+    wrongDetails: string;
+    whyAddPrice: string;
+    resultPrice: string | number;
+    dateOfWorkDone: string;
     warranty: string;
-    moduleModel: string;
+    modulesModel: string;
 }
 
 // Интерфейс для store
