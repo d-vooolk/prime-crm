@@ -292,3 +292,13 @@
   font-size: 16px;
 }
 
+.formText {
+  color: theme.$text-dark-color-1;
+}
+
+.twoFieldsRow {
+  display: flex;
+  flex-direction: row;
+  gap: 15px;
+}
+

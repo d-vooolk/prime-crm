@@ -8,6 +8,7 @@ interface WorkListProps {
     works: JobOption[];
     firstPrice: number;
     setFormData: React.Dispatch<React.SetStateAction<any>>;
+    modalMode: string;
 }
 
 const jobsList: JobOption[] = [

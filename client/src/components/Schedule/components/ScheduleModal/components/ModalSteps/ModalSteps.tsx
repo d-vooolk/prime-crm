@@ -13,9 +13,6 @@ const ModalSteps = ({ step }: { step: { currentStep: number; percent: number; } 
                     title: 'Запись',
                 },
                 {
-                    title: 'Оформление',
-                },
-                {
                     title: 'Закрытие',
                 },
             ]}

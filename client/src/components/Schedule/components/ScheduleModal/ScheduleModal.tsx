@@ -8,13 +8,12 @@ import {
     Input,
     Modal,
     TimePicker,
-    ConfigProvider,
+    ConfigProvider, Typography, Select,
 } from "antd";
 import styles from "./ScheduleModal.module.scss";
 import dayjs from "dayjs";
 import TextArea from "antd/es/input/TextArea";
 import {useRecordsStore} from "../../../../store/recordsStore/recordsStore";
-import ModalInfoCard from "./components/ModalInfoCard/ModalInfoCard";
 import {FormDataInterface} from "./types";
 import PhoneField from "./components/PhoneField/PhoneField";
 import ModalSteps from "./components/ModalSteps/ModalSteps";
@@ -52,6 +51,22 @@ const emptyFormData = {
     modulesModel: "",
 };
 
+const servicemanOptions = [
+    {
+        label: "Волк Дмитрий Иванович",
+        value: "Волк Дмитрий Иванович",
+        key: 0,
+    },
+    {
+        label: "Петкевич Артём Леонидович",
+        value: "Петкевич Артём Леонидович",
+        key: 1,
+    },
+];
+
+export const EDIT = "edit";
+export const CREATE = "create";
+
 const ScheduleModal = ({isOpen, closeModal, defaultFormData}: {
     isOpen: boolean;
     closeModal: () => void;
@@ -62,7 +77,9 @@ const ScheduleModal = ({isOpen, closeModal, defaultFormData}: {
         minCount: 0,
         maxCount: 2,
         percent: 100 / 3,
+        closedStep: 0,
     });
+    const [modalMode, setModalMode] = useState<string>(Boolean(defaultFormData?.car?.brand) ? EDIT : CREATE);
 
     const addRecord = useRecordsStore((state: any) => state.addRecord);
 
@@ -107,6 +124,7 @@ const ScheduleModal = ({isOpen, closeModal, defaultFormData}: {
         setFormData((prevState: FormDataInterface) => ({...prevState, [key]: value}));
     }
 
+    // setFormDataHandler("serviceman", servicemanOptions[0]);
 
     return (
         <Modal
@@ -144,10 +162,18 @@ const ScheduleModal = ({isOpen, closeModal, defaultFormData}: {
                                         name="date"
                                         layout="vertical"
                                     >
-                                        <DatePicker
-                                            value={formData.date ? dayjs(formData.date, 'DD.MM.YYYY') : undefined}
-                                            onChange={(e) => setFormDataHandler("date", e.toDate().toLocaleDateString())}
-                                        />
+                                        {
+                                            modalMode === EDIT
+                                                ? (
+                                                    <Typography className={styles.formText}>{formData?.date}</Typography>
+                                                )
+                                                : (
+                                                    <DatePicker
+                                                        value={formData.date ? dayjs(formData.date, 'DD.MM.YYYY') : undefined}
+                                                        onChange={(e) => setFormDataHandler("date", e.toDate().toLocaleDateString())}
+                                                    />
+                                                )
+                                        }
                                     </Form.Item>
 
                                     <Form.Item
@@ -155,14 +181,22 @@ const ScheduleModal = ({isOpen, closeModal, defaultFormData}: {
                                         name="time"
                                         layout="vertical"
                                     >
-                                        <TimePicker
-                                            value={formData.time ? dayjs(formData.time, timeFormat) : dayjs(defaultTime, timeFormat)}
-                                            format={timeFormat}
-                                            minuteStep={5}
-                                            disabledHours={() => [0, 1, 2, 3, 4, 5, 6, 7, 8, 20, 21, 22, 23]}
-                                            hideDisabledOptions
-                                            onChange={(e) => setFormDataHandler("time", e.toDate().toLocaleTimeString())}
-                                        />
+                                        {
+                                            modalMode === EDIT
+                                                ? (
+                                                    <Typography className={styles.formText}>{formData?.time}</Typography>
+                                                )
+                                                : (
+                                                    <TimePicker
+                                                        value={formData.time ? dayjs(formData.time, timeFormat) : dayjs(defaultTime, timeFormat)}
+                                                        format={timeFormat}
+                                                        minuteStep={5}
+                                                        disabledHours={() => [0, 1, 2, 3, 4, 5, 6, 7, 8, 20, 21, 22, 23]}
+                                                        hideDisabledOptions
+                                                        onChange={(e) => setFormDataHandler("time", e.toDate().toLocaleTimeString())}
+                                                    />
+                                                )
+                                        }
                                     </Form.Item>
                                 </div>
 
@@ -172,11 +206,18 @@ const ScheduleModal = ({isOpen, closeModal, defaultFormData}: {
                                     layout="vertical"
                                     initialValue={formData.clientName}
                                 >
-                                    <Input
-                                        value={formData.clientName}
-                                        placeholder="Волк Дмитрий Иванович"
-                                        onChange={(e) => setFormDataHandler("clientName", e.target.value)}
-                                    />
+                                    {
+                                        modalMode === EDIT
+                                            ? (
+                                                <Typography className={styles.formText}>{formData.clientName}</Typography>)
+                                            : (
+                                                <Input
+                                                    value={formData.clientName}
+                                                    placeholder="Волк Дмитрий Иванович"
+                                                    onChange={(e) => setFormDataHandler("clientName", e.target.value)}
+                                                />
+                                            )
+                                    }
                                 </Form.Item>
 
                                 <Form.Item
@@ -184,10 +225,16 @@ const ScheduleModal = ({isOpen, closeModal, defaultFormData}: {
                                     name="phone"
                                     layout="vertical"
                                 >
-                                    <PhoneField
-                                        formData={formData}
-                                        setFormData={setFormData}
-                                    />
+                                    {
+                                        modalMode === EDIT
+                                            ? (<Typography className={styles.formText}>{formData.phone}</Typography>)
+                                            : (
+                                                <PhoneField
+                                                    formData={formData}
+                                                    setFormData={setFormData}
+                                                />
+                                            )
+                                    }
                                 </Form.Item>
 
                                 <Form.Item
@@ -198,6 +245,7 @@ const ScheduleModal = ({isOpen, closeModal, defaultFormData}: {
                                     <CarSelector
                                         car={formData.car}
                                         setFormData={setFormData}
+                                        modalMode={modalMode}
                                     />
                                 </Form.Item>
 
@@ -207,20 +255,28 @@ const ScheduleModal = ({isOpen, closeModal, defaultFormData}: {
                                     layout="vertical"
                                     initialValue={formData.car.year}
                                 >
-                                    <Input
-                                        value={formData.car.year}
-                                        placeholder="2020"
-                                        onChange={(e) =>
-                                            setFormData(
-                                                (prevState) => (
-                                                    {
-                                                        ...prevState,
-                                                        car: {
-                                                            ...prevState.car, year: e.target.value
-                                                        }
-                                                    }
-                                                ))}
-                                    />
+                                    {
+                                        modalMode === EDIT
+                                            ? (
+                                                <Typography className={styles.formText}>{formData?.car?.year}</Typography>
+                                            )
+                                            : (
+                                                <Input
+                                                    value={formData.car.year}
+                                                    placeholder="2020"
+                                                    onChange={(e) =>
+                                                        setFormData(
+                                                            (prevState) => (
+                                                                {
+                                                                    ...prevState,
+                                                                    car: {
+                                                                        ...prevState.car, year: e.target.value
+                                                                    }
+                                                                }
+                                                            ))}
+                                                />
+                                            )
+                                    }
                                 </Form.Item>
 
                                 <Form.Item
@@ -229,11 +285,55 @@ const ScheduleModal = ({isOpen, closeModal, defaultFormData}: {
                                     layout="vertical"
                                     initialValue={formData.comment}
                                 >
-                                    <TextArea
-                                        value={formData.comment}
-                                        rows={4}
-                                        placeholder="Особенности заказа"
-                                        onChange={(e) => setFormDataHandler("comment", e.target.value)}
+                                    {
+                                        modalMode === EDIT
+                                            ? (<Typography className={styles.formText}>{formData.comment}</Typography>)
+                                            : (
+                                                <TextArea
+                                                    value={formData.comment}
+                                                    rows={2}
+                                                    placeholder="Особенности заказа"
+                                                    onChange={(e) => setFormDataHandler("comment", e.target.value)}
+                                                />
+                                            )
+                                    }
+                                </Form.Item>
+
+                                <div className={styles.twoFieldsRow}>
+                                    <Form.Item
+                                        label="Рег знак"
+                                        name="carNumber"
+                                        layout="vertical"
+                                    >
+                                        <Input
+                                            value={formData.carNumber}
+                                            placeholder="1111 MB-1"
+                                            onChange={(e) => setFormDataHandler("carNumber", e.target.value)}
+                                        />
+                                    </Form.Item>
+
+                                    <Form.Item
+                                        label="Пробег"
+                                        name="carMilleage"
+                                        layout="vertical"
+                                    >
+                                        <Input
+                                            value={formData.carMileage}
+                                            placeholder="300 000"
+                                            onChange={(e) => setFormDataHandler("carMileage", e.target.value)}
+                                        />
+                                    </Form.Item>
+                                </div>
+
+                                <Form.Item
+                                    label="Мастер-приёмщик"
+                                    name="serviceMan"
+                                    layout="vertical"
+                                >
+                                    <Select
+                                        options={servicemanOptions}
+                                        defaultValue={servicemanOptions[0]}
+                                        onChange={(val) => setFormDataHandler("serviceman", val)}
                                     />
                                 </Form.Item>
                             </Form>
@@ -243,57 +343,12 @@ const ScheduleModal = ({isOpen, closeModal, defaultFormData}: {
                             works={formData.works}
                             firstPrice={formData.firstPrice}
                             setFormData={setFormData}
+                            modalMode={modalMode}
                         />
                     </div>
                 )}
 
                 {step.currentStep === 1 && (
-                    <div className={styles.flexRow}>
-                        <ModalInfoCard formData={formData}/>
-
-                        <Card className={styles.modalCardContent}>
-                            <Form className={styles.formWrapper}>
-                                <Form.Item
-                                    label="Рег знак"
-                                    name="carNumber"
-                                    layout="vertical"
-                                >
-                                    <Input
-                                        value={formData.carNumber}
-                                        placeholder="1111 MB-1"
-                                        onChange={(e) => setFormDataHandler("carNumber", e.target.value)}
-                                    />
-                                </Form.Item>
-
-                                <Form.Item
-                                    label="Пробег"
-                                    name="carMilleage"
-                                    layout="vertical"
-                                >
-                                    <Input
-                                        value={formData.carMileage}
-                                        placeholder="300 000"
-                                        onChange={(e) => setFormDataHandler("carMileage", e.target.value)}
-                                    />
-                                </Form.Item>
-
-                                <Form.Item
-                                    label="Мастер-приёмщик"
-                                    name="serviceMan"
-                                    layout="vertical"
-                                >
-                                    <Input
-                                        value={formData.serviceman}
-                                        placeholder="Волк Дмитрий Иванович"
-                                        onChange={(e) => setFormDataHandler("serviceman", e.target.value)}
-                                    />
-                                </Form.Item>
-                            </Form>
-                        </Card>
-                    </div>
-                )}
-
-                {step.currentStep === 2 && (
                     <Card className={styles.modalCardContent}>
                         <Form className={styles.formWrapper}>
                             <Form.Item
@@ -371,7 +426,7 @@ const ScheduleModal = ({isOpen, closeModal, defaultFormData}: {
                         step.currentStep === 0 && (
                             <div className={styles.navButtonWrapper}>
                                 <Button onClick={() => createRecord(false)}>
-                                    Создать запись
+                                    Сохранить
                                 </Button>
                             </div>
                         )

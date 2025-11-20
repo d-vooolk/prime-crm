@@ -1,16 +1,18 @@
 import React, {useEffect, useState} from 'react'
-import {Input, Select} from "antd";
+import {Input, Select, Typography} from "antd";
 import {Brand, Generation, Model} from "../../../../../../api/carsApi/types";
 import {carApi} from "../../../../../../api/carsApi/cars.api";
 import styles from "./CarSelector.module.scss";
 import {Car} from "../../types";
+import {CREATE, EDIT} from "../../ScheduleModal";
 
 interface CarSelectorProps {
     car: Car;
     setFormData: React.Dispatch<React.SetStateAction<any>>;
+    modalMode: string;
 }
 
-const CarSelector: React.FC<CarSelectorProps> = ({ car, setFormData }) => {
+const CarSelector: React.FC<CarSelectorProps> = ({car, setFormData, modalMode}) => {
     const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
     const [selectedModel, setSelectedModel] = useState<string | null>(null);
     const [selectedGeneration, setSelectedGeneration] = useState<string | null>(null);
@@ -126,76 +128,105 @@ const CarSelector: React.FC<CarSelectorProps> = ({ car, setFormData }) => {
 
     return (
         <div className={styles.carSelectWrapper}>
-            <div className={styles.carSelectFirstRow}>
-                <Select
-                    showSearch
-                    placeholder="Выберите марку"
-                    style={{width: '100%'}}
-                    loading={loading.brands}
-                    disabled={loading.brands}
-                    value={selectedBrand || undefined}
-                    onChange={handleBrandChange}
-                    filterOption={(input, option) =>
-                        option?.['data-brand-name']?.toLowerCase().includes(input.toLowerCase())
-                    }
-                >
-                    {brands.map((brand) => (
-                        <Select.Option
-                            key={brand.id}
-                            value={brand.id}
-                            data-brand-name={brand.name}
+            {
+                modalMode === EDIT
+                    ? (
+                        <div className={styles.carSelectFirstRow}>
+                            <Typography className={styles.formText}>{car?.brand}</Typography>
+                            <Typography className={styles.formText}>{car?.model}</Typography>
+                        </div>
+                    )
+                    : (
+                        <div className={styles.carSelectFirstRow}>
+                            <Select
+                                showSearch
+                                placeholder="Выберите марку"
+                                style={{width: '100%'}}
+                                loading={loading.brands}
+                                disabled={loading.brands}
+                                value={selectedBrand || undefined}
+                                onChange={handleBrandChange}
+                                filterOption={(input, option) =>
+                                    option?.['data-brand-name']?.toLowerCase().includes(input.toLowerCase())
+                                }
+                            >
+                                {brands.map((brand) => (
+                                    <Select.Option
+                                        key={brand.id}
+                                        value={brand.id}
+                                        data-brand-name={brand.name}
+                                    >
+                                        <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                                            {brand.logo && (
+                                                <img
+                                                    src={brand.logo}
+                                                    alt={brand.name}
+                                                    style={{
+                                                        width: '24px',
+                                                        height: '24px',
+                                                        objectFit: 'contain',
+                                                    }}
+                                                />
+                                            )}
+                                            <span>{brand.name}</span>
+                                        </div>
+                                    </Select.Option>
+                                ))}
+                            </Select>
+
+                            <Select
+                                onChange={handleModelChange}
+                                value={selectedModel || undefined}
+                                disabled={!selectedBrand}
+                                loading={loading.models}
+                                placeholder="Выберите модель"
+                                style={{width: '100%'}}
+                            >
+                                {models.map(model => (
+                                    <Select.Option key={model.id} value={model.id}>{model.name}</Select.Option>
+                                ))}
+                            </Select>
+                        </div>
+                    )
+            }
+
+            {
+                modalMode === EDIT
+                    ? (
+                        <Typography className={styles.formText}>{car?.generationName}</Typography>
+                    )
+                    : (
+                        <Select
+                            onChange={handleGenerationChange}
+                            value={selectedGeneration || undefined}
+                            disabled={!selectedModel}
+                            loading={loading.generations}
+                            placeholder="Выберите поколение"
+                            style={{width: '100%'}}
                         >
-                            <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-                                {brand.logo && (
-                                    <img
-                                        src={brand.logo}
-                                        alt={brand.name}
-                                        style={{
-                                            width: '24px',
-                                            height: '24px',
-                                            objectFit: 'contain',
-                                        }}
-                                    />
-                                )}
-                                <span>{brand.name}</span>
-                            </div>
-                        </Select.Option>
-                    ))}
-                </Select>
+                            {generations.map(generation => (
+                                <Select.Option key={generation.id} value={generation.id}>
+                                    {`${generation.name} (${generation.year_from}-${generation.year_to})`}
+                                </Select.Option>
+                            ))}
+                        </Select>
+                    )
+            }
 
-                <Select
-                    onChange={handleModelChange}
-                    value={selectedModel || undefined}
-                    disabled={!selectedBrand}
-                    loading={loading.models}
-                    placeholder="Выберите модель"
-                    style={{width: '100%'}}
-                >
-                    {models.map(model => (
-                        <Select.Option key={model.id} value={model.id}>{model.name}</Select.Option>
-                    ))}
-                </Select>
-            </div>
 
-            <Select
-                onChange={handleGenerationChange}
-                value={selectedGeneration || undefined}
-                disabled={!selectedModel}
-                loading={loading.generations}
-                placeholder="Выберите поколение"
-                style={{width: '100%'}}
-            >
-                {generations.map(generation => (
-                    <Select.Option key={generation.id} value={generation.id}>
-                        {`${generation.name} (${generation.year_from}-${generation.year_to})`}
-                    </Select.Option>
-                ))}
-            </Select>
-
-            <div className={styles.wikiTextWrapper}>
-                {!isOpenOtherField && <div className={styles.underText} onClick={() => setIsOpenOtherField(true)}>нет подходящего варианта</div>}
-                {isOpenOtherField && <div className={styles.underText} onClick={() => setIsOpenOtherField(false)}>скрыть дополнительное поле</div>}
-            </div>
+            {
+                modalMode === CREATE && (
+                    <div className={styles.wikiTextWrapper}>
+                        {!isOpenOtherField &&
+                            <div className={styles.underText} onClick={() => setIsOpenOtherField(true)}>нет подходящего
+                                варианта</div>}
+                        {isOpenOtherField &&
+                            <div className={styles.underText} onClick={() => setIsOpenOtherField(false)}>скрыть
+                                дополнительное
+                                поле</div>}
+                    </div>
+                )
+            }
 
             {
                 isOpenOtherField && (
