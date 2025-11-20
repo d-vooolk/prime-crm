@@ -71,6 +71,7 @@ const WorkList: React.FC<WorkListProps> = ({ works, firstPrice, setFormData }) =
                         label="Перечень работ"
                         name="works"
                         layout="vertical"
+                        initialValue={works}
                     >
                         <Select
                             mode="multiple"

@@ -52,10 +52,10 @@ const emptyFormData = {
     modulesModel: "",
 };
 
-const ScheduleModal = ({isOpen, closeModal, defaultFormData}: { 
-    isOpen: boolean; 
-    closeModal: () => void; 
-    defaultFormData?: FormDataInterface; 
+const ScheduleModal = ({isOpen, closeModal, defaultFormData}: {
+    isOpen: boolean;
+    closeModal: () => void;
+    defaultFormData?: FormDataInterface;
 }) => {
     const [step, setStep] = useState({
         currentStep: 0,
@@ -170,6 +170,7 @@ const ScheduleModal = ({isOpen, closeModal, defaultFormData}: {
                                     label="ФИО"
                                     name="clientName"
                                     layout="vertical"
+                                    initialValue={formData.clientName}
                                 >
                                     <Input
                                         value={formData.clientName}
@@ -204,6 +205,7 @@ const ScheduleModal = ({isOpen, closeModal, defaultFormData}: {
                                     label="Год выпуска"
                                     name="carYear"
                                     layout="vertical"
+                                    initialValue={formData.car.year}
                                 >
                                     <Input
                                         value={formData.car.year}
@@ -225,6 +227,7 @@ const ScheduleModal = ({isOpen, closeModal, defaultFormData}: {
                                     label="Комментарий"
                                     name="comment"
                                     layout="vertical"
+                                    initialValue={formData.comment}
                                 >
                                     <TextArea
                                         value={formData.comment}
@@ -367,9 +370,6 @@ const ScheduleModal = ({isOpen, closeModal, defaultFormData}: {
                     {
                         step.currentStep === 0 && (
                             <div className={styles.navButtonWrapper}>
-                                <Button onClick={() => createRecord(true)}>
-                                    Создать запись и продолжить
-                                </Button>
                                 <Button onClick={() => createRecord(false)}>
                                     Создать запись
                                 </Button>
@@ -398,6 +398,29 @@ const ScheduleModal = ({isOpen, closeModal, defaultFormData}: {
                                 <Button>Печать акта</Button>
                             </div>
                         )
+                    }
+
+                    {step.currentStep > 0 && (
+                        <div className={styles.navButtonWrapper}>
+                            <Button onClick={() => setStep((prevState) => ({
+                                ...prevState,
+                                currentStep: prevState.currentStep -= 1
+                            }))}>
+                                Назад
+                            </Button>
+                        </div>
+                    )
+                    }
+                    {step.currentStep < 2 && (
+                        <div className={styles.navButtonWrapper}>
+                            <Button onClick={() => setStep((prevState) => ({
+                                ...prevState,
+                                currentStep: prevState.currentStep += 1
+                            }))}>
+                                Далее
+                            </Button>
+                        </div>
+                    )
                     }
                 </div>
             </ConfigProvider>
