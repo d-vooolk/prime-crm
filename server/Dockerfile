@@ -1,15 +1,17 @@
-FROM node:20-alpine
-
+FROM node:20-alpine AS builder
 WORKDIR /app
-
 COPY package*.json ./
-
-RUN npm install
-
+RUN npm ci
 COPY . .
-
-# Собираем TypeScript в JS (если используешь TS)
+RUN npm run db:generate
 RUN npm run build
 
-# Запускаем сервер (предположим, он лежит в `dist/index.js`)
-CMD ["node", "dist/index.js"]
+FROM node:20-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/prisma ./prisma
+RUN npx prisma generate
+EXPOSE 3001
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/index.js"]

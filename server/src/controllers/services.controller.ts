@@ -1,0 +1,180 @@
+import { Request, Response, NextFunction } from 'express';
+import { prisma } from '../prisma/client';
+
+export const servicesController = {
+  async getAll(_req: Request, res: Response, next: NextFunction) {
+    try {
+      const categories = await prisma.category.findMany({
+        include: { services: { where: { isActive: true }, orderBy: { name: 'asc' } } },
+        orderBy: { name: 'asc' },
+      });
+      res.json({ data: categories });
+    } catch (e) { next(e); }
+  },
+
+  async createCategory(req: Request, res: Response, next: NextFunction) {
+    try {
+      const category = await prisma.category.create({ data: { name: req.body.name } });
+      res.status(201).json({ data: category });
+    } catch (e) { next(e); }
+  },
+
+  async updateCategory(req: Request, res: Response, next: NextFunction) {
+    try {
+      const category = await prisma.category.update({
+        where: { id: String(req.params.id) },
+        data: { name: req.body.name },
+      });
+      res.json({ data: category });
+    } catch (e) { next(e); }
+  },
+
+  async deleteCategory(req: Request, res: Response, next: NextFunction) {
+    try {
+      await prisma.category.delete({ where: { id: String(req.params.id) } });
+      res.json({ success: true });
+    } catch (e) { next(e); }
+  },
+
+  async createService(req: Request, res: Response, next: NextFunction) {
+    try {
+      const service = await prisma.service.create({
+        data: req.body,
+        include: { category: true },
+      });
+      res.status(201).json({ data: service });
+    } catch (e) { next(e); }
+  },
+
+  async updateService(req: Request, res: Response, next: NextFunction) {
+    try {
+      const service = await prisma.service.update({
+        where: { id: String(req.params.id) },
+        data: req.body,
+        include: { category: true },
+      });
+      res.json({ data: service });
+    } catch (e) { next(e); }
+  },
+
+  async deleteService(req: Request, res: Response, next: NextFunction) {
+    try {
+      await prisma.service.update({
+        where: { id: String(req.params.id) },
+        data: { isActive: false },
+      });
+      res.json({ success: true });
+    } catch (e) { next(e); }
+  },
+};
+
+export const equipmentController = {
+  async getAll(_req: Request, res: Response, next: NextFunction) {
+    try {
+      const equipment = await prisma.equipment.findMany({ orderBy: { name: 'asc' } });
+      res.json({ data: equipment });
+    } catch (e) { next(e); }
+  },
+
+  async create(req: Request, res: Response, next: NextFunction) {
+    try {
+      const equipment = await prisma.equipment.create({ data: { name: req.body.name } });
+      res.status(201).json({ data: equipment });
+    } catch (e) { next(e); }
+  },
+
+  async update(req: Request, res: Response, next: NextFunction) {
+    try {
+      const equipment = await prisma.equipment.update({
+        where: { id: String(req.params.id) },
+        data: { name: req.body.name },
+      });
+      res.json({ data: equipment });
+    } catch (e) { next(e); }
+  },
+
+  async delete(req: Request, res: Response, next: NextFunction) {
+    try {
+      await prisma.equipment.delete({ where: { id: String(req.params.id) } });
+      res.json({ success: true });
+    } catch (e) { next(e); }
+  },
+};
+
+export const servicemanController = {
+  async getAll(_req: Request, res: Response, next: NextFunction) {
+    try {
+      const servicemen = await prisma.serviceman.findMany({ orderBy: { name: 'asc' } });
+      res.json({ data: servicemen });
+    } catch (e) { next(e); }
+  },
+
+  async create(req: Request, res: Response, next: NextFunction) {
+    try {
+      const s = await prisma.serviceman.create({ data: { name: req.body.name } });
+      res.status(201).json({ data: s });
+    } catch (e) { next(e); }
+  },
+
+  async delete(req: Request, res: Response, next: NextFunction) {
+    try {
+      await prisma.serviceman.delete({ where: { id: String(req.params.id) } });
+      res.json({ success: true });
+    } catch (e) { next(e); }
+  },
+};
+
+export const settingsController = {
+  async get(_req: Request, res: Response, next: NextFunction) {
+    try {
+      const settings = await prisma.companySettings.findFirst();
+      res.json({ data: settings });
+    } catch (e) { next(e); }
+  },
+
+  async update(req: Request, res: Response, next: NextFunction) {
+    try {
+      const existing = await prisma.companySettings.findFirst();
+      let settings;
+      if (existing) {
+        settings = await prisma.companySettings.update({
+          where: { id: existing.id },
+          data: req.body,
+        });
+      } else {
+        settings = await prisma.companySettings.create({ data: req.body });
+      }
+      res.json({ data: settings });
+    } catch (e) { next(e); }
+  },
+};
+
+export const analyticsController = {
+  async getSummary(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { analyticsService } = await import('../services/analytics.service');
+      const period = (req.query.period as 'day' | 'week' | 'month' | 'quarter' | 'year') || 'month';
+      const data = await analyticsService.getSummary(period);
+      res.json({ data });
+    } catch (e) { next(e); }
+  },
+
+  async getRevenue(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { analyticsService } = await import('../services/analytics.service');
+      const from = String(req.query.from || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
+      const to = String(req.query.to || new Date().toISOString());
+      const data = await analyticsService.getRevenueChart(from, to);
+      res.json({ data });
+    } catch (e) { next(e); }
+  },
+
+  async getTopServices(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { analyticsService } = await import('../services/analytics.service');
+      const period = (req.query.period as 'day' | 'week' | 'month' | 'quarter' | 'year') || 'month';
+      const data = await analyticsService.getTopServices(period);
+      res.json({ data });
+    } catch (e) { next(e); }
+  },
+};

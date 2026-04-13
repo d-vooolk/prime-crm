@@ -1,0 +1,26 @@
+@use '@/styles/variables' as *;
+
+.root {
+  display: flex;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--color-bg);
+
+  @include mobile {
+    flex-direction: column;
+    padding-bottom: var(--bottom-nav-height);
+  }
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.pageContent {
+  flex: 1;
+  overflow-y: auto;
+  min-width: 0;
+}

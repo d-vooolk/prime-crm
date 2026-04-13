@@ -1,7 +1,65 @@
-@use './theme' as theme;
+@use 'variables' as *;
 
-// Максимальный приоритет для удаления границ у календаря
-html body .ant-picker-calendar * {
-  border-top: none !important;
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+  background-color: var(--color-bg);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+#root {
+  height: 100dvh;
+  overflow: hidden;
+}
+
+// ─── Ant Design overrides ────────────────────────────
+.ant-modal-content {
+  border-radius: var(--border-radius-lg) !important;
+}
+
+.ant-btn {
+  border-radius: var(--border-radius-sm) !important;
+  font-weight: 500 !important;
+}
+
+.ant-select-selector,
+.ant-input,
+.ant-input-affix-wrapper,
+.ant-picker {
+  border-radius: var(--border-radius-sm) !important;
+}
+
+// ─── Scrollbar ────────────────────────────────────
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+  &:hover { background: var(--color-text-muted); }
+}
+
+// ─── Print ────────────────────────────────────────
+@media print {
+  .no-print { display: none !important; }
+  .print-only { display: block !important; }
+  body { background: white; }
+}
+
+.print-only { display: none; }

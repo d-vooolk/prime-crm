@@ -1,23 +1,12 @@
-# Базовый образ
-FROM node:20-alpine
-
-# Рабочая директория внутри контейнера
+FROM node:20-alpine AS builder
 WORKDIR /app
-
-# Копируем package.json и lock-файл
 COPY package*.json ./
-
-# Устанавливаем зависимости
-RUN npm install
-
-# Копируем остальной код
+RUN npm ci
 COPY . .
-
-# Сборка проекта
 RUN npm run build
 
-# Используем утилиту serve для раздачи статики
-RUN npm install -g serve
-
-# Запускаем фронт
-CMD ["serve", "-s", "dist", "-l", "3000"]
+FROM nginx:alpine
+COPY --from=builder /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]

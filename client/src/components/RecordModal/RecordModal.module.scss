@@ -1,0 +1,55 @@
+@use '@/styles/variables' as *;
+
+.modal {
+  :global(.ant-modal-body) {
+    padding: 0;
+  }
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  min-height: 500px;
+}
+
+.steps {
+  padding: var(--spacing-lg) var(--spacing-xl) var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+}
+
+.content {
+  flex: 1;
+  padding: var(--spacing-lg) var(--spacing-xl);
+  overflow-y: auto;
+  max-height: 60vh;
+
+  @include mobile {
+    padding: var(--spacing-md);
+    max-height: 55vh;
+  }
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md) var(--spacing-xl);
+  border-top: 1px solid var(--color-border);
+  gap: var(--spacing-sm);
+
+  @include mobile {
+    padding: var(--spacing-md);
+    flex-wrap: wrap;
+  }
+}
+
+.footerLeft {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.footerRight {
+  display: flex;
+  gap: var(--spacing-sm);
+}

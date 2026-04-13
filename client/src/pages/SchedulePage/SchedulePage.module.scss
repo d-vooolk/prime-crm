@@ -1,0 +1,163 @@
+@use '@/styles/variables' as *;
+
+.page {
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+}
+
+// ─── Calendar panel ────────────────────────────────
+.calendarPanel {
+  width: var(--calendar-width);
+  flex-shrink: 0;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  @include tablet-down {
+    display: none;
+  }
+}
+
+.calendarHeader {
+  padding: var(--spacing-lg) var(--spacing-md) var(--spacing-sm);
+  font-weight: 600;
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+}
+
+// ─── Records area ──────────────────────────────────
+.recordsArea {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.recordsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-lg) var(--spacing-xl);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+
+  @include mobile {
+    padding: var(--spacing-md);
+  }
+}
+
+.recordsTitle {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--color-text-primary);
+
+  span {
+    color: var(--color-text-secondary);
+    font-weight: 400;
+    font-size: var(--font-size-md);
+    margin-left: var(--spacing-sm);
+  }
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+// ─── Mobile date selector ──────────────────────────
+.mobileDateRow {
+  display: none;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+
+  @include mobile {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+  }
+}
+
+// ─── Columns layout ────────────────────────────────
+.columns {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  gap: 0;
+}
+
+.column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+
+  &:first-child {
+    border-right: 1px solid var(--color-border);
+  }
+}
+
+.columnHeader {
+  padding: var(--spacing-md) var(--spacing-lg);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: var(--color-surface-2);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.columnCount {
+  background: var(--color-accent);
+  color: #fff;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 10px;
+}
+
+.columnOverdue .columnCount {
+  background: var(--color-error);
+}
+
+.columnBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.emptyState {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  gap: var(--spacing-sm);
+  padding: var(--spacing-2xl);
+  text-align: center;
+
+  .emptyIcon {
+    font-size: 40px;
+    opacity: 0.4;
+  }
+
+  p {
+    font-size: var(--font-size-sm);
+  }
+}

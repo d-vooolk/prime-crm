@@ -1,24 +1,42 @@
 version: '3.9'
 
 services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: prime_crm
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
   server:
-    build: ./server
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/prime_crm
+      PORT: 3001
+      NODE_ENV: production
+      CLIENT_URL: http://localhost:3000
     ports:
       - '3001:3001'
-    environment:
-      - NODE_ENV=production
-    volumes:
-      - ./server:/app
-    restart: unless-stopped
+    depends_on:
+      - postgres
 
   client:
-    build: ./client
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    restart: unless-stopped
     ports:
-      - '3000:3000'
-    environment:
-      - NODE_ENV=production
-    volumes:
-      - ./client:/app
+      - '3000:80'
     depends_on:
       - server
-    restart: unless-stopped
+
+volumes:
+  postgres_data:
