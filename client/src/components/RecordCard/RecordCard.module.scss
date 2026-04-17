@@ -19,12 +19,12 @@
 
   &.closed {
     background: var(--color-record-closed);
-    border-color: #86efac;
+    border-color: var(--color-record-closed-border);
   }
 
   &.cancelled {
     background: var(--color-record-cancelled);
-    border-color: #fca5a5;
+    border-color: var(--color-record-cancelled-border);
     opacity: 0.7;
   }
 }

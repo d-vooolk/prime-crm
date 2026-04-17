@@ -14,6 +14,7 @@ export interface RecordFormData {
   clientPhone: string;
   clientNotes?: string;
   // Авто
+  carId?: string;
   carBrandId: string;
   carBrand: string;
   carModelId: string;
@@ -21,18 +22,30 @@ export interface RecordFormData {
   carGenerationId?: string;
   carGenerationName?: string;
   carYear: string;
-  carPlate?: string;
   // Запись
   date: string;
   time: string;
   serviceman: string;
+  receptionist?: string;
+  // Юр. лицо
+  isLegalEntity?: boolean;
+  legalCompanyName?: string;
+  legalAddress?: string;
+  legalActualAddress?: string;
+  legalPostalAddress?: string;
+  legalBankDetails?: string;
+  legalBic?: string;
+  legalUnp?: string;
+  legalOkpo?: string;
+  legalPhone?: string;
+  legalEmail?: string;
   // Услуги
   services: SelectedService[];
 }
 
 export const emptyFormData: RecordFormData = {
   clientName: '',
-  clientPhone: '',
+  clientPhone: '+375 ',
   clientNotes: '',
   carBrandId: '',
   carBrand: '',
@@ -41,9 +54,10 @@ export const emptyFormData: RecordFormData = {
   carGenerationId: '',
   carGenerationName: '',
   carYear: '',
-  carPlate: '',
   date: '',
   time: '',
   serviceman: '',
+  receptionist: '',
+  isLegalEntity: false,
   services: [],
 };

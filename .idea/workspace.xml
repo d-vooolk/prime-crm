@@ -5,44 +5,28 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="45f6dddb-f82f-43d5-b121-b81757ed27dc" name="Changes" comment="add image for record card&#10;fix bugs">
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/watcherTasks.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/client/.dockerignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/client/eslint.config.mjs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/server/.dockerignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/server/eslint.config.mjs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/server/src/routes/cars.routes.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.claude/settings.local.json" beforeDir="false" afterPath="$PROJECT_DIR$/.claude/settings.local.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/client/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/client/package.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/api/records.api.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/api/records.api.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/api/services.api.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/api/services.api.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/components/RecordCard/RecordCard.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/RecordCard/RecordCard.module.scss" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/components/RecordCard/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/RecordCard/index.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/components/RecordDetailModal/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/RecordDetailModal/index.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/components/RecordModal/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/RecordModal/index.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/components/RecordModal/steps/Step1Client.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/RecordModal/steps/Step1Client.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/components/RecordModal/steps/Step2Services.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/RecordModal/steps/Step2Services.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/components/RecordModal/steps/Step3Summary.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/RecordModal/steps/Step3Summary.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/components/RecordModal/types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/RecordModal/types.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/components/SideBar/SideBar.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/SideBar/SideBar.module.scss" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/components/SideBar/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/SideBar/index.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/pages/SchedulePage/SchedulePage.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/pages/SchedulePage/SchedulePage.module.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/pages/ClientsPage/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/pages/ClientsPage/index.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/pages/SchedulePage/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/pages/SchedulePage/index.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/pages/ServicesPage/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/pages/ServicesPage/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/pages/SettingsPage/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/pages/SettingsPage/index.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/styles/_variables.scss" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/styles/_variables.scss" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/utils/formatters.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/utils/formatters.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/webpack.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/client/webpack.config.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/server/Dockerfile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/server/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/server/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/types/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/types/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/utils/print.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/utils/print.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/server/prisma/schema.prisma" beforeDir="false" afterPath="$PROJECT_DIR$/server/prisma/schema.prisma" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/src/controllers/records.controller.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/controllers/records.controller.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/src/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/index.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/src/middleware/errorHandler.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/middleware/errorHandler.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/src/routes/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/routes/index.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/src/routes/records.routes.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/routes/records.routes.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/src/services/analytics.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/services/analytics.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/src/controllers/services.controller.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/controllers/services.controller.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/src/routes/services.routes.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/routes/services.routes.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/server/src/services/records.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/services/records.service.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -83,27 +67,27 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ASKED_SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "git-widget-placeholder": "main",
-    "javascript.preferred.runtime.type.id": "node",
-    "last_opened_file_path": "C:/Users/Dmitriy/Desktop/prime-crm",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "ts.external.directory.path": "C:\\Users\\Dmitriy\\Desktop\\prime-crm\\client\\node_modules\\typescript\\lib",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ASKED_SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;javascript.preferred.runtime.type.id&quot;: &quot;node&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/Dmitriy/Desktop/prime-crm&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;C:\\Users\\Dmitriy\\Desktop\\prime-crm\\client\\node_modules\\typescript\\lib&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>

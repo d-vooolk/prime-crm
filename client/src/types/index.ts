@@ -49,8 +49,20 @@ export interface Record {
   carId: string;
   scheduledAt: string;
   serviceman: string;
+  receptionist?: string;
   notes?: string;
   status: RecordStatus;
+  isLegalEntity?: boolean;
+  legalCompanyName?: string;
+  legalAddress?: string;
+  legalActualAddress?: string;
+  legalPostalAddress?: string;
+  legalBankDetails?: string;
+  legalBic?: string;
+  legalUnp?: string;
+  legalOkpo?: string;
+  legalPhone?: string;
+  legalEmail?: string;
   createdAt: string;
   client: Client;
   car: Car;
@@ -77,20 +89,32 @@ export interface Service {
 export interface Equipment {
   id: string;
   name: string;
+  isActive?: boolean;
 }
 
 export interface Serviceman {
   id: string;
   name: string;
+  position?: string;
+  email?: string;
+  password?: string;
+  photoUrl?: string;
+  isDismissed: boolean;
+  isReceptionist: boolean;
+  isDefault: boolean;
 }
 
 export interface CompanySettings {
   id: string;
   name: string;
-  address?: string;
+  legalAddress?: string;
+  actualAddress?: string;
+  postalAddress?: string;
   phone?: string;
   email?: string;
   taxId?: string;
+  bic?: string;
+  okpo?: string;
   bankDetails?: string;
 }
 

@@ -23,7 +23,7 @@ const NAV_ITEMS = [
   { path: '/schedule', label: 'Расписание', icon: <CalendarOutlined /> },
   { path: '/dashboard', label: 'Дашборд', icon: <DashboardOutlined /> },
   { path: '/clients', label: 'Клиенты', icon: <TeamOutlined /> },
-  { path: '/services', label: 'Услуги', icon: <ToolOutlined /> },
+  { path: '/services', label: 'Справочник', icon: <ToolOutlined /> },
   { path: '/settings', label: 'Настройки', icon: <SettingOutlined /> },
 ];
 
@@ -85,7 +85,7 @@ export const SideBar: React.FC = () => {
             />
           </ConfigProvider>
           <div className={styles.todayBtn}>
-            <Button size="small" onClick={goToToday} block>Сегодня</Button>
+            <Button onClick={goToToday} block>Сегодня</Button>
           </div>
         </div>
 

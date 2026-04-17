@@ -30,6 +30,11 @@ export const SchedulePage: React.FC = () => {
       ]);
       setTodayRecords(today);
       setIncompleteRecords(incomplete);
+      // Обновляем открытую карточку, если она есть
+      setSelectedRecord(prev => {
+        if (!prev) return null;
+        return [...today, ...incomplete].find(r => r.id === prev.id) || prev;
+      });
     } catch {
       /* silent */
     } finally {

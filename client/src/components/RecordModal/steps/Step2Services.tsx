@@ -103,7 +103,8 @@ export const Step2Services: React.FC<Props> = ({ data, onChange }) => {
           value={row.quantity}
           onChange={v => updateQuantity(row.serviceId, v || 1)}
           size="small"
-          style={{ width: 70 }}
+          controls
+          style={{ width: 80 }}
         />
       ),
     },

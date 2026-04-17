@@ -18,7 +18,19 @@ export interface CreateRecordDto {
   };
   scheduledAt: string;
   serviceman: string;
+  receptionist?: string;
   notes?: string;
+  isLegalEntity?: boolean;
+  legalCompanyName?: string;
+  legalAddress?: string;
+  legalActualAddress?: string;
+  legalPostalAddress?: string;
+  legalBankDetails?: string;
+  legalBic?: string;
+  legalUnp?: string;
+  legalOkpo?: string;
+  legalPhone?: string;
+  legalEmail?: string;
   items: Array<{
     serviceId: string;
     price: number;
@@ -85,7 +97,11 @@ export const recordsService = {
   },
 
   async create(data: CreateRecordDto) {
-    const { clientId, car, scheduledAt, serviceman, notes, items } = data;
+    const {
+      clientId, car, scheduledAt, serviceman, receptionist, notes, items,
+      isLegalEntity, legalCompanyName, legalAddress, legalActualAddress, legalPostalAddress,
+      legalBankDetails, legalBic, legalUnp, legalOkpo, legalPhone, legalEmail,
+    } = data;
 
     // Найти или создать авто для клиента
     let carRecord = await prisma.car.findFirst({
@@ -120,7 +136,11 @@ export const recordsService = {
         carId: carRecord.id,
         scheduledAt: new Date(scheduledAt),
         serviceman,
+        receptionist,
         notes,
+        isLegalEntity: isLegalEntity ?? false,
+        legalCompanyName, legalAddress, legalActualAddress, legalPostalAddress,
+        legalBankDetails, legalBic, legalUnp, legalOkpo, legalPhone, legalEmail,
         items: {
           create: items.map((item) => ({
             serviceId: item.serviceId,
@@ -144,7 +164,8 @@ export const recordsService = {
 
     const updateData: Record<string, unknown> = {};
     if (data.scheduledAt) updateData.scheduledAt = new Date(data.scheduledAt);
-    if (data.serviceman) updateData.serviceman = data.serviceman;
+    if (data.serviceman !== undefined) updateData.serviceman = data.serviceman;
+    if (data.receptionist !== undefined) updateData.receptionist = data.receptionist;
     if (data.notes !== undefined) updateData.notes = data.notes;
 
     if (data.items) {

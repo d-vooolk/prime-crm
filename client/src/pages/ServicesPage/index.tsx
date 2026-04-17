@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Card, Table, Modal, Form, Input, InputNumber, Select, Popconfirm, message, Tabs } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import {
+  Button, Card, Table, Modal, Form, Input, InputNumber, Select,
+  Popconfirm, message, Tabs, Checkbox, Tag, Space, Collapse,
+} from 'antd';
+import {
+  PlusOutlined, EditOutlined, DeleteOutlined,
+  StopOutlined, UserOutlined,
+} from '@ant-design/icons';
 import { servicesApi } from '@/api/services.api';
 import { Category, Service, Equipment, Serviceman } from '@/types';
 import { formatPrice, formatDuration } from '@/utils/formatters';
@@ -9,46 +15,151 @@ import styles from './ServicesPage.module.scss';
 export const ServicesPage: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [equipment, setEquipment] = useState<Equipment[]>([]);
-  const [servicemen, setServicemen] = useState<Serviceman[]>([]);
+  const [allServicemen, setAllServicemen] = useState<Serviceman[]>([]);
+
+  const [serviceForm] = Form.useForm();
+  const [categoryForm] = Form.useForm();
+  const [equipmentForm] = Form.useForm();
+  const [servicemanForm] = Form.useForm();
+
   const [serviceModal, setServiceModal] = useState<{ open: boolean; service?: Service; categoryId?: string }>({ open: false });
   const [categoryModal, setCategoryModal] = useState<{ open: boolean; category?: Category }>({ open: false });
   const [equipmentModal, setEquipmentModal] = useState<{ open: boolean; item?: Equipment }>({ open: false });
-  const [servicemanModal, setServicemanModal] = useState(false);
-
-  const [form] = Form.useForm();
+  const [servicemanModal, setServicemanModal] = useState<{ open: boolean; item?: Serviceman; isReceptionist?: boolean }>({ open: false });
 
   const fetchAll = async () => {
     await Promise.all([
       servicesApi.getCategories().then(setCategories),
       servicesApi.getEquipment().then(setEquipment),
-      servicesApi.getServicemen().then(setServicemen),
+      servicesApi.getAllServicemen().then(setAllServicemen),
     ]);
   };
 
   useEffect(() => { fetchAll(); }, []);
 
+  // ─── Services ─────────────────────────────────────
+
   const handleSaveService = async () => {
-    const values = await form.validateFields();
-    if (serviceModal.service) {
-      await servicesApi.updateService(serviceModal.service.id, values);
-    } else {
-      await servicesApi.createService(values);
+    const values = await serviceForm.validateFields();
+    try {
+      if (serviceModal.service) {
+        await servicesApi.updateService(serviceModal.service.id, values);
+      } else {
+        await servicesApi.createService(values);
+      }
+      message.success('Сохранено');
+      setServiceModal({ open: false });
+      serviceForm.resetFields();
+      fetchAll();
+    } catch {
+      message.error('Ошибка сохранения');
     }
-    message.success('Сохранено');
-    setServiceModal({ open: false });
-    fetchAll();
   };
 
+  const openAddService = (categoryId?: string) => {
+    serviceForm.resetFields();
+    if (categoryId) serviceForm.setFieldsValue({ categoryId });
+    setServiceModal({ open: true, categoryId });
+  };
+
+  const openEditService = (service: Service) => {
+    serviceForm.resetFields();
+    serviceForm.setFieldsValue({
+      name: service.name,
+      categoryId: service.categoryId,
+      standardPrice: service.standardPrice,
+      estimatedTime: service.estimatedTime,
+    });
+    setServiceModal({ open: true, service });
+  };
+
+  // ─── Categories ────────────────────────────────────
+
   const handleSaveCategory = async () => {
-    const values = await form.validateFields();
-    if (categoryModal.category) {
-      await servicesApi.updateCategory(categoryModal.category.id, values.name);
-    } else {
-      await servicesApi.createCategory(values.name);
+    const values = await categoryForm.validateFields();
+    try {
+      if (categoryModal.category) {
+        await servicesApi.updateCategory(categoryModal.category.id, values.name);
+      } else {
+        await servicesApi.createCategory(values.name);
+      }
+      message.success('Сохранено');
+      setCategoryModal({ open: false });
+      categoryForm.resetFields();
+      fetchAll();
+    } catch {
+      message.error('Ошибка сохранения');
     }
-    message.success('Сохранено');
-    setCategoryModal({ open: false });
-    fetchAll();
+  };
+
+  // ─── Equipment ────────────────────────────────────
+
+  const handleSaveEquipment = async () => {
+    const values = await equipmentForm.validateFields();
+    try {
+      if (equipmentModal.item) {
+        await servicesApi.updateEquipment(equipmentModal.item.id, values.name);
+      } else {
+        await servicesApi.createEquipment(values.name);
+      }
+      message.success('Сохранено');
+      setEquipmentModal({ open: false });
+      equipmentForm.resetFields();
+      fetchAll();
+    } catch {
+      message.error('Ошибка сохранения');
+    }
+  };
+
+  // ─── Servicemen ────────────────────────────────────
+
+  const handleSaveServiceman = async () => {
+    const values = await servicemanForm.validateFields();
+    try {
+      if (servicemanModal.item) {
+        await servicesApi.updateServiceman(servicemanModal.item.id, {
+          name: values.name,
+          position: values.position,
+          email: values.email,
+          password: values.password || undefined,
+          isReceptionist: servicemanModal.isReceptionist,
+        });
+      } else {
+        await servicesApi.createServiceman({
+          name: values.name,
+          position: values.position,
+          email: values.email,
+          password: values.password || undefined,
+          isReceptionist: servicemanModal.isReceptionist,
+        });
+      }
+      message.success('Сохранено');
+      setServicemanModal({ open: false });
+      servicemanForm.resetFields();
+      fetchAll();
+    } catch {
+      message.error('Ошибка сохранения');
+    }
+  };
+
+  const handleDismiss = async (id: string) => {
+    try {
+      await servicesApi.dismissServiceman(id);
+      message.success('Сотрудник уволен');
+      fetchAll();
+    } catch {
+      message.error('Ошибка');
+    }
+  };
+
+  const handleSetDefault = async (id: string) => {
+    try {
+      await servicesApi.setDefaultReceptionist(id);
+      message.success('Мастер приёмщик по умолчанию установлен');
+      fetchAll();
+    } catch {
+      message.error('Ошибка');
+    }
   };
 
   const serviceColumns = [
@@ -59,13 +170,14 @@ export const ServicesPage: React.FC = () => {
       title: '', key: 'actions', width: 80,
       render: (_: unknown, row: Service) => (
         <div style={{ display: 'flex', gap: 4 }}>
-          <Button size="small" icon={<EditOutlined />} onClick={() => {
-            form.setFieldsValue(row);
-            setServiceModal({ open: true, service: row });
-          }} />
+          <Button size="small" icon={<EditOutlined />} onClick={() => openEditService(row)} />
           <Popconfirm title="Удалить услугу?" onConfirm={async () => {
-            await servicesApi.deleteService(row.id);
-            fetchAll();
+            try {
+              await servicesApi.deleteService(row.id);
+              fetchAll();
+            } catch {
+              message.error('Ошибка удаления');
+            }
           }}>
             <Button size="small" danger icon={<DeleteOutlined />} />
           </Popconfirm>
@@ -74,10 +186,82 @@ export const ServicesPage: React.FC = () => {
     },
   ];
 
+  const activeEmployees = allServicemen.filter(s => !s.isReceptionist && !s.isDismissed);
+  const dismissedEmployees = allServicemen.filter(s => !s.isReceptionist && s.isDismissed);
+  const activeReceptionists = allServicemen.filter(s => s.isReceptionist && !s.isDismissed);
+  const dismissedReceptionists = allServicemen.filter(s => s.isReceptionist && s.isDismissed);
+
+  const servicemanColumns = (isReceptionist: boolean, isDismissedList = false) => [
+    {
+      title: 'ФИО',
+      dataIndex: 'name',
+      key: 'name',
+      render: (name: string, row: Serviceman) => (
+        <div>
+          <div style={{ fontWeight: 500 }}>{name}</div>
+          {row.position && <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{row.position}</div>}
+        </div>
+      ),
+    },
+    isReceptionist && !isDismissedList ? {
+      title: 'По умолчанию',
+      key: 'default',
+      width: 130,
+      render: (_: unknown, row: Serviceman) => (
+        <Checkbox
+          checked={row.isDefault}
+          onChange={() => { if (!row.isDefault) handleSetDefault(row.id); }}
+        />
+      ),
+    } : { title: '', key: 'empty', width: 0, render: () => null },
+    {
+      title: '', key: 'actions', width: isDismissedList ? 0 : 120,
+      render: isDismissedList ? () => null : (_: unknown, row: Serviceman) => (
+        <Space size="small">
+          <Button size="small" icon={<EditOutlined />} onClick={() => {
+            servicemanForm.resetFields();
+            servicemanForm.setFieldsValue({ name: row.name, position: row.position, email: row.email, password: row.password });
+            setServicemanModal({ open: true, item: row, isReceptionist });
+          }} />
+          <Popconfirm
+            title="Уволить сотрудника?"
+            description="Сотрудник будет перемещён в список уволенных"
+            onConfirm={() => handleDismiss(row.id)}
+            okText="Уволить"
+            cancelText="Отмена"
+          >
+            <Button size="small" danger icon={<StopOutlined />} title="Уволить" />
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ];
+
+  const dismissedSection = (list: Serviceman[], isReceptionist: boolean) =>
+    list.length > 0 ? (
+      <Collapse
+        style={{ marginTop: 16 }}
+        items={[{
+          key: 'dismissed',
+          label: `Уволенные (${list.length})`,
+          children: (
+            <Table
+              dataSource={list}
+              rowKey="id"
+              size="middle"
+              pagination={false}
+              columns={servicemanColumns(isReceptionist, true)}
+              rowClassName={() => 'ant-table-row-dimmed'}
+            />
+          ),
+        }]}
+      />
+    ) : null;
+
   return (
     <div className={styles.page}>
       <div className={styles.header}>
-        <h1 className={styles.title}>Услуги и справочники</h1>
+        <h1 className={styles.title}>Справочник</h1>
       </div>
 
       <Tabs
@@ -88,10 +272,10 @@ export const ServicesPage: React.FC = () => {
             children: (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                  <Button icon={<PlusOutlined />} onClick={() => { form.resetFields(); setCategoryModal({ open: true }); }}>
+                  <Button icon={<PlusOutlined />} onClick={() => { categoryForm.resetFields(); setCategoryModal({ open: true }); }}>
                     Категория
                   </Button>
-                  <Button type="primary" icon={<PlusOutlined />} onClick={() => { form.resetFields(); setServiceModal({ open: true }); }}>
+                  <Button type="primary" icon={<PlusOutlined />} onClick={() => openAddService()}>
                     Услуга
                   </Button>
                 </div>
@@ -103,13 +287,16 @@ export const ServicesPage: React.FC = () => {
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <span>{cat.name}</span>
                         <div style={{ display: 'flex', gap: 4 }}>
-                          <Button size="small" icon={<PlusOutlined />} onClick={() => {
-                            form.setFieldsValue({ categoryId: cat.id });
-                            setServiceModal({ open: true, categoryId: cat.id });
-                          }}>Добавить</Button>
+                          <Button size="small" icon={<PlusOutlined />} onClick={() => openAddService(cat.id)}>
+                            Добавить
+                          </Button>
                           <Popconfirm title="Удалить категорию?" onConfirm={async () => {
-                            await servicesApi.deleteCategory(cat.id);
-                            fetchAll();
+                            try {
+                              await servicesApi.deleteCategory(cat.id);
+                              fetchAll();
+                            } catch {
+                              message.error('Ошибка удаления');
+                            }
                           }}>
                             <Button size="small" danger icon={<DeleteOutlined />} />
                           </Popconfirm>
@@ -132,11 +319,11 @@ export const ServicesPage: React.FC = () => {
           },
           {
             key: 'equipment',
-            label: 'Оборудование',
+            label: 'Bi-Led модули',
             children: (
               <div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
-                  <Button type="primary" icon={<PlusOutlined />} onClick={() => { form.resetFields(); setEquipmentModal({ open: true }); }}>
+                  <Button type="primary" icon={<PlusOutlined />} onClick={() => { equipmentForm.resetFields(); setEquipmentModal({ open: true }); }}>
                     Добавить
                   </Button>
                 </div>
@@ -150,7 +337,14 @@ export const ServicesPage: React.FC = () => {
                     {
                       title: '', key: 'actions', width: 80,
                       render: (_: unknown, row: Equipment) => (
-                        <Popconfirm title="Удалить?" onConfirm={async () => { await servicesApi.deleteEquipment(row.id); fetchAll(); }}>
+                        <Popconfirm title="Удалить?" onConfirm={async () => {
+                          try {
+                            await servicesApi.deleteEquipment(row.id);
+                            fetchAll();
+                          } catch {
+                            message.error('Невозможно удалить: оборудование используется в сделках');
+                          }
+                        }}>
                           <Button size="small" danger icon={<DeleteOutlined />} />
                         </Popconfirm>
                       ),
@@ -161,32 +355,55 @@ export const ServicesPage: React.FC = () => {
             ),
           },
           {
-            key: 'servicemen',
-            label: 'Мастера',
+            key: 'employees',
+            label: 'Сотрудники',
             children: (
               <div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
-                  <Button type="primary" icon={<PlusOutlined />} onClick={() => { form.resetFields(); setServicemanModal(true); }}>
+                  <Button type="primary" icon={<PlusOutlined />} onClick={() => {
+                    servicemanForm.resetFields();
+                    setServicemanModal({ open: true, isReceptionist: false });
+                  }}>
+                    Добавить сотрудника
+                  </Button>
+                </div>
+                <Table
+                  dataSource={activeEmployees}
+                  rowKey="id"
+                  size="middle"
+                  pagination={false}
+                  columns={servicemanColumns(false)}
+                  locale={{ emptyText: 'Нет сотрудников' }}
+                />
+                {dismissedSection(dismissedEmployees, false)}
+              </div>
+            ),
+          },
+          {
+            key: 'receptionists',
+            label: 'Мастера приёмщики',
+            children: (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12, gap: 8 }}>
+                  <Tag color="blue" style={{ lineHeight: '30px', padding: '0 10px' }}>
+                    Отмеченный по умолчанию будет автоматически подставляться в новые записи
+                  </Tag>
+                  <Button type="primary" icon={<PlusOutlined />} onClick={() => {
+                    servicemanForm.resetFields();
+                    setServicemanModal({ open: true, isReceptionist: true });
+                  }}>
                     Добавить мастера
                   </Button>
                 </div>
                 <Table
-                  dataSource={servicemen}
+                  dataSource={activeReceptionists}
                   rowKey="id"
                   size="middle"
                   pagination={false}
-                  columns={[
-                    { title: 'ФИО', dataIndex: 'name', key: 'name' },
-                    {
-                      title: '', key: 'actions', width: 80,
-                      render: (_: unknown, row: Serviceman) => (
-                        <Popconfirm title="Удалить?" onConfirm={async () => { await servicesApi.deleteServiceman(row.id); fetchAll(); }}>
-                          <Button size="small" danger icon={<DeleteOutlined />} />
-                        </Popconfirm>
-                      ),
-                    },
-                  ]}
+                  columns={servicemanColumns(true)}
+                  locale={{ emptyText: 'Нет мастеров приёмщиков' }}
                 />
+                {dismissedSection(dismissedReceptionists, true)}
               </div>
             ),
           },
@@ -194,9 +411,14 @@ export const ServicesPage: React.FC = () => {
       />
 
       {/* Service modal */}
-      <Modal open={serviceModal.open} onCancel={() => setServiceModal({ open: false })} onOk={handleSaveService}
-        title={serviceModal.service ? 'Редактировать услугу' : 'Новая услуга'} destroyOnHidden>
-        <Form form={form} layout="vertical">
+      <Modal
+        open={serviceModal.open}
+        onCancel={() => { setServiceModal({ open: false }); serviceForm.resetFields(); }}
+        onOk={handleSaveService}
+        title={serviceModal.service ? 'Редактировать услугу' : 'Новая услуга'}
+        destroyOnHidden
+      >
+        <Form form={serviceForm} layout="vertical">
           <Form.Item label="Категория" name="categoryId" rules={[{ required: true }]}>
             <Select options={categories.map(c => ({ value: c.id, label: c.name }))} />
           </Form.Item>
@@ -213,9 +435,14 @@ export const ServicesPage: React.FC = () => {
       </Modal>
 
       {/* Category modal */}
-      <Modal open={categoryModal.open} onCancel={() => setCategoryModal({ open: false })} onOk={handleSaveCategory}
-        title={categoryModal.category ? 'Редактировать категорию' : 'Новая категория'} destroyOnHidden>
-        <Form form={form} layout="vertical">
+      <Modal
+        open={categoryModal.open}
+        onCancel={() => { setCategoryModal({ open: false }); categoryForm.resetFields(); }}
+        onOk={handleSaveCategory}
+        title={categoryModal.category ? 'Редактировать категорию' : 'Новая категория'}
+        destroyOnHidden
+      >
+        <Form form={categoryForm} layout="vertical">
           <Form.Item label="Название" name="name" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
@@ -223,15 +450,14 @@ export const ServicesPage: React.FC = () => {
       </Modal>
 
       {/* Equipment modal */}
-      <Modal open={equipmentModal.open} onCancel={() => setEquipmentModal({ open: false })}
-        onOk={async () => {
-          const v = await form.validateFields();
-          await servicesApi.createEquipment(v.name);
-          setEquipmentModal({ open: false });
-          fetchAll();
-        }}
-        title="Добавить оборудование" destroyOnHidden>
-        <Form form={form} layout="vertical">
+      <Modal
+        open={equipmentModal.open}
+        onCancel={() => { setEquipmentModal({ open: false }); equipmentForm.resetFields(); }}
+        onOk={handleSaveEquipment}
+        title={equipmentModal.item ? 'Редактировать' : 'Добавить Bi-Led модуль'}
+        destroyOnHidden
+      >
+        <Form form={equipmentForm} layout="vertical">
           <Form.Item label="Название" name="name" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
@@ -239,17 +465,27 @@ export const ServicesPage: React.FC = () => {
       </Modal>
 
       {/* Serviceman modal */}
-      <Modal open={servicemanModal} onCancel={() => setServicemanModal(false)}
-        onOk={async () => {
-          const v = await form.validateFields();
-          await servicesApi.createServiceman(v.name);
-          setServicemanModal(false);
-          fetchAll();
-        }}
-        title="Добавить мастера" destroyOnHidden>
-        <Form form={form} layout="vertical">
-          <Form.Item label="ФИО мастера" name="name" rules={[{ required: true }]}>
-            <Input />
+      <Modal
+        open={servicemanModal.open}
+        onCancel={() => { setServicemanModal({ open: false }); servicemanForm.resetFields(); }}
+        onOk={handleSaveServiceman}
+        title={servicemanModal.item
+          ? 'Редактировать сотрудника'
+          : servicemanModal.isReceptionist ? 'Добавить мастера приёмщика' : 'Добавить сотрудника'}
+        destroyOnHidden
+      >
+        <Form form={servicemanForm} layout="vertical">
+          <Form.Item label="ФИО" name="name" rules={[{ required: true, message: 'Введите ФИО' }]}>
+            <Input prefix={<UserOutlined />} placeholder="Иванов Иван" />
+          </Form.Item>
+          <Form.Item label="Должность" name="position">
+            <Input placeholder="Мастер-установщик" />
+          </Form.Item>
+          <Form.Item label="Email" name="email">
+            <Input type="email" placeholder="example@mail.com" />
+          </Form.Item>
+          <Form.Item label="Пароль" name="password">
+            <Input placeholder="Пароль для входа в систему" autoComplete="new-password" />
           </Form.Item>
         </Form>
       </Modal>

@@ -6,7 +6,7 @@
   width: var(--sidebar-width);
   min-width: var(--sidebar-width);
   height: 100%;
-  background: var(--color-primary);
+  background: var(--color-sidebar-bg);
   overflow: hidden;
   user-select: none;
   flex-shrink: 0;
@@ -143,7 +143,8 @@
 }
 
 .todayBtn {
-  padding: 0 8px 8px;
+  padding: 0 8px 4px;
+  margin-top: -4px;
 }
 
 // ─── Nav ──────────────────────────────────────────

@@ -15,9 +15,28 @@ export const Step3Summary: React.FC<Props> = ({ data }) => {
     <div>
       <Divider orientation="left" style={{ fontSize: 13 }}>Клиент</Divider>
       <Descriptions column={{ xs: 1, sm: 2 }} size="small">
-        <Descriptions.Item label="ФИО">{data.clientName || '—'}</Descriptions.Item>
+        <Descriptions.Item label={data.isLegalEntity ? 'ФИО представителя' : 'ФИО'}>
+          {data.clientName || '—'}
+        </Descriptions.Item>
         <Descriptions.Item label="Телефон">{data.clientPhone || '—'}</Descriptions.Item>
       </Descriptions>
+
+      {data.isLegalEntity && (
+        <>
+          <Divider orientation="left" style={{ fontSize: 13 }}>Юридическое лицо</Divider>
+          <Descriptions column={{ xs: 1, sm: 2 }} size="small">
+            {data.legalCompanyName && (
+              <Descriptions.Item label="Организация" span={2}>{data.legalCompanyName}</Descriptions.Item>
+            )}
+            {data.legalAddress && (
+              <Descriptions.Item label="Юр. адрес" span={2}>{data.legalAddress}</Descriptions.Item>
+            )}
+            {data.legalUnp && <Descriptions.Item label="УНП">{data.legalUnp}</Descriptions.Item>}
+            {data.legalBic && <Descriptions.Item label="БИК">{data.legalBic}</Descriptions.Item>}
+            {data.legalOkpo && <Descriptions.Item label="ОКПО">{data.legalOkpo}</Descriptions.Item>}
+          </Descriptions>
+        </>
+      )}
 
       <Divider orientation="left" style={{ fontSize: 13 }}>Автомобиль</Divider>
       <Descriptions column={{ xs: 1, sm: 2 }} size="small">

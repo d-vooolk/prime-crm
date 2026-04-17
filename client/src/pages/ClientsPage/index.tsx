@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Input, Table, Tag, Button, Drawer, Descriptions, Divider, Empty } from 'antd';
+import { Input, Table, Tag, Drawer, Descriptions, Divider, Empty } from 'antd';
 import { SearchOutlined, UserOutlined } from '@ant-design/icons';
 import { clientsApi } from '@/api/clients.api';
+import { recordsApi } from '@/api/records.api';
 import { Client, Record } from '@/types';
 import { formatDate, formatPrice } from '@/utils/formatters';
+import { RecordDetailModal } from '@/components/RecordDetailModal';
 import styles from './ClientsPage.module.scss';
 
 export const ClientsPage: React.FC = () => {
@@ -11,11 +13,23 @@ export const ClientsPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Client | null>(null);
+  const [selectedRecord, setSelectedRecord] = useState<Record | null>(null);
+  const [recordModalOpen, setRecordModalOpen] = useState(false);
 
   useEffect(() => {
     setLoading(true);
     clientsApi.getAll(search).then(setClients).finally(() => setLoading(false));
   }, [search]);
+
+  const handleRecordClick = async (recordId: string) => {
+    try {
+      const record = await recordsApi.getById(recordId);
+      setSelectedRecord(record);
+      setRecordModalOpen(true);
+    } catch {
+      /* silent */
+    }
+  };
 
   const columns = [
     {
@@ -23,7 +37,10 @@ export const ClientsPage: React.FC = () => {
       dataIndex: 'name',
       key: 'name',
       render: (name: string) => (
-        <span style={{ fontWeight: 500 }}><UserOutlined style={{ marginRight: 6, color: 'var(--color-text-muted)' }} />{name}</span>
+        <span style={{ fontWeight: 500 }}>
+          <UserOutlined style={{ marginRight: 6, color: 'var(--color-text-muted)' }} />
+          {name}
+        </span>
       ),
     },
     { title: 'Телефон', dataIndex: 'phone', key: 'phone' },
@@ -43,19 +60,6 @@ export const ClientsPage: React.FC = () => {
       key: 'visits',
       width: 100,
       render: (_: unknown, row: Client) => row._count?.records || 0,
-    },
-    {
-      title: '',
-      key: 'action',
-      width: 100,
-      render: (_: unknown, row: Client) => (
-        <Button
-          size="small"
-          onClick={() => clientsApi.getById(row.id).then(setSelected)}
-        >
-          Подробнее
-        </Button>
-      ),
     },
   ];
 
@@ -113,15 +117,23 @@ export const ClientsPage: React.FC = () => {
               <Empty description="Нет записей" />
             ) : (
               (selected as Client & { records?: Record[] }).records?.map(r => (
-                <div key={r.id} style={{
-                  padding: '10px 12px',
-                  background: 'var(--color-surface-2)',
-                  borderRadius: 8,
-                  marginBottom: 8,
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}>
+                <div
+                  key={r.id}
+                  onClick={() => handleRecordClick(r.id)}
+                  style={{
+                    padding: '10px 12px',
+                    background: 'var(--color-surface-2)',
+                    borderRadius: 8,
+                    marginBottom: 8,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    cursor: 'pointer',
+                    transition: 'var(--transition)',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-border)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'var(--color-surface-2)')}
+                >
                   <div>
                     <div style={{ fontWeight: 500 }}>{formatDate(r.scheduledAt)}</div>
                     <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
@@ -132,7 +144,10 @@ export const ClientsPage: React.FC = () => {
                     <div style={{ fontWeight: 700 }}>
                       {formatPrice(r.deal?.finalPrice || r.items.reduce((s, i) => s + i.price * i.quantity, 0))}
                     </div>
-                    <Tag color={r.status === 'CLOSED' ? 'green' : r.status === 'CANCELLED' ? 'red' : 'blue'} style={{ fontSize: 11 }}>
+                    <Tag
+                      color={r.status === 'CLOSED' ? 'green' : r.status === 'CANCELLED' ? 'red' : 'blue'}
+                      style={{ fontSize: 11 }}
+                    >
                       {r.status === 'CLOSED' ? 'Завершена' : r.status === 'CANCELLED' ? 'Отменена' : 'Активна'}
                     </Tag>
                   </div>
@@ -142,6 +157,17 @@ export const ClientsPage: React.FC = () => {
           </>
         )}
       </Drawer>
+
+      <RecordDetailModal
+        record={selectedRecord}
+        open={recordModalOpen}
+        onClose={() => { setRecordModalOpen(false); setSelectedRecord(null); }}
+        onRefresh={() => {
+          if (selected) {
+            clientsApi.getById(selected.id).then(setSelected).catch(() => {});
+          }
+        }}
+      />
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Modal, Button, Descriptions, Tag, Divider, Table, message,
   Popconfirm, Select, InputNumber, DatePicker, TimePicker, Space,
@@ -11,7 +11,7 @@ import dayjs from 'dayjs';
 import { Record as CrmRecord, Category, Serviceman } from '@/types';
 import { SelectedService } from '@/components/RecordModal/types';
 import { formatPrice, formatDate, formatTime } from '@/utils/formatters';
-import { printWorkOrder, printCompletionAct } from '@/utils/print';
+import { printWorkOrder, printCompletionAct, printServiceContract, printInvoice } from '@/utils/print';
 import { CloseRecordModal } from '../CloseRecordModal';
 import { recordsApi } from '@/api/records.api';
 import { servicesApi } from '@/api/services.api';
@@ -38,8 +38,11 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
   const [rescheduleDate, setRescheduleDate] = useState<dayjs.Dayjs | null>(null);
   const [rescheduleTime, setRescheduleTime] = useState<dayjs.Dayjs | null>(null);
   const [reschedulePerson, setReschedulePerson] = useState('');
+  const [rescheduleReceptionist, setRescheduleReceptionist] = useState('');
   const [servicemen, setServicemen] = useState<Serviceman[]>([]);
   const [saving, setSaving] = useState(false);
+  const [timePickerOpen, setTimePickerOpen] = useState(false);
+  const timeClickCount = useRef(0);
 
   useEffect(() => {
     if (open && record) {
@@ -48,6 +51,7 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
       setRescheduleDate(dayjs(record.scheduledAt));
       setRescheduleTime(dayjs(record.scheduledAt));
       setReschedulePerson(record.serviceman);
+      setRescheduleReceptionist(record.receptionist || '');
     }
   }, [open, record?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -129,8 +133,8 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
   };
 
   const handleSaveReschedule = async () => {
-    if (!rescheduleDate || !rescheduleTime || !reschedulePerson) {
-      message.warning('Заполните все поля');
+    if (!rescheduleDate || !rescheduleTime) {
+      message.warning('Укажите дату и время');
       return;
     }
     const scheduledAt = rescheduleDate
@@ -140,8 +144,12 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
       .toISOString();
     setSaving(true);
     try {
-      await recordsApi.update(record.id, { scheduledAt, serviceman: reschedulePerson });
-      message.success('Запись перенесена');
+      await recordsApi.update(record.id, {
+        scheduledAt,
+        serviceman: reschedulePerson,
+        receptionist: rescheduleReceptionist,
+      });
+      message.success('Запись обновлена');
       setRescheduleOpen(false);
       onRefresh();
       onClose();
@@ -186,6 +194,9 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
     })),
   }));
 
+  const employees = servicemen.filter(s => !s.isReceptionist && !s.isDismissed);
+  const receptionists = servicemen.filter(s => s.isReceptionist && !s.isDismissed);
+
   const editColumns = [
     {
       title: 'Услуга',
@@ -199,10 +210,12 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
       ),
     },
     {
-      title: 'Кол-во', key: 'quantity', width: 90,
+      title: 'Кол-во', key: 'quantity', width: 100,
       render: (_: unknown, row: SelectedService) => (
         <InputNumber
-          min={1} max={99} value={row.quantity} size="small" style={{ width: 65 }}
+          min={1} max={99} value={row.quantity} size="small"
+          controls
+          style={{ width: 80 }}
           onChange={v => setEditItems(prev =>
             prev.map(s => s.serviceId === row.serviceId ? { ...s, quantity: v || 1 } : s)
           )}
@@ -210,11 +223,11 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
       ),
     },
     {
-      title: 'Цена', key: 'price', width: 140,
+      title: 'Цена', key: 'price', width: 150,
       render: (_: unknown, row: SelectedService) => (
         <Space.Compact size="small">
           <InputNumber
-            min={0} value={row.price} style={{ width: 90 }}
+            min={0} value={row.price} style={{ width: 100 }}
             formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}
             onChange={v => setEditItems(prev =>
               prev.map(s => s.serviceId === row.serviceId ? { ...s, price: v || 0 } : s)
@@ -273,21 +286,37 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
         }
         footer={
           <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <Button icon={<PrinterOutlined />} onClick={() => printWorkOrder(record)}>
-                Заявка
-              </Button>
-              {record.deal && (
-                <Button icon={<PrinterOutlined />} onClick={() => printCompletionAct(record)}>
-                  Акт
-                </Button>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {record.isLegalEntity ? (
+                <>
+                  <Button icon={<PrinterOutlined />} onClick={() => printServiceContract(record)}>
+                    Договор
+                  </Button>
+                  <Button icon={<PrinterOutlined />} onClick={() => printInvoice(record)}>
+                    Счёт
+                  </Button>
+                  <Button icon={<PrinterOutlined />} onClick={() => record.deal ? printCompletionAct(record) : printBlankCompletionAct(record)}>
+                    Акт
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button icon={<PrinterOutlined />} onClick={() => printWorkOrder(record)}>
+                    Заявка
+                  </Button>
+                  {record.deal && (
+                    <Button icon={<PrinterOutlined />} onClick={() => printCompletionAct(record)}>
+                      Акт
+                    </Button>
+                  )}
+                </>
               )}
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               {record.status === 'ACTIVE' && (
                 <>
                   <Button icon={<CalendarOutlined />} onClick={handleOpenReschedule}>
-                    Перенести
+                    Редактировать
                   </Button>
                   <Popconfirm title="Отменить запись?" onConfirm={handleCancel} okText="Да" cancelText="Нет">
                     <Button danger icon={<CloseCircleOutlined />}>Отменить</Button>
@@ -314,9 +343,30 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
       >
         <Divider orientation="left" style={{ fontSize: 13 }}>Клиент</Divider>
         <Descriptions size="small" column={{ xs: 1, sm: 2 }}>
-          <Descriptions.Item label="ФИО">{record.client.name}</Descriptions.Item>
+          <Descriptions.Item label={record.isLegalEntity ? 'ФИО представителя' : 'ФИО'}>
+            {record.client.name}
+          </Descriptions.Item>
           <Descriptions.Item label="Телефон">{record.client.phone}</Descriptions.Item>
         </Descriptions>
+
+        {record.isLegalEntity && (
+          <>
+            <Divider orientation="left" style={{ fontSize: 13 }}>Юридическое лицо</Divider>
+            <Descriptions size="small" column={{ xs: 1, sm: 2 }}>
+              {record.legalCompanyName && (
+                <Descriptions.Item label="Организация" span={2}>{record.legalCompanyName}</Descriptions.Item>
+              )}
+              {record.legalAddress && (
+                <Descriptions.Item label="Юр. адрес" span={2}>{record.legalAddress}</Descriptions.Item>
+              )}
+              {record.legalUnp && <Descriptions.Item label="УНП">{record.legalUnp}</Descriptions.Item>}
+              {record.legalBic && <Descriptions.Item label="БИК">{record.legalBic}</Descriptions.Item>}
+              {record.legalOkpo && <Descriptions.Item label="ОКПО">{record.legalOkpo}</Descriptions.Item>}
+              {record.legalPhone && <Descriptions.Item label="Телефон орг.">{record.legalPhone}</Descriptions.Item>}
+              {record.legalEmail && <Descriptions.Item label="Email орг.">{record.legalEmail}</Descriptions.Item>}
+            </Descriptions>
+          </>
+        )}
 
         <Divider orientation="left" style={{ fontSize: 13 }}>Автомобиль</Divider>
         <Descriptions size="small" column={{ xs: 1, sm: 2 }}>
@@ -336,7 +386,12 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
         <Descriptions size="small" column={{ xs: 1, sm: 2 }}>
           <Descriptions.Item label="Дата">{formatDate(record.scheduledAt)}</Descriptions.Item>
           <Descriptions.Item label="Время">{formatTime(record.scheduledAt)}</Descriptions.Item>
-          <Descriptions.Item label="Мастер">{record.serviceman}</Descriptions.Item>
+          {record.serviceman && (
+            <Descriptions.Item label="Сотрудник">{record.serviceman}</Descriptions.Item>
+          )}
+          {record.receptionist && (
+            <Descriptions.Item label="Мастер приёмщик">{record.receptionist}</Descriptions.Item>
+          )}
         </Descriptions>
 
         {record.notes && (
@@ -410,7 +465,7 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
                 </Descriptions.Item>
               )}
               {record.deal.equipment.length > 0 && (
-                <Descriptions.Item label="Оборудование" span={2}>
+                <Descriptions.Item label="Bi-Led модули" span={2}>
                   {record.deal.equipment.map(e => e.equipment.name).join(', ')}
                 </Descriptions.Item>
               )}
@@ -419,17 +474,18 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
         )}
       </Modal>
 
+      {/* Редактирование записи */}
       <Modal
-        title="Перенос записи"
+        title="Редактировать запись"
         open={rescheduleOpen}
         onCancel={() => setRescheduleOpen(false)}
         footer={[
           <Button key="cancel" onClick={() => setRescheduleOpen(false)}>Отмена</Button>,
           <Button key="save" type="primary" loading={saving} onClick={handleSaveReschedule}>
-            Перенести
+            Сохранить
           </Button>,
         ]}
-        width={380}
+        width={400}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '16px 0' }}>
           <div>
@@ -445,22 +501,47 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
             <div style={{ marginBottom: 6, fontWeight: 500 }}>Время</div>
             <TimePicker
               style={{ width: '100%' }}
+              open={timePickerOpen}
+              onOpenChange={(open) => {
+                setTimePickerOpen(open);
+                if (!open) timeClickCount.current = 0;
+              }}
               value={rescheduleTime}
-              onChange={setRescheduleTime}
+              onChange={t => {
+                setRescheduleTime(t);
+                timeClickCount.current += 1;
+                if (timeClickCount.current >= 2) {
+                  setTimePickerOpen(false);
+                  timeClickCount.current = 0;
+                }
+              }}
               format="HH:mm"
               minuteStep={5}
+              needConfirm={false}
               disabledTime={() => ({ disabledHours: () => [0, 1, 2, 3, 4, 5, 6, 7, 8, 20, 21, 22, 23] })}
               hideDisabledOptions
             />
           </div>
           <div>
-            <div style={{ marginBottom: 6, fontWeight: 500 }}>Мастер-приёмщик</div>
+            <div style={{ marginBottom: 6, fontWeight: 500 }}>Сотрудник</div>
             <Select
               style={{ width: '100%' }}
               value={reschedulePerson || undefined}
-              onChange={setReschedulePerson}
+              onChange={v => setReschedulePerson(v ?? '')}
+              placeholder="Выберите сотрудника"
+              allowClear
+              options={employees.map(s => ({ value: s.name, label: s.name }))}
+            />
+          </div>
+          <div>
+            <div style={{ marginBottom: 6, fontWeight: 500 }}>Мастер приёмщик</div>
+            <Select
+              style={{ width: '100%' }}
+              value={rescheduleReceptionist || undefined}
+              onChange={v => setRescheduleReceptionist(v ?? '')}
               placeholder="Выберите мастера"
-              options={servicemen.map(s => ({ value: s.name, label: s.name }))}
+              allowClear
+              options={receptionists.map(s => ({ value: s.name, label: s.name }))}
             />
           </div>
         </div>

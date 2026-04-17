@@ -7,7 +7,7 @@ import { Step3Summary } from './steps/Step3Summary';
 import { RecordFormData, emptyFormData } from './types';
 import { recordsApi } from '@/api/records.api';
 import { clientsApi } from '@/api/clients.api';
-import { printWorkOrder } from '@/utils/print';
+import { printWorkOrder, printServiceContract, printInvoice, printBlankCompletionAct } from '@/utils/print';
 import styles from './RecordModal.module.scss';
 
 interface Props {
@@ -48,18 +48,22 @@ export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initial
     onClose();
   };
 
+  const isPhoneValid = (phone: string) => {
+    return phone.replace(/\D/g, '').length >= 11;
+  };
+
   const validateStep = (): boolean => {
     if (step === 0) {
-      if (!data.clientName || !data.clientPhone) {
-        message.warning('Укажите ФИО и телефон клиента');
+      if (!data.clientName || !isPhoneValid(data.clientPhone)) {
+        message.warning('Укажите ФИО и полный номер телефона клиента');
         return false;
       }
       if (!data.carBrandId || !data.carModelId || !data.carYear) {
         message.warning('Выберите марку, модель и год автомобиля');
         return false;
       }
-      if (!data.date || !data.time || !data.serviceman) {
-        message.warning('Укажите дату, время и мастера');
+      if (!data.date || !data.time) {
+        message.warning('Укажите дату и время');
         return false;
       }
     }
@@ -74,12 +78,11 @@ export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initial
     if (validateStep()) setStep(s => s + 1);
   };
 
-  const handleSave = async (withPrint = false) => {
+  const handleSave = async (printType?: 'workOrder' | 'contract' | 'invoice' | 'act') => {
     setLoading(true);
     try {
       let clientId = data.clientId;
 
-      // Создаём клиента если нового
       if (!clientId) {
         const existing = await clientsApi.searchByPhone(data.clientPhone);
         if (existing.length > 0) {
@@ -94,7 +97,6 @@ export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initial
         }
       }
 
-      // Собираем дату + время
       const [hours, minutes] = data.time.split(':').map(Number);
       const scheduledAt = new Date(data.date);
       scheduledAt.setHours(hours, minutes, 0, 0);
@@ -110,11 +112,22 @@ export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initial
           generationId: data.carGenerationId,
           generationName: data.carGenerationName,
           year: data.carYear,
-          plateNumber: data.carPlate,
         },
         scheduledAt: scheduledAt.toISOString(),
         serviceman: data.serviceman,
+        receptionist: data.receptionist,
         notes: data.clientNotes,
+        isLegalEntity: data.isLegalEntity,
+        legalCompanyName: data.legalCompanyName,
+        legalAddress: data.legalAddress,
+        legalActualAddress: data.legalActualAddress,
+        legalPostalAddress: data.legalPostalAddress,
+        legalBankDetails: data.legalBankDetails,
+        legalBic: data.legalBic,
+        legalUnp: data.legalUnp,
+        legalOkpo: data.legalOkpo,
+        legalPhone: data.legalPhone,
+        legalEmail: data.legalEmail,
         items: data.services.map(s => ({
           serviceId: s.serviceId,
           price: s.price,
@@ -124,9 +137,10 @@ export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initial
 
       message.success('Запись создана');
 
-      if (withPrint) {
-        printWorkOrder(record);
-      }
+      if (printType === 'workOrder') printWorkOrder(record);
+      if (printType === 'contract') printServiceContract(record);
+      if (printType === 'invoice') printInvoice(record);
+      if (printType === 'act') printBlankCompletionAct(record);
 
       onSuccess();
       handleClose();
@@ -169,16 +183,20 @@ export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initial
               <Button type="primary" onClick={handleNext}>
                 Далее
               </Button>
+            ) : data.isLegalEntity ? (
+              <Button type="primary" loading={loading} onClick={() => handleSave()}>
+                Сохранить
+              </Button>
             ) : (
               <>
                 <Button
                   icon={<PrinterOutlined />}
                   loading={loading}
-                  onClick={() => handleSave(true)}
+                  onClick={() => handleSave('workOrder')}
                 >
                   Сохранить и распечатать заявку
                 </Button>
-                <Button type="primary" loading={loading} onClick={() => handleSave(false)}>
+                <Button type="primary" loading={loading} onClick={() => handleSave()}>
                   Сохранить
                 </Button>
               </>

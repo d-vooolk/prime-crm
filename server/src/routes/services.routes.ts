@@ -25,9 +25,13 @@ router.post('/equipment', equipmentController.create);
 router.patch('/equipment/:id', equipmentController.update);
 router.delete('/equipment/:id', equipmentController.delete);
 
-// Мастера
+// Сотрудники
 router.get('/servicemen', servicemanController.getAll);
+router.get('/servicemen/all', servicemanController.getAllIncludingDismissed);
 router.post('/servicemen', servicemanController.create);
+router.patch('/servicemen/:id', servicemanController.update);
+router.post('/servicemen/:id/dismiss', servicemanController.dismiss);
+router.post('/servicemen/:id/set-default', servicemanController.setDefault);
 router.delete('/servicemen/:id', servicemanController.delete);
 
 // Настройки компании

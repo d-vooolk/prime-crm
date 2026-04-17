@@ -71,7 +71,10 @@ export const servicesController = {
 export const equipmentController = {
   async getAll(_req: Request, res: Response, next: NextFunction) {
     try {
-      const equipment = await prisma.equipment.findMany({ orderBy: { name: 'asc' } });
+      const equipment = await prisma.equipment.findMany({
+        where: { isActive: true },
+        orderBy: { name: 'asc' },
+      });
       res.json({ data: equipment });
     } catch (e) { next(e); }
   },
@@ -95,7 +98,10 @@ export const equipmentController = {
 
   async delete(req: Request, res: Response, next: NextFunction) {
     try {
-      await prisma.equipment.delete({ where: { id: String(req.params.id) } });
+      await prisma.equipment.update({
+        where: { id: String(req.params.id) },
+        data: { isActive: false },
+      });
       res.json({ success: true });
     } catch (e) { next(e); }
   },
@@ -104,6 +110,16 @@ export const equipmentController = {
 export const servicemanController = {
   async getAll(_req: Request, res: Response, next: NextFunction) {
     try {
+      const servicemen = await prisma.serviceman.findMany({
+        where: { isDismissed: false },
+        orderBy: { name: 'asc' },
+      });
+      res.json({ data: servicemen });
+    } catch (e) { next(e); }
+  },
+
+  async getAllIncludingDismissed(_req: Request, res: Response, next: NextFunction) {
+    try {
       const servicemen = await prisma.serviceman.findMany({ orderBy: { name: 'asc' } });
       res.json({ data: servicemen });
     } catch (e) { next(e); }
@@ -111,8 +127,47 @@ export const servicemanController = {
 
   async create(req: Request, res: Response, next: NextFunction) {
     try {
-      const s = await prisma.serviceman.create({ data: { name: req.body.name } });
+      const { name, position, email, password, photoUrl, isReceptionist } = req.body;
+      const s = await prisma.serviceman.create({
+        data: { name, position, email, password, photoUrl, isReceptionist: !!isReceptionist },
+      });
       res.status(201).json({ data: s });
+    } catch (e) { next(e); }
+  },
+
+  async update(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { name, position, email, password, photoUrl, isReceptionist } = req.body;
+      const s = await prisma.serviceman.update({
+        where: { id: String(req.params.id) },
+        data: { name, position, email, password, photoUrl, isReceptionist },
+      });
+      res.json({ data: s });
+    } catch (e) { next(e); }
+  },
+
+  async dismiss(req: Request, res: Response, next: NextFunction) {
+    try {
+      const s = await prisma.serviceman.update({
+        where: { id: String(req.params.id) },
+        data: { isDismissed: true, isDefault: false },
+      });
+      res.json({ data: s });
+    } catch (e) { next(e); }
+  },
+
+  async setDefault(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = String(req.params.id);
+      await prisma.serviceman.updateMany({
+        where: { isReceptionist: true },
+        data: { isDefault: false },
+      });
+      const s = await prisma.serviceman.update({
+        where: { id },
+        data: { isDefault: true },
+      });
+      res.json({ data: s });
     } catch (e) { next(e); }
   },
 

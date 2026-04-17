@@ -38,8 +38,20 @@ export const servicesApi = {
   getServicemen: () =>
     http.get<{ data: Serviceman[] }>('/services/servicemen').then(r => r.data.data),
 
-  createServiceman: (name: string) =>
-    http.post<{ data: Serviceman }>('/services/servicemen', { name }).then(r => r.data.data),
+  getAllServicemen: () =>
+    http.get<{ data: Serviceman[] }>('/services/servicemen/all').then(r => r.data.data),
+
+  createServiceman: (data: { name: string; position?: string; email?: string; password?: string; isReceptionist?: boolean }) =>
+    http.post<{ data: Serviceman }>('/services/servicemen', data).then(r => r.data.data),
+
+  updateServiceman: (id: string, data: { name?: string; position?: string; email?: string; password?: string; isReceptionist?: boolean }) =>
+    http.patch<{ data: Serviceman }>(`/services/servicemen/${id}`, data).then(r => r.data.data),
+
+  dismissServiceman: (id: string) =>
+    http.post<{ data: Serviceman }>(`/services/servicemen/${id}/dismiss`).then(r => r.data.data),
+
+  setDefaultReceptionist: (id: string) =>
+    http.post<{ data: Serviceman }>(`/services/servicemen/${id}/set-default`).then(r => r.data.data),
 
   deleteServiceman: (id: string) =>
     http.delete(`/services/servicemen/${id}`),

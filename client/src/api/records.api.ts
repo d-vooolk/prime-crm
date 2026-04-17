@@ -16,7 +16,19 @@ export interface CreateRecordDto {
   };
   scheduledAt: string;
   serviceman: string;
+  receptionist?: string;
   notes?: string;
+  isLegalEntity?: boolean;
+  legalCompanyName?: string;
+  legalAddress?: string;
+  legalActualAddress?: string;
+  legalPostalAddress?: string;
+  legalBankDetails?: string;
+  legalBic?: string;
+  legalUnp?: string;
+  legalOkpo?: string;
+  legalPhone?: string;
+  legalEmail?: string;
   items: Array<{ serviceId: string; price: number; quantity: number }>;
 }
 

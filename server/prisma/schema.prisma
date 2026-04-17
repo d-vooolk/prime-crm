@@ -36,19 +36,31 @@ model Car {
 }
 
 model Record {
-  id          String       @id @default(cuid())
-  clientId    String
-  carId       String
-  scheduledAt DateTime
-  serviceman  String
-  notes       String?
-  status      RecordStatus @default(ACTIVE)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  client      Client       @relation(fields: [clientId], references: [id])
-  car         Car          @relation(fields: [carId], references: [id])
-  items       RecordItem[]
-  deal        Deal?
+  id                 String       @id @default(cuid())
+  clientId           String
+  carId              String
+  scheduledAt        DateTime
+  serviceman         String
+  receptionist       String?
+  notes              String?
+  status             RecordStatus @default(ACTIVE)
+  isLegalEntity      Boolean      @default(false)
+  legalCompanyName   String?
+  legalAddress       String?
+  legalActualAddress String?
+  legalPostalAddress String?
+  legalBankDetails   String?
+  legalBic           String?
+  legalUnp           String?
+  legalOkpo          String?
+  legalPhone         String?
+  legalEmail         String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  client             Client       @relation(fields: [clientId], references: [id])
+  car                Car          @relation(fields: [carId], references: [id])
+  items              RecordItem[]
+  deal               Deal?
 }
 
 enum RecordStatus {
@@ -104,23 +116,36 @@ model DealEquipment {
 }
 
 model Equipment {
-  id    String          @id @default(cuid())
-  name  String          @unique
-  deals DealEquipment[]
+  id       String          @id @default(cuid())
+  name     String          @unique
+  isActive Boolean         @default(true)
+  deals    DealEquipment[]
 }
 
 model Serviceman {
-  id   String @id @default(cuid())
-  name String @unique
+  id             String   @id @default(cuid())
+  name           String   @unique
+  position       String?
+  email          String?
+  password       String?
+  photoUrl       String?
+  isDismissed    Boolean  @default(false)
+  isReceptionist Boolean  @default(false)
+  isDefault      Boolean  @default(false)
+  createdAt      DateTime @default(now())
 }
 
 model CompanySettings {
-  id          String  @id @default(cuid())
-  name        String
-  address     String?
-  phone       String?
-  email       String?
-  taxId       String?
-  bankDetails String?
-  logoUrl     String?
+  id            String  @id @default(cuid())
+  name          String
+  legalAddress  String?
+  actualAddress String?
+  postalAddress String?
+  phone         String?
+  email         String?
+  taxId         String?
+  bic           String?
+  okpo          String?
+  bankDetails   String?
+  logoUrl       String?
 }
