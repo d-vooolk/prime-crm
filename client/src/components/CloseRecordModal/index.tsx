@@ -6,6 +6,7 @@ import { servicesApi } from '@/api/services.api';
 import { recordsApi } from '@/api/records.api';
 import { formatPrice } from '@/utils/formatters';
 import { printCompletionAct } from '@/utils/print';
+import { DealCelebration } from '../DealCelebration';
 
 interface Props {
   record: Record;
@@ -17,6 +18,7 @@ interface Props {
 export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [equipment, setEquipment] = useState<Equipment[]>([]);
+  const [celebrating, setCelebrating] = useState(false);
   const totalFromServices = record.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
 
   const [form] = Form.useForm();
@@ -45,9 +47,11 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
         printCompletionAct(closed);
       }
 
-      message.success('Сделка завершена');
-      onSuccess();
+      // Скрываем форму сразу, запускаем анимацию
       onClose();
+      setCelebrating(true);
+      // Обновляем данные и закрываем RecordDetailModal после анимации
+      setTimeout(() => onSuccess(), 2100);
     } catch (e: unknown) {
       message.error(e instanceof Error ? e.message : 'Ошибка');
     } finally {
@@ -56,6 +60,8 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
   };
 
   return (
+    <>
+    {celebrating && <DealCelebration onDone={() => setCelebrating(false)} />}
     <Modal
       open={open}
       onCancel={onClose}
@@ -119,5 +125,6 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
         </div>
       </Form>
     </Modal>
+    </>
   );
 };

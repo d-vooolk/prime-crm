@@ -1,0 +1,75 @@
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes overlayOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+@keyframes textPop {
+  0%   { transform: scale(0) rotate(-8deg); opacity: 0; }
+  35%  { transform: scale(1.15) rotate(2deg); opacity: 1; }
+  60%  { transform: scale(1) rotate(0deg); opacity: 1; }
+  85%  { transform: scale(1) rotate(0deg); opacity: 1; }
+  100% { transform: scale(0.7) rotate(0deg); opacity: 0; }
+}
+
+@keyframes particle {
+  0% {
+    transform: rotate(var(--angle)) translateX(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(var(--angle)) translateX(var(--dist)) scale(0);
+    opacity: 0;
+  }
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+  pointer-events: none;
+
+  &.enter { animation: overlayIn 0.15s ease forwards; }
+  &.exit  { animation: overlayOut 0.35s ease forwards; }
+}
+
+.center {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.text {
+  position: relative;
+  z-index: 2;
+  font-size: clamp(28px, 6vw, 56px);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow:
+    0 0 30px rgba(52, 211, 153, 0.9),
+    0 0 60px rgba(52, 211, 153, 0.5),
+    0 4px 16px rgba(0, 0, 0, 0.6);
+  animation: textPop 1.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  white-space: nowrap;
+}
+
+.particle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  transform-origin: 0 0;
+  animation: particle var(--dur) cubic-bezier(0.2, 0.8, 0.4, 1) var(--delay) forwards;
+}

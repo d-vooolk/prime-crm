@@ -4,30 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="45f6dddb-f82f-43d5-b121-b81757ed27dc" name="Changes" comment="add image for record card&#10;fix bugs">
+    <list default="true" id="45f6dddb-f82f-43d5-b121-b81757ed27dc" name="Changes" comment="add functionality">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/api/records.api.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/api/records.api.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/api/services.api.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/api/services.api.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/components/RecordCard/RecordCard.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/RecordCard/RecordCard.module.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/components/CloseRecordModal/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/CloseRecordModal/index.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/components/RecordDetailModal/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/RecordDetailModal/index.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/components/RecordModal/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/RecordModal/index.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/components/RecordModal/steps/Step1Client.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/RecordModal/steps/Step1Client.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/components/RecordModal/steps/Step2Services.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/RecordModal/steps/Step2Services.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/components/RecordModal/steps/Step3Summary.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/RecordModal/steps/Step3Summary.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/components/RecordModal/types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/RecordModal/types.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/components/SideBar/SideBar.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/SideBar/SideBar.module.scss" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/components/SideBar/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/SideBar/index.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/pages/ClientsPage/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/pages/ClientsPage/index.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/pages/SchedulePage/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/pages/SchedulePage/index.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/pages/ServicesPage/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/pages/ServicesPage/index.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/pages/SettingsPage/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/pages/SettingsPage/index.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/styles/_variables.scss" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/styles/_variables.scss" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/types/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/types/index.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/utils/print.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/utils/print.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/prisma/schema.prisma" beforeDir="false" afterPath="$PROJECT_DIR$/server/prisma/schema.prisma" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/src/controllers/services.controller.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/controllers/services.controller.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/src/routes/services.routes.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/routes/services.routes.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/src/services/records.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/services/records.service.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -116,7 +97,15 @@
       <option name="project" value="LOCAL" />
       <updated>1776123501097</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="add functionality">
+      <option name="closed" value="true" />
+      <created>1776445448493</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1776445448493</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -132,6 +121,7 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="init new version of product" />
     <MESSAGE value="add image for record card&#10;fix bugs" />
-    <option name="LAST_COMMIT_MESSAGE" value="add image for record card&#10;fix bugs" />
+    <MESSAGE value="add functionality" />
+    <option name="LAST_COMMIT_MESSAGE" value="add functionality" />
   </component>
 </project>

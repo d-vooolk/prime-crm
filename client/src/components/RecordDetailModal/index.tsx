@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal, Button, Descriptions, Tag, Divider, Table, message,
-  Popconfirm, Select, InputNumber, DatePicker, TimePicker, Space,
+  Popconfirm, Select, InputNumber, DatePicker, Space,
 } from 'antd';
 import {
   PrinterOutlined, CheckCircleOutlined, CloseCircleOutlined,
@@ -11,7 +11,7 @@ import dayjs from 'dayjs';
 import { Record as CrmRecord, Category, Serviceman } from '@/types';
 import { SelectedService } from '@/components/RecordModal/types';
 import { formatPrice, formatDate, formatTime } from '@/utils/formatters';
-import { printWorkOrder, printCompletionAct, printServiceContract, printInvoice } from '@/utils/print';
+import { printWorkOrder, printCompletionAct, printServiceContract, printInvoice, printBlankCompletionAct } from '@/utils/print';
 import { CloseRecordModal } from '../CloseRecordModal';
 import { recordsApi } from '@/api/records.api';
 import { servicesApi } from '@/api/services.api';
@@ -41,8 +41,8 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
   const [rescheduleReceptionist, setRescheduleReceptionist] = useState('');
   const [servicemen, setServicemen] = useState<Serviceman[]>([]);
   const [saving, setSaving] = useState(false);
-  const [timePickerOpen, setTimePickerOpen] = useState(false);
-  const timeClickCount = useRef(0);
+  const timePickerRef = useRef<any>(null);
+  const timeCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (open && record) {
@@ -501,19 +501,15 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
             <div style={{ marginBottom: 6, fontWeight: 500 }}>Время</div>
             <TimePicker
               style={{ width: '100%' }}
-              open={timePickerOpen}
-              onOpenChange={(open) => {
-                setTimePickerOpen(open);
-                if (!open) timeClickCount.current = 0;
-              }}
+              ref={timePickerRef}
               value={rescheduleTime}
               onChange={t => {
                 setRescheduleTime(t);
-                timeClickCount.current += 1;
-                if (timeClickCount.current >= 2) {
-                  setTimePickerOpen(false);
-                  timeClickCount.current = 0;
-                }
+                if (timeCloseTimer.current) clearTimeout(timeCloseTimer.current);
+                timeCloseTimer.current = setTimeout(() => {
+                  timePickerRef.current?.blur();
+                  timeCloseTimer.current = null;
+                }, 600);
               }}
               format="HH:mm"
               minuteStep={5}

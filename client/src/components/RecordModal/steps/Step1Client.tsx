@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Form, Input, Select, DatePicker, TimePicker, AutoComplete,
+  Form, Input, Select, DatePicker, AutoComplete,
   Row, Col, Divider, Card, Checkbox,
 } from 'antd';
 import { CarOutlined } from '@ant-design/icons';
@@ -28,9 +28,6 @@ export const Step1Client: React.FC<Props> = ({ data, onChange }) => {
   const [loadingGenerations, setLoadingGenerations] = useState(false);
   const [legalActualSameAsLegal, setLegalActualSameAsLegal] = useState(false);
   const [legalPostalSameAsLegal, setLegalPostalSameAsLegal] = useState(false);
-  const [timePickerOpen, setTimePickerOpen] = useState(false);
-  const timeClickCount = useRef(0);
-
   useEffect(() => {
     servicesApi.getServicemen().then(setServicemen).catch(() => {});
     carsApi.getBrands().then(setBrands).catch(() => {});
@@ -462,28 +459,34 @@ export const Step1Client: React.FC<Props> = ({ data, onChange }) => {
         </Col>
         <Col xs={24} sm={8}>
           <Form.Item label="Время" required>
-            <TimePicker
-              style={{ width: '100%' }}
-              open={timePickerOpen}
-              onOpenChange={(open) => {
-                setTimePickerOpen(open);
-                if (!open) timeClickCount.current = 0;
-              }}
-              value={data.time ? dayjs(data.time, 'HH:mm') : null}
-              onChange={t => {
-                onChange({ time: t?.format('HH:mm') || '' });
-                timeClickCount.current += 1;
-                if (timeClickCount.current >= 2) {
-                  setTimePickerOpen(false);
-                  timeClickCount.current = 0;
-                }
-              }}
-              format="HH:mm"
-              minuteStep={5}
-              needConfirm={false}
-              disabledTime={() => ({ disabledHours: () => [0, 1, 2, 3, 4, 5, 6, 7, 8, 20, 21, 22, 23] })}
-              hideDisabledOptions
-            />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Select
+                value={data.time ? Number(data.time.split(':')[0]) : undefined}
+                onChange={h => {
+                  const m = data.time ? data.time.split(':')[1] : '00';
+                  onChange({ time: `${String(h).padStart(2, '0')}:${m}` });
+                }}
+                placeholder="ЧЧ"
+                style={{ flex: 1 }}
+                options={Array.from({ length: 11 }, (_, i) => i + 9).map(h => ({
+                  value: h,
+                  label: String(h).padStart(2, '0'),
+                }))}
+              />
+              <Select
+                value={data.time ? Number(data.time.split(':')[1]) : undefined}
+                onChange={m => {
+                  const h = data.time ? data.time.split(':')[0] : '09';
+                  onChange({ time: `${h}:${String(m).padStart(2, '0')}` });
+                }}
+                placeholder="ММ"
+                style={{ flex: 1 }}
+                options={[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map(m => ({
+                  value: m,
+                  label: String(m).padStart(2, '0'),
+                }))}
+              />
+            </div>
           </Form.Item>
         </Col>
         <Col xs={24} sm={8}>
