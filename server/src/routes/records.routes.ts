@@ -10,5 +10,6 @@ router.post('/', recordsController.create);
 router.patch('/:id', recordsController.update);
 router.post('/:id/close', recordsController.close);
 router.post('/:id/cancel', recordsController.cancel);
+router.post('/:id/restore', recordsController.restore);
 
 export default router;

@@ -1,9 +1,5 @@
 export function formatPrice(value: number): string {
-  return new Intl.NumberFormat('ru-RU', {
-    style: 'currency',
-    currency: 'RUB',
-    maximumFractionDigits: 0,
-  }).format(value);
+  return `${new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(value)} р.`;
 }
 
 export function formatDate(iso: string): string {

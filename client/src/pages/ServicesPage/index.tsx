@@ -10,8 +10,6 @@ export const ServicesPage: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [servicemen, setServicemen] = useState<Serviceman[]>([]);
-  const [loading, setLoading] = useState(false);
-
   const [serviceModal, setServiceModal] = useState<{ open: boolean; service?: Service; categoryId?: string }>({ open: false });
   const [categoryModal, setCategoryModal] = useState<{ open: boolean; category?: Category }>({ open: false });
   const [equipmentModal, setEquipmentModal] = useState<{ open: boolean; item?: Equipment }>({ open: false });
@@ -20,12 +18,11 @@ export const ServicesPage: React.FC = () => {
   const [form] = Form.useForm();
 
   const fetchAll = async () => {
-    setLoading(true);
     await Promise.all([
       servicesApi.getCategories().then(setCategories),
       servicesApi.getEquipment().then(setEquipment),
       servicesApi.getServicemen().then(setServicemen),
-    ]).finally(() => setLoading(false));
+    ]);
   };
 
   useEffect(() => { fetchAll(); }, []);
@@ -198,7 +195,7 @@ export const ServicesPage: React.FC = () => {
 
       {/* Service modal */}
       <Modal open={serviceModal.open} onCancel={() => setServiceModal({ open: false })} onOk={handleSaveService}
-        title={serviceModal.service ? 'Редактировать услугу' : 'Новая услуга'} destroyOnClose>
+        title={serviceModal.service ? 'Редактировать услугу' : 'Новая услуга'} destroyOnHidden>
         <Form form={form} layout="vertical">
           <Form.Item label="Категория" name="categoryId" rules={[{ required: true }]}>
             <Select options={categories.map(c => ({ value: c.id, label: c.name }))} />
@@ -217,7 +214,7 @@ export const ServicesPage: React.FC = () => {
 
       {/* Category modal */}
       <Modal open={categoryModal.open} onCancel={() => setCategoryModal({ open: false })} onOk={handleSaveCategory}
-        title={categoryModal.category ? 'Редактировать категорию' : 'Новая категория'} destroyOnClose>
+        title={categoryModal.category ? 'Редактировать категорию' : 'Новая категория'} destroyOnHidden>
         <Form form={form} layout="vertical">
           <Form.Item label="Название" name="name" rules={[{ required: true }]}>
             <Input />
@@ -233,7 +230,7 @@ export const ServicesPage: React.FC = () => {
           setEquipmentModal({ open: false });
           fetchAll();
         }}
-        title="Добавить оборудование" destroyOnClose>
+        title="Добавить оборудование" destroyOnHidden>
         <Form form={form} layout="vertical">
           <Form.Item label="Название" name="name" rules={[{ required: true }]}>
             <Input />
@@ -249,7 +246,7 @@ export const ServicesPage: React.FC = () => {
           setServicemanModal(false);
           fetchAll();
         }}
-        title="Добавить мастера" destroyOnClose>
+        title="Добавить мастера" destroyOnHidden>
         <Form form={form} layout="vertical">
           <Form.Item label="ФИО мастера" name="name" rules={[{ required: true }]}>
             <Input />

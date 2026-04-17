@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from '../prisma/client';
 import { AppError } from '../middleware/errorHandler';
 import { startOfDay, endOfDay } from '../utils/date';
@@ -105,7 +106,7 @@ export const recordsService = {
           model: car.model,
           modelId: car.modelId,
           generation: car.generation,
-          generationId: car.generationId,
+          generationId: car.generationId != null ? String(car.generationId) : undefined,
           generationName: car.generationName,
           year: car.year,
           plateNumber: car.plateNumber,
@@ -175,7 +176,7 @@ export const recordsService = {
 
     const { finalPrice, priceIncreaseReason, warranty, equipmentIds } = data;
 
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       await tx.deal.create({
         data: {
           recordId: id,
@@ -200,6 +201,21 @@ export const recordsService = {
     return prisma.record.update({
       where: { id },
       data: { status: 'CANCELLED' },
+    });
+  },
+
+  async restore(id: string) {
+    const record = await recordsService.findById(id);
+    if (record.status !== 'CANCELLED') throw new AppError('Запись не была отменена', 400);
+    return prisma.record.update({
+      where: { id },
+      data: { status: 'ACTIVE' },
+      include: {
+        client: true,
+        car: true,
+        items: { include: { service: { include: { category: true } } } },
+        deal: { include: { equipment: { include: { equipment: true } } } },
+      },
     });
   },
 };

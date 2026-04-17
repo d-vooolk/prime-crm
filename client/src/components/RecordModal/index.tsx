@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal, Steps, Button, message, Form } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
 import { Step1Client } from './steps/Step1Client';
@@ -30,6 +30,13 @@ export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initial
     ...emptyFormData,
     date: initialDate || '',
   });
+
+  useEffect(() => {
+    if (open) {
+      setData({ ...emptyFormData, date: initialDate || '' });
+      setStep(0);
+    }
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleChange = (partial: Partial<RecordFormData>) => {
     setData(prev => ({ ...prev, ...partial }));
@@ -138,7 +145,7 @@ export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initial
       width={800}
       footer={null}
       className={styles.modal}
-      destroyOnClose
+      destroyOnHidden
     >
       <div className={styles.body}>
         <div className={styles.steps}>

@@ -26,7 +26,7 @@ export function errorHandler(
     return;
   }
 
-  console.error('[Unhandled Error]', err);
+  console.error('[Unhandled Error]', err); // eslint-disable-line no-console
   res.status(500).json({
     error: true,
     message: 'Внутренняя ошибка сервера',

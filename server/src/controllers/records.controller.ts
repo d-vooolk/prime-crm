@@ -51,4 +51,11 @@ export const recordsController = {
       res.json({ data: record });
     } catch (e) { next(e); }
   },
+
+  async restore(req: Request, res: Response, next: NextFunction) {
+    try {
+      const record = await recordsService.restore(String(req.params.id));
+      res.json({ data: record });
+    } catch (e) { next(e); }
+  },
 };

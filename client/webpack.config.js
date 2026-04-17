@@ -40,7 +40,7 @@ module.exports = (env = {}) => {
           test: /\.module\.scss$/,
           use: [
             isDev ? 'style-loader' : MiniCssExtractPlugin.loader,
-            { loader: 'css-loader', options: { modules: { localIdentName: isDev ? '[local]__[hash:base64:5]' : '[hash:base64:8]' } } },
+            { loader: 'css-loader', options: { esModule: false, modules: { localIdentName: isDev ? '[local]__[hash:base64:5]' : '[local]_[hash:base64:5]' } } },
             'sass-loader',
           ],
         },

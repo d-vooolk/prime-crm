@@ -1,7 +1,39 @@
 {
   "permissions": {
     "allow": [
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Read(//tmp/**)",
+      "Bash(npm --version)",
+      "Bash(docker --version)",
+      "Bash(docker compose *)",
+      "Bash(git --version)",
+      "Bash(wsl --status)",
+      "Bash(wsl --list --verbose)",
+      "Bash(powershell *)",
+      "Bash(docker info *)",
+      "Bash(powershell.exe *)",
+      "Bash(wsl *)",
+      "Bash(taskkill /F /IM \"Docker Desktop.exe\")",
+      "Bash(taskkill /F /IM \"com.docker.backend.exe\")",
+      "Bash(taskkill /F /IM \"dockerd.exe\")",
+      "Bash(docker exec prime-crm-client-1 *)",
+      "Bash(npx tsc *)",
+      "Bash(docker-compose ps *)",
+      "Bash(docker-compose up *)",
+      "Bash(curl *)",
+      "Bash(docker exec prime-crm-postgres-1 *)",
+      "Bash(docker exec prime-crm-server-1 *)",
+      "Bash(npm install *)",
+      "Bash(npx eslint *)",
+      "Bash(sed -n '120p;121p;122p;123p' /c/Users/Dmitriy/Desktop/prime-crm/client/src/components/RecordModal/steps/Step2Services.tsx)",
+      "Bash(sed -n '146p;147p;148p;149p' /c/Users/Dmitriy/Desktop/prime-crm/client/src/components/RecordModal/index.tsx)",
+      "Bash(sed -n '215p;216p;217p;218p;219p' /c/Users/Dmitriy/Desktop/prime-crm/client/src/components/RecordDetailModal/index.tsx)",
+      "Bash(sed -n '442p;443p;444p;445p;446p' /c/Users/Dmitriy/Desktop/prime-crm/client/src/components/RecordDetailModal/index.tsx)",
+      "Bash(sed -n '208p;209p;210p;211p' /c/Users/Dmitriy/Desktop/prime-crm/client/src/components/RecordModal/steps/Step1Client.tsx)",
+      "Bash(npm view *)",
+      "Bash(npx prisma *)",
+      "Bash(docker-compose build *)",
+      "Bash(xargs grep *)"
     ]
   }
 }

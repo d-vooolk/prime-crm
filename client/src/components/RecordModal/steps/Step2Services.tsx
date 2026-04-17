@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Select, InputNumber, Button, Table, Empty, Tag } from 'antd';
-import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Select, InputNumber, Button, Table, Empty, Tag, Space } from 'antd';
+import { DeleteOutlined } from '@ant-design/icons';
 import { servicesApi } from '@/api/services.api';
 import { Category } from '@/types';
 import { formatPrice } from '@/utils/formatters';
@@ -13,7 +13,6 @@ interface Props {
 
 export const Step2Services: React.FC<Props> = ({ data, onChange }) => {
   const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedServiceId, setSelectedServiceId] = useState<string>('');
 
   useEffect(() => {
     servicesApi.getCategories().then(setCategories).catch(() => {});
@@ -23,17 +22,14 @@ export const Step2Services: React.FC<Props> = ({ data, onChange }) => {
     c.services.map(s => ({ ...s, category: c }))
   );
 
-  const addService = () => {
-    if (!selectedServiceId) return;
-    const service = allServices.find(s => s.id === selectedServiceId);
+  const handleServiceSelect = (serviceId: string) => {
+    const service = allServices.find(s => s.id === serviceId);
     if (!service) return;
-    const existing = data.services.find(s => s.serviceId === selectedServiceId);
+    const existing = data.services.find(s => s.serviceId === serviceId);
     if (existing) {
       onChange({
         services: data.services.map(s =>
-          s.serviceId === selectedServiceId
-            ? { ...s, quantity: s.quantity + 1 }
-            : s
+          s.serviceId === serviceId ? { ...s, quantity: s.quantity + 1 } : s
         ),
       });
     } else {
@@ -51,7 +47,6 @@ export const Step2Services: React.FC<Props> = ({ data, onChange }) => {
         ],
       });
     }
-    setSelectedServiceId('');
   };
 
   const removeService = (serviceId: string) => {
@@ -117,15 +112,21 @@ export const Step2Services: React.FC<Props> = ({ data, onChange }) => {
       key: 'price',
       width: 140,
       render: (_: unknown, row: SelectedService) => (
-        <InputNumber
-          min={0}
-          value={row.price}
-          onChange={v => updatePrice(row.serviceId, v || 0)}
-          size="small"
-          style={{ width: 110 }}
-          formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}
-          addonAfter="₽"
-        />
+        <Space.Compact size="small">
+          <InputNumber
+            min={0}
+            value={row.price}
+            onChange={v => updatePrice(row.serviceId, v || 0)}
+            style={{ width: 90 }}
+            formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}
+          />
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', padding: '0 8px',
+            background: 'var(--color-surface-2)', border: '1px solid var(--color-border)',
+            borderLeft: 'none', borderRadius: '0 6px 6px 0', fontSize: 13,
+            color: 'var(--color-text-secondary)',
+          }}>р.</span>
+        </Space.Compact>
       ),
     },
     {
@@ -154,24 +155,16 @@ export const Step2Services: React.FC<Props> = ({ data, onChange }) => {
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+      <div style={{ marginBottom: 16 }}>
         <Select
           showSearch
-          style={{ flex: 1 }}
-          value={selectedServiceId || undefined}
-          onChange={setSelectedServiceId}
+          style={{ width: '100%' }}
+          value={undefined}
+          onChange={handleServiceSelect}
           placeholder="Выберите услугу для добавления..."
           optionFilterProp="label"
           options={serviceOptions}
         />
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={addService}
-          disabled={!selectedServiceId}
-        >
-          Добавить
-        </Button>
       </div>
 
       {data.services.length === 0 ? (

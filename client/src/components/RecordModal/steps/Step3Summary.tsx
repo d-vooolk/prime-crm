@@ -28,9 +28,6 @@ export const Step3Summary: React.FC<Props> = ({ data }) => {
         {data.carGenerationName && (
           <Descriptions.Item label="Поколение">{data.carGenerationName}</Descriptions.Item>
         )}
-        {data.carPlate && (
-          <Descriptions.Item label="Гос. номер">{data.carPlate}</Descriptions.Item>
-        )}
       </Descriptions>
 
       <Divider orientation="left" style={{ fontSize: 13 }}>Запись</Divider>

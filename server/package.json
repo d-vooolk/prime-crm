@@ -15,18 +15,24 @@
     "format": "prettier --write \"src/**/*.ts\""
   },
   "dependencies": {
-    "@prisma/client": "^5.22.0",
+    "@prisma/adapter-pg": "^7.7.0",
+    "@prisma/client": "^7.7.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^5.1.0",
     "helmet": "^8.0.0",
+    "pg": "^8.20.0",
+    "prisma": "^7.7.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "@types/node": "^22.0.0",
-    "prisma": "^5.22.0",
+    "@types/pg": "^8.20.0",
+    "@typescript-eslint/eslint-plugin": "^8.58.2",
+    "@typescript-eslint/parser": "^8.58.2",
+    "eslint": "^9.39.4",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.6.0"

@@ -1,18 +1,23 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   CalendarOutlined,
   DashboardOutlined,
   TeamOutlined,
   ToolOutlined,
   SettingOutlined,
-  MenuFoldOutlined,
-  MenuUnfoldOutlined,
+  LeftOutlined,
+  RightOutlined,
 } from '@ant-design/icons';
-import { Tooltip } from 'antd';
+import { Calendar, ConfigProvider, Button } from 'antd';
+import type { Dayjs } from 'dayjs';
+import dayjs from 'dayjs';
+import 'dayjs/locale/ru';
 import { useUiStore } from '@/store/uiStore';
 import styles from './SideBar.module.scss';
 import cn from 'classnames';
+
+dayjs.locale('ru');
 
 const NAV_ITEMS = [
   { path: '/schedule', label: 'Расписание', icon: <CalendarOutlined /> },
@@ -23,48 +28,83 @@ const NAV_ITEMS = [
 ];
 
 export const SideBar: React.FC = () => {
-  const { sidebarCollapsed, toggleSidebar } = useUiStore();
+  const { selectedDate, setSelectedDate } = useUiStore();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [calendarValue, setCalendarValue] = useState<Dayjs>(dayjs(selectedDate));
+
+  useEffect(() => {
+    setCalendarValue(dayjs(selectedDate));
+  }, [selectedDate]);
+
+  const prevMonth = () => setCalendarValue(v => v.subtract(1, 'month'));
+  const nextMonth = () => setCalendarValue(v => v.add(1, 'month'));
+
+  const goToToday = () => {
+    const today = dayjs();
+    setCalendarValue(today);
+    setSelectedDate(today.format('YYYY-MM-DD'));
+    if (location.pathname !== '/schedule') navigate('/schedule');
+  };
+
+  const handleDateSelect = (date: Dayjs) => {
+    setCalendarValue(date);
+    setSelectedDate(date.format('YYYY-MM-DD'));
+    if (location.pathname !== '/schedule') {
+      navigate('/schedule');
+    }
+  };
 
   return (
     <>
-      {/* Desktop sidebar */}
-      <aside
-        className={cn(styles.sidebar, { [styles.collapsed]: sidebarCollapsed })}
-        style={{ width: sidebarCollapsed ? 'var(--sidebar-collapsed-width)' : 'var(--sidebar-width)' }}
-      >
-        <div className={cn(styles.logo, { [styles.collapsed]: sidebarCollapsed })}>
-          <span style={{ fontSize: 24, flexShrink: 0 }}>🚗</span>
-          <span>Prime CRM</span>
+      <aside className={styles.sidebar}>
+        <div className={styles.logo}>
+          <span className={styles.logoIcon}>🚗</span>
+          <span className={styles.logoText}>Prime CRM</span>
+        </div>
+
+        <div className={styles.calendarWrap}>
+          <ConfigProvider theme={{ components: { Calendar: { colorBgContainer: 'transparent' } } }}>
+            <Calendar
+              fullscreen={false}
+              value={calendarValue}
+              onChange={handleDateSelect}
+              headerRender={({ value }) => (
+                <div className={styles.calendarHeader}>
+                  <button className={styles.calendarArrow} onClick={prevMonth}>
+                    <LeftOutlined />
+                  </button>
+                  <span className={styles.calendarTitle}>
+                    {value.locale('ru').format('MMMM YYYY')}
+                  </span>
+                  <button className={styles.calendarArrow} onClick={nextMonth}>
+                    <RightOutlined />
+                  </button>
+                </div>
+              )}
+            />
+          </ConfigProvider>
+          <div className={styles.todayBtn}>
+            <Button size="small" onClick={goToToday} block>Сегодня</Button>
+          </div>
         </div>
 
         <nav className={styles.nav}>
           {NAV_ITEMS.map((item) => (
-            <Tooltip
+            <NavLink
               key={item.path}
-              title={sidebarCollapsed ? item.label : ''}
-              placement="right"
+              to={item.path}
+              className={({ isActive }) =>
+                cn(styles.navItem, { [styles.active]: isActive })
+              }
             >
-              <NavLink
-                to={item.path}
-                className={({ isActive }) =>
-                  cn(styles.navItem, { [styles.active]: isActive })
-                }
-              >
-                <span className={styles.navIcon}>{item.icon}</span>
-                <span className={styles.navLabel}>{item.label}</span>
-              </NavLink>
-            </Tooltip>
+              <span className={styles.navIcon}>{item.icon}</span>
+              <span className={styles.navLabel}>{item.label}</span>
+            </NavLink>
           ))}
         </nav>
-
-        <div className={styles.footer}>
-          <button className={styles.collapseBtn} onClick={toggleSidebar}>
-            {sidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-          </button>
-        </div>
       </aside>
 
-      {/* Mobile bottom nav */}
       <nav className={styles.bottomNav}>
         {NAV_ITEMS.map((item) => (
           <NavLink

@@ -184,15 +184,6 @@ export const Step1Client: React.FC<Props> = ({ data, onChange }) => {
             />
           </Form.Item>
         </Col>
-        <Col xs={24} sm={8}>
-          <Form.Item label="Гос. номер">
-            <Input
-              value={data.carPlate}
-              onChange={e => onChange({ carPlate: e.target.value })}
-              placeholder="1234 AB-7"
-            />
-          </Form.Item>
-        </Col>
       </Row>
 
       <Divider orientation="left" style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>Запись</Divider>
@@ -216,7 +207,7 @@ export const Step1Client: React.FC<Props> = ({ data, onChange }) => {
               onChange={t => onChange({ time: t?.format('HH:mm') || '' })}
               format="HH:mm"
               minuteStep={5}
-              disabledHours={() => [0, 1, 2, 3, 4, 5, 6, 7, 8, 20, 21, 22, 23]}
+              disabledTime={() => ({ disabledHours: () => [0, 1, 2, 3, 4, 5, 6, 7, 8, 20, 21, 22, 23] })}
               hideDisabledOptions
             />
           </Form.Item>

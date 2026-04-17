@@ -48,4 +48,7 @@ export const recordsApi = {
 
   cancel: (id: string) =>
     http.post<{ data: Record }>(`/records/${id}/cancel`).then(r => r.data.data),
+
+  restore: (id: string) =>
+    http.post<{ data: Record }>(`/records/${id}/restore`).then(r => r.data.data),
 };

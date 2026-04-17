@@ -1,11 +1,20 @@
-import React, { useState } from 'react';
-import { Modal, Button, Descriptions, Tag, Divider, Table, message, Popconfirm } from 'antd';
-import { PrinterOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
-import { Record as CrmRecord } from '@/types';
+import React, { useState, useEffect } from 'react';
+import {
+  Modal, Button, Descriptions, Tag, Divider, Table, message,
+  Popconfirm, Select, InputNumber, DatePicker, TimePicker, Space,
+} from 'antd';
+import {
+  PrinterOutlined, CheckCircleOutlined, CloseCircleOutlined,
+  EditOutlined, DeleteOutlined, ReloadOutlined, CalendarOutlined,
+} from '@ant-design/icons';
+import dayjs from 'dayjs';
+import { Record as CrmRecord, Category, Serviceman } from '@/types';
+import { SelectedService } from '@/components/RecordModal/types';
 import { formatPrice, formatDate, formatTime } from '@/utils/formatters';
 import { printWorkOrder, printCompletionAct } from '@/utils/print';
 import { CloseRecordModal } from '../CloseRecordModal';
 import { recordsApi } from '@/api/records.api';
+import { servicesApi } from '@/api/services.api';
 
 interface Props {
   record: CrmRecord | null;
@@ -22,6 +31,25 @@ const STATUS_MAP: Record<string, { color: string; label: string }> = {
 
 export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRefresh }) => {
   const [closeModalOpen, setCloseModalOpen] = useState(false);
+  const [editingServices, setEditingServices] = useState(false);
+  const [editItems, setEditItems] = useState<SelectedService[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [rescheduleOpen, setRescheduleOpen] = useState(false);
+  const [rescheduleDate, setRescheduleDate] = useState<dayjs.Dayjs | null>(null);
+  const [rescheduleTime, setRescheduleTime] = useState<dayjs.Dayjs | null>(null);
+  const [reschedulePerson, setReschedulePerson] = useState('');
+  const [servicemen, setServicemen] = useState<Serviceman[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open && record) {
+      setEditingServices(false);
+      setRescheduleOpen(false);
+      setRescheduleDate(dayjs(record.scheduledAt));
+      setRescheduleTime(dayjs(record.scheduledAt));
+      setReschedulePerson(record.serviceman);
+    }
+  }, [open, record?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!record) return null;
 
@@ -29,6 +57,102 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
   const total = record.deal
     ? record.deal.finalPrice
     : record.items.reduce((s, i) => s + i.price * i.quantity, 0);
+
+  // ─── Service editing ──────────────────────────────
+
+  const handleStartEditServices = async () => {
+    if (categories.length === 0) {
+      const cats = await servicesApi.getCategories().catch(() => []);
+      setCategories(cats);
+    }
+    setEditItems(record.items.map(item => ({
+      serviceId: item.serviceId,
+      serviceName: item.service.name,
+      categoryName: item.service.category?.name || '',
+      price: item.price,
+      quantity: item.quantity,
+      estimatedTime: item.service.estimatedTime,
+    })));
+    setEditingServices(true);
+  };
+
+  const allServices = categories.flatMap(c => c.services.map(s => ({ ...s, category: c })));
+
+  const handleServiceAdd = (serviceId: string) => {
+    const service = allServices.find(s => s.id === serviceId);
+    if (!service) return;
+    const existing = editItems.find(s => s.serviceId === serviceId);
+    if (existing) {
+      setEditItems(prev => prev.map(s =>
+        s.serviceId === serviceId ? { ...s, quantity: s.quantity + 1 } : s
+      ));
+    } else {
+      setEditItems(prev => [...prev, {
+        serviceId: service.id,
+        serviceName: service.name,
+        categoryName: service.category.name,
+        price: service.standardPrice,
+        quantity: 1,
+        estimatedTime: service.estimatedTime,
+      }]);
+    }
+  };
+
+  const handleSaveServices = async () => {
+    setSaving(true);
+    try {
+      await recordsApi.update(record.id, {
+        items: editItems.map(s => ({
+          serviceId: s.serviceId,
+          price: s.price,
+          quantity: s.quantity,
+        })),
+      });
+      message.success('Услуги обновлены');
+      setEditingServices(false);
+      onRefresh();
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : 'Ошибка');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ─── Reschedule ───────────────────────────────────
+
+  const handleOpenReschedule = async () => {
+    if (servicemen.length === 0) {
+      const sm = await servicesApi.getServicemen().catch(() => []);
+      setServicemen(sm);
+    }
+    setRescheduleOpen(true);
+  };
+
+  const handleSaveReschedule = async () => {
+    if (!rescheduleDate || !rescheduleTime || !reschedulePerson) {
+      message.warning('Заполните все поля');
+      return;
+    }
+    const scheduledAt = rescheduleDate
+      .hour(rescheduleTime.hour())
+      .minute(rescheduleTime.minute())
+      .second(0)
+      .toISOString();
+    setSaving(true);
+    try {
+      await recordsApi.update(record.id, { scheduledAt, serviceman: reschedulePerson });
+      message.success('Запись перенесена');
+      setRescheduleOpen(false);
+      onRefresh();
+      onClose();
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : 'Ошибка');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ─── Cancel / Restore ─────────────────────────────
 
   const handleCancel = async () => {
     try {
@@ -41,12 +165,87 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
     }
   };
 
-  const serviceColumns = [
+  const handleRestore = async () => {
+    try {
+      await recordsApi.restore(record.id);
+      message.success('Запись восстановлена');
+      onRefresh();
+      onClose();
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : 'Ошибка');
+    }
+  };
+
+  // ─── Column definitions ───────────────────────────
+
+  const serviceOptions = categories.map(cat => ({
+    label: cat.name,
+    options: cat.services.map(s => ({
+      value: s.id,
+      label: `${s.name} — ${formatPrice(s.standardPrice)}`,
+    })),
+  }));
+
+  const editColumns = [
+    {
+      title: 'Услуга',
+      dataIndex: 'serviceName',
+      key: 'name',
+      render: (name: string, row: SelectedService) => (
+        <div>
+          <div style={{ fontWeight: 500 }}>{name}</div>
+          <Tag style={{ fontSize: 11, marginTop: 2 }}>{row.categoryName}</Tag>
+        </div>
+      ),
+    },
+    {
+      title: 'Кол-во', key: 'quantity', width: 90,
+      render: (_: unknown, row: SelectedService) => (
+        <InputNumber
+          min={1} max={99} value={row.quantity} size="small" style={{ width: 65 }}
+          onChange={v => setEditItems(prev =>
+            prev.map(s => s.serviceId === row.serviceId ? { ...s, quantity: v || 1 } : s)
+          )}
+        />
+      ),
+    },
+    {
+      title: 'Цена', key: 'price', width: 140,
+      render: (_: unknown, row: SelectedService) => (
+        <Space.Compact size="small">
+          <InputNumber
+            min={0} value={row.price} style={{ width: 90 }}
+            formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}
+            onChange={v => setEditItems(prev =>
+              prev.map(s => s.serviceId === row.serviceId ? { ...s, price: v || 0 } : s)
+            )}
+          />
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', padding: '0 8px',
+            background: 'var(--color-surface-2)', border: '1px solid var(--color-border)',
+            borderLeft: 'none', borderRadius: '0 6px 6px 0', fontSize: 13,
+            color: 'var(--color-text-secondary)',
+          }}>р.</span>
+        </Space.Compact>
+      ),
+    },
+    {
+      title: '', key: 'action', width: 40,
+      render: (_: unknown, row: SelectedService) => (
+        <Button
+          type="text" danger icon={<DeleteOutlined />} size="small"
+          onClick={() => setEditItems(prev => prev.filter(s => s.serviceId !== row.serviceId))}
+        />
+      ),
+    },
+  ];
+
+  const viewColumns = [
     { title: 'Услуга', dataIndex: ['service', 'name'], key: 'name' },
     {
       title: 'Категория', key: 'cat',
       render: (_: unknown, row: typeof record.items[0]) =>
-        <Tag>{row.service.category?.name}</Tag>
+        <Tag>{row.service.category?.name}</Tag>,
     },
     { title: 'Кол-во', dataIndex: 'quantity', key: 'qty', width: 80 },
     {
@@ -87,6 +286,9 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
             <div style={{ display: 'flex', gap: 8 }}>
               {record.status === 'ACTIVE' && (
                 <>
+                  <Button icon={<CalendarOutlined />} onClick={handleOpenReschedule}>
+                    Перенести
+                  </Button>
                   <Popconfirm title="Отменить запись?" onConfirm={handleCancel} okText="Да" cancelText="Нет">
                     <Button danger icon={<CloseCircleOutlined />}>Отменить</Button>
                   </Popconfirm>
@@ -98,6 +300,13 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
                     Закрыть сделку
                   </Button>
                 </>
+              )}
+              {record.status === 'CANCELLED' && (
+                <Popconfirm title="Восстановить запись?" onConfirm={handleRestore} okText="Да" cancelText="Нет">
+                  <Button type="primary" icon={<ReloadOutlined />}>
+                    Восстановить
+                  </Button>
+                </Popconfirm>
               )}
             </div>
           </div>
@@ -137,18 +346,53 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
         )}
 
         <Divider orientation="left" style={{ fontSize: 13 }}>Услуги</Divider>
-        <Table
-          dataSource={record.items}
-          columns={serviceColumns}
-          rowKey="id"
-          pagination={false}
-          size="small"
-          footer={() => (
-            <div style={{ textAlign: 'right', fontSize: 16, fontWeight: 700 }}>
-              {record.deal ? 'Итого: ' : 'Предв. итого: '}{formatPrice(total)}
+        {record.status === 'ACTIVE' && !record.deal && !editingServices && (
+          <div style={{ marginBottom: 8, textAlign: 'right' }}>
+            <Button size="small" icon={<EditOutlined />} onClick={handleStartEditServices}>
+              Изменить услуги
+            </Button>
+          </div>
+        )}
+
+        {editingServices ? (
+          <div style={{ marginTop: 8 }}>
+            <Select
+              showSearch
+              style={{ width: '100%', marginBottom: 12 }}
+              value={undefined}
+              onChange={handleServiceAdd}
+              placeholder="Добавить услугу..."
+              optionFilterProp="label"
+              options={serviceOptions}
+            />
+            <Table
+              dataSource={editItems}
+              columns={editColumns}
+              rowKey="serviceId"
+              pagination={false}
+              size="small"
+            />
+            <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'flex-end' }}>
+              <Button onClick={() => setEditingServices(false)}>Отмена</Button>
+              <Button type="primary" loading={saving} onClick={handleSaveServices}>
+                Сохранить
+              </Button>
             </div>
-          )}
-        />
+          </div>
+        ) : (
+          <Table
+            dataSource={record.items}
+            columns={viewColumns}
+            rowKey="id"
+            pagination={false}
+            size="small"
+            footer={() => (
+              <div style={{ textAlign: 'right', fontSize: 16, fontWeight: 700 }}>
+                {record.deal ? 'Итого: ' : 'Предв. итого: '}{formatPrice(total)}
+              </div>
+            )}
+          />
+        )}
 
         {record.deal && (
           <>
@@ -173,6 +417,53 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
             </Descriptions>
           </>
         )}
+      </Modal>
+
+      <Modal
+        title="Перенос записи"
+        open={rescheduleOpen}
+        onCancel={() => setRescheduleOpen(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setRescheduleOpen(false)}>Отмена</Button>,
+          <Button key="save" type="primary" loading={saving} onClick={handleSaveReschedule}>
+            Перенести
+          </Button>,
+        ]}
+        width={380}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '16px 0' }}>
+          <div>
+            <div style={{ marginBottom: 6, fontWeight: 500 }}>Дата</div>
+            <DatePicker
+              style={{ width: '100%' }}
+              value={rescheduleDate}
+              onChange={setRescheduleDate}
+              format="DD.MM.YYYY"
+            />
+          </div>
+          <div>
+            <div style={{ marginBottom: 6, fontWeight: 500 }}>Время</div>
+            <TimePicker
+              style={{ width: '100%' }}
+              value={rescheduleTime}
+              onChange={setRescheduleTime}
+              format="HH:mm"
+              minuteStep={5}
+              disabledTime={() => ({ disabledHours: () => [0, 1, 2, 3, 4, 5, 6, 7, 8, 20, 21, 22, 23] })}
+              hideDisabledOptions
+            />
+          </div>
+          <div>
+            <div style={{ marginBottom: 6, fontWeight: 500 }}>Мастер-приёмщик</div>
+            <Select
+              style={{ width: '100%' }}
+              value={reschedulePerson || undefined}
+              onChange={setReschedulePerson}
+              placeholder="Выберите мастера"
+              options={servicemen.map(s => ({ value: s.name, label: s.name }))}
+            />
+          </div>
+        </div>
       </Modal>
 
       <CloseRecordModal

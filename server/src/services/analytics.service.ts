@@ -43,7 +43,7 @@ export const analyticsService = {
     });
 
     const closedCount = deals.length;
-    const totalRevenue = deals.reduce((sum, d) => sum + d.finalPrice, 0);
+    const totalRevenue = deals.reduce((sum: number, d: { finalPrice: number }) => sum + d.finalPrice, 0);
 
     const activeRecords = await prisma.record.count({
       where: {
@@ -95,11 +95,11 @@ export const analyticsService = {
     });
 
     const services = await prisma.service.findMany({
-      where: { id: { in: items.map((i) => i.serviceId) } },
+      where: { id: { in: items.map((i: { serviceId: string }) => i.serviceId) } },
     });
 
-    return items.map((item) => ({
-      service: services.find((s) => s.id === item.serviceId),
+    return items.map((item: { serviceId: string; _count: { serviceId: number }; _sum: { price: number | null } }) => ({
+      service: services.find((s: { id: string }) => s.id === item.serviceId),
       count: item._count.serviceId,
       total: item._sum.price,
     }));
