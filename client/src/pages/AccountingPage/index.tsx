@@ -75,6 +75,7 @@ const withdrawalColumns = [
 
 export const AccountingPage: React.FC = () => {
   const { user } = useAuthStore();
+  const canSeeCashflow = user?.isMaster || MANAGER_ROLES.includes(user?.role || '');
   const canSeeCapital = user?.isMaster || DIRECTOR_ROLES.includes(user?.role || '');
 
   const [selectedMonth, setSelectedMonth] = useState<Dayjs>(dayjs());
@@ -519,7 +520,7 @@ export const AccountingPage: React.FC = () => {
   );
 
   const tabItems = [
-    { key: 'cashflow', label: 'Приходно-Расходный', children: cashFlowTab },
+    ...(canSeeCashflow ? [{ key: 'cashflow', label: 'Приходно-Расходный', children: cashFlowTab }] : []),
     ...(canSeeCapital ? [{ key: 'capital', label: 'Капитал', children: capitalTab }] : []),
     { key: 'salary', label: 'Расчёт ЗП', children: salaryTab },
   ];
