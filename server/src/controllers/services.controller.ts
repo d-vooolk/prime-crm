@@ -81,16 +81,25 @@ export const equipmentController = {
 
   async create(req: Request, res: Response, next: NextFunction) {
     try {
-      const equipment = await prisma.equipment.create({ data: { name: req.body.name } });
+      const { name, warranty, wholesalePrice, retailPrice } = req.body;
+      const equipment = await prisma.equipment.create({
+        data: { name, warranty, wholesalePrice, retailPrice },
+      });
       res.status(201).json({ data: equipment });
     } catch (e) { next(e); }
   },
 
   async update(req: Request, res: Response, next: NextFunction) {
     try {
+      const { name, warranty, wholesalePrice, retailPrice } = req.body;
       const equipment = await prisma.equipment.update({
         where: { id: String(req.params.id) },
-        data: { name: req.body.name },
+        data: {
+          ...(name !== undefined && { name }),
+          ...(warranty !== undefined && { warranty }),
+          ...(wholesalePrice !== undefined && { wholesalePrice }),
+          ...(retailPrice !== undefined && { retailPrice }),
+        },
       });
       res.json({ data: equipment });
     } catch (e) { next(e); }
@@ -200,6 +209,59 @@ export const settingsController = {
         settings = await prisma.companySettings.create({ data: req.body });
       }
       res.json({ data: settings });
+    } catch (e) { next(e); }
+  },
+};
+
+export const documentTemplateController = {
+  async getAll(_req: Request, res: Response, next: NextFunction) {
+    try {
+      const templates = await prisma.documentTemplate.findMany({
+        include: { category: true },
+        orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
+      });
+      res.json({ data: templates });
+    } catch (e) { next(e); }
+  },
+
+  async create(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { name, type, content, isDefault, categoryId } = req.body;
+      if (isDefault) {
+        await prisma.documentTemplate.updateMany({ where: { type, isDefault: true }, data: { isDefault: false } });
+      }
+      const template = await prisma.documentTemplate.create({
+        data: { name, type: type || 'work_order', content, isDefault: !!isDefault, categoryId: categoryId || null },
+        include: { category: true },
+      });
+      res.status(201).json({ data: template });
+    } catch (e) { next(e); }
+  },
+
+  async update(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { name, content, isDefault, categoryId } = req.body;
+      const existing = await prisma.documentTemplate.findUnique({ where: { id: String(req.params.id) } });
+      if (!existing) { res.status(404).json({ error: 'Не найден' }); return; }
+      if (isDefault) {
+        await prisma.documentTemplate.updateMany({
+          where: { type: existing.type, isDefault: true, id: { not: existing.id } },
+          data: { isDefault: false },
+        });
+      }
+      const template = await prisma.documentTemplate.update({
+        where: { id: String(req.params.id) },
+        data: { name, content, isDefault: isDefault !== undefined ? !!isDefault : existing.isDefault, categoryId: categoryId !== undefined ? (categoryId || null) : existing.categoryId },
+        include: { category: true },
+      });
+      res.json({ data: template });
+    } catch (e) { next(e); }
+  },
+
+  async delete(req: Request, res: Response, next: NextFunction) {
+    try {
+      await prisma.documentTemplate.delete({ where: { id: String(req.params.id) } });
+      res.json({ success: true });
     } catch (e) { next(e); }
   },
 };

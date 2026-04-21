@@ -13,6 +13,7 @@ export interface CreateRecordDto {
     generationName?: string;
     year: string;
     plateNumber?: string;
+    mileage?: string;
   };
   scheduledAt: string;
   serviceman: string;
@@ -29,12 +30,19 @@ export interface CreateRecordDto {
   legalOkpo?: string;
   legalPhone?: string;
   legalEmail?: string;
+  legalRepresentativePosition?: string;
+  legalRepresentativePositionGenitive?: string;
+  legalRepresentative?: string;
+  legalRepresentativeGenitive?: string;
+  legalBasis?: string;
+  legalVin?: string;
+  legalEndDate?: string;
   items: Array<{ serviceId: string; price: number; quantity: number }>;
 }
 
 export interface CloseDealDto {
   finalPrice: number;
-  priceIncreaseReason?: string;
+  defects?: string;
   warranty?: string;
   equipmentIds?: string[];
 }
@@ -43,8 +51,11 @@ export const recordsApi = {
   getByDate: (date: string) =>
     http.get<{ data: Record[] }>('/records', { params: { date } }).then(r => r.data.data),
 
-  getIncomplete: () =>
-    http.get<{ data: Record[] }>('/records/incomplete').then(r => r.data.data),
+  getIncomplete: () => {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    return http.get<{ data: Record[] }>('/records/incomplete', { params: { date: date.toISOString() } }).then(r => r.data.data);
+  },
 
   getById: (id: string) =>
     http.get<{ data: Record }>(`/records/${id}`).then(r => r.data.data),

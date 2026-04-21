@@ -15,6 +15,7 @@ export interface CreateRecordDto {
     generationName?: string;
     year: string;
     plateNumber?: string;
+    mileage?: string;
   };
   scheduledAt: string;
   serviceman: string;
@@ -31,6 +32,13 @@ export interface CreateRecordDto {
   legalOkpo?: string;
   legalPhone?: string;
   legalEmail?: string;
+  legalRepresentativePosition?: string;
+  legalRepresentativePositionGenitive?: string;
+  legalRepresentative?: string;
+  legalRepresentativeGenitive?: string;
+  legalBasis?: string;
+  legalVin?: string;
+  legalEndDate?: string;
   items: Array<{
     serviceId: string;
     price: number;
@@ -40,7 +48,7 @@ export interface CreateRecordDto {
 
 export interface CloseDealDto {
   finalPrice: number;
-  priceIncreaseReason?: string;
+  defects?: string;
   warranty?: string;
   equipmentIds?: string[];
 }
@@ -65,8 +73,8 @@ export const recordsService = {
     });
   },
 
-  async findIncomplete() {
-    const today = startOfDay(new Date());
+  async findIncomplete(clientDate?: string) {
+    const today = clientDate ? new Date(clientDate) : startOfDay(new Date());
     return prisma.record.findMany({
       where: {
         scheduledAt: { lt: today },
@@ -101,60 +109,85 @@ export const recordsService = {
       clientId, car, scheduledAt, serviceman, receptionist, notes, items,
       isLegalEntity, legalCompanyName, legalAddress, legalActualAddress, legalPostalAddress,
       legalBankDetails, legalBic, legalUnp, legalOkpo, legalPhone, legalEmail,
+      legalRepresentativePosition, legalRepresentativePositionGenitive,
+      legalRepresentative, legalRepresentativeGenitive,
+      legalBasis, legalVin, legalEndDate,
     } = data;
 
-    // Найти или создать авто для клиента
-    let carRecord = await prisma.car.findFirst({
-      where: {
-        clientId,
-        brandId: car.brandId,
-        modelId: car.modelId,
-        year: car.year,
-      },
-    });
+    return prisma.$transaction(async (tx) => {
+      // Генерация номера документа
+      let settings = await tx.companySettings.findFirst();
+      if (!settings) {
+        settings = await tx.companySettings.create({ data: { name: 'Компания' } });
+      }
+      const prefix = settings.documentPrefix || 'ПА';
+      const n = settings.nextDocumentNumber;
+      const documentNumber = `${prefix}-${String(n).padStart(6, '0')}`;
+      await tx.companySettings.update({
+        where: { id: settings.id },
+        data: { nextDocumentNumber: n + 1 },
+      });
 
-    if (!carRecord) {
-      carRecord = await prisma.car.create({
+      // Найти или создать авто для клиента
+      let carRecord = await tx.car.findFirst({
+        where: { clientId, brandId: car.brandId, modelId: car.modelId, year: car.year },
+      });
+
+      if (!carRecord) {
+        carRecord = await tx.car.create({
+          data: {
+            clientId,
+            brand: car.brand,
+            brandId: car.brandId,
+            model: car.model,
+            modelId: car.modelId,
+            generation: car.generation,
+            generationId: car.generationId != null ? String(car.generationId) : undefined,
+            generationName: car.generationName,
+            year: car.year,
+            plateNumber: car.plateNumber,
+            mileage: car.mileage,
+          },
+        });
+      } else {
+        const updateData: { plateNumber?: string; mileage?: string } = {};
+        if (car.plateNumber) updateData.plateNumber = car.plateNumber;
+        if (car.mileage) updateData.mileage = car.mileage;
+        if (Object.keys(updateData).length > 0) {
+          carRecord = await tx.car.update({ where: { id: carRecord.id }, data: updateData });
+        }
+      }
+
+      return tx.record.create({
         data: {
           clientId,
-          brand: car.brand,
-          brandId: car.brandId,
-          model: car.model,
-          modelId: car.modelId,
-          generation: car.generation,
-          generationId: car.generationId != null ? String(car.generationId) : undefined,
-          generationName: car.generationName,
-          year: car.year,
-          plateNumber: car.plateNumber,
+          carId: carRecord.id,
+          scheduledAt: new Date(scheduledAt),
+          serviceman,
+          receptionist,
+          notes,
+          documentNumber,
+          isLegalEntity: isLegalEntity ?? false,
+          legalCompanyName, legalAddress, legalActualAddress, legalPostalAddress,
+          legalBankDetails, legalBic, legalUnp, legalOkpo, legalPhone, legalEmail,
+          legalRepresentativePosition, legalRepresentativePositionGenitive,
+          legalRepresentative, legalRepresentativeGenitive,
+          legalBasis, legalVin, legalEndDate,
+          items: {
+            create: items.map((item) => ({
+              serviceId: item.serviceId,
+              price: item.price,
+              quantity: item.quantity,
+            })),
+          },
+        },
+        include: {
+          client: true,
+          car: true,
+          items: { include: { service: { include: { category: true } } } },
+          deal: true,
         },
       });
-    }
-
-    return prisma.record.create({
-      data: {
-        clientId,
-        carId: carRecord.id,
-        scheduledAt: new Date(scheduledAt),
-        serviceman,
-        receptionist,
-        notes,
-        isLegalEntity: isLegalEntity ?? false,
-        legalCompanyName, legalAddress, legalActualAddress, legalPostalAddress,
-        legalBankDetails, legalBic, legalUnp, legalOkpo, legalPhone, legalEmail,
-        items: {
-          create: items.map((item) => ({
-            serviceId: item.serviceId,
-            price: item.price,
-            quantity: item.quantity,
-          })),
-        },
-      },
-      include: {
-        client: true,
-        car: true,
-        items: { include: { service: { include: { category: true } } } },
-        deal: true,
-      },
     });
   },
 
@@ -195,14 +228,14 @@ export const recordsService = {
     const record = await recordsService.findById(id);
     if (record.status === 'CLOSED') throw new AppError('Сделка уже закрыта', 400);
 
-    const { finalPrice, priceIncreaseReason, warranty, equipmentIds } = data;
+    const { finalPrice, defects, warranty, equipmentIds } = data;
 
     await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       await tx.deal.create({
         data: {
           recordId: id,
           finalPrice,
-          priceIncreaseReason,
+          defects,
           warranty,
           equipment: equipmentIds?.length
             ? {

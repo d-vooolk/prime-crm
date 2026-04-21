@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Modal, Button, Descriptions, Tag, Divider, Table, message,
-  Popconfirm, Select, InputNumber, DatePicker, Space,
+  Popconfirm, Select, InputNumber, DatePicker, TimePicker, Space,
 } from 'antd';
 import {
   PrinterOutlined, CheckCircleOutlined, CloseCircleOutlined,
@@ -11,7 +11,7 @@ import dayjs from 'dayjs';
 import { Record as CrmRecord, Category, Serviceman } from '@/types';
 import { SelectedService } from '@/components/RecordModal/types';
 import { formatPrice, formatDate, formatTime } from '@/utils/formatters';
-import { printWorkOrder, printCompletionAct, printServiceContract, printInvoice, printBlankCompletionAct } from '@/utils/print';
+import { printWorkOrder, printCompletionAct, printServiceContract, printInvoice, printBlankCompletionAct, printLegalAct } from '@/utils/print';
 import { CloseRecordModal } from '../CloseRecordModal';
 import { recordsApi } from '@/api/records.api';
 import { servicesApi } from '@/api/services.api';
@@ -41,8 +41,68 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
   const [rescheduleReceptionist, setRescheduleReceptionist] = useState('');
   const [servicemen, setServicemen] = useState<Serviceman[]>([]);
   const [saving, setSaving] = useState(false);
+  const [printing, setPrinting] = useState(false);
   const timePickerRef = useRef<any>(null);
   const timeCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const fetchPrintData = async () => {
+    const [settings, templates] = await Promise.all([
+      servicesApi.getSettings().catch(() => undefined),
+      servicesApi.getDocTemplates().catch(() => []),
+    ]);
+    return { settings, templates };
+  };
+
+  const handlePrintWorkOrder = async () => {
+    setPrinting(true);
+    try {
+      const { settings, templates } = await fetchPrintData();
+      const categoryId = record.items[0]?.service?.categoryId;
+      const template = templates.find(t => t.categoryId === categoryId && t.type === 'work_order')
+        || templates.find(t => !t.categoryId && t.type === 'work_order' && t.isDefault)
+        || templates.find(t => t.type === 'work_order');
+      printWorkOrder(record, settings, template?.content);
+    } finally {
+      setPrinting(false);
+    }
+  };
+
+  const handlePrintAct = async () => {
+    setPrinting(true);
+    try {
+      const { settings, templates } = await fetchPrintData();
+      if (record.isLegalEntity) {
+        printLegalAct(record, settings);
+      } else {
+        const actTemplate = templates.find(t => t.type === 'completion_act' && t.isDefault)
+          || templates.find(t => t.type === 'completion_act');
+        if (record.deal) printCompletionAct(record, settings, actTemplate?.content);
+        else printBlankCompletionAct(record, settings, actTemplate?.content);
+      }
+    } finally {
+      setPrinting(false);
+    }
+  };
+
+  const handlePrintContract = async () => {
+    setPrinting(true);
+    try {
+      const { settings } = await fetchPrintData();
+      printServiceContract(record, settings);
+    } finally {
+      setPrinting(false);
+    }
+  };
+
+  const handlePrintInvoice = async () => {
+    setPrinting(true);
+    try {
+      const { settings } = await fetchPrintData();
+      printInvoice(record, settings);
+    } finally {
+      setPrinting(false);
+    }
+  };
 
   useEffect(() => {
     if (open && record) {
@@ -289,23 +349,23 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {record.isLegalEntity ? (
                 <>
-                  <Button icon={<PrinterOutlined />} onClick={() => printServiceContract(record)}>
+                  <Button icon={<PrinterOutlined />} loading={printing} onClick={handlePrintContract}>
                     Договор
                   </Button>
-                  <Button icon={<PrinterOutlined />} onClick={() => printInvoice(record)}>
+                  <Button icon={<PrinterOutlined />} loading={printing} onClick={handlePrintInvoice}>
                     Счёт
                   </Button>
-                  <Button icon={<PrinterOutlined />} onClick={() => record.deal ? printCompletionAct(record) : printBlankCompletionAct(record)}>
+                  <Button icon={<PrinterOutlined />} loading={printing} onClick={handlePrintAct}>
                     Акт
                   </Button>
                 </>
               ) : (
                 <>
-                  <Button icon={<PrinterOutlined />} onClick={() => printWorkOrder(record)}>
+                  <Button icon={<PrinterOutlined />} loading={printing} onClick={handlePrintWorkOrder}>
                     Заявка
                   </Button>
                   {record.deal && (
-                    <Button icon={<PrinterOutlined />} onClick={() => printCompletionAct(record)}>
+                    <Button icon={<PrinterOutlined />} loading={printing} onClick={handlePrintAct}>
                       Акт
                     </Button>
                   )}

@@ -1,12 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Form, InputNumber, Input, Select, Button, Divider, message } from 'antd';
-import { PrinterOutlined } from '@ant-design/icons';
-import { Record, Equipment } from '@/types';
+import {
+  Modal, Form, InputNumber, Input, Select, Button, Divider, message,
+  Table, Empty, Tag, Space,
+} from 'antd';
+// InputNumber используется в таблице услуг
+import { PrinterOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Record, Equipment, Category, DocumentTemplate } from '@/types';
 import { servicesApi } from '@/api/services.api';
 import { recordsApi } from '@/api/records.api';
 import { formatPrice } from '@/utils/formatters';
 import { printCompletionAct } from '@/utils/print';
 import { DealCelebration } from '../DealCelebration';
+
+interface ItemRow {
+  serviceId: string;
+  serviceName: string;
+  categoryName: string;
+  price: number;
+  quantity: number;
+  estimatedTime: number;
+}
 
 interface Props {
   record: Record;
@@ -18,17 +31,138 @@ interface Props {
 export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [equipment, setEquipment] = useState<Equipment[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [celebrating, setCelebrating] = useState(false);
-  const totalFromServices = record.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const [items, setItems] = useState<ItemRow[]>([]);
 
   const [form] = Form.useForm();
 
   useEffect(() => {
     if (open) {
       servicesApi.getEquipment().then(setEquipment).catch(() => {});
-      form.setFieldsValue({ finalPrice: totalFromServices });
+      servicesApi.getCategories().then(setCategories).catch(() => {});
+
+      const initialItems: ItemRow[] = record.items.map(i => ({
+        serviceId: i.serviceId,
+        serviceName: i.service.name,
+        categoryName: i.service.category?.name || '',
+        price: i.price,
+        quantity: i.quantity,
+        estimatedTime: i.service.estimatedTime || 0,
+      }));
+      setItems(initialItems);
+
+      const total = record.items.reduce((s, i) => s + i.price * i.quantity, 0);
+      form.setFieldsValue({ finalPrice: total });
     }
-  }, [open, totalFromServices, form]);
+  }, [open, record, form]);
+
+  const allServices = categories.flatMap(c => c.services.map(s => ({ ...s, category: c })));
+
+  const handleServiceSelect = (serviceId: string) => {
+    const service = allServices.find(s => s.id === serviceId);
+    if (!service) return;
+    const existing = items.find(i => i.serviceId === serviceId);
+    let next: ItemRow[];
+    if (existing) {
+      next = items.map(i => i.serviceId === serviceId ? { ...i, quantity: i.quantity + 1 } : i);
+    } else {
+      next = [...items, {
+        serviceId: service.id,
+        serviceName: service.name,
+        categoryName: service.category.name,
+        price: service.standardPrice,
+        quantity: 1,
+        estimatedTime: service.estimatedTime,
+      }];
+    }
+    setItems(next);
+    form.setFieldValue('finalPrice', next.reduce((s, i) => s + i.price * i.quantity, 0));
+  };
+
+  const removeItem = (serviceId: string) => {
+    const next = items.filter(i => i.serviceId !== serviceId);
+    setItems(next);
+    form.setFieldValue('finalPrice', next.reduce((s, i) => s + i.price * i.quantity, 0));
+  };
+
+  const updateItemPrice = (serviceId: string, price: number) => {
+    const next = items.map(i => i.serviceId === serviceId ? { ...i, price } : i);
+    setItems(next);
+    form.setFieldValue('finalPrice', next.reduce((s, i) => s + i.price * i.quantity, 0));
+  };
+
+  const updateItemQty = (serviceId: string, quantity: number) => {
+    const next = items.map(i => i.serviceId === serviceId ? { ...i, quantity } : i);
+    setItems(next);
+    form.setFieldValue('finalPrice', next.reduce((s, i) => s + i.price * i.quantity, 0));
+  };
+
+  const serviceOptions = categories.map(cat => ({
+    label: cat.name,
+    options: cat.services.map(s => ({ value: s.id, label: `${s.name} — ${formatPrice(s.standardPrice)}` })),
+  }));
+
+  const itemColumns = [
+    {
+      title: 'Услуга',
+      dataIndex: 'serviceName',
+      key: 'name',
+      render: (name: string, row: ItemRow) => (
+        <div>
+          <div style={{ fontWeight: 500 }}>{name}</div>
+          <Tag style={{ fontSize: 11, marginTop: 2 }}>{row.categoryName}</Tag>
+        </div>
+      ),
+    },
+    {
+      title: 'Кол-во',
+      key: 'quantity',
+      width: 90,
+      render: (_: unknown, row: ItemRow) => (
+        <InputNumber
+          min={1} max={99} value={row.quantity} size="small" controls style={{ width: 70 }}
+          onChange={v => updateItemQty(row.serviceId, v || 1)}
+        />
+      ),
+    },
+    {
+      title: 'Цена',
+      key: 'price',
+      width: 130,
+      render: (_: unknown, row: ItemRow) => (
+        <Space.Compact size="small">
+          <InputNumber
+            min={0} value={row.price} style={{ width: 85 }}
+            formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}
+            onChange={v => updateItemPrice(row.serviceId, v || 0)}
+          />
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', padding: '0 8px',
+            background: 'var(--color-surface-2)', border: '1px solid var(--color-border)',
+            borderLeft: 'none', borderRadius: '0 6px 6px 0', fontSize: 13,
+            color: 'var(--color-text-secondary)',
+          }}>р.</span>
+        </Space.Compact>
+      ),
+    },
+    {
+      title: 'Итого',
+      key: 'total',
+      width: 100,
+      render: (_: unknown, row: ItemRow) => (
+        <span style={{ fontWeight: 600 }}>{formatPrice(row.price * row.quantity)}</span>
+      ),
+    },
+    {
+      title: '',
+      key: 'del',
+      width: 36,
+      render: (_: unknown, row: ItemRow) => (
+        <Button type="text" danger icon={<DeleteOutlined />} size="small" onClick={() => removeItem(row.serviceId)} />
+      ),
+    },
+  ];
 
   const handleClose = async (withPrint = false) => {
     const values = await form.validateFields().catch(() => null);
@@ -36,21 +170,41 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
 
     setLoading(true);
     try {
+      // Обновляем список услуг если он изменился
+      const originalIds = record.items.map(i => i.serviceId).sort().join(',');
+      const currentIds = items.map(i => i.serviceId).sort().join(',');
+      const itemsChanged =
+        originalIds !== currentIds ||
+        items.some(ci => {
+          const orig = record.items.find(i => i.serviceId === ci.serviceId);
+          return !orig || orig.price !== ci.price || orig.quantity !== ci.quantity;
+        });
+
+      if (itemsChanged) {
+        await recordsApi.update(record.id, {
+          items: items.map(i => ({ serviceId: i.serviceId, price: i.price, quantity: i.quantity })),
+        });
+      }
+
       const closed = await recordsApi.close(record.id, {
-        finalPrice: values.finalPrice,
-        priceIncreaseReason: values.priceIncreaseReason,
-        warranty: values.warranty,
+        finalPrice: items.reduce((s, i) => s + i.price * i.quantity, 0),
+        defects: values.defects || undefined,
+        warranty: values.warranty || undefined,
         equipmentIds: values.equipmentIds || [],
       });
 
       if (withPrint) {
-        printCompletionAct(closed);
+        const [settings, templates] = await Promise.all([
+          servicesApi.getSettings().catch(() => undefined),
+          servicesApi.getDocTemplates().catch(() => []),
+        ]);
+        const actTemplate = (templates as DocumentTemplate[]).find(t => t.type === 'completion_act' && t.isDefault)
+          || (templates as DocumentTemplate[]).find(t => t.type === 'completion_act');
+        printCompletionAct(closed, settings, actTemplate?.content);
       }
 
-      // Скрываем форму сразу, запускаем анимацию
       onClose();
       setCelebrating(true);
-      // Обновляем данные и закрываем RecordDetailModal после анимации
       setTimeout(() => onSuccess(), 2100);
     } catch (e: unknown) {
       message.error(e instanceof Error ? e.message : 'Ошибка');
@@ -59,72 +213,86 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
     }
   };
 
+  const total = items.reduce((s, i) => s + i.price * i.quantity, 0);
+
   return (
     <>
-    {celebrating && <DealCelebration onDone={() => setCelebrating(false)} />}
-    <Modal
-      open={open}
-      onCancel={onClose}
-      title="Закрыть сделку"
-      width={600}
-      footer={null}
-      destroyOnClose
-    >
-      <Form form={form} layout="vertical">
-        <Divider orientation="left" style={{ fontSize: 13 }}>Финансы</Divider>
+      {celebrating && <DealCelebration onDone={() => setCelebrating(false)} />}
+      <Modal
+        open={open}
+        onCancel={onClose}
+        title="Закрыть сделку"
+        width={720}
+        footer={null}
+        destroyOnClose
+      >
+        <Form form={form} layout="vertical">
+          <Divider orientation="left" style={{ fontSize: 13 }}>Перечень работ</Divider>
 
-        <Form.Item
-          label="Итоговая сумма"
-          name="finalPrice"
-          rules={[{ required: true, message: 'Укажите сумму' }]}
-        >
-          <InputNumber
-            style={{ width: '100%' }}
-            min={0}
-            formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}
-            addonAfter="₽"
-            size="large"
-          />
-        </Form.Item>
-
-        <p style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginTop: -12, marginBottom: 16 }}>
-          Сумма по услугам: {formatPrice(totalFromServices)}
-        </p>
-
-        <Form.Item label="Причина изменения стоимости (если есть)" name="priceIncreaseReason">
-          <Input.TextArea rows={2} placeholder="Например: обнаружена дополнительная неисправность" />
-        </Form.Item>
-
-        <Divider orientation="left" style={{ fontSize: 13 }}>Гарантия и оборудование</Divider>
-
-        <Form.Item label="Гарантия на работу" name="warranty">
-          <Input placeholder="Например: 1 год" />
-        </Form.Item>
-
-        <Form.Item label="Установленное оборудование" name="equipmentIds">
           <Select
-            mode="multiple"
-            placeholder="Выберите из списка"
+            showSearch
+            style={{ width: '100%', marginBottom: 12 }}
+            value={undefined}
+            onChange={handleServiceSelect}
+            placeholder="Добавить услугу..."
             optionFilterProp="label"
-            options={equipment.map(e => ({ value: e.id, label: e.name }))}
+            options={serviceOptions}
           />
-        </Form.Item>
 
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
-          <Button onClick={onClose}>Отмена</Button>
-          <Button
-            icon={<PrinterOutlined />}
-            loading={loading}
-            onClick={() => handleClose(true)}
-          >
-            Завершить и распечатать акт
-          </Button>
-          <Button type="primary" loading={loading} onClick={() => handleClose(false)}>
-            Завершить сделку
-          </Button>
-        </div>
-      </Form>
-    </Modal>
+          {items.length === 0 ? (
+            <Empty description="Нет услуг" style={{ margin: '16px 0' }} />
+          ) : (
+            <Table
+              dataSource={items}
+              columns={itemColumns}
+              rowKey="serviceId"
+              pagination={false}
+              size="small"
+              style={{ marginBottom: 8 }}
+              footer={() => (
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <span style={{ fontSize: 16, fontWeight: 700 }}>{formatPrice(total)}</span>
+                </div>
+              )}
+            />
+          )}
+
+          <Divider orientation="left" style={{ fontSize: 13 }}>Дефекты</Divider>
+
+          <Form.Item label="Обнаруженные недостатки в процессе работы" name="defects">
+            <Input.TextArea rows={3} placeholder="Описание дефектов, обнаруженных в ходе выполнения работ" />
+          </Form.Item>
+
+          <Divider orientation="left" style={{ fontSize: 13 }}>Гарантия и оборудование</Divider>
+
+          <Form.Item label="Гарантия на работу" name="warranty">
+            <Input placeholder="Например: 1 год" />
+          </Form.Item>
+
+          <Form.Item label="Установленное оборудование (модули)" name="equipmentIds">
+            <Select
+              mode="multiple"
+              placeholder="Выберите из списка"
+              optionFilterProp="label"
+              options={equipment.map(e => ({ value: e.id, label: e.name }))}
+            />
+          </Form.Item>
+
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
+            <Button onClick={onClose}>Отмена</Button>
+            <Button
+              icon={<PrinterOutlined />}
+              loading={loading}
+              onClick={() => handleClose(true)}
+            >
+              Завершить и распечатать акт
+            </Button>
+            <Button type="primary" loading={loading} onClick={() => handleClose(false)}>
+              Завершить сделку
+            </Button>
+          </div>
+        </Form>
+      </Modal>
     </>
   );
 };

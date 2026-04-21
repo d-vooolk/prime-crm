@@ -1,5 +1,5 @@
 import http from './http';
-import { Category, Equipment, Serviceman, CompanySettings } from '@/types';
+import { Category, Equipment, Serviceman, CompanySettings, DocumentTemplate } from '@/types';
 
 export const servicesApi = {
   getCategories: () =>
@@ -26,11 +26,11 @@ export const servicesApi = {
   getEquipment: () =>
     http.get<{ data: Equipment[] }>('/services/equipment').then(r => r.data.data),
 
-  createEquipment: (name: string) =>
-    http.post<{ data: Equipment }>('/services/equipment', { name }).then(r => r.data.data),
+  createEquipment: (data: { name: string; warranty?: string; wholesalePrice?: number; retailPrice?: number }) =>
+    http.post<{ data: Equipment }>('/services/equipment', data).then(r => r.data.data),
 
-  updateEquipment: (id: string, name: string) =>
-    http.patch<{ data: Equipment }>(`/services/equipment/${id}`, { name }).then(r => r.data.data),
+  updateEquipment: (id: string, data: { name?: string; warranty?: string; wholesalePrice?: number; retailPrice?: number }) =>
+    http.patch<{ data: Equipment }>(`/services/equipment/${id}`, data).then(r => r.data.data),
 
   deleteEquipment: (id: string) =>
     http.delete(`/services/equipment/${id}`),
@@ -61,4 +61,16 @@ export const servicesApi = {
 
   updateSettings: (data: Partial<CompanySettings>) =>
     http.patch<{ data: CompanySettings }>('/services/settings', data).then(r => r.data.data),
+
+  getDocTemplates: () =>
+    http.get<{ data: DocumentTemplate[] }>('/services/doc-templates').then(r => r.data.data),
+
+  createDocTemplate: (data: { name: string; type?: string; content: string; isDefault?: boolean; categoryId?: string | null }) =>
+    http.post<{ data: DocumentTemplate }>('/services/doc-templates', data).then(r => r.data.data),
+
+  updateDocTemplate: (id: string, data: { name?: string; content?: string; isDefault?: boolean; categoryId?: string | null }) =>
+    http.patch<{ data: DocumentTemplate }>(`/services/doc-templates/${id}`, data).then(r => r.data.data),
+
+  deleteDocTemplate: (id: string) =>
+    http.delete(`/services/doc-templates/${id}`),
 };

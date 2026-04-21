@@ -29,6 +29,7 @@ model Car {
   generationName String?
   year           String
   plateNumber    String?
+  mileage        String?
   client         Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
   records        Record[]
 
@@ -43,18 +44,26 @@ model Record {
   serviceman         String
   receptionist       String?
   notes              String?
+  documentNumber     String?      @unique
   status             RecordStatus @default(ACTIVE)
-  isLegalEntity      Boolean      @default(false)
-  legalCompanyName   String?
-  legalAddress       String?
-  legalActualAddress String?
-  legalPostalAddress String?
-  legalBankDetails   String?
-  legalBic           String?
-  legalUnp           String?
-  legalOkpo          String?
-  legalPhone         String?
-  legalEmail         String?
+  isLegalEntity                Boolean      @default(false)
+  legalCompanyName             String?
+  legalAddress                 String?
+  legalActualAddress           String?
+  legalPostalAddress           String?
+  legalBankDetails             String?
+  legalBic                     String?
+  legalUnp                     String?
+  legalOkpo                    String?
+  legalPhone                   String?
+  legalEmail                   String?
+  legalRepresentativePosition          String?
+  legalRepresentativePositionGenitive  String?
+  legalRepresentative                  String?
+  legalRepresentativeGenitive          String?
+  legalBasis                           String?
+  legalVin                     String?
+  legalEndDate                 String?
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
   client             Client       @relation(fields: [clientId], references: [id])
@@ -91,9 +100,10 @@ model Service {
 }
 
 model Category {
-  id       String    @id @default(cuid())
-  name     String    @unique
-  services Service[]
+  id                String             @id @default(cuid())
+  name              String             @unique
+  services          Service[]
+  documentTemplates DocumentTemplate[]
 }
 
 model Deal {
@@ -101,6 +111,7 @@ model Deal {
   recordId            String          @unique
   finalPrice          Float
   priceIncreaseReason String?
+  defects             String?
   warranty            String?
   closedAt            DateTime        @default(now())
   record              Record          @relation(fields: [recordId], references: [id])
@@ -116,10 +127,13 @@ model DealEquipment {
 }
 
 model Equipment {
-  id       String          @id @default(cuid())
-  name     String          @unique
-  isActive Boolean         @default(true)
-  deals    DealEquipment[]
+  id             String          @id @default(cuid())
+  name           String          @unique
+  warranty       String?
+  wholesalePrice Float?
+  retailPrice    Float?
+  isActive       Boolean         @default(true)
+  deals          DealEquipment[]
 }
 
 model Serviceman {
@@ -136,16 +150,32 @@ model Serviceman {
 }
 
 model CompanySettings {
-  id            String  @id @default(cuid())
-  name          String
-  legalAddress  String?
-  actualAddress String?
-  postalAddress String?
-  phone         String?
-  email         String?
-  taxId         String?
-  bic           String?
-  okpo          String?
-  bankDetails   String?
-  logoUrl       String?
+  id                 String  @id @default(cuid())
+  name                  String
+  directorName          String?
+  directorNameGenitive  String?
+  legalAddress          String?
+  actualAddress      String?
+  postalAddress      String?
+  phone              String?
+  email              String?
+  taxId              String?
+  bic                String?
+  okpo               String?
+  bankDetails        String?
+  logoUrl            String?
+  documentPrefix     String  @default("ПА")
+  nextDocumentNumber Int     @default(1)
+}
+
+model DocumentTemplate {
+  id         String    @id @default(cuid())
+  name       String
+  type       String    @default("work_order")
+  content    String
+  isDefault  Boolean   @default(false)
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 }

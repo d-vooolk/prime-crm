@@ -97,10 +97,16 @@ export const ServicesPage: React.FC = () => {
   const handleSaveEquipment = async () => {
     const values = await equipmentForm.validateFields();
     try {
+      const payload = {
+        name: values.name,
+        warranty: values.warranty || undefined,
+        wholesalePrice: values.wholesalePrice ?? undefined,
+        retailPrice: values.retailPrice ?? undefined,
+      };
       if (equipmentModal.item) {
-        await servicesApi.updateEquipment(equipmentModal.item.id, values.name);
+        await servicesApi.updateEquipment(equipmentModal.item.id, payload);
       } else {
-        await servicesApi.createEquipment(values.name);
+        await servicesApi.createEquipment(payload);
       }
       message.success('Сохранено');
       setEquipmentModal({ open: false });
@@ -333,20 +339,50 @@ export const ServicesPage: React.FC = () => {
                   size="middle"
                   pagination={false}
                   columns={[
-                    { title: 'Название', dataIndex: 'name', key: 'name' },
+                    { title: 'Название модулей', dataIndex: 'name', key: 'name', render: (n: string) => <span style={{ fontWeight: 500 }}>{n}</span> },
+                    {
+                      title: 'Гарантия', dataIndex: 'warranty', key: 'warranty', width: 130,
+                      render: (w: string) => w
+                        ? <Tag color="green">{w}</Tag>
+                        : <span style={{ color: 'var(--color-text-secondary)' }}>—</span>,
+                    },
+                    {
+                      title: 'Опт. цена', dataIndex: 'wholesalePrice', key: 'wholesalePrice', width: 110,
+                      render: (v: number) => v != null
+                        ? <span>{formatPrice(v)}</span>
+                        : <span style={{ color: 'var(--color-text-secondary)' }}>—</span>,
+                    },
+                    {
+                      title: 'Розн. цена', dataIndex: 'retailPrice', key: 'retailPrice', width: 110,
+                      render: (v: number) => v != null
+                        ? <span>{formatPrice(v)}</span>
+                        : <span style={{ color: 'var(--color-text-secondary)' }}>—</span>,
+                    },
                     {
                       title: '', key: 'actions', width: 80,
                       render: (_: unknown, row: Equipment) => (
-                        <Popconfirm title="Удалить?" onConfirm={async () => {
-                          try {
-                            await servicesApi.deleteEquipment(row.id);
-                            fetchAll();
-                          } catch {
-                            message.error('Невозможно удалить: оборудование используется в сделках');
-                          }
-                        }}>
-                          <Button size="small" danger icon={<DeleteOutlined />} />
-                        </Popconfirm>
+                        <Space size="small">
+                          <Button size="small" icon={<EditOutlined />} onClick={() => {
+                            equipmentForm.resetFields();
+                            equipmentForm.setFieldsValue({
+                              name: row.name,
+                              warranty: row.warranty || '',
+                              wholesalePrice: row.wholesalePrice ?? null,
+                              retailPrice: row.retailPrice ?? null,
+                            });
+                            setEquipmentModal({ open: true, item: row });
+                          }} />
+                          <Popconfirm title="Удалить?" onConfirm={async () => {
+                            try {
+                              await servicesApi.deleteEquipment(row.id);
+                              fetchAll();
+                            } catch {
+                              message.error('Невозможно удалить: оборудование используется в сделках');
+                            }
+                          }}>
+                            <Button size="small" danger icon={<DeleteOutlined />} />
+                          </Popconfirm>
+                        </Space>
                       ),
                     },
                   ]}
@@ -454,12 +490,22 @@ export const ServicesPage: React.FC = () => {
         open={equipmentModal.open}
         onCancel={() => { setEquipmentModal({ open: false }); equipmentForm.resetFields(); }}
         onOk={handleSaveEquipment}
-        title={equipmentModal.item ? 'Редактировать' : 'Добавить Bi-Led модуль'}
+        title={equipmentModal.item ? 'Редактировать Bi-Led модуль' : 'Добавить Bi-Led модуль'}
+        width={480}
         destroyOnHidden
       >
         <Form form={equipmentForm} layout="vertical">
-          <Form.Item label="Название" name="name" rules={[{ required: true }]}>
-            <Input />
+          <Form.Item label="Название модулей" name="name" rules={[{ required: true }]}>
+            <Input placeholder="Например: Bi-LED модуль GTR Falcon" />
+          </Form.Item>
+          <Form.Item label="Гарантия от производителей" name="warranty">
+            <Input placeholder="Например: 2 года" />
+          </Form.Item>
+          <Form.Item label="Оптовая цена (р.)" name="wholesalePrice">
+            <InputNumber style={{ width: '100%' }} min={0} formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} placeholder="0" />
+          </Form.Item>
+          <Form.Item label="Розничная цена (р.)" name="retailPrice">
+            <InputNumber style={{ width: '100%' }} min={0} formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} placeholder="0" />
           </Form.Item>
         </Form>
       </Modal>

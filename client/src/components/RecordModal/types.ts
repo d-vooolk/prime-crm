@@ -22,6 +22,8 @@ export interface RecordFormData {
   carGenerationId?: string;
   carGenerationName?: string;
   carYear: string;
+  carPlateNumber?: string;
+  carMileage?: string;
   // Запись
   date: string;
   time: string;
@@ -39,6 +41,13 @@ export interface RecordFormData {
   legalOkpo?: string;
   legalPhone?: string;
   legalEmail?: string;
+  legalRepresentativePosition?: string;
+  legalRepresentativePositionGenitive?: string;
+  legalRepresentative?: string;
+  legalRepresentativeGenitive?: string;
+  legalBasis?: string;
+  legalVin?: string;
+  legalEndDate?: string;
   // Услуги
   services: SelectedService[];
 }

@@ -20,6 +20,7 @@ export interface Car {
   generationName?: string;
   year: string;
   plateNumber?: string;
+  mileage?: string;
   photoUrl?: string;
 }
 
@@ -37,7 +38,7 @@ export interface Deal {
   id: string;
   recordId: string;
   finalPrice: number;
-  priceIncreaseReason?: string;
+  defects?: string;
   warranty?: string;
   closedAt: string;
   equipment: Array<{ equipment: Equipment }>;
@@ -51,6 +52,7 @@ export interface Record {
   serviceman: string;
   receptionist?: string;
   notes?: string;
+  documentNumber?: string;
   status: RecordStatus;
   isLegalEntity?: boolean;
   legalCompanyName?: string;
@@ -63,6 +65,13 @@ export interface Record {
   legalOkpo?: string;
   legalPhone?: string;
   legalEmail?: string;
+  legalRepresentativePosition?: string;
+  legalRepresentativePositionGenitive?: string;
+  legalRepresentative?: string;
+  legalRepresentativeGenitive?: string;
+  legalBasis?: string;
+  legalVin?: string;
+  legalEndDate?: string;
   createdAt: string;
   client: Client;
   car: Car;
@@ -89,6 +98,9 @@ export interface Service {
 export interface Equipment {
   id: string;
   name: string;
+  warranty?: string;
+  wholesalePrice?: number;
+  retailPrice?: number;
   isActive?: boolean;
 }
 
@@ -107,6 +119,8 @@ export interface Serviceman {
 export interface CompanySettings {
   id: string;
   name: string;
+  directorName?: string;
+  directorNameGenitive?: string;
   legalAddress?: string;
   actualAddress?: string;
   postalAddress?: string;
@@ -116,6 +130,20 @@ export interface CompanySettings {
   bic?: string;
   okpo?: string;
   bankDetails?: string;
+  documentPrefix?: string;
+  nextDocumentNumber?: number;
+}
+
+export interface DocumentTemplate {
+  id: string;
+  name: string;
+  type: string;
+  content: string;
+  isDefault: boolean;
+  categoryId?: string | null;
+  category?: { id: string; name: string } | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Cars API

@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { ConfigProvider } from 'antd';
+import { ConfigProvider, App as AntApp } from 'antd';
 import ruRU from 'antd/locale/ru_RU';
 import dayjs from 'dayjs';
 import 'dayjs/locale/ru';
@@ -24,18 +24,20 @@ const App: React.FC = () => {
 
   return (
     <ConfigProvider locale={ruRU} theme={theme === 'dark' ? darkTheme : lightTheme}>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Layout />}>
-            <Route index element={<Navigate to="/schedule" replace />} />
-            <Route path="schedule" element={<SchedulePage />} />
-            <Route path="dashboard" element={<DashboardPage />} />
-            <Route path="clients" element={<ClientsPage />} />
-            <Route path="services" element={<ServicesPage />} />
-            <Route path="settings" element={<SettingsPage />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+      <AntApp>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Layout />}>
+              <Route index element={<Navigate to="/schedule" replace />} />
+              <Route path="schedule" element={<SchedulePage />} />
+              <Route path="dashboard" element={<DashboardPage />} />
+              <Route path="clients" element={<ClientsPage />} />
+              <Route path="services" element={<ServicesPage />} />
+              <Route path="settings" element={<SettingsPage />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </AntApp>
     </ConfigProvider>
   );
 };

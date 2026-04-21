@@ -10,9 +10,10 @@ export const recordsController = {
     } catch (e) { next(e); }
   },
 
-  async getIncomplete(_req: Request, res: Response, next: NextFunction) {
+  async getIncomplete(req: Request, res: Response, next: NextFunction) {
     try {
-      const records = await recordsService.findIncomplete();
+      const clientDate = req.query.date ? String(req.query.date) : undefined;
+      const records = await recordsService.findIncomplete(clientDate);
       res.json({ data: records });
     } catch (e) { next(e); }
   },

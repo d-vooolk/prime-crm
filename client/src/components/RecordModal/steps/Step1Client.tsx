@@ -3,6 +3,7 @@ import {
   Form, Input, Select, DatePicker, AutoComplete,
   Row, Col, Divider, Card, Checkbox,
 } from 'antd';
+import type { Dayjs } from 'dayjs';
 import { CarOutlined } from '@ant-design/icons';
 import MaskedInput from 'antd-mask-input';
 import dayjs from 'dayjs';
@@ -73,6 +74,8 @@ export const Step1Client: React.FC<Props> = ({ data, onChange }) => {
       carGenerationId: car.generationId || '',
       carGenerationName: car.generationName || '',
       carYear: car.year,
+      carPlateNumber: car.plateNumber || '',
+      carMileage: car.mileage || '',
     });
     setModels([]);
     setGenerations([]);
@@ -336,6 +339,64 @@ export const Step1Client: React.FC<Props> = ({ data, onChange }) => {
               </Form.Item>
             </Col>
           </Row>
+
+          <Divider orientation="left" style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+            Представитель и основание
+          </Divider>
+
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item label="Должность">
+                <Input
+                  value={data.legalRepresentativePosition}
+                  onChange={e => onChange({ legalRepresentativePosition: e.target.value })}
+                  placeholder="Директор"
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item label="Должность (род. падеж)">
+                <Input
+                  value={data.legalRepresentativePositionGenitive}
+                  onChange={e => onChange({ legalRepresentativePositionGenitive: e.target.value })}
+                  placeholder="директора"
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item label="Представитель (ФИО)">
+                <Input
+                  value={data.legalRepresentative}
+                  onChange={e => onChange({ legalRepresentative: e.target.value })}
+                  placeholder="Иванов Иван Иванович"
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item label="Представитель (род. падеж)">
+                <Input
+                  value={data.legalRepresentativeGenitive}
+                  onChange={e => onChange({ legalRepresentativeGenitive: e.target.value })}
+                  placeholder="Иванова Ивана Ивановича"
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item label="Основание">
+                <Input
+                  value={data.legalBasis}
+                  onChange={e => onChange({ legalBasis: e.target.value })}
+                  placeholder="устава"
+                />
+              </Form.Item>
+            </Col>
+          </Row>
         </>
       )}
 
@@ -440,7 +501,41 @@ export const Step1Client: React.FC<Props> = ({ data, onChange }) => {
             />
           </Form.Item>
         </Col>
+        <Col xs={24} sm={8}>
+          <Form.Item label="Гос. номер">
+            <Input
+              value={data.carPlateNumber || ''}
+              onChange={e => onChange({ carPlateNumber: e.target.value.toUpperCase() })}
+              placeholder="1234 АА-7"
+              style={{ textTransform: 'uppercase' }}
+            />
+          </Form.Item>
+        </Col>
+        <Col xs={24} sm={8}>
+          <Form.Item label="Пробег (км)">
+            <Input
+              value={data.carMileage || ''}
+              onChange={e => onChange({ carMileage: e.target.value })}
+              placeholder="150 000"
+            />
+          </Form.Item>
+        </Col>
       </Row>
+
+      {data.isLegalEntity && (
+        <Row gutter={16}>
+          <Col xs={24} sm={12}>
+            <Form.Item label="VIN номер">
+              <Input
+                value={data.legalVin || ''}
+                onChange={e => onChange({ legalVin: e.target.value.toUpperCase() })}
+                placeholder="WAUZZZ4B7BN012345"
+                style={{ textTransform: 'uppercase', fontFamily: 'monospace' }}
+              />
+            </Form.Item>
+          </Col>
+        </Row>
+      )}
 
       <Divider orientation="left" style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
         Запись
@@ -514,6 +609,18 @@ export const Step1Client: React.FC<Props> = ({ data, onChange }) => {
             />
           </Form.Item>
         </Col>
+        {data.isLegalEntity && (
+          <Col xs={24} sm={8}>
+            <Form.Item label="Дата окончания работ">
+              <DatePicker
+                style={{ width: '100%' }}
+                value={data.legalEndDate ? dayjs(data.legalEndDate) : null}
+                onChange={(d: Dayjs | null) => onChange({ legalEndDate: d?.toISOString() || '' })}
+                format="DD.MM.YYYY"
+              />
+            </Form.Item>
+          </Col>
+        )}
       </Row>
     </div>
   );
