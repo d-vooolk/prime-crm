@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Tabs, Table, Button, Modal, Form, Input, InputNumber, Select,
-  DatePicker, message, Statistic, Card, Row, Col, Tag,
+  DatePicker, message, Statistic, Card, Tag,
 } from 'antd';
 import {
   PlusOutlined, MinusOutlined,
@@ -249,8 +249,8 @@ export const AccountingPage: React.FC = () => {
         </div>
       </div>
 
-      <Row gutter={[12, 12]}>
-        <Col xs={24} lg={8}>
+      <div className={styles.tablesGrid}>
+        <div className={styles.tableBlock}>
           <div className={styles.tableTitle}>Приход (наличные)</div>
           <Table<CashTransaction>
             dataSource={income}
@@ -258,16 +258,16 @@ export const AccountingPage: React.FC = () => {
             rowKey="id"
             size="small"
             pagination={false}
-            scroll={{ x: 400 }}
+            scroll={{ x: 500 }}
             footer={() => (
               <div style={{ textAlign: 'right', fontWeight: 700 }}>
                 Итого: {formatPrice(incomeTotal)}
               </div>
             )}
           />
-        </Col>
+        </div>
 
-        <Col xs={24} lg={8}>
+        <div className={styles.tableBlock}>
           <div className={styles.tableTitle}>Приход РС</div>
           <Table<CashTransaction>
             dataSource={incomeRs}
@@ -275,16 +275,16 @@ export const AccountingPage: React.FC = () => {
             rowKey="id"
             size="small"
             pagination={false}
-            scroll={{ x: 400 }}
+            scroll={{ x: 500 }}
             footer={() => (
               <div style={{ textAlign: 'right', fontWeight: 700 }}>
                 Итого: {formatPrice(incomeRsTotal)}
               </div>
             )}
           />
-        </Col>
+        </div>
 
-        <Col xs={24} lg={8}>
+        <div className={styles.tableBlock}>
           <div className={styles.tableTitle}>Расход</div>
           <Table<CashTransaction>
             dataSource={expenses}
@@ -292,10 +292,10 @@ export const AccountingPage: React.FC = () => {
             rowKey="id"
             size="small"
             pagination={false}
-            scroll={{ x: 400 }}
+            scroll={{ x: 500 }}
           />
-        </Col>
-      </Row>
+        </div>
+      </div>
     </div>
   );
 
@@ -330,8 +330,8 @@ export const AccountingPage: React.FC = () => {
         </div>
       </div>
 
-      <Row gutter={[12, 12]}>
-        <Col xs={24} lg={12}>
+      <div className={styles.tablesGrid}>
+        <div className={styles.tableBlock}>
           <div className={styles.tableTitle}>Пополнения</div>
           <Table<CapitalTransaction>
             dataSource={deposits}
@@ -341,8 +341,8 @@ export const AccountingPage: React.FC = () => {
             pagination={false}
             scroll={{ x: 350 }}
           />
-        </Col>
-        <Col xs={24} lg={12}>
+        </div>
+        <div className={styles.tableBlock}>
           <div className={styles.tableTitle}>Списания</div>
           <Table<CapitalTransaction>
             dataSource={withdrawals}
@@ -352,8 +352,8 @@ export const AccountingPage: React.FC = () => {
             pagination={false}
             scroll={{ x: 350 }}
           />
-        </Col>
-      </Row>
+        </div>
+      </div>
     </div>
   ) : null;
 

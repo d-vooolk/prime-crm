@@ -1,6 +1,5 @@
 .page {
   padding: 24px;
-  max-width: 1400px;
 }
 
 .pageTitle {
@@ -19,7 +18,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .balanceCard {
@@ -30,6 +29,18 @@
   display: flex;
   gap: 8px;
   margin-left: auto;
+}
+
+.tablesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 32px;
+  align-items: start;
+}
+
+.tableBlock {
+  min-width: 0;
+  overflow: hidden;
 }
 
 .tableTitle {
