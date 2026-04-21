@@ -38,9 +38,21 @@
   align-items: start;
 }
 
-.tableBlock {
+.tableSection {
   min-width: 0;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.tableBlock {
+  overflow-x: auto;
+
+  @media (max-width: 768px) {
+    max-height: 320px;
+    overflow-y: auto;
+    border: 1px solid var(--color-border);
+    border-radius: 0 0 8px 8px;
+  }
 }
 
 .tableTitle {

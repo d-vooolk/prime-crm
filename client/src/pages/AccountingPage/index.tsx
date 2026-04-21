@@ -250,50 +250,56 @@ export const AccountingPage: React.FC = () => {
       </div>
 
       <div className={styles.tablesGrid}>
-        <div className={styles.tableBlock}>
+        <div className={styles.tableSection}>
           <div className={styles.tableTitle}>Приход (наличные)</div>
-          <Table<CashTransaction>
-            dataSource={income}
-            columns={incomeColumns}
-            rowKey="id"
-            size="small"
-            pagination={false}
-            scroll={{ x: 500 }}
-            footer={() => (
-              <div style={{ textAlign: 'right', fontWeight: 700 }}>
-                Итого: {formatPrice(incomeTotal)}
-              </div>
-            )}
-          />
+          <div className={styles.tableBlock}>
+            <Table<CashTransaction>
+              dataSource={income}
+              columns={incomeColumns}
+              rowKey="id"
+              size="small"
+              pagination={false}
+              scroll={{ x: 500 }}
+              footer={() => (
+                <div style={{ textAlign: 'right', fontWeight: 700 }}>
+                  Итого: {formatPrice(incomeTotal)}
+                </div>
+              )}
+            />
+          </div>
         </div>
 
-        <div className={styles.tableBlock}>
+        <div className={styles.tableSection}>
           <div className={styles.tableTitle}>Приход РС</div>
-          <Table<CashTransaction>
-            dataSource={incomeRs}
-            columns={incomeRsCols}
-            rowKey="id"
-            size="small"
-            pagination={false}
-            scroll={{ x: 500 }}
-            footer={() => (
-              <div style={{ textAlign: 'right', fontWeight: 700 }}>
-                Итого: {formatPrice(incomeRsTotal)}
-              </div>
-            )}
-          />
+          <div className={styles.tableBlock}>
+            <Table<CashTransaction>
+              dataSource={incomeRs}
+              columns={incomeRsCols}
+              rowKey="id"
+              size="small"
+              pagination={false}
+              scroll={{ x: 500 }}
+              footer={() => (
+                <div style={{ textAlign: 'right', fontWeight: 700 }}>
+                  Итого: {formatPrice(incomeRsTotal)}
+                </div>
+              )}
+            />
+          </div>
         </div>
 
-        <div className={styles.tableBlock}>
+        <div className={styles.tableSection}>
           <div className={styles.tableTitle}>Расход</div>
-          <Table<CashTransaction>
-            dataSource={expenses}
-            columns={expenseColumns}
-            rowKey="id"
-            size="small"
-            pagination={false}
-            scroll={{ x: 500 }}
-          />
+          <div className={styles.tableBlock}>
+            <Table<CashTransaction>
+              dataSource={expenses}
+              columns={expenseColumns}
+              rowKey="id"
+              size="small"
+              pagination={false}
+              scroll={{ x: 500 }}
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -331,27 +337,31 @@ export const AccountingPage: React.FC = () => {
       </div>
 
       <div className={styles.tablesGrid}>
-        <div className={styles.tableBlock}>
+        <div className={styles.tableSection}>
           <div className={styles.tableTitle}>Пополнения</div>
-          <Table<CapitalTransaction>
-            dataSource={deposits}
-            columns={depositColumns}
-            rowKey="id"
-            size="small"
-            pagination={false}
-            scroll={{ x: 350 }}
-          />
+          <div className={styles.tableBlock}>
+            <Table<CapitalTransaction>
+              dataSource={deposits}
+              columns={depositColumns}
+              rowKey="id"
+              size="small"
+              pagination={false}
+              scroll={{ x: 350 }}
+            />
+          </div>
         </div>
-        <div className={styles.tableBlock}>
+        <div className={styles.tableSection}>
           <div className={styles.tableTitle}>Списания</div>
-          <Table<CapitalTransaction>
-            dataSource={withdrawals}
-            columns={withdrawalColumns}
-            rowKey="id"
-            size="small"
-            pagination={false}
-            scroll={{ x: 350 }}
-          />
+          <div className={styles.tableBlock}>
+            <Table<CapitalTransaction>
+              dataSource={withdrawals}
+              columns={withdrawalColumns}
+              rowKey="id"
+              size="small"
+              pagination={false}
+              scroll={{ x: 350 }}
+            />
+          </div>
         </div>
       </div>
     </div>
