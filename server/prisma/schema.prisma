@@ -80,13 +80,15 @@ enum RecordStatus {
 }
 
 model RecordItem {
-  id        String  @id @default(cuid())
-  recordId  String
-  serviceId String
-  price     Float
-  quantity  Int     @default(1)
-  record    Record  @relation(fields: [recordId], references: [id], onDelete: Cascade)
-  service   Service @relation(fields: [serviceId], references: [id])
+  id             String  @id @default(cuid())
+  recordId       String
+  serviceId      String
+  price          Float
+  quantity       Int     @default(1)
+  netProfit      Float?
+  servicemanName String?
+  record         Record  @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  service        Service @relation(fields: [serviceId], references: [id])
 }
 
 model Service {
@@ -149,6 +151,7 @@ model Serviceman {
   isDismissed    Boolean  @default(false)
   isReceptionist Boolean  @default(false)
   isDefault      Boolean  @default(false)
+  profitPercent  Float    @default(0)
   createdAt      DateTime @default(now())
 }
 

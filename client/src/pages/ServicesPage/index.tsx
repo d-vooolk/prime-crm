@@ -143,6 +143,7 @@ export const ServicesPage: React.FC = () => {
           email: values.email,
           password: values.password || undefined,
           isReceptionist: servicemanModal.isReceptionist,
+          ...(values.role === 'Сотрудник' && { profitPercent: values.profitPercent ?? 0 }),
         });
       } else {
         await servicesApi.createServiceman({
@@ -227,6 +228,15 @@ export const ServicesPage: React.FC = () => {
         </div>
       ),
     },
+    !isReceptionist ? {
+      title: '% прибыли',
+      key: 'profitPercent',
+      width: 110,
+      render: (_: unknown, row: Serviceman) =>
+        row.role === 'Сотрудник' && row.profitPercent > 0
+          ? <Tag color="green">{row.profitPercent}%</Tag>
+          : <span style={{ color: 'var(--color-text-secondary)' }}>—</span>,
+    } : { title: '', key: 'emptyProfit', width: 0, render: () => null },
     isReceptionist && !isDismissedList ? {
       title: 'По умолчанию',
       key: 'default',
@@ -246,7 +256,7 @@ export const ServicesPage: React.FC = () => {
           <Space size="small">
             <Button size="small" icon={<EditOutlined />} onClick={() => {
               servicemanForm.resetFields();
-              servicemanForm.setFieldsValue({ name: row.name, position: row.position, role: row.role, email: row.email, password: row.password });
+              servicemanForm.setFieldsValue({ name: row.name, position: row.position, role: row.role, email: row.email, password: row.password, profitPercent: row.profitPercent ?? 0 });
               setServicemanModal({ open: true, item: row, isReceptionist });
             }} />
             <Popconfirm
@@ -560,6 +570,17 @@ export const ServicesPage: React.FC = () => {
           </Form.Item>
           <Form.Item label="Пароль" name="password">
             <Input placeholder="Пароль для входа в систему" autoComplete="new-password" />
+          </Form.Item>
+          <Form.Item noStyle shouldUpdate={(prev, cur) => prev.role !== cur.role}>
+            {({ getFieldValue }) => getFieldValue('role') === 'Сотрудник' ? (
+              <Form.Item
+                label="Процент от чистой прибыли (%)"
+                name="profitPercent"
+                tooltip="Процент, который сотрудник получает от чистой прибыли по каждой услуге"
+              >
+                <InputNumber min={0} max={100} step={0.5} style={{ width: '100%' }} placeholder="0" />
+              </Form.Item>
+            ) : null}
           </Form.Item>
         </Form>
       </Modal>

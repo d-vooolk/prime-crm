@@ -23,7 +23,7 @@ const App: React.FC = () => {
   const { theme } = useUiStore();
   const { user } = useAuthStore();
   const scheduleOnly = user?.role === 'Сотрудник';
-  const canSeeAccounting = user?.isMaster || ['Создатель', 'Директор', 'Менеджер'].includes(user?.role || '');
+  const canSeeAccounting = !!user;
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);

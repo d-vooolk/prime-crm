@@ -53,6 +53,8 @@ export interface CreateRecordDto {
     serviceId: string;
     price: number;
     quantity: number;
+    netProfit?: number;
+    servicemanName?: string;
   }>;
 }
 
@@ -172,6 +174,8 @@ export const recordsService = {
               serviceId: item.serviceId,
               price: item.price,
               quantity: item.quantity,
+              netProfit: item.netProfit,
+              servicemanName: item.servicemanName,
             })),
           },
         },
@@ -201,6 +205,8 @@ export const recordsService = {
           serviceId: item.serviceId,
           price: item.price,
           quantity: item.quantity,
+          netProfit: item.netProfit,
+          servicemanName: item.servicemanName,
         })),
       };
     }

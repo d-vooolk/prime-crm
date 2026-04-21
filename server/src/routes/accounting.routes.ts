@@ -11,5 +11,6 @@ router.get('/capital', accountingController.getCapital);
 router.get('/capital/balance', accountingController.getCapitalBalance);
 router.post('/capital/deposit', accountingController.createDeposit);
 router.post('/capital/withdrawal', accountingController.createWithdrawal);
+router.get('/salary', accountingController.getSalary);
 
 export default router;

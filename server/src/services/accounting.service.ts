@@ -1,5 +1,31 @@
 import { prisma } from '../prisma/client';
 
+export interface SalaryRecordItem {
+  serviceName: string;
+  netProfit: number;
+  payment: number;
+}
+
+export interface SalaryRecord {
+  recordId: string;
+  clientName: string;
+  carInfo: string;
+  scheduledAt: string;
+  items: SalaryRecordItem[];
+  totalNetProfit: number;
+  totalPayment: number;
+}
+
+export interface SalaryData {
+  servicemanName: string;
+  profitPercent: number;
+  periodFrom: string;
+  periodTo: string;
+  records: SalaryRecord[];
+  totalNetProfit: number;
+  totalPayment: number;
+}
+
 export const accountingService = {
   async getCashForMonth(year: number, month: number) {
     const from = new Date(year, month - 1, 1);
@@ -88,6 +114,72 @@ export const accountingService = {
         amountUsd: data.currency === 'USD' ? data.amount : undefined,
       },
     });
+  },
+
+  async getSalaryData(servicemanName: string, year: number, month: number): Promise<SalaryData> {
+    // Period: 25th of previous month to 24th of current month
+    const periodFrom = new Date(year, month - 2, 25); // 25th of prev month
+    const periodTo = new Date(year, month - 1, 25);   // 25th of current month (exclusive)
+
+    const serviceman = await prisma.serviceman.findUnique({ where: { name: servicemanName } });
+    const profitPercent = serviceman?.profitPercent ?? 0;
+
+    const items = await prisma.recordItem.findMany({
+      where: {
+        servicemanName,
+        record: {
+          deal: {
+            closedAt: { gte: periodFrom, lt: periodTo },
+          },
+        },
+      },
+      include: {
+        service: true,
+        record: {
+          include: {
+            client: true,
+            car: true,
+            deal: true,
+          },
+        },
+      },
+    });
+
+    const recordMap = new Map<string, SalaryRecord>();
+    for (const item of items) {
+      const { record } = item;
+      const netProfit = item.netProfit ?? 0;
+      const payment = Math.round(netProfit * profitPercent) / 100;
+      if (!recordMap.has(record.id)) {
+        recordMap.set(record.id, {
+          recordId: record.id,
+          clientName: record.client.name,
+          carInfo: `${record.car.brand} ${record.car.model} ${record.car.year}${record.car.plateNumber ? ' ' + record.car.plateNumber : ''}`,
+          scheduledAt: record.scheduledAt.toISOString(),
+          items: [],
+          totalNetProfit: 0,
+          totalPayment: 0,
+        });
+      }
+      const rec = recordMap.get(record.id)!;
+      rec.items.push({ serviceName: item.service.name, netProfit, payment });
+      rec.totalNetProfit += netProfit;
+      rec.totalPayment += payment;
+    }
+
+    const records = Array.from(recordMap.values());
+    const totalNetProfit = records.reduce((s, r) => s + r.totalNetProfit, 0);
+    const totalPayment = records.reduce((s, r) => s + r.totalPayment, 0);
+
+    return {
+      servicemanName,
+      profitPercent,
+      periodFrom: periodFrom.toISOString(),
+      periodTo: periodTo.toISOString(),
+      records,
+      totalNetProfit,
+      totalPayment,
+    };
   },
 
   async createWithdrawal(data: { date: string; amount: number; currency: 'BYN' | 'USD'; description?: string; person: string }) {

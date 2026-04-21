@@ -7,6 +7,32 @@ export interface CashMonthData {
   expenses: CashTransaction[];
 }
 
+export interface SalaryRecordItem {
+  serviceName: string;
+  netProfit: number;
+  payment: number;
+}
+
+export interface SalaryRecord {
+  recordId: string;
+  clientName: string;
+  carInfo: string;
+  scheduledAt: string;
+  items: SalaryRecordItem[];
+  totalNetProfit: number;
+  totalPayment: number;
+}
+
+export interface SalaryData {
+  servicemanName: string;
+  profitPercent: number;
+  periodFrom: string;
+  periodTo: string;
+  records: SalaryRecord[];
+  totalNetProfit: number;
+  totalPayment: number;
+}
+
 export const accountingApi = {
   getCash: (year: number, month: number) =>
     http.get<{ data: CashMonthData }>('/accounting/cash', { params: { year, month } }).then(r => r.data.data),
@@ -31,4 +57,7 @@ export const accountingApi = {
 
   createWithdrawal: (data: { date: string; amount: number; currency: 'BYN' | 'USD'; description?: string; person: string }) =>
     http.post<{ data: CapitalTransaction }>('/accounting/capital/withdrawal', data).then(r => r.data.data),
+
+  getSalary: (servicemanName: string, year: number, month: number) =>
+    http.get<{ data: SalaryData }>('/accounting/salary', { params: { servicemanName, year, month } }).then(r => r.data.data),
 };

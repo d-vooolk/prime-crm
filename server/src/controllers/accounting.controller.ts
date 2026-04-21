@@ -47,4 +47,12 @@ export const accountingController = {
     const tx = await accountingService.createWithdrawal({ date, amount, currency, description, person });
     res.status(201).json({ data: tx });
   },
+
+  async getSalary(req: Request, res: Response) {
+    const servicemanName = String(req.query.servicemanName || '');
+    const year = Number(req.query.year) || new Date().getFullYear();
+    const month = Number(req.query.month) || new Date().getMonth() + 1;
+    const data = await accountingService.getSalaryData(servicemanName, year, month);
+    res.json({ data });
+  },
 };

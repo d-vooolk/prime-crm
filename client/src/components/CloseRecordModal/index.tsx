@@ -5,7 +5,7 @@ import {
 } from 'antd';
 // InputNumber используется в таблице услуг
 import { PrinterOutlined, DeleteOutlined } from '@ant-design/icons';
-import { Record, Equipment, Category, DocumentTemplate } from '@/types';
+import { Record, Equipment, Category, DocumentTemplate, Serviceman } from '@/types';
 import { servicesApi } from '@/api/services.api';
 import { recordsApi } from '@/api/records.api';
 import { formatPrice } from '@/utils/formatters';
@@ -19,6 +19,8 @@ interface ItemRow {
   price: number;
   quantity: number;
   estimatedTime: number;
+  netProfit: number;
+  servicemanName: string;
 }
 
 interface Props {
@@ -32,6 +34,7 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
   const [loading, setLoading] = useState(false);
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [employees, setEmployees] = useState<Serviceman[]>([]);
   const [celebrating, setCelebrating] = useState(false);
   const [items, setItems] = useState<ItemRow[]>([]);
 
@@ -41,6 +44,7 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
     if (open) {
       servicesApi.getEquipment().then(setEquipment).catch(() => {});
       servicesApi.getCategories().then(setCategories).catch(() => {});
+      servicesApi.getAllServicemen().then(all => setEmployees(all.filter(s => s.role === 'Сотрудник' && !s.isDismissed))).catch(() => {});
 
       const initialItems: ItemRow[] = record.items.map(i => ({
         serviceId: i.serviceId,
@@ -49,6 +53,8 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
         price: i.price,
         quantity: i.quantity,
         estimatedTime: i.service.estimatedTime || 0,
+        netProfit: i.netProfit ?? i.price * i.quantity,
+        servicemanName: i.servicemanName ?? record.serviceman,
       }));
       setItems(initialItems);
 
@@ -74,6 +80,8 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
         price: service.standardPrice,
         quantity: 1,
         estimatedTime: service.estimatedTime,
+        netProfit: service.standardPrice,
+        servicemanName: record.serviceman,
       }];
     }
     setItems(next);
@@ -96,6 +104,14 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
     const next = items.map(i => i.serviceId === serviceId ? { ...i, quantity } : i);
     setItems(next);
     form.setFieldValue('finalPrice', next.reduce((s, i) => s + i.price * i.quantity, 0));
+  };
+
+  const updateItemNetProfit = (serviceId: string, netProfit: number) => {
+    setItems(items.map(i => i.serviceId === serviceId ? { ...i, netProfit } : i));
+  };
+
+  const updateItemServiceman = (serviceId: string, servicemanName: string) => {
+    setItems(items.map(i => i.serviceId === serviceId ? { ...i, servicemanName } : i));
   };
 
   const serviceOptions = categories.map(cat => ({
@@ -155,6 +171,26 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
       ),
     },
     {
+      title: 'Чистая прибыль',
+      key: 'netProfit',
+      width: 140,
+      render: (_: unknown, row: ItemRow) => (
+        <Space.Compact size="small">
+          <InputNumber
+            min={0} value={row.netProfit} style={{ width: 90 }}
+            formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}
+            onChange={v => updateItemNetProfit(row.serviceId, v ?? 0)}
+          />
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', padding: '0 8px',
+            background: 'var(--color-surface-2)', border: '1px solid var(--color-border)',
+            borderLeft: 'none', borderRadius: '0 6px 6px 0', fontSize: 13,
+            color: 'var(--color-text-secondary)',
+          }}>р.</span>
+        </Space.Compact>
+      ),
+    },
+    {
       title: '',
       key: 'del',
       width: 36,
@@ -164,27 +200,38 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
     },
   ];
 
+  if (employees.length > 0) {
+    itemColumns.splice(itemColumns.length - 1, 0, {
+      title: 'Сотрудник',
+      key: 'serviceman',
+      width: 150,
+      render: (_: unknown, row: ItemRow) => (
+        <Select
+          size="small"
+          style={{ width: '100%' }}
+          value={row.servicemanName}
+          onChange={(v: string) => updateItemServiceman(row.serviceId, v)}
+          options={employees.map(e => ({ value: e.name, label: e.name }))}
+        />
+      ),
+    });
+  }
+
   const handleClose = async (withPrint = false) => {
     const values = await form.validateFields().catch(() => null);
     if (!values) return;
 
     setLoading(true);
     try {
-      // Обновляем список услуг если он изменился
-      const originalIds = record.items.map(i => i.serviceId).sort().join(',');
-      const currentIds = items.map(i => i.serviceId).sort().join(',');
-      const itemsChanged =
-        originalIds !== currentIds ||
-        items.some(ci => {
-          const orig = record.items.find(i => i.serviceId === ci.serviceId);
-          return !orig || orig.price !== ci.price || orig.quantity !== ci.quantity;
-        });
-
-      if (itemsChanged) {
-        await recordsApi.update(record.id, {
-          items: items.map(i => ({ serviceId: i.serviceId, price: i.price, quantity: i.quantity })),
-        });
-      }
+      await recordsApi.update(record.id, {
+        items: items.map(i => ({
+          serviceId: i.serviceId,
+          price: i.price,
+          quantity: i.quantity,
+          netProfit: i.netProfit,
+          servicemanName: i.servicemanName,
+        })),
+      });
 
       const closed = await recordsApi.close(record.id, {
         finalPrice: items.reduce((s, i) => s + i.price * i.quantity, 0),

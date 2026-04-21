@@ -55,7 +55,7 @@ export interface CreateRecordDto {
   legalBasis?: string;
   legalVin?: string;
   legalEndDate?: string;
-  items: Array<{ serviceId: string; price: number; quantity: number }>;
+  items: Array<{ serviceId: string; price: number; quantity: number; netProfit?: number; servicemanName?: string }>;
 }
 
 export interface CloseDealDto {

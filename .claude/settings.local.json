@@ -73,7 +73,13 @@
       "Bash(node_modules/.bin/prisma generate *)",
       "Bash(tasklist *)",
       "Bash(wmic process *)",
-      "Bash(DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/prime_crm\" node_modules/.bin/prisma generate)"
+      "Bash(DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/prime_crm\" node_modules/.bin/prisma generate)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/prime_crm\" npx prisma migrate dev --name add_salary_fields)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/prime_crm\" npx prisma db push)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/prime_crm\" npx prisma generate)",
+      "Bash(pkill -f \"webpack\")",
+      "Bash(taskkill *)",
+      "PowerShell(Stop-Process *)"
     ]
   }
 }

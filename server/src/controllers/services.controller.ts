@@ -168,7 +168,7 @@ export const servicemanController = {
 
   async update(req: Request, res: Response, next: NextFunction) {
     try {
-      const { name, position, role, email, password, photoUrl, isReceptionist } = req.body;
+      const { name, position, role, email, password, photoUrl, isReceptionist, profitPercent } = req.body;
       const myLevel = requesterLevel(req);
       const existing = await prisma.serviceman.findUnique({ where: { id: String(req.params.id) } });
       if (!existing) { res.status(404).json({ message: 'Сотрудник не найден' }); return; }
@@ -183,7 +183,12 @@ export const servicemanController = {
       const hashed = password ? await bcrypt.hash(password, 10) : undefined;
       const s = await prisma.serviceman.update({
         where: { id: String(req.params.id) },
-        data: { name, position, role, email, ...(hashed !== undefined && { password: hashed }), photoUrl, isReceptionist },
+        data: {
+          name, position, role, email,
+          ...(hashed !== undefined && { password: hashed }),
+          photoUrl, isReceptionist,
+          ...(profitPercent !== undefined && { profitPercent: Number(profitPercent) }),
+        },
       });
       res.json({ data: s });
     } catch (e) { next(e); }

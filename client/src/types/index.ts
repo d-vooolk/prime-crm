@@ -56,6 +56,8 @@ export interface RecordItem {
   serviceId: string;
   price: number;
   quantity: number;
+  netProfit?: number;
+  servicemanName?: string;
   service: Service & { category: Category };
 }
 
@@ -170,6 +172,7 @@ export interface Serviceman {
   isDismissed: boolean;
   isReceptionist: boolean;
   isDefault: boolean;
+  profitPercent: number;
 }
 
 export interface CompanySettings {

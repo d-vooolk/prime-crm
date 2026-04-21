@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Tabs, Table, Button, Modal, Form, Input, InputNumber, Select,
-  DatePicker, message, Statistic, Card, Tag,
+  DatePicker, message, Statistic, Card, Tag, Empty,
 } from 'antd';
 import {
   PlusOutlined, MinusOutlined,
 } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
 import { CashTransaction, CapitalTransaction, Serviceman } from '@/types';
-import { accountingApi } from '@/api/accounting.api';
+import { accountingApi, SalaryData, SalaryRecord } from '@/api/accounting.api';
 import { servicesApi } from '@/api/services.api';
 import { formatPrice } from '@/utils/formatters';
 import { useAuthStore } from '@/store/authStore';
@@ -88,6 +88,12 @@ export const AccountingPage: React.FC = () => {
   const [withdrawals, setWithdrawals] = useState<CapitalTransaction[]>([]);
   const [capitalBalance, setCapitalBalance] = useState({ byn: 0, usd: 0 });
 
+  const [employees, setEmployees] = useState<Serviceman[]>([]);
+  const [salaryMonth, setSalaryMonth] = useState<Dayjs>(dayjs());
+  const [salaryEmployee, setSalaryEmployee] = useState<string>('');
+  const [salaryData, setSalaryData] = useState<SalaryData | null>(null);
+  const [salaryLoading, setSalaryLoading] = useState(false);
+
   const [expenseOpen, setExpenseOpen] = useState(false);
   const [manualIncomeOpen, setManualIncomeOpen] = useState(false);
   const [depositOpen, setDepositOpen] = useState(false);
@@ -122,7 +128,26 @@ export const AccountingPage: React.FC = () => {
   useEffect(() => { loadCapital(); }, [loadCapital]);
   useEffect(() => {
     servicesApi.getServicemen().then(setServicemen).catch(() => {});
+    servicesApi.getAllServicemen().then(all => setEmployees(all.filter(s => s.role === 'Сотрудник' && !s.isDismissed))).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (user?.role === 'Сотрудник' && user.name && !salaryEmployee) {
+      setSalaryEmployee(user.name);
+    }
+  }, [user, salaryEmployee]);
+
+  const loadSalary = useCallback(async () => {
+    if (!salaryEmployee) { setSalaryData(null); return; }
+    setSalaryLoading(true);
+    try {
+      const data = await accountingApi.getSalary(salaryEmployee, salaryMonth.year(), salaryMonth.month() + 1);
+      setSalaryData(data);
+    } catch { setSalaryData(null); }
+    finally { setSalaryLoading(false); }
+  }, [salaryEmployee, salaryMonth]);
+
+  useEffect(() => { loadSalary(); }, [loadSalary]);
 
   useEffect(() => {
     if (expenseOpen) expenseForm.setFieldsValue({ person: defaultPerson, date: dayjs() });
@@ -369,9 +394,134 @@ export const AccountingPage: React.FC = () => {
     </div>
   ) : null;
 
+  const isSotrudnik = user?.role === 'Сотрудник';
+
+  const salaryColumns = [
+    {
+      title: 'Клиент',
+      dataIndex: 'clientName',
+      key: 'clientName',
+      render: (name: string, row: SalaryRecord) => (
+        <div>
+          <div style={{ fontWeight: 500 }}>{name}</div>
+          <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{row.carInfo}</div>
+        </div>
+      ),
+    },
+    {
+      title: 'Дата',
+      dataIndex: 'scheduledAt',
+      key: 'date',
+      width: 110,
+      render: (d: string) => dayjs(d).format('DD.MM.YYYY'),
+    },
+    {
+      title: 'Чистая прибыль',
+      dataIndex: 'totalNetProfit',
+      key: 'netProfit',
+      width: 140,
+      render: (v: number) => formatPrice(v),
+    },
+    {
+      title: 'К выплате',
+      dataIndex: 'totalPayment',
+      key: 'payment',
+      width: 120,
+      render: (v: number) => <strong style={{ color: 'var(--color-success)' }}>{formatPrice(v)}</strong>,
+    },
+  ];
+
+  const periodLabel = salaryData
+    ? `${dayjs(salaryData.periodFrom).format('DD.MM.YYYY')} — ${dayjs(salaryData.periodTo).subtract(1, 'day').format('DD.MM.YYYY')}`
+    : '';
+
+  const salaryTab = (
+    <div className={styles.tabContent}>
+      <div className={styles.topBar}>
+        {salaryData && (
+          <Card size="small" className={styles.balanceCard}>
+            <Statistic
+              title="К выплате за период"
+              value={salaryData.totalPayment}
+              precision={2}
+              suffix="р."
+              valueStyle={{ color: 'var(--color-success)', fontSize: 22 }}
+            />
+          </Card>
+        )}
+
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          {!isSotrudnik && (
+            <Select
+              showSearch
+              style={{ width: 200 }}
+              placeholder="Выберите сотрудника"
+              value={salaryEmployee || undefined}
+              onChange={setSalaryEmployee}
+              options={employees.map(e => ({ value: e.name, label: e.name }))}
+              allowClear
+              onClear={() => setSalaryEmployee('')}
+            />
+          )}
+          <DatePicker
+            picker="month"
+            value={salaryMonth}
+            onChange={v => v && setSalaryMonth(v)}
+            format="MMMM YYYY"
+            allowClear={false}
+            style={{ width: 160 }}
+          />
+        </div>
+      </div>
+
+      {salaryEmployee && salaryData ? (
+        <>
+          <div style={{ marginBottom: 12, color: 'var(--color-text-secondary)', fontSize: 13 }}>
+            Период: <strong>{periodLabel}</strong>
+            {salaryData.profitPercent > 0 && (
+              <span style={{ marginLeft: 16 }}>Процент: <Tag color="blue">{salaryData.profitPercent}%</Tag></span>
+            )}
+          </div>
+          <Table<SalaryRecord>
+            dataSource={salaryData.records}
+            columns={salaryColumns}
+            rowKey="recordId"
+            size="small"
+            pagination={false}
+            loading={salaryLoading}
+            expandable={{
+              expandedRowRender: (row: SalaryRecord) => (
+                <Table
+                  dataSource={row.items}
+                  rowKey="serviceName"
+                  size="small"
+                  pagination={false}
+                  columns={[
+                    { title: 'Услуга', dataIndex: 'serviceName', key: 'name' },
+                    { title: 'Чистая прибыль', dataIndex: 'netProfit', key: 'netProfit', width: 140, render: (v: number) => formatPrice(v) },
+                    { title: 'К выплате', dataIndex: 'payment', key: 'payment', width: 120, render: (v: number) => <strong style={{ color: 'var(--color-success)' }}>{formatPrice(v)}</strong> },
+                  ]}
+                />
+              ),
+            }}
+            footer={() => (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 32 }}>
+                <span>Итого чистая прибыль: <strong>{formatPrice(salaryData.totalNetProfit)}</strong></span>
+                <span>Итого к выплате: <strong style={{ color: 'var(--color-success)' }}>{formatPrice(salaryData.totalPayment)}</strong></span>
+              </div>
+            )}
+          />
+        </>
+      ) : (
+        <Empty description={salaryEmployee ? 'Нет данных за период' : 'Выберите сотрудника'} style={{ marginTop: 40 }} />
+      )}
+    </div>
+  );
+
   const tabItems = [
     { key: 'cashflow', label: 'Приходно-Расходный', children: cashFlowTab },
     ...(canSeeCapital ? [{ key: 'capital', label: 'Капитал', children: capitalTab }] : []),
+    { key: 'salary', label: 'Расчёт ЗП', children: salaryTab },
   ];
 
   return (
