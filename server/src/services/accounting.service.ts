@@ -167,7 +167,8 @@ export const accountingService = {
       rec.totalPayment += payment;
     }
 
-    const records = Array.from(recordMap.values());
+    const records = Array.from(recordMap.values())
+      .sort((a, b) => new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime());
     const totalNetProfit = records.reduce((s, r) => s + r.totalNetProfit, 0);
     const totalPayment = records.reduce((s, r) => s + r.totalPayment, 0);
 
