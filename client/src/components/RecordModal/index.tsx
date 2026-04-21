@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Steps, Button, message, Form, Grid } from 'antd';
+import cn from 'classnames';
 const { useBreakpoint } = Grid;
 import { PrinterOutlined } from '@ant-design/icons';
 import { Step1Client } from './steps/Step1Client';
@@ -196,8 +197,26 @@ export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initial
     >
       <div className={styles.body}>
         <div className={styles.steps}>
-          <Steps current={step} items={STEPS} size="small" />
-          <div className={styles.stepLabel}>{STEPS[step].title}</div>
+          {isMobile ? (
+            <div className={styles.mobileSteps}>
+              {STEPS.map((s, i) => (
+                <React.Fragment key={i}>
+                  {i > 0 && (
+                    <div className={cn(styles.mobileStepLine, { [styles.mobileStepLineDone]: step >= i })} />
+                  )}
+                  <div className={cn(styles.mobileStepDot, {
+                    [styles.mobileStepDotActive]: step === i,
+                    [styles.mobileStepDotDone]: step > i,
+                  })}>
+                    {step > i ? '✓' : i + 1}
+                  </div>
+                </React.Fragment>
+              ))}
+              <span className={styles.mobileStepTitle}>{STEPS[step].title}</span>
+            </div>
+          ) : (
+            <Steps current={step} items={STEPS} size="small" />
+          )}
         </div>
 
         <Form layout="vertical" className={styles.content}>
