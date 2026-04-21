@@ -47,7 +47,10 @@
       "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); r=d['data'][0]; print\\('smsLogs' in r, r.get\\('smsLogs'\\)\\)\")",
       "Bash(python -c ' *)",
       "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('OK' if 'token' in d.get\\('data',{}\\) else d\\)\")",
-      "Bash(docker-compose down *)"
+      "Bash(docker-compose down *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)"
     ]
   }
 }
