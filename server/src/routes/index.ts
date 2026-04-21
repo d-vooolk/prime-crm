@@ -4,6 +4,7 @@ import recordsRouter from './records.routes';
 import servicesRouter from './services.routes';
 import carsRouter from './cars.routes';
 import authRouter from './auth.routes';
+import accountingRouter from './accounting.routes';
 import { authMiddleware } from '../middleware/auth.middleware';
 
 const router = Router();
@@ -16,5 +17,6 @@ router.use(authMiddleware);
 router.use('/clients', clientsRouter);
 router.use('/records', recordsRouter);
 router.use('/services', servicesRouter);
+router.use('/accounting', accountingRouter);
 
 export default router;

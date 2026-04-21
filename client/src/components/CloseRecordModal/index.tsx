@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Modal, Form, InputNumber, Input, Select, Button, Divider, message,
-  Table, Empty, Tag, Space,
+  Table, Empty, Tag, Space, Checkbox,
 } from 'antd';
 // InputNumber используется в таблице услуг
 import { PrinterOutlined, DeleteOutlined } from '@ant-design/icons';
@@ -191,6 +191,7 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
         defects: values.defects || undefined,
         warranty: values.warranty || undefined,
         equipmentIds: values.equipmentIds || [],
+        isPaidByBankTransfer: values.isPaidByBankTransfer || false,
       });
 
       if (withPrint) {
@@ -276,6 +277,10 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
               optionFilterProp="label"
               options={equipment.map(e => ({ value: e.id, label: e.name }))}
             />
+          </Form.Item>
+
+          <Form.Item name="isPaidByBankTransfer" valuePropName="checked" style={{ marginBottom: 0 }}>
+            <Checkbox>Оплата по расчётному счёту (РС)</Checkbox>
           </Form.Item>
 
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>

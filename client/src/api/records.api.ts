@@ -63,6 +63,7 @@ export interface CloseDealDto {
   defects?: string;
   warranty?: string;
   equipmentIds?: string[];
+  isPaidByBankTransfer?: boolean;
 }
 
 export const recordsApi = {

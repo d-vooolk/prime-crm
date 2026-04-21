@@ -6,6 +6,7 @@ import {
   TeamOutlined,
   ToolOutlined,
   SettingOutlined,
+  AccountBookOutlined,
   LeftOutlined,
   RightOutlined,
   LogoutOutlined,
@@ -23,19 +24,22 @@ import cn from 'classnames';
 dayjs.locale('ru');
 
 const NAV_ITEMS = [
-  { path: '/schedule', label: 'Расписание', icon: <CalendarOutlined /> },
-  { path: '/dashboard', label: 'Дашборд', icon: <DashboardOutlined /> },
-  { path: '/clients', label: 'Клиенты', icon: <TeamOutlined /> },
-  { path: '/services', label: 'Справочник', icon: <ToolOutlined /> },
-  { path: '/settings', label: 'Настройки', icon: <SettingOutlined /> },
+  { path: '/schedule', label: 'Расписание', icon: <CalendarOutlined />, allowedRoles: null },
+  { path: '/dashboard', label: 'Дашборд', icon: <DashboardOutlined />, allowedRoles: null },
+  { path: '/clients', label: 'Клиенты', icon: <TeamOutlined />, allowedRoles: null },
+  { path: '/services', label: 'Справочник', icon: <ToolOutlined />, allowedRoles: null },
+  { path: '/accounting', label: 'Бухгалтерия', icon: <AccountBookOutlined />, allowedRoles: ['Создатель', 'Директор', 'Менеджер'] },
+  { path: '/settings', label: 'Настройки', icon: <SettingOutlined />, allowedRoles: null },
 ];
 
 export const SideBar: React.FC = () => {
   const { selectedDate, setSelectedDate } = useUiStore();
   const { user, logout } = useAuthStore();
-  const visibleNavItems = user?.role === 'Сотрудник'
-    ? NAV_ITEMS.filter(i => i.path === '/schedule')
-    : NAV_ITEMS;
+  const visibleNavItems = NAV_ITEMS.filter(item => {
+    if (user?.role === 'Сотрудник') return item.path === '/schedule';
+    if (item.allowedRoles === null) return true;
+    return user?.isMaster || item.allowedRoles.includes(user?.role || '');
+  });
   const navigate = useNavigate();
   const location = useLocation();
   const [calendarValue, setCalendarValue] = useState<Dayjs>(dayjs(selectedDate));

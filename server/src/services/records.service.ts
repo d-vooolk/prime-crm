@@ -3,6 +3,7 @@ import { prisma } from '../prisma/client';
 import { AppError } from '../middleware/errorHandler';
 import { startOfDay, endOfDay } from '../utils/date';
 import { smsService } from './sms.service';
+import { accountingService } from './accounting.service';
 
 const RECORD_INCLUDE = {
   client: true,
@@ -60,6 +61,7 @@ export interface CloseDealDto {
   defects?: string;
   warranty?: string;
   equipmentIds?: string[];
+  isPaidByBankTransfer?: boolean;
 }
 
 export const recordsService = {
@@ -210,7 +212,7 @@ export const recordsService = {
     const record = await recordsService.findById(id);
     if (record.status === 'CLOSED') throw new AppError('Сделка уже закрыта', 400);
 
-    const { finalPrice, defects, warranty, equipmentIds } = data;
+    const { finalPrice, defects, warranty, equipmentIds, isPaidByBankTransfer = false } = data;
 
     await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       await tx.deal.create({
@@ -219,6 +221,7 @@ export const recordsService = {
           finalPrice,
           defects,
           warranty,
+          isPaidByBankTransfer,
           equipment: equipmentIds?.length
             ? {
                 create: equipmentIds.map((equipmentId) => ({ equipmentId })),
@@ -229,7 +232,19 @@ export const recordsService = {
       await tx.record.update({ where: { id }, data: { status: 'CLOSED' } });
     });
 
-    return recordsService.findById(id);
+    const closed = await recordsService.findById(id);
+
+    await accountingService.createIncomeFromDeal({
+      recordId: id,
+      clientName: record.client.name,
+      clientPhone: record.client.phone,
+      carInfo: `${record.car.brand} ${record.car.model} ${record.car.year}${record.car.plateNumber ? ' ' + record.car.plateNumber : ''}`,
+      amount: finalPrice,
+      isPaidByBankTransfer,
+      closedAt: new Date(),
+    });
+
+    return closed;
   },
 
   async cancel(id: string) {

@@ -65,8 +65,36 @@ export interface Deal {
   finalPrice: number;
   defects?: string;
   warranty?: string;
+  isPaidByBankTransfer: boolean;
   closedAt: string;
   equipment: Array<{ equipment: Equipment }>;
+}
+
+export type CashTransactionType = 'INCOME' | 'INCOME_RS' | 'EXPENSE' | 'MANUAL_INCOME';
+export type CapitalTransactionType = 'DEPOSIT' | 'WITHDRAWAL';
+
+export interface CashTransaction {
+  id: string;
+  type: CashTransactionType;
+  date: string;
+  amount: number;
+  clientName?: string;
+  clientPhone?: string;
+  carInfo?: string;
+  description?: string;
+  person?: string;
+  recordId?: string;
+  createdAt: string;
+}
+
+export interface CapitalTransaction {
+  id: string;
+  type: CapitalTransactionType;
+  date: string;
+  amountByn?: number;
+  amountUsd?: number;
+  person?: string;
+  createdAt: string;
 }
 
 export interface Record {

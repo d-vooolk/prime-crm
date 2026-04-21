@@ -1,0 +1,42 @@
+.page {
+  padding: 24px;
+  max-width: 1400px;
+}
+
+.pageTitle {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 20px;
+  color: var(--color-text-primary);
+}
+
+.tabContent {
+  padding-top: 16px;
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.balanceCard {
+  min-width: 180px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.tableTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--color-border);
+}

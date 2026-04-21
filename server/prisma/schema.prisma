@@ -114,6 +114,7 @@ model Deal {
   priceIncreaseReason String?
   defects             String?
   warranty            String?
+  isPaidByBankTransfer Boolean        @default(false)
   closedAt            DateTime        @default(now())
   record              Record          @relation(fields: [recordId], references: [id])
   equipment           DealEquipment[]
@@ -211,4 +212,40 @@ model DocumentTemplate {
   category   Category? @relation(fields: [categoryId], references: [id])
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
+}
+
+enum CashTransactionType {
+  INCOME
+  INCOME_RS
+  EXPENSE
+  MANUAL_INCOME
+}
+
+model CashTransaction {
+  id          String              @id @default(cuid())
+  type        CashTransactionType
+  date        DateTime
+  amount      Float
+  clientName  String?
+  clientPhone String?
+  carInfo     String?
+  description String?
+  person      String?
+  recordId    String?
+  createdAt   DateTime            @default(now())
+}
+
+enum CapitalTransactionType {
+  DEPOSIT
+  WITHDRAWAL
+}
+
+model CapitalTransaction {
+  id        String                 @id @default(cuid())
+  type      CapitalTransactionType
+  date      DateTime
+  amountByn Float?
+  amountUsd Float?
+  person    String?
+  createdAt DateTime               @default(now())
 }
