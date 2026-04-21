@@ -3,12 +3,12 @@
   "private": true,
   "scripts": {
     "deploy": "bash deploy.sh",
-    "start": "docker-compose up -d",
-    "stop": "docker-compose down",
-    "restart": "docker-compose restart",
-    "rebuild": "docker-compose up --build -d",
-    "logs": "docker-compose logs -f",
-    "logs:server": "docker-compose logs -f server",
-    "logs:client": "docker-compose logs -f client"
+    "start": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d",
+    "stop": "docker compose down",
+    "restart": "docker compose restart",
+    "rebuild": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build -d",
+    "logs": "docker compose logs -f",
+    "logs:server": "docker compose logs -f server",
+    "logs:client": "docker compose logs -f client"
   }
 }

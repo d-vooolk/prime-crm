@@ -4,3 +4,6 @@ dist/
 .env.production
 *.log
 .DS_Store
+docker-compose.override.yml
+__ssh_*.py
+__fix*.txt

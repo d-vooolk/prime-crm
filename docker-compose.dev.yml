@@ -1,0 +1,10 @@
+services:
+  postgres:
+    ports:
+      - '5432:5432'
+  server:
+    ports:
+      - '3001:3001'
+  client:
+    ports:
+      - '3000:80'

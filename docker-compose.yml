@@ -6,8 +6,6 @@ services:
       POSTGRES_DB: prime_crm
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    ports:
-      - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -30,8 +28,6 @@ services:
       JWT_SECRET: prime-crm-jwt-secret-change-in-production
       MASTER_EMAIL: admin@prime-auto.by
       MASTER_PASSWORD: 82ehedub
-    ports:
-      - '3001:3001'
     depends_on:
       postgres:
         condition: service_healthy
@@ -41,8 +37,6 @@ services:
       context: ./client
       dockerfile: Dockerfile
     restart: unless-stopped
-    ports:
-      - '3000:80'
     depends_on:
       - server
 
