@@ -397,15 +397,17 @@ export const AccountingPage: React.FC = () => {
 
   const isSotrudnik = user?.role === 'Сотрудник';
 
+  const canSeeClientName = user?.isMaster || MANAGER_ROLES.includes(user?.role || '');
+
   const salaryColumns = [
     {
-      title: 'Клиент',
+      title: canSeeClientName ? 'Клиент / Авто' : 'Авто',
       dataIndex: 'clientName',
       key: 'clientName',
       render: (name: string, row: SalaryRecord) => (
         <div>
-          <div style={{ fontWeight: 500 }}>{name}</div>
-          <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{row.carInfo}</div>
+          {canSeeClientName && <div style={{ fontWeight: 500 }}>{name}</div>}
+          <div style={{ fontSize: canSeeClientName ? 12 : 14, color: canSeeClientName ? 'var(--color-text-secondary)' : undefined, fontWeight: canSeeClientName ? undefined : 500 }}>{row.carInfo}</div>
         </div>
       ),
     },
