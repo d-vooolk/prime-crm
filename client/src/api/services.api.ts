@@ -1,5 +1,5 @@
 import http from './http';
-import { Category, Equipment, Serviceman, CompanySettings, DocumentTemplate } from '@/types';
+import { Category, Equipment, Serviceman, CompanySettings, DocumentTemplate, SmsSettings } from '@/types';
 
 export const servicesApi = {
   getCategories: () =>
@@ -41,10 +41,10 @@ export const servicesApi = {
   getAllServicemen: () =>
     http.get<{ data: Serviceman[] }>('/services/servicemen/all').then(r => r.data.data),
 
-  createServiceman: (data: { name: string; position?: string; email?: string; password?: string; isReceptionist?: boolean }) =>
+  createServiceman: (data: { name: string; position?: string; role?: string; email?: string; password?: string; isReceptionist?: boolean }) =>
     http.post<{ data: Serviceman }>('/services/servicemen', data).then(r => r.data.data),
 
-  updateServiceman: (id: string, data: { name?: string; position?: string; email?: string; password?: string; isReceptionist?: boolean }) =>
+  updateServiceman: (id: string, data: { name?: string; position?: string; role?: string; email?: string; password?: string; isReceptionist?: boolean }) =>
     http.patch<{ data: Serviceman }>(`/services/servicemen/${id}`, data).then(r => r.data.data),
 
   dismissServiceman: (id: string) =>
@@ -61,6 +61,12 @@ export const servicesApi = {
 
   updateSettings: (data: Partial<CompanySettings>) =>
     http.patch<{ data: CompanySettings }>('/services/settings', data).then(r => r.data.data),
+
+  getSmsSettings: () =>
+    http.get<{ data: SmsSettings | null }>('/services/sms-settings').then(r => r.data.data),
+
+  updateSmsSettings: (data: Partial<SmsSettings>) =>
+    http.patch<{ data: SmsSettings }>('/services/sms-settings', data).then(r => r.data.data),
 
   getDocTemplates: () =>
     http.get<{ data: DocumentTemplate[] }>('/services/doc-templates').then(r => r.data.data),

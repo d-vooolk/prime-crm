@@ -1,6 +1,24 @@
 import http from './http';
 import { Record } from '@/types';
 
+export interface CompanySuggestion {
+  legalCompanyName: string;
+  legalAddress?: string | null;
+  legalActualAddress?: string | null;
+  legalPostalAddress?: string | null;
+  legalBankDetails?: string | null;
+  legalBic?: string | null;
+  legalUnp?: string | null;
+  legalOkpo?: string | null;
+  legalPhone?: string | null;
+  legalEmail?: string | null;
+  legalRepresentativePosition?: string | null;
+  legalRepresentativePositionGenitive?: string | null;
+  legalRepresentative?: string | null;
+  legalRepresentativeGenitive?: string | null;
+  legalBasis?: string | null;
+}
+
 export interface CreateRecordDto {
   clientId: string;
   car: {
@@ -74,4 +92,10 @@ export const recordsApi = {
 
   restore: (id: string) =>
     http.post<{ data: Record }>(`/records/${id}/restore`).then(r => r.data.data),
+
+  searchCompanies: (search: string) =>
+    http.get<{ data: CompanySuggestion[] }>('/records/companies', { params: { search } }).then(r => r.data.data),
+
+  sendSms: (id: string, type: 'CAR_READY' | 'REVIEW_REQUEST') =>
+    http.post(`/records/${id}/send-sms`, { type }).then(r => r.data),
 };

@@ -26,6 +26,31 @@ export interface Car {
 
 export type RecordStatus = 'ACTIVE' | 'CLOSED' | 'CANCELLED';
 
+export type SmsType = 'ON_CREATE' | 'REMINDER' | 'CAR_READY' | 'REVIEW_REQUEST';
+
+export interface SmsLog {
+  id: string;
+  recordId: string;
+  type: SmsType;
+  phone: string;
+  message: string;
+  status: string;
+  externalId?: string | null;
+  error?: string | null;
+  sentAt: string;
+}
+
+export interface SmsSettings {
+  id: string;
+  enabled: boolean;
+  username: string;
+  password: string;
+  onCreateTemplate: string;
+  reminderTemplate: string;
+  carReadyTemplate: string;
+  reviewRequestTemplate: string;
+}
+
 export interface RecordItem {
   id: string;
   serviceId: string;
@@ -77,6 +102,7 @@ export interface Record {
   car: Car;
   items: RecordItem[];
   deal?: Deal;
+  smsLogs?: SmsLog[];
 }
 
 export interface Category {
@@ -108,6 +134,7 @@ export interface Serviceman {
   id: string;
   name: string;
   position?: string;
+  role?: string;
   email?: string;
   password?: string;
   photoUrl?: string;

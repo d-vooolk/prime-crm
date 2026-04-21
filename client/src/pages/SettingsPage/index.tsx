@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import {
   Card, Form, Input, Button, Switch, message, Row, Col, Checkbox,
-  Modal, Table, Tag, Select, Space, Popconfirm, Tabs,
+  Modal, Table, Tag, Select, Space, Popconfirm, Tabs, Alert, Typography,
 } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { servicesApi } from '@/api/services.api';
 import { useUiStore } from '@/store/uiStore';
-import { CompanySettings, DocumentTemplate, Category } from '@/types';
+import { CompanySettings, DocumentTemplate, Category, SmsSettings } from '@/types';
 import styles from './SettingsPage.module.scss';
+
+const { Text } = Typography;
 
 const DEFAULT_WORK_ORDER_CONTENT = `Дополнительные работы, необходимость в которых может возникнуть в процессе исполнения Заказа, их стоимость и сроки выполнения Исполнитель согласовывает с Заказчиком/Представителем устно и/или письменно с последующим отражением в документе, подтверждающий факт выполненных работ.
 Исполнитель не несёт ответственность за несоответствие параметрам гос. стандартов при прохождении государственного технического осмотра.
@@ -46,13 +48,20 @@ export const SettingsPage: React.FC = () => {
   const [templateForm] = Form.useForm();
   const [templateSaving, setTemplateSaving] = useState(false);
 
+  const [smsForm] = Form.useForm();
+  const [smsSaving, setSmsSaving] = useState(false);
+
   useEffect(() => {
     servicesApi.getSettings().then(s => {
       if (s) form.setFieldsValue(s);
     }).catch(() => {});
     loadTemplates();
     servicesApi.getCategories().then(setCategories).catch(() => {});
-  }, [form]);
+    servicesApi.getSmsSettings().then(s => {
+      if (s) smsForm.setFieldsValue(s);
+      else smsForm.setFieldsValue({ enabled: false });
+    }).catch(() => {});
+  }, [form, smsForm]);
 
   const loadTemplates = () => {
     setTemplatesLoading(true);
@@ -175,6 +184,20 @@ export const SettingsPage: React.FC = () => {
     },
   ];
 
+  const handleSaveSms = async () => {
+    const values = await smsForm.validateFields().catch(() => null);
+    if (!values) return;
+    setSmsSaving(true);
+    try {
+      await servicesApi.updateSmsSettings(values as Partial<SmsSettings>);
+      message.success('SMS настройки сохранены');
+    } catch {
+      message.error('Ошибка сохранения');
+    } finally {
+      setSmsSaving(false);
+    }
+  };
+
   const workOrderTemplates = templates.filter(t => t.type === 'work_order');
   const completionActTemplates = templates.filter(t => t.type === 'completion_act');
 
@@ -284,6 +307,93 @@ export const SettingsPage: React.FC = () => {
             </Row>
 
             <Button type="primary" loading={loading} onClick={handleSave}>Сохранить</Button>
+          </Form>
+        </Card>
+      ),
+    },
+    {
+      key: 'sms',
+      label: 'SMS',
+      children: (
+        <Card>
+          <Form form={smsForm} layout="vertical">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 0 20px' }}>
+              <div>
+                <div style={{ fontWeight: 500 }}>Отправка SMS</div>
+                <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
+                  Включить автоматическую отправку сообщений клиентам
+                </div>
+              </div>
+              <Form.Item name="enabled" valuePropName="checked" style={{ margin: 0 }}>
+                <Switch />
+              </Form.Item>
+            </div>
+
+            <Row gutter={16}>
+              <Col xs={24} sm={12}>
+                <Form.Item label="Логин RocketSMS" name="username">
+                  <Input placeholder="291388531" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={12}>
+                <Form.Item label="Пароль RocketSMS" name="password">
+                  <Input.Password placeholder="••••••••" />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Alert
+              type="info"
+              showIcon
+              style={{ marginBottom: 20 }}
+              message="Доступные переменные в шаблонах"
+              description={
+                <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+                  <Text code>{'{{clientName}}'}</Text> — имя клиента{' · '}
+                  <Text code>{'{{date}}'}</Text> — дата записи{' · '}
+                  <Text code>{'{{time}}'}</Text> — время{' · '}
+                  <Text code>{'{{carBrand}}'}</Text> — марка авто{' · '}
+                  <Text code>{'{{carModel}}'}</Text> — модель{' · '}
+                  <Text code>{'{{plateNumber}}'}</Text> — гос. номер{' · '}
+                  <Text code>{'{{companyName}}'}</Text> — название компании{' · '}
+                  <Text code>{'{{services}}'}</Text> — список услуг через запятую
+                </div>
+              }
+            />
+
+            <Form.Item
+              label="Шаблон при создании записи"
+              name="onCreateTemplate"
+              rules={[{ required: true, message: 'Обязательное поле' }]}
+            >
+              <Input.TextArea rows={3} placeholder="Здравствуйте, {{clientName}}! Вы записаны на {{date}} в {{time}}..." />
+            </Form.Item>
+
+            <Form.Item
+              label="Шаблон напоминания (за сутки)"
+              name="reminderTemplate"
+              rules={[{ required: true, message: 'Обязательное поле' }]}
+            >
+              <Input.TextArea rows={3} placeholder="Напоминаем о записи завтра {{date}} в {{time}}..." />
+            </Form.Item>
+
+            <Form.Item
+              label="Шаблон «Авто готово»"
+              name="carReadyTemplate"
+              rules={[{ required: true, message: 'Обязательное поле' }]}
+            >
+              <Input.TextArea rows={3} placeholder="Здравствуйте, {{clientName}}! Ваш {{carBrand}} {{carModel}} готов к выдаче..." />
+            </Form.Item>
+
+            <Form.Item
+              label="Шаблон запроса отзыва"
+              name="reviewRequestTemplate"
+              rules={[{ required: true, message: 'Обязательное поле' }]}
+            >
+              <Input.TextArea rows={3} placeholder="Здравствуйте, {{clientName}}! Будем благодарны за ваш отзыв..." />
+            </Form.Item>
+
+            <Button type="primary" loading={smsSaving} onClick={handleSaveSms}>Сохранить</Button>
           </Form>
         </Card>
       ),

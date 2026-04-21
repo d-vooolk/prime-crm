@@ -54,6 +54,7 @@
 // ─── Columns layout ────────────────────────────────
 .columns {
   flex: 1;
+  min-height: 0;
   display: flex;
   overflow: hidden;
 
@@ -68,6 +69,7 @@
   flex-direction: column;
   overflow: hidden;
   min-width: 0;
+  min-height: 0;
 
   &:first-child {
     border-right: 1px solid var(--color-border);
@@ -109,11 +111,16 @@
 
 .columnBody {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: var(--spacing-md);
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);
+
+  & > * {
+    flex-shrink: 0;
+  }
 }
 
 .emptyState {

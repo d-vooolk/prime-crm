@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import dayjs from 'dayjs';
 import cn from 'classnames';
+import { MessageOutlined, BellOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { Record as CrmRecord } from '@/types';
 import { formatPrice } from '@/utils/formatters';
+import { useAuthStore } from '@/store/authStore';
 import styles from './RecordCard.module.scss';
 
 interface Props {
@@ -17,9 +19,11 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export const RecordCard: React.FC<Props> = ({ record, onClick }) => {
-  const { client, car, items, status, scheduledAt, serviceman, deal } = record;
+  const { client, car, items, status, scheduledAt, serviceman, deal, smsLogs } = record;
   const [photoLoaded, setPhotoLoaded] = useState(false);
   const [photoError, setPhotoError] = useState(false);
+  const { user } = useAuthStore();
+  const isEmployee = user?.role === 'Сотрудник';
 
   const total = deal
     ? deal.finalPrice
@@ -53,15 +57,25 @@ export const RecordCard: React.FC<Props> = ({ record, onClick }) => {
         <div className={styles.carPhotoPlaceholder}>🚗</div>
       )}
 
+      {smsLogs && smsLogs.length > 0 && (
+        <div className={styles.smsLabels}>
+          {smsLogs.map(log => (
+            <span
+              key={log.id}
+              className={cn(styles.smsLabel, { [styles.smsLabelFailed]: log.status === 'failed' })}
+              title={log.type === 'ON_CREATE' ? 'SMS при создании' : 'SMS напоминание'}
+            />
+          ))}
+        </div>
+      )}
+
       <div className={styles.content}>
         <div className={styles.header}>
           <div className={styles.time}>{time}</div>
-          <div className={styles.clientInfo}>
-            <div className={styles.clientName}>{client.name}</div>
-            <div className={styles.phone}>{client.phone}</div>
-          </div>
+          <div className={cn(styles.clientName, { [styles.blurred]: isEmployee })}>{client.name}</div>
           <div className={styles.statusBadge}>{STATUS_LABELS[status]}</div>
         </div>
+        <div className={cn(styles.phone, { [styles.blurred]: isEmployee })}>{client.phone}</div>
 
         <div className={styles.carInfo}>
           <div className={styles.carName}>{car.brand} {car.model}</div>
@@ -79,7 +93,9 @@ export const RecordCard: React.FC<Props> = ({ record, onClick }) => {
                   {item.service.name}
                   {item.quantity > 1 ? ` ×${item.quantity}` : ''}
                 </span>
-                <span className={styles.servicePrice}>{formatPrice(item.price * item.quantity)}</span>
+                {!isEmployee && (
+                  <span className={styles.servicePrice}>{formatPrice(item.price * item.quantity)}</span>
+                )}
               </div>
             ))}
             {items.length > 3 && (
@@ -93,12 +109,15 @@ export const RecordCard: React.FC<Props> = ({ record, onClick }) => {
         )}
 
         <div className={styles.footer}>
-          <div className={styles.total}>
-            <span className={styles.totalLabel}>{deal ? 'Итого' : 'Предв. сумма'}</span>
-            <span className={styles.totalAmount}>{formatPrice(total)}</span>
-          </div>
+          {!isEmployee && (
+            <div className={styles.total}>
+              <span className={styles.totalLabel}>{deal ? 'Итого' : 'Предв. сумма'}</span>
+              <span className={styles.totalAmount}>{formatPrice(total)}</span>
+            </div>
+          )}
           <div className={styles.serviceman}>{serviceman}</div>
         </div>
+
       </div>
     </div>
   );

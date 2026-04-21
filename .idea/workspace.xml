@@ -4,25 +4,34 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="45f6dddb-f82f-43d5-b121-b81757ed27dc" name="Changes" comment="add functionality">
+    <list default="true" id="45f6dddb-f82f-43d5-b121-b81757ed27dc" name="Changes" comment="add functionality doc for clients">
       <change beforePath="$PROJECT_DIR$/.claude/settings.local.json" beforeDir="false" afterPath="$PROJECT_DIR$/.claude/settings.local.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/public/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/client/public/index.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/App.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/api/http.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/api/http.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/api/records.api.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/api/records.api.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/api/services.api.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/api/services.api.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/components/CloseRecordModal/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/CloseRecordModal/index.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/components/RecordCard/RecordCard.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/RecordCard/RecordCard.module.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/components/RecordCard/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/RecordCard/index.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/components/RecordDetailModal/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/RecordDetailModal/index.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/components/RecordModal/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/RecordModal/index.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/components/RecordModal/steps/Step1Client.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/RecordModal/steps/Step1Client.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/components/RecordModal/types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/RecordModal/types.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/components/SideBar/SideBar.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/SideBar/SideBar.module.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/components/SideBar/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/SideBar/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/pages/SchedulePage/SchedulePage.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/pages/SchedulePage/SchedulePage.module.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/pages/SchedulePage/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/pages/SchedulePage/index.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/pages/ServicesPage/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/pages/ServicesPage/index.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/pages/SettingsPage/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/pages/SettingsPage/index.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/types/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/types/index.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/utils/print.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/utils/print.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/server/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/server/package.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/server/prisma/schema.prisma" beforeDir="false" afterPath="$PROJECT_DIR$/server/prisma/schema.prisma" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/server/src/controllers/records.controller.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/controllers/records.controller.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/server/src/controllers/services.controller.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/controllers/services.controller.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/src/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/src/routes/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/routes/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/src/routes/records.routes.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/routes/records.routes.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/server/src/routes/services.routes.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/routes/services.routes.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/server/src/services/records.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/services/records.service.ts" afterDir="false" />
     </list>
@@ -106,7 +115,8 @@
       <workItem from="1776387664786" duration="9692000" />
       <workItem from="1776475399414" duration="331000" />
       <workItem from="1776643840701" duration="29000" />
-      <workItem from="1776720749851" duration="14776000" />
+      <workItem from="1776720749851" duration="14836000" />
+      <workItem from="1776773986054" duration="12041000" />
     </task>
     <task id="LOCAL-00001" summary="init new version of product">
       <option name="closed" value="true" />
@@ -132,7 +142,15 @@
       <option name="project" value="LOCAL" />
       <updated>1776447598935</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="add functionality doc for clients">
+      <option name="closed" value="true" />
+      <created>1776737023891</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1776737023891</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -149,6 +167,7 @@
     <MESSAGE value="init new version of product" />
     <MESSAGE value="add image for record card&#10;fix bugs" />
     <MESSAGE value="add functionality" />
-    <option name="LAST_COMMIT_MESSAGE" value="add functionality" />
+    <MESSAGE value="add functionality doc for clients" />
+    <option name="LAST_COMMIT_MESSAGE" value="add functionality doc for clients" />
   </component>
 </project>

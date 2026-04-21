@@ -10,6 +10,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import apiRouter from './routes/index';
 import { errorHandler } from './middleware/errorHandler';
+import { smsService } from './services/sms.service';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -30,3 +31,6 @@ app.use(errorHandler);
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`); // eslint-disable-line no-console
 });
+
+// Проверка напоминаний каждые 5 минут
+setInterval(() => smsService.runReminderCheck(), 5 * 60 * 1000);

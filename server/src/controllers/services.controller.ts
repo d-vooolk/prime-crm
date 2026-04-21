@@ -1,5 +1,21 @@
 import { Request, Response, NextFunction } from 'express';
+import bcrypt from 'bcryptjs';
 import { prisma } from '../prisma/client';
+import { AuthPayload } from '../middleware/auth.middleware';
+
+const ROLE_LEVEL: Record<string, number> = {
+  'Создатель': 1, 'Директор': 2, 'Менеджер': 3, 'Сотрудник': 4,
+};
+function getLevel(role?: string | null): number {
+  if (!role) return 99;
+  return ROLE_LEVEL[role] ?? 99;
+}
+function requesterLevel(req: Request): number {
+  const user = (req as Request & { user?: AuthPayload }).user;
+  if (!user) return 0;
+  if (user.isMaster) return 0;
+  return getLevel(user.role);
+}
 
 export const servicesController = {
   async getAll(_req: Request, res: Response, next: NextFunction) {
@@ -136,9 +152,15 @@ export const servicemanController = {
 
   async create(req: Request, res: Response, next: NextFunction) {
     try {
-      const { name, position, email, password, photoUrl, isReceptionist } = req.body;
+      const { name, position, role, email, password, photoUrl, isReceptionist } = req.body;
+      const myLevel = requesterLevel(req);
+      if (myLevel !== 0 && getLevel(role) < myLevel) {
+        res.status(403).json({ message: 'Нельзя назначить роль выше вашего уровня' });
+        return;
+      }
+      const hashed = password ? await bcrypt.hash(password, 10) : undefined;
       const s = await prisma.serviceman.create({
-        data: { name, position, email, password, photoUrl, isReceptionist: !!isReceptionist },
+        data: { name, position, role, email, password: hashed, photoUrl, isReceptionist: !!isReceptionist },
       });
       res.status(201).json({ data: s });
     } catch (e) { next(e); }
@@ -146,10 +168,22 @@ export const servicemanController = {
 
   async update(req: Request, res: Response, next: NextFunction) {
     try {
-      const { name, position, email, password, photoUrl, isReceptionist } = req.body;
+      const { name, position, role, email, password, photoUrl, isReceptionist } = req.body;
+      const myLevel = requesterLevel(req);
+      const existing = await prisma.serviceman.findUnique({ where: { id: String(req.params.id) } });
+      if (!existing) { res.status(404).json({ message: 'Сотрудник не найден' }); return; }
+      if (myLevel !== 0 && getLevel(existing.role) < myLevel) {
+        res.status(403).json({ message: 'Недостаточно прав для редактирования этого сотрудника' });
+        return;
+      }
+      if (myLevel !== 0 && getLevel(role) < myLevel) {
+        res.status(403).json({ message: 'Нельзя назначить роль выше вашего уровня' });
+        return;
+      }
+      const hashed = password ? await bcrypt.hash(password, 10) : undefined;
       const s = await prisma.serviceman.update({
         where: { id: String(req.params.id) },
-        data: { name, position, email, password, photoUrl, isReceptionist },
+        data: { name, position, role, email, ...(hashed !== undefined && { password: hashed }), photoUrl, isReceptionist },
       });
       res.json({ data: s });
     } catch (e) { next(e); }
@@ -157,6 +191,13 @@ export const servicemanController = {
 
   async dismiss(req: Request, res: Response, next: NextFunction) {
     try {
+      const myLevel = requesterLevel(req);
+      const existing = await prisma.serviceman.findUnique({ where: { id: String(req.params.id) } });
+      if (!existing) { res.status(404).json({ message: 'Сотрудник не найден' }); return; }
+      if (myLevel !== 0 && getLevel(existing.role) < myLevel) {
+        res.status(403).json({ message: 'Недостаточно прав для увольнения этого сотрудника' });
+        return;
+      }
       const s = await prisma.serviceman.update({
         where: { id: String(req.params.id) },
         data: { isDismissed: true, isDefault: false },
@@ -208,6 +249,27 @@ export const settingsController = {
       } else {
         settings = await prisma.companySettings.create({ data: req.body });
       }
+      res.json({ data: settings });
+    } catch (e) { next(e); }
+  },
+};
+
+export const smsSettingsController = {
+  async get(_req: Request, res: Response, next: NextFunction) {
+    try {
+      const settings = await prisma.smsSettings.findFirst();
+      res.json({ data: settings });
+    } catch (e) { next(e); }
+  },
+
+  async update(req: Request, res: Response, next: NextFunction) {
+    try {
+      const existing = await prisma.smsSettings.findFirst();
+      const { enabled, username, password, onCreateTemplate, reminderTemplate, carReadyTemplate, reviewRequestTemplate } = req.body;
+      const data = { enabled, username, password, onCreateTemplate, reminderTemplate, carReadyTemplate, reviewRequestTemplate };
+      const settings = existing
+        ? await prisma.smsSettings.update({ where: { id: existing.id }, data })
+        : await prisma.smsSettings.create({ data });
       res.json({ data: settings });
     } catch (e) { next(e); }
   },

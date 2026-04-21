@@ -30,6 +30,12 @@
   }
 }
 
+.blurred {
+  filter: blur(5px);
+  user-select: none;
+  pointer-events: none;
+}
+
 .statusBar {
   position: absolute;
   left: 0;
@@ -115,12 +121,9 @@
   min-width: 48px;
 }
 
-.clientInfo {
+.clientName {
   flex: 1;
   min-width: 0;
-}
-
-.clientName {
   font-weight: 600;
   font-size: var(--font-size-md);
   color: var(--color-text-primary);
@@ -228,4 +231,28 @@
 .serviceman {
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
+}
+
+// ─── SMS значки-оверлей ────────────────────────────
+
+.smsLabels {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  display: flex;
+  gap: 4px;
+  z-index: 2;
+}
+
+.smsLabel {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-status-closed);
+  border: 2px solid var(--color-surface);
+  flex-shrink: 0;
+
+  &.smsLabelFailed {
+    background: var(--color-status-cancelled);
+  }
 }

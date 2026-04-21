@@ -26,6 +26,10 @@ services:
       PORT: 3001
       NODE_ENV: production
       CLIENT_URL: http://localhost:3000
+      TZ: Europe/Minsk
+      JWT_SECRET: prime-crm-jwt-secret-change-in-production
+      MASTER_EMAIL: admin@prime-auto.by
+      MASTER_PASSWORD: 82ehedub
     ports:
       - '3001:3001'
     depends_on:

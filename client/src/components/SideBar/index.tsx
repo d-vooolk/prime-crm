@@ -8,12 +8,15 @@ import {
   SettingOutlined,
   LeftOutlined,
   RightOutlined,
+  LogoutOutlined,
 } from '@ant-design/icons';
-import { Calendar, ConfigProvider, Button } from 'antd';
+import { Calendar, ConfigProvider, Button, Popconfirm, Tooltip } from 'antd';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import 'dayjs/locale/ru';
 import { useUiStore } from '@/store/uiStore';
+import { useAuthStore } from '@/store/authStore';
+import { Logo } from '@/components/Logo';
 import styles from './SideBar.module.scss';
 import cn from 'classnames';
 
@@ -29,6 +32,10 @@ const NAV_ITEMS = [
 
 export const SideBar: React.FC = () => {
   const { selectedDate, setSelectedDate } = useUiStore();
+  const { user, logout } = useAuthStore();
+  const visibleNavItems = user?.role === 'Сотрудник'
+    ? NAV_ITEMS.filter(i => i.path === '/schedule')
+    : NAV_ITEMS;
   const navigate = useNavigate();
   const location = useLocation();
   const [calendarValue, setCalendarValue] = useState<Dayjs>(dayjs(selectedDate));
@@ -50,17 +57,19 @@ export const SideBar: React.FC = () => {
   const handleDateSelect = (date: Dayjs) => {
     setCalendarValue(date);
     setSelectedDate(date.format('YYYY-MM-DD'));
-    if (location.pathname !== '/schedule') {
-      navigate('/schedule');
-    }
+    if (location.pathname !== '/schedule') navigate('/schedule');
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
   };
 
   return (
     <>
       <aside className={styles.sidebar}>
         <div className={styles.logo}>
-          <span className={styles.logoIcon}>🚗</span>
-          <span className={styles.logoText}>Prime CRM</span>
+          <Logo className={styles.logoSvg} />
         </div>
 
         <div className={styles.calendarWrap}>
@@ -90,7 +99,7 @@ export const SideBar: React.FC = () => {
         </div>
 
         <nav className={styles.nav}>
-          {NAV_ITEMS.map((item) => (
+          {visibleNavItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
@@ -103,10 +112,30 @@ export const SideBar: React.FC = () => {
             </NavLink>
           ))}
         </nav>
+
+        <div className={styles.userSection}>
+          <div className={styles.userInfo}>
+            <div className={styles.userName}>{user?.name}</div>
+            {user?.role && <div className={styles.userRole}>{user.role}</div>}
+          </div>
+          <Popconfirm
+            title="Выйти из системы?"
+            onConfirm={handleLogout}
+            okText="Выйти"
+            cancelText="Отмена"
+            placement="topRight"
+          >
+            <Tooltip title="Выйти">
+              <button className={styles.logoutBtn}>
+                <LogoutOutlined />
+              </button>
+            </Tooltip>
+          </Popconfirm>
+        </div>
       </aside>
 
       <nav className={styles.bottomNav}>
-        {NAV_ITEMS.map((item) => (
+        {visibleNavItems.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}

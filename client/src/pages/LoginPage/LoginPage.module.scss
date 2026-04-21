@@ -1,0 +1,41 @@
+@use '@/styles/variables' as *;
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg);
+  padding: var(--spacing-md);
+}
+
+.card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: calc(var(--border-radius) * 2);
+  padding: 40px;
+  box-shadow: var(--shadow-md);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 28px;
+}
+
+.logoSvg {
+  height: 48px;
+  width: auto;
+  color: var(--color-text-primary);
+}
+
+.title {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  text-align: center;
+  margin: 0 0 24px;
+}

@@ -2,6 +2,15 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../prisma/client';
 import { AppError } from '../middleware/errorHandler';
 import { startOfDay, endOfDay } from '../utils/date';
+import { smsService } from './sms.service';
+
+const RECORD_INCLUDE = {
+  client: true,
+  car: true,
+  items: { include: { service: { include: { category: true } } } },
+  deal: { include: { equipment: { include: { equipment: true } } } },
+  smsLogs: { orderBy: { sentAt: 'asc' as const } },
+} as const;
 
 export interface CreateRecordDto {
   clientId: string;
@@ -57,18 +66,8 @@ export const recordsService = {
   async findByDate(date: string) {
     const d = new Date(date);
     return prisma.record.findMany({
-      where: {
-        scheduledAt: {
-          gte: startOfDay(d),
-          lte: endOfDay(d),
-        },
-      },
-      include: {
-        client: true,
-        car: true,
-        items: { include: { service: { include: { category: true } } } },
-        deal: { include: { equipment: { include: { equipment: true } } } },
-      },
+      where: { scheduledAt: { gte: startOfDay(d), lte: endOfDay(d) } },
+      include: RECORD_INCLUDE,
       orderBy: { scheduledAt: 'asc' },
     });
   },
@@ -76,16 +75,8 @@ export const recordsService = {
   async findIncomplete(clientDate?: string) {
     const today = clientDate ? new Date(clientDate) : startOfDay(new Date());
     return prisma.record.findMany({
-      where: {
-        scheduledAt: { lt: today },
-        status: 'ACTIVE',
-      },
-      include: {
-        client: true,
-        car: true,
-        items: { include: { service: { include: { category: true } } } },
-        deal: { include: { equipment: { include: { equipment: true } } } },
-      },
+      where: { scheduledAt: { lt: today }, status: 'ACTIVE' },
+      include: RECORD_INCLUDE,
       orderBy: { scheduledAt: 'desc' },
     });
   },
@@ -98,6 +89,7 @@ export const recordsService = {
         car: true,
         items: { include: { service: { include: { category: true } } } },
         deal: { include: { equipment: { include: { equipment: true } } } },
+        smsLogs: { orderBy: { sentAt: 'asc' } },
       },
     });
     if (!record) throw new AppError('Запись не найдена', 404);
@@ -114,7 +106,7 @@ export const recordsService = {
       legalBasis, legalVin, legalEndDate,
     } = data;
 
-    return prisma.$transaction(async (tx) => {
+    const newRecord = await prisma.$transaction(async (tx) => {
       // Генерация номера документа
       let settings = await tx.companySettings.findFirst();
       if (!settings) {
@@ -181,14 +173,13 @@ export const recordsService = {
             })),
           },
         },
-        include: {
-          client: true,
-          car: true,
-          items: { include: { service: { include: { category: true } } } },
-          deal: true,
-        },
+        include: RECORD_INCLUDE,
       });
     });
+
+    // fire-and-forget: не блокируем ответ
+    smsService.sendForRecord(newRecord.id, 'ON_CREATE');
+    return newRecord;
   },
 
   async update(id: string, data: Partial<CreateRecordDto>) {
@@ -212,16 +203,7 @@ export const recordsService = {
       };
     }
 
-    return prisma.record.update({
-      where: { id },
-      data: updateData,
-      include: {
-        client: true,
-        car: true,
-        items: { include: { service: { include: { category: true } } } },
-        deal: { include: { equipment: { include: { equipment: true } } } },
-      },
-    });
+    return prisma.record.update({ where: { id }, data: updateData, include: RECORD_INCLUDE });
   },
 
   async close(id: string, data: CloseDealDto) {
@@ -261,15 +243,45 @@ export const recordsService = {
   async restore(id: string) {
     const record = await recordsService.findById(id);
     if (record.status !== 'CANCELLED') throw new AppError('Запись не была отменена', 400);
-    return prisma.record.update({
-      where: { id },
-      data: { status: 'ACTIVE' },
-      include: {
-        client: true,
-        car: true,
-        items: { include: { service: { include: { category: true } } } },
-        deal: { include: { equipment: { include: { equipment: true } } } },
+    return prisma.record.update({ where: { id }, data: { status: 'ACTIVE' }, include: RECORD_INCLUDE });
+  },
+
+  async searchCompanies(search: string) {
+    const records = await prisma.record.findMany({
+      where: {
+        isLegalEntity: true,
+        legalCompanyName: search
+          ? { contains: search, mode: 'insensitive' }
+          : { not: null },
       },
+      select: {
+        legalCompanyName: true,
+        legalAddress: true,
+        legalActualAddress: true,
+        legalPostalAddress: true,
+        legalBankDetails: true,
+        legalBic: true,
+        legalUnp: true,
+        legalOkpo: true,
+        legalPhone: true,
+        legalEmail: true,
+        legalRepresentativePosition: true,
+        legalRepresentativePositionGenitive: true,
+        legalRepresentative: true,
+        legalRepresentativeGenitive: true,
+        legalBasis: true,
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
     });
+
+    const seen = new Set<string>();
+    return records.filter(r => {
+      if (!r.legalCompanyName) return false;
+      const key = r.legalCompanyName.toLowerCase().trim();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).slice(0, 10);
   },
 };

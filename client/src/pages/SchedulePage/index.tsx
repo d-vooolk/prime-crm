@@ -9,12 +9,15 @@ import { RecordCard } from '@/components/RecordCard';
 import { RecordModal } from '@/components/RecordModal';
 import { RecordDetailModal } from '@/components/RecordDetailModal';
 import { useUiStore } from '@/store/uiStore';
+import { useAuthStore } from '@/store/authStore';
 import styles from './SchedulePage.module.scss';
 
 dayjs.locale('ru');
 
 export const SchedulePage: React.FC = () => {
   const { selectedDate, setSelectedDate } = useUiStore();
+  const { user } = useAuthStore();
+  const isEmployee = user?.role === 'Сотрудник';
   const [todayRecords, setTodayRecords] = useState<Record[]>([]);
   const [incompleteRecords, setIncompleteRecords] = useState<Record[]>([]);
   const [loading, setLoading] = useState(false);
@@ -65,13 +68,15 @@ export const SchedulePage: React.FC = () => {
             allowClear={false}
             className={styles.mobilePicker}
           />
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => setCreateModalOpen(true)}
-          >
-            Новая запись
-          </Button>
+          {!isEmployee && (
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => setCreateModalOpen(true)}
+            >
+              Новая запись
+            </Button>
+          )}
         </div>
       </div>
 
@@ -86,9 +91,11 @@ export const SchedulePage: React.FC = () => {
               <div className={styles.emptyState}>
                 <div className={styles.emptyIcon}>📅</div>
                 <p>Записей на этот день нет</p>
-                <Button type="link" onClick={() => setCreateModalOpen(true)}>
-                  Создать запись
-                </Button>
+                {!isEmployee && (
+                  <Button type="link" onClick={() => setCreateModalOpen(true)}>
+                    Создать запись
+                  </Button>
+                )}
               </div>
             ) : (
               todayRecords.map(record => (
@@ -129,7 +136,7 @@ export const SchedulePage: React.FC = () => {
       <RecordModal
         open={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
-        onSuccess={fetchRecords}
+        onSuccess={() => { fetchRecords(); setTimeout(fetchRecords, 3000); }}
         initialDate={selectedDate}
       />
 

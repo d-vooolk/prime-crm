@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { recordsService } from '../services/records.service';
+import { smsService } from '../services/sms.service';
 
 export const recordsController = {
   async getByDate(req: Request, res: Response, next: NextFunction) {
@@ -57,6 +58,22 @@ export const recordsController = {
     try {
       const record = await recordsService.restore(String(req.params.id));
       res.json({ data: record });
+    } catch (e) { next(e); }
+  },
+
+  async sendSms(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { type } = req.body as { type: 'CAR_READY' | 'REVIEW_REQUEST' };
+      await smsService.sendForRecord(String(req.params.id), type);
+      res.json({ ok: true });
+    } catch (e) { next(e); }
+  },
+
+  async searchCompanies(req: Request, res: Response, next: NextFunction) {
+    try {
+      const search = String(req.query.search || '');
+      const companies = await recordsService.searchCompanies(search);
+      res.json({ data: companies });
     } catch (e) { next(e); }
   },
 };

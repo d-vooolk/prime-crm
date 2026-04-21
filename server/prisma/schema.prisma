@@ -46,6 +46,7 @@ model Record {
   notes              String?
   documentNumber     String?      @unique
   status             RecordStatus @default(ACTIVE)
+  smsLogs            SmsLog[]
   isLegalEntity                Boolean      @default(false)
   legalCompanyName             String?
   legalAddress                 String?
@@ -140,6 +141,7 @@ model Serviceman {
   id             String   @id @default(cuid())
   name           String   @unique
   position       String?
+  role           String?
   email          String?
   password       String?
   photoUrl       String?
@@ -166,6 +168,37 @@ model CompanySettings {
   logoUrl            String?
   documentPrefix     String  @default("ПА")
   nextDocumentNumber Int     @default(1)
+}
+
+enum SmsType {
+  ON_CREATE
+  REMINDER
+  CAR_READY
+  REVIEW_REQUEST
+}
+
+model SmsSettings {
+  id                    String  @id @default(cuid())
+  enabled               Boolean @default(false)
+  username              String  @default("")
+  password              String  @default("")
+  onCreateTemplate      String  @default("Здравствуйте, {{clientName}}! Вы записаны на {{date}} в {{time}}. {{carBrand}} {{carModel}}{{plateNumber}}. Ждём вас! {{companyName}}")
+  reminderTemplate      String  @default("Напоминаем о записи завтра {{date}} в {{time}}. {{carBrand}} {{carModel}}{{plateNumber}}. До встречи! {{companyName}}")
+  carReadyTemplate      String  @default("Здравствуйте, {{clientName}}! Ваш {{carBrand}} {{carModel}}{{plateNumber}} готов к выдаче. Ждём вас! {{companyName}}")
+  reviewRequestTemplate String  @default("Здравствуйте, {{clientName}}! Будем благодарны за ваш отзыв о нашей работе. {{companyName}}")
+}
+
+model SmsLog {
+  id         String   @id @default(cuid())
+  recordId   String
+  type       SmsType
+  phone      String
+  message    String
+  status     String
+  externalId String?
+  error      String?
+  sentAt     DateTime @default(now())
+  record     Record   @relation(fields: [recordId], references: [id], onDelete: Cascade)
 }
 
 model DocumentTemplate {

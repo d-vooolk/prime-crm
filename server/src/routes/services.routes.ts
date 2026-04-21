@@ -4,15 +4,20 @@ import {
   equipmentController,
   servicemanController,
   settingsController,
+  smsSettingsController,
   documentTemplateController,
   analyticsController,
 } from '../controllers/services.controller';
 
 const router = Router();
 
-// Настройки компании (раньше /:id чтобы не перехватывалось)
+// Настройки компании
 router.get('/settings', settingsController.get);
 router.patch('/settings', settingsController.update);
+
+// SMS настройки
+router.get('/sms-settings', smsSettingsController.get);
+router.patch('/sms-settings', smsSettingsController.update);
 
 // Шаблоны документов
 router.get('/doc-templates', documentTemplateController.getAll);

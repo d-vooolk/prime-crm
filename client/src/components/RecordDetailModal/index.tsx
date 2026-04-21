@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Modal, Button, Descriptions, Tag, Divider, Table, message,
-  Popconfirm, Select, InputNumber, DatePicker, TimePicker, Space,
+  Popconfirm, Select, InputNumber, DatePicker, TimePicker, Space, Tooltip,
 } from 'antd';
 import {
   PrinterOutlined, CheckCircleOutlined, CloseCircleOutlined,
   EditOutlined, DeleteOutlined, ReloadOutlined, CalendarOutlined,
+  CarOutlined, StarOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { Record as CrmRecord, Category, Serviceman } from '@/types';
@@ -15,6 +16,8 @@ import { printWorkOrder, printCompletionAct, printServiceContract, printInvoice,
 import { CloseRecordModal } from '../CloseRecordModal';
 import { recordsApi } from '@/api/records.api';
 import { servicesApi } from '@/api/services.api';
+import { useAuthStore } from '@/store/authStore';
+import styles from './RecordDetailModal.module.scss';
 
 interface Props {
   record: CrmRecord | null;
@@ -30,6 +33,8 @@ const STATUS_MAP: Record<string, { color: string; label: string }> = {
 };
 
 export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRefresh }) => {
+  const { user } = useAuthStore();
+  const isEmployee = user?.role === 'Сотрудник';
   const [closeModalOpen, setCloseModalOpen] = useState(false);
   const [editingServices, setEditingServices] = useState(false);
   const [editItems, setEditItems] = useState<SelectedService[]>([]);
@@ -42,6 +47,7 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
   const [servicemen, setServicemen] = useState<Serviceman[]>([]);
   const [saving, setSaving] = useState(false);
   const [printing, setPrinting] = useState(false);
+  const [smsSending, setSmsSending] = useState<'CAR_READY' | 'REVIEW_REQUEST' | null>(null);
   const timePickerRef = useRef<any>(null);
   const timeCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -244,6 +250,19 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
     }
   };
 
+  const handleSendSms = async (type: 'CAR_READY' | 'REVIEW_REQUEST') => {
+    setSmsSending(type);
+    try {
+      await recordsApi.sendSms(record.id, type);
+      message.success(type === 'CAR_READY' ? 'SMS «Авто готово» отправлено' : 'SMS запроса отзыва отправлено');
+      onRefresh();
+    } catch {
+      message.error('Не удалось отправить SMS');
+    } finally {
+      setSmsSending(null);
+    }
+  };
+
   // ─── Column definitions ───────────────────────────
 
   const serviceOptions = categories.map(cat => ({
@@ -321,15 +340,17 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
         <Tag>{row.service.category?.name}</Tag>,
     },
     { title: 'Кол-во', dataIndex: 'quantity', key: 'qty', width: 80 },
-    {
-      title: 'Цена', key: 'price', width: 120,
-      render: (_: unknown, row: typeof record.items[0]) => formatPrice(row.price),
-    },
-    {
-      title: 'Итого', key: 'total', width: 120,
-      render: (_: unknown, row: typeof record.items[0]) =>
-        <strong>{formatPrice(row.price * row.quantity)}</strong>,
-    },
+    ...(!isEmployee ? [
+      {
+        title: 'Цена', key: 'price', width: 120,
+        render: (_: unknown, row: typeof record.items[0]) => formatPrice(row.price),
+      },
+      {
+        title: 'Итого', key: 'total', width: 120,
+        render: (_: unknown, row: typeof record.items[0]) =>
+          <strong>{formatPrice(row.price * row.quantity)}</strong>,
+      },
+    ] : []),
   ];
 
   return (
@@ -346,70 +367,110 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
         }
         footer={
           <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {record.isLegalEntity ? (
-                <>
-                  <Button icon={<PrinterOutlined />} loading={printing} onClick={handlePrintContract}>
-                    Договор
-                  </Button>
-                  <Button icon={<PrinterOutlined />} loading={printing} onClick={handlePrintInvoice}>
-                    Счёт
-                  </Button>
-                  <Button icon={<PrinterOutlined />} loading={printing} onClick={handlePrintAct}>
-                    Акт
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button icon={<PrinterOutlined />} loading={printing} onClick={handlePrintWorkOrder}>
-                    Заявка
-                  </Button>
-                  {record.deal && (
+            {!isEmployee && (
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {(record.status === 'ACTIVE' || record.status === 'CLOSED') && (
+                  <>
+                    <Popconfirm
+                      title="Отправить SMS «Авто готово»?"
+                      description={`На номер ${record.client.phone}`}
+                      onConfirm={() => handleSendSms('CAR_READY')}
+                      okText="Отправить"
+                      cancelText="Отмена"
+                    >
+                      <Tooltip title="Авто готово">
+                        <Button
+                          icon={<CarOutlined />}
+                          loading={smsSending === 'CAR_READY'}
+                          size="middle"
+                        />
+                      </Tooltip>
+                    </Popconfirm>
+                    <Popconfirm
+                      title="Отправить запрос отзыва?"
+                      description={`На номер ${record.client.phone}`}
+                      onConfirm={() => handleSendSms('REVIEW_REQUEST')}
+                      okText="Отправить"
+                      cancelText="Отмена"
+                    >
+                      <Tooltip title="Запросить отзыв">
+                        <Button
+                          icon={<StarOutlined />}
+                          loading={smsSending === 'REVIEW_REQUEST'}
+                          size="middle"
+                        />
+                      </Tooltip>
+                    </Popconfirm>
+                  </>
+                )}
+                {record.isLegalEntity ? (
+                  <>
+                    <Button icon={<PrinterOutlined />} loading={printing} onClick={handlePrintContract}>
+                      Договор
+                    </Button>
+                    <Button icon={<PrinterOutlined />} loading={printing} onClick={handlePrintInvoice}>
+                      Счёт
+                    </Button>
                     <Button icon={<PrinterOutlined />} loading={printing} onClick={handlePrintAct}>
                       Акт
                     </Button>
-                  )}
-                </>
-              )}
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              {record.status === 'ACTIVE' && (
-                <>
-                  <Button icon={<CalendarOutlined />} onClick={handleOpenReschedule}>
-                    Редактировать
-                  </Button>
-                  <Popconfirm title="Отменить запись?" onConfirm={handleCancel} okText="Да" cancelText="Нет">
-                    <Button danger icon={<CloseCircleOutlined />}>Отменить</Button>
+                  </>
+                ) : (
+                  <>
+                    <Button icon={<PrinterOutlined />} loading={printing} onClick={handlePrintWorkOrder}>
+                      Заявка
+                    </Button>
+                    {record.deal && (
+                      <Button icon={<PrinterOutlined />} loading={printing} onClick={handlePrintAct}>
+                        Акт
+                      </Button>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+            {!isEmployee && (
+              <div style={{ display: 'flex', gap: 8 }}>
+                {record.status === 'ACTIVE' && (
+                  <>
+                    <Button icon={<CalendarOutlined />} onClick={handleOpenReschedule}>
+                      Редактировать
+                    </Button>
+                    <Popconfirm title="Отменить запись?" onConfirm={handleCancel} okText="Да" cancelText="Нет">
+                      <Button danger icon={<CloseCircleOutlined />}>Отменить</Button>
+                    </Popconfirm>
+                    <Button
+                      type="primary"
+                      icon={<CheckCircleOutlined />}
+                      onClick={() => setCloseModalOpen(true)}
+                    >
+                      Закрыть сделку
+                    </Button>
+                  </>
+                )}
+                {record.status === 'CANCELLED' && (
+                  <Popconfirm title="Восстановить запись?" onConfirm={handleRestore} okText="Да" cancelText="Нет">
+                    <Button type="primary" icon={<ReloadOutlined />}>
+                      Восстановить
+                    </Button>
                   </Popconfirm>
-                  <Button
-                    type="primary"
-                    icon={<CheckCircleOutlined />}
-                    onClick={() => setCloseModalOpen(true)}
-                  >
-                    Закрыть сделку
-                  </Button>
-                </>
-              )}
-              {record.status === 'CANCELLED' && (
-                <Popconfirm title="Восстановить запись?" onConfirm={handleRestore} okText="Да" cancelText="Нет">
-                  <Button type="primary" icon={<ReloadOutlined />}>
-                    Восстановить
-                  </Button>
-                </Popconfirm>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </div>
         }
       >
         <Divider orientation="left" style={{ fontSize: 13 }}>Клиент</Divider>
-        <Descriptions size="small" column={{ xs: 1, sm: 2 }}>
+        <Descriptions size="small" column={1}>
           <Descriptions.Item label={record.isLegalEntity ? 'ФИО представителя' : 'ФИО'}>
-            {record.client.name}
+            <span className={isEmployee ? styles.blurred : undefined}>{record.client.name}</span>
           </Descriptions.Item>
-          <Descriptions.Item label="Телефон">{record.client.phone}</Descriptions.Item>
+          <Descriptions.Item label="Телефон">
+            <span className={isEmployee ? styles.blurred : undefined}>{record.client.phone}</span>
+          </Descriptions.Item>
         </Descriptions>
 
-        {record.isLegalEntity && (
+        {record.isLegalEntity && !isEmployee && (
           <>
             <Divider orientation="left" style={{ fontSize: 13 }}>Юридическое лицо</Divider>
             <Descriptions size="small" column={{ xs: 1, sm: 2 }}>
@@ -461,7 +522,7 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
         )}
 
         <Divider orientation="left" style={{ fontSize: 13 }}>Услуги</Divider>
-        {record.status === 'ACTIVE' && !record.deal && !editingServices && (
+        {record.status === 'ACTIVE' && !record.deal && !editingServices && !isEmployee && (
           <div style={{ marginBottom: 8, textAlign: 'right' }}>
             <Button size="small" icon={<EditOutlined />} onClick={handleStartEditServices}>
               Изменить услуги
@@ -501,7 +562,7 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
             rowKey="id"
             pagination={false}
             size="small"
-            footer={() => (
+            footer={isEmployee ? undefined : () => (
               <div style={{ textAlign: 'right', fontSize: 16, fontWeight: 700 }}>
                 {record.deal ? 'Итого: ' : 'Предв. итого: '}{formatPrice(total)}
               </div>

@@ -5,11 +5,13 @@ const router = Router();
 
 router.get('/', recordsController.getByDate);
 router.get('/incomplete', recordsController.getIncomplete);
+router.get('/companies', recordsController.searchCompanies);
 router.get('/:id', recordsController.getById);
 router.post('/', recordsController.create);
 router.patch('/:id', recordsController.update);
 router.post('/:id/close', recordsController.close);
 router.post('/:id/cancel', recordsController.cancel);
 router.post('/:id/restore', recordsController.restore);
+router.post('/:id/send-sms', recordsController.sendSms);
 
 export default router;

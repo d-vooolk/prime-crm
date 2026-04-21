@@ -10,8 +10,26 @@ import dayjs from 'dayjs';
 import { clientsApi } from '@/api/clients.api';
 import { servicesApi } from '@/api/services.api';
 import { carsApi } from '@/api/cars.api';
+import { recordsApi, CompanySuggestion } from '@/api/records.api';
 import { Client, Car, CarBrand, CarModel, CarGeneration, Serviceman } from '@/types';
 import { RecordFormData } from '../types';
+
+const formatPlateNumber = (value: string): string => {
+  const clean = value.toUpperCase().replace(/[ \-]/g, '');
+  let result = '';
+  for (let i = 0; i < Math.min(clean.length, 7); i++) {
+    if (i === 4) result += ' ';
+    if (i === 6) result += '-';
+    result += clean[i];
+  }
+  return result;
+};
+
+const formatMileage = (value: string): string => {
+  const digits = value.replace(/[^0-9]/g, '').slice(0, 7);
+  if (!digits) return '';
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+};
 
 interface Props {
   data: RecordFormData;
@@ -29,6 +47,7 @@ export const Step1Client: React.FC<Props> = ({ data, onChange }) => {
   const [loadingGenerations, setLoadingGenerations] = useState(false);
   const [legalActualSameAsLegal, setLegalActualSameAsLegal] = useState(false);
   const [legalPostalSameAsLegal, setLegalPostalSameAsLegal] = useState(false);
+  const [companySuggestions, setCompanySuggestions] = useState<CompanySuggestion[]>([]);
   useEffect(() => {
     servicesApi.getServicemen().then(setServicemen).catch(() => {});
     carsApi.getBrands().then(setBrands).catch(() => {});
@@ -126,6 +145,38 @@ export const Step1Client: React.FC<Props> = ({ data, onChange }) => {
     onChange({ carGenerationId: genId, carGenerationName: gen?.name || '', carYear: '' });
   };
 
+  const handleCompanySearch = useCallback(async (value: string) => {
+    onChange({ legalCompanyName: value });
+    if (value.length >= 2) {
+      const results = await recordsApi.searchCompanies(value).catch(() => []);
+      setCompanySuggestions(results);
+    } else {
+      setCompanySuggestions([]);
+    }
+  }, [onChange]);
+
+  const handleSelectCompany = (value: string) => {
+    const company = companySuggestions.find(c => c.legalCompanyName === value);
+    if (!company) return;
+    onChange({
+      legalCompanyName: company.legalCompanyName,
+      legalAddress: company.legalAddress || '',
+      legalActualAddress: company.legalActualAddress || '',
+      legalPostalAddress: company.legalPostalAddress || '',
+      legalBankDetails: company.legalBankDetails || '',
+      legalBic: company.legalBic || '',
+      legalUnp: company.legalUnp || '',
+      legalOkpo: company.legalOkpo || '',
+      legalPhone: company.legalPhone || '',
+      legalEmail: company.legalEmail || '',
+      legalRepresentativePosition: company.legalRepresentativePosition || '',
+      legalRepresentativePositionGenitive: company.legalRepresentativePositionGenitive || '',
+      legalRepresentative: company.legalRepresentative || '',
+      legalRepresentativeGenitive: company.legalRepresentativeGenitive || '',
+      legalBasis: company.legalBasis || '',
+    });
+  };
+
   const selectedGeneration = generations.find(g => g.id === data.carGenerationId);
   const yearOptions = selectedGeneration
     ? Array.from(
@@ -218,11 +269,27 @@ export const Step1Client: React.FC<Props> = ({ data, onChange }) => {
           <Row gutter={16}>
             <Col xs={24} sm={12}>
               <Form.Item label="Название организации">
-                <Input
+                <AutoComplete
                   value={data.legalCompanyName}
-                  onChange={e => onChange({ legalCompanyName: e.target.value })}
-                  placeholder="ООО «Название»"
-                />
+                  onSearch={handleCompanySearch}
+                  onSelect={handleSelectCompany}
+                  options={companySuggestions.map(c => ({
+                    value: c.legalCompanyName,
+                    label: (
+                      <div>
+                        <div style={{ fontWeight: 600 }}>{c.legalCompanyName}</div>
+                        {c.legalUnp && (
+                          <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+                            УНП: {c.legalUnp}
+                          </div>
+                        )}
+                      </div>
+                    ),
+                  }))}
+                  style={{ width: '100%' }}
+                >
+                  <Input placeholder="ООО «Название»" />
+                </AutoComplete>
               </Form.Item>
             </Col>
             <Col xs={24} sm={12}>
@@ -505,9 +572,9 @@ export const Step1Client: React.FC<Props> = ({ data, onChange }) => {
           <Form.Item label="Гос. номер">
             <Input
               value={data.carPlateNumber || ''}
-              onChange={e => onChange({ carPlateNumber: e.target.value.toUpperCase() })}
+              onChange={e => onChange({ carPlateNumber: formatPlateNumber(e.target.value) })}
               placeholder="1234 АА-7"
-              style={{ textTransform: 'uppercase' }}
+              maxLength={9}
             />
           </Form.Item>
         </Col>
@@ -515,8 +582,9 @@ export const Step1Client: React.FC<Props> = ({ data, onChange }) => {
           <Form.Item label="Пробег (км)">
             <Input
               value={data.carMileage || ''}
-              onChange={e => onChange({ carMileage: e.target.value })}
+              onChange={e => onChange({ carMileage: formatMileage(e.target.value) })}
               placeholder="150 000"
+              suffix="км"
             />
           </Form.Item>
         </Col>

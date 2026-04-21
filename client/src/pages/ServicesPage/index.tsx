@@ -8,11 +8,24 @@ import {
   StopOutlined, UserOutlined,
 } from '@ant-design/icons';
 import { servicesApi } from '@/api/services.api';
+import { useAuthStore } from '@/store/authStore';
 import { Category, Service, Equipment, Serviceman } from '@/types';
 import { formatPrice, formatDuration } from '@/utils/formatters';
 import styles from './ServicesPage.module.scss';
 
+const ROLE_LEVEL: Record<string, number> = { 'Создатель': 1, 'Директор': 2, 'Менеджер': 3, 'Сотрудник': 4 };
+const ALL_ROLES = ['Создатель', 'Директор', 'Менеджер', 'Сотрудник'];
+function getRoleLevel(role?: string | null): number {
+  if (!role) return 99;
+  return ROLE_LEVEL[role] ?? 99;
+}
+
 export const ServicesPage: React.FC = () => {
+  const { user } = useAuthStore();
+  const myLevel = user?.isMaster ? 0 : getRoleLevel(user?.role);
+  const canEditServiceman = (row: Serviceman) => myLevel === 0 || getRoleLevel(row.role) >= myLevel;
+  const allowedRoles = myLevel === 0 ? ALL_ROLES : ALL_ROLES.filter(r => ROLE_LEVEL[r] >= myLevel);
+
   const [categories, setCategories] = useState<Category[]>([]);
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [allServicemen, setAllServicemen] = useState<Serviceman[]>([]);
@@ -126,6 +139,7 @@ export const ServicesPage: React.FC = () => {
         await servicesApi.updateServiceman(servicemanModal.item.id, {
           name: values.name,
           position: values.position,
+          role: values.role || undefined,
           email: values.email,
           password: values.password || undefined,
           isReceptionist: servicemanModal.isReceptionist,
@@ -134,6 +148,7 @@ export const ServicesPage: React.FC = () => {
         await servicesApi.createServiceman({
           name: values.name,
           position: values.position,
+          role: values.role || undefined,
           email: values.email,
           password: values.password || undefined,
           isReceptionist: servicemanModal.isReceptionist,
@@ -204,7 +219,10 @@ export const ServicesPage: React.FC = () => {
       key: 'name',
       render: (name: string, row: Serviceman) => (
         <div>
-          <div style={{ fontWeight: 500 }}>{name}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontWeight: 500 }}>{name}</span>
+            {row.role && <Tag style={{ margin: 0 }}>{row.role}</Tag>}
+          </div>
           {row.position && <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{row.position}</div>}
         </div>
       ),
@@ -222,24 +240,27 @@ export const ServicesPage: React.FC = () => {
     } : { title: '', key: 'empty', width: 0, render: () => null },
     {
       title: '', key: 'actions', width: isDismissedList ? 0 : 120,
-      render: isDismissedList ? () => null : (_: unknown, row: Serviceman) => (
-        <Space size="small">
-          <Button size="small" icon={<EditOutlined />} onClick={() => {
-            servicemanForm.resetFields();
-            servicemanForm.setFieldsValue({ name: row.name, position: row.position, email: row.email, password: row.password });
-            setServicemanModal({ open: true, item: row, isReceptionist });
-          }} />
-          <Popconfirm
-            title="Уволить сотрудника?"
-            description="Сотрудник будет перемещён в список уволенных"
-            onConfirm={() => handleDismiss(row.id)}
-            okText="Уволить"
-            cancelText="Отмена"
-          >
-            <Button size="small" danger icon={<StopOutlined />} title="Уволить" />
-          </Popconfirm>
-        </Space>
-      ),
+      render: isDismissedList ? () => null : (_: unknown, row: Serviceman) => {
+        if (!canEditServiceman(row)) return null;
+        return (
+          <Space size="small">
+            <Button size="small" icon={<EditOutlined />} onClick={() => {
+              servicemanForm.resetFields();
+              servicemanForm.setFieldsValue({ name: row.name, position: row.position, role: row.role, email: row.email, password: row.password });
+              setServicemanModal({ open: true, item: row, isReceptionist });
+            }} />
+            <Popconfirm
+              title="Уволить сотрудника?"
+              description="Сотрудник будет перемещён в список уволенных"
+              onConfirm={() => handleDismiss(row.id)}
+              okText="Уволить"
+              cancelText="Отмена"
+            >
+              <Button size="small" danger icon={<StopOutlined />} title="Уволить" />
+            </Popconfirm>
+          </Space>
+        );
+      },
     },
   ];
 
@@ -526,6 +547,13 @@ export const ServicesPage: React.FC = () => {
           </Form.Item>
           <Form.Item label="Должность" name="position">
             <Input placeholder="Мастер-установщик" />
+          </Form.Item>
+          <Form.Item label="Роль" name="role">
+            <Select allowClear placeholder="Выберите роль">
+              {allowedRoles.map(r => (
+                <Select.Option key={r} value={r}>{r}</Select.Option>
+              ))}
+            </Select>
           </Form.Item>
           <Form.Item label="Email" name="email">
             <Input type="email" placeholder="example@mail.com" />
