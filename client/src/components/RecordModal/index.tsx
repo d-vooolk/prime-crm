@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Steps, Button, message, Form } from 'antd';
+import { Modal, Steps, Button, message, Form, Grid } from 'antd';
+const { useBreakpoint } = Grid;
 import { PrinterOutlined } from '@ant-design/icons';
 import { Step1Client } from './steps/Step1Client';
 import { Step2Services } from './steps/Step2Services';
@@ -25,6 +26,8 @@ const STEPS = [
 ];
 
 export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initialDate }) => {
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<RecordFormData>({
@@ -184,11 +187,17 @@ export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initial
       width={800}
       footer={null}
       className={styles.modal}
+      classNames={{
+        wrapper: styles.modalWrap,
+        content: styles.modalContent,
+        body: styles.modalBody,
+      }}
       destroyOnHidden
     >
       <div className={styles.body}>
         <div className={styles.steps}>
           <Steps current={step} items={STEPS} size="small" />
+          <div className={styles.stepLabel}>{STEPS[step].title}</div>
         </div>
 
         <Form layout="vertical" className={styles.content}>
@@ -219,7 +228,7 @@ export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initial
                   loading={loading}
                   onClick={() => handleSave('workOrder')}
                 >
-                  Сохранить и распечатать заявку
+                  {isMobile ? 'Распечатать заявку' : 'Сохранить и распечатать заявку'}
                 </Button>
                 <Button type="primary" loading={loading} onClick={() => handleSave()}>
                   Сохранить
