@@ -41,11 +41,14 @@ export const servicesApi = {
   getAllServicemen: () =>
     http.get<{ data: Serviceman[] }>('/services/servicemen/all').then(r => r.data.data),
 
-  createServiceman: (data: { name: string; position?: string; role?: string; email?: string; password?: string; isReceptionist?: boolean }) =>
+  createServiceman: (data: { name: string; position?: string; role?: string; email?: string; password?: string; isReceptionist?: boolean; birthday?: string | null }) =>
     http.post<{ data: Serviceman }>('/services/servicemen', data).then(r => r.data.data),
 
-  updateServiceman: (id: string, data: { name?: string; position?: string; role?: string; email?: string; password?: string; isReceptionist?: boolean; profitPercent?: number }) =>
+  updateServiceman: (id: string, data: { name?: string; position?: string; role?: string; email?: string; password?: string; isReceptionist?: boolean; profitPercent?: number; birthday?: string | null }) =>
     http.patch<{ data: Serviceman }>(`/services/servicemen/${id}`, data).then(r => r.data.data),
+
+  getTodayBirthdays: () =>
+    http.get<{ data: { id: string; name: string; position?: string; birthday: string }[] }>('/services/servicemen/today-birthdays').then(r => r.data.data),
 
   dismissServiceman: (id: string) =>
     http.post<{ data: Serviceman }>(`/services/servicemen/${id}/dismiss`).then(r => r.data.data),

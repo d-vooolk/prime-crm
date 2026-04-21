@@ -152,7 +152,7 @@ export const servicemanController = {
 
   async create(req: Request, res: Response, next: NextFunction) {
     try {
-      const { name, position, role, email, password, photoUrl, isReceptionist } = req.body;
+      const { name, position, role, email, password, photoUrl, isReceptionist, birthday } = req.body;
       const myLevel = requesterLevel(req);
       if (myLevel !== 0 && getLevel(role) < myLevel) {
         res.status(403).json({ message: 'Нельзя назначить роль выше вашего уровня' });
@@ -160,7 +160,10 @@ export const servicemanController = {
       }
       const hashed = password ? await bcrypt.hash(password, 10) : undefined;
       const s = await prisma.serviceman.create({
-        data: { name, position, role, email, password: hashed, photoUrl, isReceptionist: !!isReceptionist },
+        data: {
+          name, position, role, email, password: hashed, photoUrl, isReceptionist: !!isReceptionist,
+          birthday: birthday ? new Date(birthday) : undefined,
+        },
       });
       res.status(201).json({ data: s });
     } catch (e) { next(e); }
@@ -180,6 +183,7 @@ export const servicemanController = {
         res.status(403).json({ message: 'Нельзя назначить роль выше вашего уровня' });
         return;
       }
+      const { birthday } = req.body;
       const hashed = password ? await bcrypt.hash(password, 10) : undefined;
       const s = await prisma.serviceman.update({
         where: { id: String(req.params.id) },
@@ -188,6 +192,7 @@ export const servicemanController = {
           ...(hashed !== undefined && { password: hashed }),
           photoUrl, isReceptionist,
           ...(profitPercent !== undefined && { profitPercent: Number(profitPercent) }),
+          ...(birthday !== undefined && { birthday: birthday ? new Date(birthday) : null }),
         },
       });
       res.json({ data: s });
@@ -208,6 +213,23 @@ export const servicemanController = {
         data: { isDismissed: true, isDefault: false },
       });
       res.json({ data: s });
+    } catch (e) { next(e); }
+  },
+
+  async getTodayBirthdays(_req: Request, res: Response, next: NextFunction) {
+    try {
+      const now = new Date();
+      const todayMonth = now.getMonth() + 1;
+      const todayDay = now.getDate();
+      const all = await prisma.serviceman.findMany({
+        where: { isDismissed: false, birthday: { not: null } },
+        select: { id: true, name: true, birthday: true, position: true },
+      });
+      const birthdays = all.filter(s => {
+        const d = s.birthday!;
+        return d.getMonth() + 1 === todayMonth && d.getDate() === todayDay;
+      });
+      res.json({ data: birthdays });
     } catch (e) { next(e); }
   },
 

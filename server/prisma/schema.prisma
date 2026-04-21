@@ -148,11 +148,12 @@ model Serviceman {
   email          String?
   password       String?
   photoUrl       String?
-  isDismissed    Boolean  @default(false)
-  isReceptionist Boolean  @default(false)
-  isDefault      Boolean  @default(false)
-  profitPercent  Float    @default(0)
-  createdAt      DateTime @default(now())
+  isDismissed    Boolean   @default(false)
+  isReceptionist Boolean   @default(false)
+  isDefault      Boolean   @default(false)
+  profitPercent  Float     @default(0)
+  birthday       DateTime?
+  createdAt      DateTime  @default(now())
 }
 
 model CompanySettings {

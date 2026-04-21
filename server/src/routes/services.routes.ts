@@ -37,6 +37,7 @@ router.patch('/equipment/:id', equipmentController.update);
 router.delete('/equipment/:id', equipmentController.delete);
 
 // Сотрудники
+router.get('/servicemen/today-birthdays', servicemanController.getTodayBirthdays);
 router.get('/servicemen', servicemanController.getAll);
 router.get('/servicemen/all', servicemanController.getAllIncludingDismissed);
 router.post('/servicemen', servicemanController.create);

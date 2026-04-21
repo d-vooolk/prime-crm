@@ -1,0 +1,29 @@
+@use '@/styles/variables' as *;
+
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  background: linear-gradient(90deg, #fff7e6 0%, #fff1cc 100%);
+  border-bottom: 2px solid #ffd666;
+  font-size: 14px;
+  font-weight: 500;
+  color: #874d00;
+  flex-shrink: 0;
+
+  [data-theme='dark'] & {
+    background: linear-gradient(90deg, #2d2000 0%, #3a2800 100%);
+    border-bottom-color: #7c5800;
+    color: #ffd666;
+  }
+}
+
+.icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.text {
+  flex: 1;
+}

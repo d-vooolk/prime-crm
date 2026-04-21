@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Button, Card, Table, Modal, Form, Input, InputNumber, Select,
-  Popconfirm, message, Tabs, Checkbox, Tag, Space, Collapse,
+  Popconfirm, message, Tabs, Checkbox, Tag, Space, Collapse, DatePicker,
 } from 'antd';
 import {
   PlusOutlined, EditOutlined, DeleteOutlined,
@@ -11,6 +11,7 @@ import { servicesApi } from '@/api/services.api';
 import { useAuthStore } from '@/store/authStore';
 import { Category, Service, Equipment, Serviceman } from '@/types';
 import { formatPrice, formatDuration } from '@/utils/formatters';
+import dayjs from 'dayjs';
 import styles from './ServicesPage.module.scss';
 
 const ROLE_LEVEL: Record<string, number> = { 'Создатель': 1, 'Директор': 2, 'Менеджер': 3, 'Сотрудник': 4 };
@@ -135,6 +136,7 @@ export const ServicesPage: React.FC = () => {
   const handleSaveServiceman = async () => {
     const values = await servicemanForm.validateFields();
     try {
+      const birthdayIso = values.birthday ? (values.birthday as import('dayjs').Dayjs).toISOString() : null;
       if (servicemanModal.item) {
         await servicesApi.updateServiceman(servicemanModal.item.id, {
           name: values.name,
@@ -143,6 +145,7 @@ export const ServicesPage: React.FC = () => {
           email: values.email,
           password: values.password || undefined,
           isReceptionist: servicemanModal.isReceptionist,
+          birthday: birthdayIso,
           ...(values.role === 'Сотрудник' && { profitPercent: values.profitPercent ?? 0 }),
         });
       } else {
@@ -153,6 +156,7 @@ export const ServicesPage: React.FC = () => {
           email: values.email,
           password: values.password || undefined,
           isReceptionist: servicemanModal.isReceptionist,
+          birthday: birthdayIso,
         });
       }
       message.success('Сохранено');
@@ -237,6 +241,22 @@ export const ServicesPage: React.FC = () => {
           ? <Tag color="green">{row.profitPercent}%</Tag>
           : <span style={{ color: 'var(--color-text-secondary)' }}>—</span>,
     } : { title: '', key: 'emptyProfit', width: 0, render: () => null },
+    {
+      title: 'День рождения',
+      key: 'birthday',
+      width: 130,
+      render: (_: unknown, row: Serviceman) => {
+        if (!row.birthday) return <span style={{ color: 'var(--color-text-secondary)' }}>—</span>;
+        const bd = dayjs(row.birthday);
+        const isToday = bd.month() === dayjs().month() && bd.date() === dayjs().date();
+        return (
+          <span style={isToday ? { color: 'var(--color-success)', fontWeight: 600 } : undefined}>
+            {bd.format('DD.MM.YYYY')}
+            {isToday && ' (сегодня!)'}
+          </span>
+        );
+      },
+    },
     isReceptionist && !isDismissedList ? {
       title: 'По умолчанию',
       key: 'default',
@@ -256,7 +276,7 @@ export const ServicesPage: React.FC = () => {
           <Space size="small">
             <Button size="small" icon={<EditOutlined />} onClick={() => {
               servicemanForm.resetFields();
-              servicemanForm.setFieldsValue({ name: row.name, position: row.position, role: row.role, email: row.email, password: row.password, profitPercent: row.profitPercent ?? 0 });
+              servicemanForm.setFieldsValue({ name: row.name, position: row.position, role: row.role, email: row.email, password: row.password, profitPercent: row.profitPercent ?? 0, birthday: row.birthday ? dayjs(row.birthday) : null });
               setServicemanModal({ open: true, item: row, isReceptionist });
             }} />
             <Popconfirm
@@ -570,6 +590,9 @@ export const ServicesPage: React.FC = () => {
           </Form.Item>
           <Form.Item label="Пароль" name="password">
             <Input placeholder="Пароль для входа в систему" autoComplete="new-password" />
+          </Form.Item>
+          <Form.Item label="Дата рождения" name="birthday">
+            <DatePicker style={{ width: '100%' }} format="DD.MM.YYYY" placeholder="Выберите дату" />
           </Form.Item>
           <Form.Item noStyle shouldUpdate={(prev, cur) => prev.role !== cur.role}>
             {({ getFieldValue }) => getFieldValue('role') === 'Сотрудник' ? (

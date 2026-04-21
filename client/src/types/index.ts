@@ -173,6 +173,7 @@ export interface Serviceman {
   isReceptionist: boolean;
   isDefault: boolean;
   profitPercent: number;
+  birthday?: string | null;
 }
 
 export interface CompanySettings {
