@@ -4,7 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="45f6dddb-f82f-43d5-b121-b81757ed27dc" name="Changes" comment="beta 1.0.0" />
+    <list default="true" id="45f6dddb-f82f-43d5-b121-b81757ed27dc" name="Changes" comment="add deploy script, root package.json and nginx config template">
+      <change beforePath="$PROJECT_DIR$/.claude/settings.local.json" beforeDir="false" afterPath="$PROJECT_DIR$/.claude/settings.local.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -86,7 +89,7 @@
       <workItem from="1776475399414" duration="331000" />
       <workItem from="1776643840701" duration="29000" />
       <workItem from="1776720749851" duration="14836000" />
-      <workItem from="1776773986054" duration="13016000" />
+      <workItem from="1776773986054" duration="15773000" />
     </task>
     <task id="LOCAL-00001" summary="init new version of product">
       <option name="closed" value="true" />
@@ -128,7 +131,15 @@
       <option name="project" value="LOCAL" />
       <updated>1776795253108</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="add deploy script, root package.json and nginx config template">
+      <option name="closed" value="true" />
+      <created>1776796139234</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1776796139234</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -147,6 +158,7 @@
     <MESSAGE value="add functionality" />
     <MESSAGE value="add functionality doc for clients" />
     <MESSAGE value="beta 1.0.0" />
-    <option name="LAST_COMMIT_MESSAGE" value="beta 1.0.0" />
+    <MESSAGE value="add deploy script, root package.json and nginx config template" />
+    <option name="LAST_COMMIT_MESSAGE" value="add deploy script, root package.json and nginx config template" />
   </component>
 </project>
