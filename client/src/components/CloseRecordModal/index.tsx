@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Modal, Form, InputNumber, Input, Select, Button, Divider, message,
-  Table, Empty, Tag, Space, Checkbox,
+  Table, Empty, Checkbox,
 } from 'antd';
 // InputNumber используется в таблице услуг
 import { PrinterOutlined, DeleteOutlined } from '@ant-design/icons';
@@ -119,6 +119,8 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
     options: cat.services.map(s => ({ value: s.id, label: `${s.name} — ${formatPrice(s.standardPrice)}` })),
   }));
 
+  const hasEmployees = employees.length > 0;
+
   const itemColumns = [
     {
       title: 'Услуга',
@@ -126,85 +128,58 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
       key: 'name',
       render: (name: string, row: ItemRow) => (
         <div>
-          <div style={{ fontWeight: 500 }}>{name}</div>
-          <Tag style={{ fontSize: 11, marginTop: 2 }}>{row.categoryName}</Tag>
+          <div style={{ fontWeight: 500, whiteSpace: 'nowrap' }}>{name}</div>
+          <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 1 }}>{row.categoryName}</div>
         </div>
       ),
     },
     {
       title: 'Кол-во',
       key: 'quantity',
-      width: 90,
+      width: 80,
       render: (_: unknown, row: ItemRow) => (
         <InputNumber
-          min={1} max={99} value={row.quantity} size="small" controls style={{ width: 70 }}
+          min={1} max={99} value={row.quantity} size="small" controls style={{ width: 64 }}
           onChange={v => updateItemQty(row.serviceId, v || 1)}
         />
       ),
     },
     {
-      title: 'Цена',
+      title: 'Цена, р.',
       key: 'price',
-      width: 130,
+      width: 110,
       render: (_: unknown, row: ItemRow) => (
-        <Space.Compact size="small">
-          <InputNumber
-            min={0} value={row.price} style={{ width: 85 }}
-            formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}
-            onChange={v => updateItemPrice(row.serviceId, v || 0)}
-          />
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', padding: '0 8px',
-            background: 'var(--color-surface-2)', border: '1px solid var(--color-border)',
-            borderLeft: 'none', borderRadius: '0 6px 6px 0', fontSize: 13,
-            color: 'var(--color-text-secondary)',
-          }}>р.</span>
-        </Space.Compact>
+        <InputNumber
+          min={0} value={row.price} size="small" style={{ width: '100%' }}
+          formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}
+          onChange={v => updateItemPrice(row.serviceId, v || 0)}
+        />
       ),
     },
     {
       title: 'Итого',
       key: 'total',
-      width: 100,
+      width: 90,
       render: (_: unknown, row: ItemRow) => (
-        <span style={{ fontWeight: 600 }}>{formatPrice(row.price * row.quantity)}</span>
+        <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{formatPrice(row.price * row.quantity)}</span>
       ),
     },
     {
-      title: 'Чистая прибыль',
+      title: 'Прибыль, р.',
       key: 'netProfit',
-      width: 140,
+      width: 120,
       render: (_: unknown, row: ItemRow) => (
-        <Space.Compact size="small">
-          <InputNumber
-            min={0} value={row.netProfit} style={{ width: 90 }}
-            formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}
-            onChange={v => updateItemNetProfit(row.serviceId, v ?? 0)}
-          />
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', padding: '0 8px',
-            background: 'var(--color-surface-2)', border: '1px solid var(--color-border)',
-            borderLeft: 'none', borderRadius: '0 6px 6px 0', fontSize: 13,
-            color: 'var(--color-text-secondary)',
-          }}>р.</span>
-        </Space.Compact>
+        <InputNumber
+          min={0} value={row.netProfit} size="small" style={{ width: '100%' }}
+          formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}
+          onChange={v => updateItemNetProfit(row.serviceId, v ?? 0)}
+        />
       ),
     },
-    {
-      title: '',
-      key: 'del',
-      width: 36,
-      render: (_: unknown, row: ItemRow) => (
-        <Button type="text" danger icon={<DeleteOutlined />} size="small" onClick={() => removeItem(row.serviceId)} />
-      ),
-    },
-  ];
-
-  if (employees.length > 0) {
-    itemColumns.splice(itemColumns.length - 1, 0, {
+    ...(hasEmployees ? [{
       title: 'Сотрудник',
       key: 'serviceman',
-      width: 150,
+      width: 140,
       render: (_: unknown, row: ItemRow) => (
         <Select
           size="small"
@@ -214,8 +189,16 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
           options={employees.map(e => ({ value: e.name, label: e.name }))}
         />
       ),
-    });
-  }
+    }] : []),
+    {
+      title: '',
+      key: 'del',
+      width: 36,
+      render: (_: unknown, row: ItemRow) => (
+        <Button type="text" danger icon={<DeleteOutlined />} size="small" onClick={() => removeItem(row.serviceId)} />
+      ),
+    },
+  ];
 
   const handleClose = async (withPrint = false) => {
     const values = await form.validateFields().catch(() => null);
@@ -270,7 +253,7 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
         open={open}
         onCancel={onClose}
         title="Закрыть сделку"
-        width={720}
+        width={hasEmployees ? 920 : 720}
         footer={null}
         destroyOnClose
       >
@@ -296,6 +279,7 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
               rowKey="serviceId"
               pagination={false}
               size="small"
+              scroll={{ x: 'max-content' }}
               style={{ marginBottom: 8 }}
               footer={() => (
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
