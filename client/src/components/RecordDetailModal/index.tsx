@@ -35,6 +35,7 @@ const STATUS_MAP: Record<string, { color: string; label: string }> = {
 export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRefresh }) => {
   const { user } = useAuthStore();
   const isEmployee = user?.role === 'Сотрудник';
+  const canDelete = user?.isMaster || user?.role === 'Создатель';
   const [closeModalOpen, setCloseModalOpen] = useState(false);
   const [editingServices, setEditingServices] = useState(false);
   const [editItems, setEditItems] = useState<SelectedService[]>([]);
@@ -250,6 +251,17 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
     }
   };
 
+  const handleDelete = async () => {
+    try {
+      await recordsApi.delete(record.id);
+      message.success('Запись удалена');
+      onRefresh();
+      onClose();
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : 'Ошибка');
+    }
+  };
+
   const handleSendSms = async (type: 'CAR_READY' | 'REVIEW_REQUEST') => {
     setSmsSending(type);
     try {
@@ -367,6 +379,18 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
         }
         footer={
           <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+            {canDelete && (
+              <Popconfirm
+                title="Удалить запись?"
+                description="Запись и все связанные данные будут удалены безвозвратно."
+                onConfirm={handleDelete}
+                okText="Удалить"
+                okButtonProps={{ danger: true }}
+                cancelText="Отмена"
+              >
+                <Button danger icon={<DeleteOutlined />}>Удалить</Button>
+              </Popconfirm>
+            )}
             {!isEmployee && (
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {(record.status === 'ACTIVE' || record.status === 'CLOSED') && (

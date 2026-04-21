@@ -61,6 +61,13 @@ export const recordsController = {
     } catch (e) { next(e); }
   },
 
+  async delete(req: Request, res: Response, next: NextFunction) {
+    try {
+      await recordsService.delete(String(req.params.id));
+      res.status(204).end();
+    } catch (e) { next(e); }
+  },
+
   async sendSms(req: Request, res: Response, next: NextFunction) {
     try {
       const { type } = req.body as { type: 'CAR_READY' | 'REVIEW_REQUEST' };

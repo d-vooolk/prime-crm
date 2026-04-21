@@ -13,5 +13,6 @@ router.post('/:id/close', recordsController.close);
 router.post('/:id/cancel', recordsController.cancel);
 router.post('/:id/restore', recordsController.restore);
 router.post('/:id/send-sms', recordsController.sendSms);
+router.delete('/:id', recordsController.delete);
 
 export default router;

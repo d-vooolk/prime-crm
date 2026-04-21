@@ -246,6 +246,12 @@ export const recordsService = {
     return prisma.record.update({ where: { id }, data: { status: 'ACTIVE' }, include: RECORD_INCLUDE });
   },
 
+  async delete(id: string) {
+    await recordsService.findById(id);
+    await prisma.deal.deleteMany({ where: { recordId: id } });
+    await prisma.record.delete({ where: { id } });
+  },
+
   async searchCompanies(search: string) {
     const records = await prisma.record.findMany({
       where: {

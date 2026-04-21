@@ -98,4 +98,7 @@ export const recordsApi = {
 
   sendSms: (id: string, type: 'CAR_READY' | 'REVIEW_REQUEST') =>
     http.post(`/records/${id}/send-sms`, { type }).then(r => r.data),
+
+  delete: (id: string) =>
+    http.delete(`/records/${id}`),
 };
