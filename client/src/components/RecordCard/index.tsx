@@ -87,11 +87,14 @@ export const RecordCard: React.FC<Props> = ({ record, onClick }) => {
 
         {items.length > 0 && (
           <div className={styles.services}>
-            {items.slice(0, 3).map((item) => (
-              <div key={item.id} className={styles.serviceItem}>
+            {items.slice(0, 3).map((item, idx) => (
+              <div key={item.id} className={cn(styles.serviceItem, { [styles.serviceItemHiddenMobile]: idx > 0 })}>
                 <span>
                   {item.service.name}
                   {item.quantity > 1 ? ` ×${item.quantity}` : ''}
+                  {idx === 0 && items.length > 1 && (
+                    <span className={styles.moreServicesMobile}> +{items.length - 1}</span>
+                  )}
                 </span>
                 {!isEmployee && (
                   <span className={styles.servicePrice}>{formatPrice(item.price * item.quantity)}</span>
@@ -99,7 +102,7 @@ export const RecordCard: React.FC<Props> = ({ record, onClick }) => {
               </div>
             ))}
             {items.length > 3 && (
-              <div className={styles.serviceItem}>
+              <div className={cn(styles.serviceItem, styles.serviceItemHiddenMobile)}>
                 <span style={{ color: 'var(--color-text-muted)' }}>
                   +{items.length - 3} услуги...
                 </span>
