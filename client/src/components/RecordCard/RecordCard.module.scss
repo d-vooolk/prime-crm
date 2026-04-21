@@ -59,7 +59,7 @@
   align-self: stretch;
   display: block;
 
-  @include mobile { display: none; }
+  @include mobile { max-width: 100px; }
 }
 
 .photoHidden {
@@ -79,7 +79,7 @@
   background-size: 200% 100%;
   animation: shimmer 1.4s infinite linear;
 
-  @include mobile { display: none; }
+  @include mobile { width: 100px; }
 }
 
 @keyframes shimmer {
@@ -98,7 +98,10 @@
   font-size: 28px;
   border-right: 1px solid var(--color-border);
 
-  @include mobile { display: none; }
+  @include mobile {
+    width: 56px;
+    font-size: 22px;
+  }
 }
 
 // ─── Content ───────────────────────────────────────
