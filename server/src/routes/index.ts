@@ -9,12 +9,12 @@ import { authMiddleware } from '../middleware/auth.middleware';
 const router = Router();
 
 router.use('/auth', authRouter);
+router.use('/cars', carsRouter);
 
 router.use(authMiddleware);
 
 router.use('/clients', clientsRouter);
 router.use('/records', recordsRouter);
 router.use('/services', servicesRouter);
-router.use('/cars', carsRouter);
 
 export default router;
