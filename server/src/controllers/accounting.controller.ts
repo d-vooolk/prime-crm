@@ -43,8 +43,8 @@ export const accountingController = {
   },
 
   async createWithdrawal(req: Request, res: Response) {
-    const { date, amount, currency, person } = req.body;
-    const tx = await accountingService.createWithdrawal({ date, amount, currency, person });
+    const { date, amount, currency, description, person } = req.body;
+    const tx = await accountingService.createWithdrawal({ date, amount, currency, description, person });
     res.status(201).json({ data: tx });
   },
 };

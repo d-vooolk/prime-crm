@@ -69,7 +69,8 @@ const withdrawalColumns = [
   { title: 'Дата', dataIndex: 'date', key: 'date', width: 100, render: (d: string) => formatDate(d) },
   { title: 'BYN', dataIndex: 'amountByn', key: 'byn', width: 100, render: (v?: number) => v != null ? formatPrice(v) : '—' },
   { title: 'USD', dataIndex: 'amountUsd', key: 'usd', width: 100, render: (v?: number) => v != null ? `$${v.toFixed(2)}` : '—' },
-  { title: 'Изыматель', dataIndex: 'person', key: 'person' },
+  { title: 'Цель', dataIndex: 'description', key: 'description', ellipsis: true, render: (v?: string) => v || '—' },
+  { title: 'Изыматель', dataIndex: 'person', key: 'person', width: 130 },
 ];
 
 export const AccountingPage: React.FC = () => {
@@ -204,6 +205,7 @@ export const AccountingPage: React.FC = () => {
         date: values.date.toISOString(),
         amount: values.amount,
         currency: values.currency,
+        description: values.description,
         person: values.person,
       });
       message.success('Списание добавлено');
@@ -479,6 +481,9 @@ export const AccountingPage: React.FC = () => {
           </Form.Item>
           <Form.Item label="Валюта" name="currency" rules={[{ required: true }]}>
             <Select options={[{ value: 'BYN', label: 'BYN (рубли)' }, { value: 'USD', label: 'USD (доллары)' }]} />
+          </Form.Item>
+          <Form.Item label="Цель списания" name="description">
+            <Input placeholder="Например: дивиденды, личные нужды" />
           </Form.Item>
           <Form.Item label="Изыматель" name="person" rules={[{ required: true, message: 'Выберите изымателя' }]}>
             <Select

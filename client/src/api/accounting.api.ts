@@ -29,6 +29,6 @@ export const accountingApi = {
   createDeposit: (data: { date: string; amount: number; currency: 'BYN' | 'USD' }) =>
     http.post<{ data: CapitalTransaction }>('/accounting/capital/deposit', data).then(r => r.data.data),
 
-  createWithdrawal: (data: { date: string; amount: number; currency: 'BYN' | 'USD'; person: string }) =>
+  createWithdrawal: (data: { date: string; amount: number; currency: 'BYN' | 'USD'; description?: string; person: string }) =>
     http.post<{ data: CapitalTransaction }>('/accounting/capital/withdrawal', data).then(r => r.data.data),
 };

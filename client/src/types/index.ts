@@ -93,6 +93,7 @@ export interface CapitalTransaction {
   date: string;
   amountByn?: number;
   amountUsd?: number;
+  description?: string;
   person?: string;
   createdAt: string;
 }

@@ -61,7 +61,19 @@
       "PowerShell(cd \"C:\\\\Users\\\\Dmitriy\\\\Desktop\\\\prime-crm\"; python __ssh_fix5.py 2>&1; Write-Host \"Exit: $LASTEXITCODE\")",
       "PowerShell(cd \"C:\\\\Users\\\\Dmitriy\\\\Desktop\\\\prime-crm\"; python __ssh_deploy_test.py 2>&1; Write-Host \"Exit: $LASTEXITCODE\")",
       "PowerShell(cd \"C:\\\\Users\\\\Dmitriy\\\\Desktop\\\\prime-crm\"; python __ssh_reset.py 2>&1; Write-Host \"Exit: $LASTEXITCODE\")",
-      "Bash(ssh *)"
+      "Bash(ssh *)",
+      "Bash(pg_isready -h localhost -p 5432)",
+      "Bash(npx dotenv *)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/prime_crm\" node_modules/.bin/prisma db push)",
+      "Bash(taskkill /F /IM ts-node-dev.cmd)",
+      "Bash(taskkill /F /IM node.exe)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/prime_crm\" PORT=3001 NODE_ENV=development JWT_SECRET=\"prime-crm-jwt-secret-change-in-production\" MASTER_EMAIL=\"admin@prime-auto.by\" MASTER_PASSWORD=\"82ehedub\" npm run dev)",
+      "Bash(awk '{print $5}')",
+      "Bash(xargs -r taskkill /F /PID)",
+      "Bash(node_modules/.bin/prisma generate *)",
+      "Bash(tasklist *)",
+      "Bash(wmic process *)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/prime_crm\" node_modules/.bin/prisma generate)"
     ]
   }
 }

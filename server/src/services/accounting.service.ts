@@ -90,13 +90,14 @@ export const accountingService = {
     });
   },
 
-  async createWithdrawal(data: { date: string; amount: number; currency: 'BYN' | 'USD'; person: string }) {
+  async createWithdrawal(data: { date: string; amount: number; currency: 'BYN' | 'USD'; description?: string; person: string }) {
     return prisma.capitalTransaction.create({
       data: {
         type: 'WITHDRAWAL',
         date: new Date(data.date),
         amountByn: data.currency === 'BYN' ? data.amount : undefined,
         amountUsd: data.currency === 'USD' ? data.amount : undefined,
+        description: data.description,
         person: data.person,
       },
     });
