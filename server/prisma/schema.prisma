@@ -102,6 +102,7 @@ model Service {
   estimatedTime Int
   isActive      Boolean      @default(true)
   hasEquipment  Boolean      @default(false)
+  isProduct     Boolean      @default(false)
   category      Category     @relation(fields: [categoryId], references: [id])
   recordItems   RecordItem[]
 }

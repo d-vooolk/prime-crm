@@ -158,6 +158,7 @@ export interface Service {
   estimatedTime: number;
   isActive: boolean;
   hasEquipment?: boolean;
+  isProduct?: boolean;
   category?: Category;
 }
 

@@ -28,6 +28,7 @@ interface ItemRow {
   netProfit: number;
   servicemanName: string;
   hasEquipment: boolean;
+  isProduct: boolean;
   equipmentId?: string;
   split?: ServicemanSplitEntry[] | null;
 }
@@ -68,6 +69,7 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
 
       setItems(record.items.map(i => {
         const hasEquipment = i.service.hasEquipment ?? false;
+        const isProduct = i.service.isProduct ?? false;
         const retailPrice = hasEquipment ? (i.equipment?.retailPrice ?? 0) : 0;
         return {
           serviceId: i.serviceId,
@@ -77,13 +79,14 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
           price: i.price,
           quantity: i.quantity,
           estimatedTime: i.service.estimatedTime || 0,
-          netProfit: i.price * i.quantity - retailPrice,
-          servicemanName: i.servicemanSplit?.length
+          netProfit: isProduct ? 0 : i.price * i.quantity - retailPrice,
+          servicemanName: isProduct || i.servicemanSplit?.length
             ? ''
             : (i.servicemanName ?? record.serviceman),
           hasEquipment,
+          isProduct,
           equipmentId: i.equipmentId ?? undefined,
-          split: i.servicemanSplit?.length ? i.servicemanSplit : null,
+          split: !isProduct && i.servicemanSplit?.length ? i.servicemanSplit : null,
         };
       }));
 
@@ -153,7 +156,7 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
             <div style={{ fontWeight: 500, whiteSpace: 'nowrap' }}>{name}</div>
             <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 1 }}>{row.categoryName}</div>
           </div>
-          {hasEmployees && (
+          {hasEmployees && !row.isProduct && (
             <Tooltip title="Разделить между сотрудниками">
               <Button
                 type="text"
@@ -179,17 +182,19 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
       title: 'Чистая прибыль',
       key: 'netProfit',
       width: 130,
-      render: (_: unknown, row: ItemRow) => (
-        <span style={{ fontWeight: 600, color: 'var(--color-success)', whiteSpace: 'nowrap' }}>
-          {formatPrice(row.netProfit)}
-        </span>
-      ),
+      render: (_: unknown, row: ItemRow) =>
+        row.isProduct
+          ? <span style={{ color: 'var(--color-text-secondary)' }}>—</span>
+          : <span style={{ fontWeight: 600, color: 'var(--color-success)', whiteSpace: 'nowrap' }}>{formatPrice(row.netProfit)}</span>,
     },
     ...(hasEmployees ? [{
       title: 'Сотрудник',
       key: 'serviceman',
       width: 180,
       render: (_: unknown, row: ItemRow) => {
+        if (row.isProduct) {
+          return <Tag color="orange" style={{ margin: 0 }}>Товар</Tag>;
+        }
         if (row.split && row.split.length >= 2) {
           return (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>

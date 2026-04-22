@@ -84,6 +84,7 @@ export const ServicesPage: React.FC = () => {
       standardPrice: service.standardPrice,
       estimatedTime: service.estimatedTime,
       hasEquipment: service.hasEquipment ?? false,
+      isProduct: service.isProduct ?? false,
     });
     setServiceModal({ open: true, service });
   };
@@ -523,6 +524,9 @@ export const ServicesPage: React.FC = () => {
           </Form.Item>
           <Form.Item name="hasEquipment" valuePropName="checked">
             <Checkbox>Услуга с сопутствующим оборудованием (Bi-Led модули)</Checkbox>
+          </Form.Item>
+          <Form.Item name="isProduct" valuePropName="checked">
+            <Checkbox>Товар (не учитывается в зарплате сотрудников)</Checkbox>
           </Form.Item>
         </Form>
       </Modal>

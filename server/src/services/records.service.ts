@@ -238,12 +238,16 @@ export const recordsService = {
 
     const { finalPrice, defects, warranty, isPaidByBankTransfer = false } = data;
 
-    // Calculate netProfit per item automatically
+    // Calculate netProfit per item automatically; products contribute 0 to salary
     for (const item of record.items) {
-      const hasEquipment = (item.service as unknown as { hasEquipment: boolean }).hasEquipment;
-      const retailPrice = hasEquipment && item.equipment ? (item.equipment.retailPrice ?? 0) : 0;
-      const netProfit = item.price * item.quantity - retailPrice;
-      await prisma.recordItem.update({ where: { id: item.id }, data: { netProfit } });
+      const svc = item.service as unknown as { hasEquipment: boolean; isProduct: boolean };
+      if (svc.isProduct) {
+        await prisma.recordItem.update({ where: { id: item.id }, data: { netProfit: 0, servicemanName: null } });
+      } else {
+        const retailPrice = svc.hasEquipment && item.equipment ? (item.equipment.retailPrice ?? 0) : 0;
+        const netProfit = item.price * item.quantity - retailPrice;
+        await prisma.recordItem.update({ where: { id: item.id }, data: { netProfit } });
+      }
     }
 
     // Collect equipment IDs from record items
