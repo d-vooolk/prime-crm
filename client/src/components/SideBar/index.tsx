@@ -9,9 +9,8 @@ import {
   AccountBookOutlined,
   LeftOutlined,
   RightOutlined,
-  LogoutOutlined,
 } from '@ant-design/icons';
-import { Calendar, ConfigProvider, Button, Popconfirm, Tooltip } from 'antd';
+import { Calendar, ConfigProvider, Button } from 'antd';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import 'dayjs/locale/ru';
@@ -34,10 +33,10 @@ const NAV_ITEMS = [
 
 export const SideBar: React.FC = () => {
   const { selectedDate, setSelectedDate } = useUiStore();
-  const { user, logout } = useAuthStore();
+  const { user } = useAuthStore();
   const visibleNavItems = NAV_ITEMS.filter(item => {
     if (user?.role === 'Сотрудник') {
-      return item.path === '/schedule' || item.path === '/accounting';
+      return item.path === '/schedule' || item.path === '/accounting' || item.path === '/settings';
     }
     return true;
   });
@@ -65,13 +64,12 @@ export const SideBar: React.FC = () => {
     if (location.pathname !== '/schedule') navigate('/schedule');
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login', { replace: true });
-  };
-
   return (
     <>
+      <div className={styles.mobileHeader}>
+        <Logo className={styles.mobileHeaderLogo} />
+      </div>
+
       <aside className={styles.sidebar}>
         <div className={styles.logo}>
           <Logo className={styles.logoSvg} />
@@ -123,19 +121,6 @@ export const SideBar: React.FC = () => {
             <div className={styles.userName}>{user?.name}</div>
             {user?.role && <div className={styles.userRole}>{user.role}</div>}
           </div>
-          <Popconfirm
-            title="Выйти из системы?"
-            onConfirm={handleLogout}
-            okText="Выйти"
-            cancelText="Отмена"
-            placement="topRight"
-          >
-            <Tooltip title="Выйти">
-              <button className={styles.logoutBtn}>
-                <LogoutOutlined />
-              </button>
-            </Tooltip>
-          </Popconfirm>
         </div>
       </aside>
 

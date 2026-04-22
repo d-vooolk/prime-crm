@@ -3,9 +3,11 @@ import {
   Card, Form, Input, Button, Switch, message, Row, Col, Checkbox,
   Modal, Table, Tag, Select, Space, Popconfirm, Tabs, Alert, Typography,
 } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, LogoutOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import { servicesApi } from '@/api/services.api';
 import { useUiStore } from '@/store/uiStore';
+import { useAuthStore } from '@/store/authStore';
 import { CompanySettings, DocumentTemplate, Category, SmsSettings } from '@/types';
 import styles from './SettingsPage.module.scss';
 
@@ -34,6 +36,14 @@ const DEFAULT_COMPLETION_ACT_CONTENT = `Претензии не принимаю
 
 export const SettingsPage: React.FC = () => {
   const { theme, toggleTheme } = useUiStore();
+  const { user, logout } = useAuthStore();
+  const navigate = useNavigate();
+  const isSotrudnik = user?.role === 'Сотрудник';
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [actualSameAsLegal, setActualSameAsLegal] = useState(false);
@@ -215,6 +225,18 @@ export const SettingsPage: React.FC = () => {
               </div>
             </div>
             <Switch checked={theme === 'dark'} onChange={toggleTheme} />
+          </div>
+          <div style={{ borderTop: '1px solid var(--color-border)', marginTop: 16, paddingTop: 16 }}>
+            <Popconfirm
+              title="Выйти из системы?"
+              onConfirm={handleLogout}
+              okText="Выйти"
+              cancelText="Отмена"
+            >
+              <Button danger icon={<LogoutOutlined />}>
+                Выйти из системы
+              </Button>
+            </Popconfirm>
           </div>
         </Card>
       ),
@@ -451,11 +473,13 @@ export const SettingsPage: React.FC = () => {
     },
   ];
 
+  const visibleTabItems = isSotrudnik ? tabItems.filter(t => t.key === 'basic') : tabItems;
+
   return (
     <div className={styles.page}>
       <h1 className={styles.title}>Настройки</h1>
 
-      <Tabs items={tabItems} />
+      <Tabs items={visibleTabItems} />
 
       <Modal
         open={templateModal}

@@ -2,15 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Modal, Steps, Button, message, Form, Grid } from 'antd';
 import cn from 'classnames';
 const { useBreakpoint } = Grid;
-import { PrinterOutlined } from '@ant-design/icons';
 import { Step1Client } from './steps/Step1Client';
 import { Step2Services } from './steps/Step2Services';
 import { Step3Summary } from './steps/Step3Summary';
 import { RecordFormData, emptyFormData } from './types';
 import { recordsApi } from '@/api/records.api';
 import { clientsApi } from '@/api/clients.api';
-import { printWorkOrder, printServiceContract, printInvoice, printBlankCompletionAct, printLegalAct } from '@/utils/print';
-import { servicesApi } from '@/api/services.api';
 import styles from './RecordModal.module.scss';
 
 interface Props {
@@ -83,7 +80,7 @@ export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initial
     if (validateStep()) setStep(s => s + 1);
   };
 
-  const handleSave = async (printType?: 'workOrder' | 'contract' | 'invoice' | 'act' | 'legalAct') => {
+  const handleSave = async () => {
     setLoading(true);
     try {
       let clientId = data.clientId;
@@ -106,7 +103,7 @@ export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initial
       const scheduledAt = new Date(data.date);
       scheduledAt.setHours(hours, minutes, 0, 0);
 
-      const record = await recordsApi.create({
+      await recordsApi.create({
         clientId,
         car: {
           brand: data.carBrand,
@@ -150,27 +147,6 @@ export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initial
       });
 
       message.success('Запись создана');
-
-      if (printType) {
-        const [settings, templates] = await Promise.all([
-          servicesApi.getSettings().catch(() => undefined),
-          servicesApi.getDocTemplates().catch(() => []),
-        ]);
-        const categoryId = record.items[0]?.service?.categoryId;
-        const template = templates.find(t => t.categoryId === categoryId && t.type === 'work_order')
-          || templates.find(t => !t.categoryId && t.type === 'work_order' && t.isDefault)
-          || templates.find(t => t.type === 'work_order');
-        if (printType === 'workOrder') printWorkOrder(record, settings, template?.content);
-        if (printType === 'contract') printServiceContract(record, settings);
-        if (printType === 'invoice') printInvoice(record, settings);
-        if (printType === 'legalAct') printLegalAct(record, settings);
-        if (printType === 'act') {
-          const actTemplate = templates.find(t => t.type === 'completion_act' && t.isDefault)
-            || templates.find(t => t.type === 'completion_act');
-          printBlankCompletionAct(record, settings, actTemplate?.content);
-        }
-      }
-
       onSuccess();
       handleClose();
     } catch (e: unknown) {
@@ -236,23 +212,10 @@ export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initial
               <Button type="primary" onClick={handleNext}>
                 Далее
               </Button>
-            ) : data.isLegalEntity ? (
-              <Button type="primary" loading={loading} onClick={() => handleSave()}>
+            ) : (
+              <Button type="primary" loading={loading} onClick={handleSave}>
                 Сохранить
               </Button>
-            ) : (
-              <>
-                <Button
-                  icon={<PrinterOutlined />}
-                  loading={loading}
-                  onClick={() => handleSave('workOrder')}
-                >
-                  {isMobile ? 'Распечатать заявку' : 'Сохранить и распечатать заявку'}
-                </Button>
-                <Button type="primary" loading={loading} onClick={() => handleSave()}>
-                  Сохранить
-                </Button>
-              </>
             )}
           </div>
         </div>

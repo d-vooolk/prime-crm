@@ -4,7 +4,26 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="45f6dddb-f82f-43d5-b121-b81757ed27dc" name="Changes" comment="fix deploy" />
+    <list default="true" id="45f6dddb-f82f-43d5-b121-b81757ed27dc" name="Changes" comment="fix deploy">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/App.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/components/CloseRecordModal/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/CloseRecordModal/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/components/Layout/Layout.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/Layout/Layout.module.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/components/RecordDetailModal/RecordDetailModal.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/RecordDetailModal/RecordDetailModal.module.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/components/RecordDetailModal/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/RecordDetailModal/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/components/RecordModal/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/RecordModal/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/components/RecordModal/steps/Step2Services.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/RecordModal/steps/Step2Services.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/components/SideBar/SideBar.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/SideBar/SideBar.module.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/components/SideBar/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/SideBar/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/pages/AccountingPage/AccountingPage.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/pages/AccountingPage/AccountingPage.module.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/pages/AccountingPage/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/pages/AccountingPage/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/pages/DashboardPage/DashboardPage.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/pages/DashboardPage/DashboardPage.module.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/pages/SchedulePage/SchedulePage.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/pages/SchedulePage/SchedulePage.module.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/pages/SchedulePage/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/pages/SchedulePage/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/pages/ServicesPage/ServicesPage.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/pages/ServicesPage/ServicesPage.module.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/pages/ServicesPage/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/pages/ServicesPage/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/pages/SettingsPage/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/pages/SettingsPage/index.tsx" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />

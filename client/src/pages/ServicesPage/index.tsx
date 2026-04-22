@@ -471,7 +471,7 @@ export const ServicesPage: React.FC = () => {
             label: 'Мастера приёмщики',
             children: (
               <div>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12, gap: 8 }}>
+                <div className={styles.receptionistsHeader}>
                   <Tag color="blue" style={{ lineHeight: '30px', padding: '0 10px' }}>
                     Отмеченный по умолчанию будет автоматически подставляться в новые записи
                   </Tag>
@@ -489,6 +489,7 @@ export const ServicesPage: React.FC = () => {
                   pagination={false}
                   columns={servicemanColumns(true)}
                   locale={{ emptyText: 'Нет мастеров приёмщиков' }}
+                  scroll={{ x: 'max-content' }}
                 />
                 {dismissedSection(dismissedReceptionists, true)}
               </div>

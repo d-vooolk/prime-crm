@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Modal, Button, Descriptions, Tag, Divider, Table, message,
-  Popconfirm, Select, InputNumber, DatePicker, TimePicker, Space, Tooltip,
+  Popconfirm, Select, InputNumber, DatePicker, TimePicker, Space, Tooltip, Grid,
 } from 'antd';
+const { useBreakpoint } = Grid;
 import {
   PrinterOutlined, CheckCircleOutlined, CloseCircleOutlined,
   EditOutlined, DeleteOutlined, ReloadOutlined, CalendarOutlined,
@@ -33,6 +34,8 @@ const STATUS_MAP: Record<string, { color: string; label: string }> = {
 };
 
 export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRefresh }) => {
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
   const { user } = useAuthStore();
   const isEmployee = user?.role === 'Сотрудник';
   const canDelete = user?.isMaster || user?.role === 'Создатель';
@@ -371,118 +374,181 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
         open={open}
         onCancel={onClose}
         width={700}
+        className={styles.modal}
+        classNames={{
+          wrapper: styles.modalWrap,
+          content: styles.modalContent,
+          body: styles.modalBody,
+        }}
         title={
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             Запись #{record.id.slice(-8).toUpperCase()}
             <Tag color={status.color}>{status.label}</Tag>
           </div>
         }
-        footer={
-          <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-            {canDelete && (
-              <Popconfirm
-                title="Удалить запись?"
-                description="Запись и все связанные данные будут удалены безвозвратно."
-                onConfirm={handleDelete}
-                okText="Удалить"
-                okButtonProps={{ danger: true }}
-                cancelText="Отмена"
-              >
-                <Button danger icon={<DeleteOutlined />}>Удалить</Button>
+        footer={isMobile ? (
+          // ─── Mobile footer ──────────────────────────
+          <div className={styles.footerMobile}>
+            {record.status === 'ACTIVE' && !isEmployee && (
+              <>
+                {/* Row 1: Редактировать + Отменить */}
+                <div className={styles.footerMobileRow}>
+                  <Button
+                    icon={<CalendarOutlined />}
+                    onClick={handleOpenReschedule}
+                    className={styles.footerMobileFlex}
+                  >
+                    Редактировать
+                  </Button>
+                  <Popconfirm title="Отменить запись?" onConfirm={handleCancel} okText="Да" cancelText="Нет">
+                    <Button danger icon={<CloseCircleOutlined />} className={styles.footerMobileFlex}>
+                      Отменить
+                    </Button>
+                  </Popconfirm>
+                </div>
+                {/* Row 2: Закрыть сделку */}
+                <Button
+                  type="primary"
+                  icon={<CheckCircleOutlined />}
+                  block
+                  onClick={() => setCloseModalOpen(true)}
+                >
+                  Закрыть сделку
+                </Button>
+              </>
+            )}
+            {record.status === 'CANCELLED' && !isEmployee && (
+              <Popconfirm title="Восстановить запись?" onConfirm={handleRestore} okText="Да" cancelText="Нет">
+                <Button type="primary" icon={<ReloadOutlined />} block>Восстановить</Button>
               </Popconfirm>
             )}
+            {/* Row 3: SMS иконки + Заявка + Удалить */}
             {!isEmployee && (
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <div className={styles.footerMobileRow}>
                 {(record.status === 'ACTIVE' || record.status === 'CLOSED') && (
                   <>
                     <Popconfirm
                       title="Отправить SMS «Авто готово»?"
                       description={`На номер ${record.client.phone}`}
                       onConfirm={() => handleSendSms('CAR_READY')}
-                      okText="Отправить"
-                      cancelText="Отмена"
+                      okText="Отправить" cancelText="Отмена"
                     >
-                      <Tooltip title="Авто готово">
-                        <Button
-                          icon={<CarOutlined />}
-                          loading={smsSending === 'CAR_READY'}
-                          size="middle"
-                        />
-                      </Tooltip>
+                      <Button icon={<CarOutlined />} loading={smsSending === 'CAR_READY'} />
                     </Popconfirm>
                     <Popconfirm
                       title="Отправить запрос отзыва?"
                       description={`На номер ${record.client.phone}`}
                       onConfirm={() => handleSendSms('REVIEW_REQUEST')}
-                      okText="Отправить"
-                      cancelText="Отмена"
+                      okText="Отправить" cancelText="Отмена"
                     >
-                      <Tooltip title="Запросить отзыв">
-                        <Button
-                          icon={<StarOutlined />}
-                          loading={smsSending === 'REVIEW_REQUEST'}
-                          size="middle"
-                        />
-                      </Tooltip>
+                      <Button icon={<StarOutlined />} loading={smsSending === 'REVIEW_REQUEST'} />
                     </Popconfirm>
                   </>
                 )}
-                {record.isLegalEntity ? (
-                  <>
-                    <Button icon={<PrinterOutlined />} loading={printing} onClick={handlePrintContract}>
-                      Договор
-                    </Button>
-                    <Button icon={<PrinterOutlined />} loading={printing} onClick={handlePrintInvoice}>
-                      Счёт
-                    </Button>
-                    <Button icon={<PrinterOutlined />} loading={printing} onClick={handlePrintAct}>
-                      Акт
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button icon={<PrinterOutlined />} loading={printing} onClick={handlePrintWorkOrder}>
-                      Заявка
-                    </Button>
-                    {record.deal && (
-                      <Button icon={<PrinterOutlined />} loading={printing} onClick={handlePrintAct}>
-                        Акт
-                      </Button>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
-            {!isEmployee && (
-              <div style={{ display: 'flex', gap: 8 }}>
-                {record.status === 'ACTIVE' && (
-                  <>
-                    <Button icon={<CalendarOutlined />} onClick={handleOpenReschedule}>
-                      Редактировать
-                    </Button>
-                    <Popconfirm title="Отменить запись?" onConfirm={handleCancel} okText="Да" cancelText="Нет">
-                      <Button danger icon={<CloseCircleOutlined />}>Отменить</Button>
-                    </Popconfirm>
-                    <Button
-                      type="primary"
-                      icon={<CheckCircleOutlined />}
-                      onClick={() => setCloseModalOpen(true)}
-                    >
-                      Закрыть сделку
-                    </Button>
-                  </>
-                )}
-                {record.status === 'CANCELLED' && (
-                  <Popconfirm title="Восстановить запись?" onConfirm={handleRestore} okText="Да" cancelText="Нет">
-                    <Button type="primary" icon={<ReloadOutlined />}>
-                      Восстановить
+                <Button
+                  icon={<PrinterOutlined />}
+                  loading={printing}
+                  onClick={record.isLegalEntity ? handlePrintContract : handlePrintWorkOrder}
+                  className={styles.footerMobileFlex}
+                >
+                  {record.isLegalEntity ? 'Договор' : 'Заявка'}
+                </Button>
+                {canDelete && (
+                  <Popconfirm
+                    title="Удалить запись?"
+                    description="Запись и все связанные данные будут удалены безвозвратно."
+                    onConfirm={handleDelete}
+                    okText="Удалить" okButtonProps={{ danger: true }} cancelText="Отмена"
+                  >
+                    <Button danger icon={<DeleteOutlined />} className={styles.footerMobileFlex}>
+                      Удалить
                     </Button>
                   </Popconfirm>
                 )}
               </div>
             )}
           </div>
-        }
+        ) : (
+          // ─── Desktop footer ──────────────────────────
+          <div className={styles.footer}>
+            <div className={styles.footerDelete}>
+              {canDelete && (
+                <Popconfirm
+                  title="Удалить запись?"
+                  description="Запись и все связанные данные будут удалены безвозвратно."
+                  onConfirm={handleDelete}
+                  okText="Удалить"
+                  okButtonProps={{ danger: true }}
+                  cancelText="Отмена"
+                >
+                  <Button danger icon={<DeleteOutlined />}>Удалить</Button>
+                </Popconfirm>
+              )}
+            </div>
+            {!isEmployee && (
+              <div className={styles.footerSecondary}>
+                {(record.status === 'ACTIVE' || record.status === 'CLOSED') && (
+                  <>
+                    <Popconfirm
+                      title="Отправить SMS «Авто готово»?"
+                      description={`На номер ${record.client.phone}`}
+                      onConfirm={() => handleSendSms('CAR_READY')}
+                      okText="Отправить" cancelText="Отмена"
+                    >
+                      <Tooltip title="Авто готово">
+                        <Button icon={<CarOutlined />} loading={smsSending === 'CAR_READY'} />
+                      </Tooltip>
+                    </Popconfirm>
+                    <Popconfirm
+                      title="Отправить запрос отзыва?"
+                      description={`На номер ${record.client.phone}`}
+                      onConfirm={() => handleSendSms('REVIEW_REQUEST')}
+                      okText="Отправить" cancelText="Отмена"
+                    >
+                      <Tooltip title="Запросить отзыв">
+                        <Button icon={<StarOutlined />} loading={smsSending === 'REVIEW_REQUEST'} />
+                      </Tooltip>
+                    </Popconfirm>
+                  </>
+                )}
+                {record.isLegalEntity ? (
+                  <>
+                    <Button icon={<PrinterOutlined />} loading={printing} onClick={handlePrintContract}>Договор</Button>
+                    <Button icon={<PrinterOutlined />} loading={printing} onClick={handlePrintInvoice}>Счёт</Button>
+                    <Button icon={<PrinterOutlined />} loading={printing} onClick={handlePrintAct}>Акт</Button>
+                  </>
+                ) : (
+                  <>
+                    <Button icon={<PrinterOutlined />} loading={printing} onClick={handlePrintWorkOrder}>Заявка</Button>
+                    {record.deal && (
+                      <Button icon={<PrinterOutlined />} loading={printing} onClick={handlePrintAct}>Акт</Button>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+            {!isEmployee && (
+              <div className={styles.footerPrimary}>
+                {record.status === 'ACTIVE' && (
+                  <>
+                    <Button icon={<CalendarOutlined />} onClick={handleOpenReschedule}>Редактировать</Button>
+                    <Popconfirm title="Отменить запись?" onConfirm={handleCancel} okText="Да" cancelText="Нет">
+                      <Button danger icon={<CloseCircleOutlined />}>Отменить</Button>
+                    </Popconfirm>
+                    <Button type="primary" icon={<CheckCircleOutlined />} onClick={() => setCloseModalOpen(true)}>
+                      Закрыть сделку
+                    </Button>
+                  </>
+                )}
+                {record.status === 'CANCELLED' && (
+                  <Popconfirm title="Восстановить запись?" onConfirm={handleRestore} okText="Да" cancelText="Нет">
+                    <Button type="primary" icon={<ReloadOutlined />}>Восстановить</Button>
+                  </Popconfirm>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       >
         <Divider orientation="left" style={{ fontSize: 13 }}>Клиент</Divider>
         <Descriptions size="small" column={1}>

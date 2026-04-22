@@ -57,7 +57,6 @@ export const SchedulePage: React.FC = () => {
       <div className={styles.recordsHeader}>
         <div className={styles.recordsTitle}>
           Расписание
-          <span>{dateLabel}</span>
         </div>
         <div className={styles.headerActions}>
           {/* Mobile date picker */}
@@ -66,6 +65,7 @@ export const SchedulePage: React.FC = () => {
             onChange={(d: Dayjs | null) => d && setSelectedDate(d.format('YYYY-MM-DD'))}
             format="DD MMMM YYYY"
             allowClear={false}
+            inputReadOnly
             className={styles.mobilePicker}
           />
           {!isEmployee && (

@@ -1,0 +1,62 @@
+@use '@/styles/variables' as *;
+
+.mobileList {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.mobileCard {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-border);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.mobileCardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.mobileCardInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.mobileCardName {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-primary);
+  line-height: 1.3;
+}
+
+.mobileCardCategory {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.mobileCardControls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mobileCardLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.mobileCardTotal {
+  margin-left: auto;
+  font-weight: 700;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+}

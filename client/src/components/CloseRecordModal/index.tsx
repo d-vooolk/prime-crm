@@ -3,14 +3,13 @@ import {
   Modal, Form, InputNumber, Input, Select, Button, Divider, message,
   Table, Empty, Checkbox,
 } from 'antd';
-// InputNumber используется в таблице услуг
-import { PrinterOutlined, DeleteOutlined } from '@ant-design/icons';
-import { Record, Equipment, Category, DocumentTemplate, Serviceman } from '@/types';
+import { Record, Equipment, DocumentTemplate, Serviceman } from '@/types';
 import { servicesApi } from '@/api/services.api';
 import { recordsApi } from '@/api/records.api';
 import { formatPrice } from '@/utils/formatters';
 import { printCompletionAct } from '@/utils/print';
 import { DealCelebration } from '../DealCelebration';
+import styles from './CloseRecordModal.module.scss';
 
 interface ItemRow {
   serviceId: string;
@@ -30,10 +29,16 @@ interface Props {
   onSuccess: () => void;
 }
 
+const WARRANTY_OPTIONS = [
+  { value: 'Без гарантии', label: 'Без гарантии' },
+  { value: '1 месяц', label: '1 месяц' },
+  { value: '6 месяцев', label: '6 месяцев' },
+  { value: '1 год', label: '1 год' },
+];
+
 export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [equipment, setEquipment] = useState<Equipment[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [employees, setEmployees] = useState<Serviceman[]>([]);
   const [celebrating, setCelebrating] = useState(false);
   const [items, setItems] = useState<ItemRow[]>([]);
@@ -43,10 +48,11 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
   useEffect(() => {
     if (open) {
       servicesApi.getEquipment().then(setEquipment).catch(() => {});
-      servicesApi.getCategories().then(setCategories).catch(() => {});
-      servicesApi.getAllServicemen().then(all => setEmployees(all.filter(s => s.role === 'Сотрудник' && !s.isDismissed))).catch(() => {});
+      servicesApi.getAllServicemen().then(all =>
+        setEmployees(all.filter(s => s.role === 'Сотрудник' && !s.isDismissed))
+      ).catch(() => {});
 
-      const initialItems: ItemRow[] = record.items.map(i => ({
+      setItems(record.items.map(i => ({
         serviceId: i.serviceId,
         serviceName: i.service.name,
         categoryName: i.service.category?.name || '',
@@ -55,69 +61,19 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
         estimatedTime: i.service.estimatedTime || 0,
         netProfit: i.netProfit ?? i.price * i.quantity,
         servicemanName: i.servicemanName ?? record.serviceman,
-      }));
-      setItems(initialItems);
+      })));
 
-      const total = record.items.reduce((s, i) => s + i.price * i.quantity, 0);
-      form.setFieldsValue({ finalPrice: total });
+      form.resetFields();
     }
   }, [open, record, form]);
 
-  const allServices = categories.flatMap(c => c.services.map(s => ({ ...s, category: c })));
-
-  const handleServiceSelect = (serviceId: string) => {
-    const service = allServices.find(s => s.id === serviceId);
-    if (!service) return;
-    const existing = items.find(i => i.serviceId === serviceId);
-    let next: ItemRow[];
-    if (existing) {
-      next = items.map(i => i.serviceId === serviceId ? { ...i, quantity: i.quantity + 1 } : i);
-    } else {
-      next = [...items, {
-        serviceId: service.id,
-        serviceName: service.name,
-        categoryName: service.category.name,
-        price: service.standardPrice,
-        quantity: 1,
-        estimatedTime: service.estimatedTime,
-        netProfit: service.standardPrice,
-        servicemanName: record.serviceman,
-      }];
-    }
-    setItems(next);
-    form.setFieldValue('finalPrice', next.reduce((s, i) => s + i.price * i.quantity, 0));
-  };
-
-  const removeItem = (serviceId: string) => {
-    const next = items.filter(i => i.serviceId !== serviceId);
-    setItems(next);
-    form.setFieldValue('finalPrice', next.reduce((s, i) => s + i.price * i.quantity, 0));
-  };
-
-  const updateItemPrice = (serviceId: string, price: number) => {
-    const next = items.map(i => i.serviceId === serviceId ? { ...i, price } : i);
-    setItems(next);
-    form.setFieldValue('finalPrice', next.reduce((s, i) => s + i.price * i.quantity, 0));
-  };
-
-  const updateItemQty = (serviceId: string, quantity: number) => {
-    const next = items.map(i => i.serviceId === serviceId ? { ...i, quantity } : i);
-    setItems(next);
-    form.setFieldValue('finalPrice', next.reduce((s, i) => s + i.price * i.quantity, 0));
-  };
-
   const updateItemNetProfit = (serviceId: string, netProfit: number) => {
-    setItems(items.map(i => i.serviceId === serviceId ? { ...i, netProfit } : i));
+    setItems(prev => prev.map(i => i.serviceId === serviceId ? { ...i, netProfit } : i));
   };
 
   const updateItemServiceman = (serviceId: string, servicemanName: string) => {
-    setItems(items.map(i => i.serviceId === serviceId ? { ...i, servicemanName } : i));
+    setItems(prev => prev.map(i => i.serviceId === serviceId ? { ...i, servicemanName } : i));
   };
-
-  const serviceOptions = categories.map(cat => ({
-    label: cat.name,
-    options: cat.services.map(s => ({ value: s.id, label: `${s.name} — ${formatPrice(s.standardPrice)}` })),
-  }));
 
   const hasEmployees = employees.length > 0;
 
@@ -134,43 +90,23 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
       ),
     },
     {
-      title: 'Кол-во',
-      key: 'quantity',
-      width: 80,
-      render: (_: unknown, row: ItemRow) => (
-        <InputNumber
-          min={1} max={99} value={row.quantity} size="small" controls style={{ width: 64 }}
-          onChange={v => updateItemQty(row.serviceId, v || 1)}
-        />
-      ),
-    },
-    {
-      title: 'Цена, р.',
-      key: 'price',
-      width: 110,
-      render: (_: unknown, row: ItemRow) => (
-        <InputNumber
-          min={0} value={row.price} size="small" style={{ width: '100%' }}
-          formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}
-          onChange={v => updateItemPrice(row.serviceId, v || 0)}
-        />
-      ),
-    },
-    {
-      title: 'Итого',
+      title: 'Сумма',
       key: 'total',
-      width: 90,
+      width: 100,
       render: (_: unknown, row: ItemRow) => (
         <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{formatPrice(row.price * row.quantity)}</span>
       ),
     },
     {
-      title: 'Прибыль, р.',
+      title: 'Чистая прибыль, р.',
       key: 'netProfit',
       width: 120,
       render: (_: unknown, row: ItemRow) => (
         <InputNumber
-          min={0} value={row.netProfit} size="small" style={{ width: '100%' }}
+          min={0}
+          value={row.netProfit}
+          size="small"
+          style={{ width: '100%' }}
           formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}
           onChange={v => updateItemNetProfit(row.serviceId, v ?? 0)}
         />
@@ -190,17 +126,9 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
         />
       ),
     }] : []),
-    {
-      title: '',
-      key: 'del',
-      width: 36,
-      render: (_: unknown, row: ItemRow) => (
-        <Button type="text" danger icon={<DeleteOutlined />} size="small" onClick={() => removeItem(row.serviceId)} />
-      ),
-    },
   ];
 
-  const handleClose = async (withPrint = false) => {
+  const handleClose = async () => {
     const values = await form.validateFields().catch(() => null);
     if (!values) return;
 
@@ -216,23 +144,13 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
         })),
       });
 
-      const closed = await recordsApi.close(record.id, {
+      await recordsApi.close(record.id, {
         finalPrice: items.reduce((s, i) => s + i.price * i.quantity, 0),
         defects: values.defects || undefined,
         warranty: values.warranty || undefined,
-        equipmentIds: values.equipmentIds || [],
+        equipmentIds: values.equipmentId ? [values.equipmentId] : [],
         isPaidByBankTransfer: values.isPaidByBankTransfer || false,
       });
-
-      if (withPrint) {
-        const [settings, templates] = await Promise.all([
-          servicesApi.getSettings().catch(() => undefined),
-          servicesApi.getDocTemplates().catch(() => []),
-        ]);
-        const actTemplate = (templates as DocumentTemplate[]).find(t => t.type === 'completion_act' && t.isDefault)
-          || (templates as DocumentTemplate[]).find(t => t.type === 'completion_act');
-        printCompletionAct(closed, settings, actTemplate?.content);
-      }
 
       onClose();
       setCelebrating(true);
@@ -253,22 +171,18 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
         open={open}
         onCancel={onClose}
         title="Закрыть сделку"
-        width={hasEmployees ? 920 : 720}
+        width={hasEmployees ? 860 : 680}
         footer={null}
         destroyOnClose
+        className={styles.modal}
+        classNames={{
+          wrapper: styles.modalWrap,
+          content: styles.modalContent,
+          body: styles.modalBody,
+        }}
       >
         <Form form={form} layout="vertical">
           <Divider orientation="left" style={{ fontSize: 13 }}>Перечень работ</Divider>
-
-          <Select
-            showSearch
-            style={{ width: '100%', marginBottom: 12 }}
-            value={undefined}
-            onChange={handleServiceSelect}
-            placeholder="Добавить услугу..."
-            optionFilterProp="label"
-            options={serviceOptions}
-          />
 
           {items.length === 0 ? (
             <Empty description="Нет услуг" style={{ margin: '16px 0' }} />
@@ -298,13 +212,17 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
           <Divider orientation="left" style={{ fontSize: 13 }}>Гарантия и оборудование</Divider>
 
           <Form.Item label="Гарантия на работу" name="warranty">
-            <Input placeholder="Например: 1 год" />
+            <Select
+              placeholder="Выберите срок гарантии"
+              allowClear
+              options={WARRANTY_OPTIONS}
+            />
           </Form.Item>
 
-          <Form.Item label="Установленное оборудование (модули)" name="equipmentIds">
+          <Form.Item label="Установленное оборудование (модули)" name="equipmentId">
             <Select
-              mode="multiple"
               placeholder="Выберите из списка"
+              allowClear
               optionFilterProp="label"
               options={equipment.map(e => ({ value: e.id, label: e.name }))}
             />
@@ -314,16 +232,9 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
             <Checkbox>Оплата по расчётному счёту (РС)</Checkbox>
           </Form.Item>
 
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
+          <div className={styles.footer}>
             <Button onClick={onClose}>Отмена</Button>
-            <Button
-              icon={<PrinterOutlined />}
-              loading={loading}
-              onClick={() => handleClose(true)}
-            >
-              Завершить и распечатать акт
-            </Button>
-            <Button type="primary" loading={loading} onClick={() => handleClose(false)}>
+            <Button type="primary" loading={loading} onClick={handleClose}>
               Завершить сделку
             </Button>
           </div>

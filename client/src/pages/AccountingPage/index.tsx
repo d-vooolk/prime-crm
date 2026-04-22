@@ -336,24 +336,26 @@ export const AccountingPage: React.FC = () => {
   const capitalTab = canSeeCapital ? (
     <div className={styles.tabContent}>
       <div className={styles.topBar}>
-        <Card size="small" className={styles.balanceCard}>
-          <Statistic
-            title="Баланс BYN"
-            value={capitalBalance.byn}
-            precision={2}
-            suffix="р."
-            valueStyle={{ color: capitalBalance.byn >= 0 ? 'var(--color-success)' : 'var(--color-danger)', fontSize: 22 }}
-          />
-        </Card>
-        <Card size="small" className={styles.balanceCard}>
-          <Statistic
-            title="Баланс USD"
-            value={capitalBalance.usd}
-            precision={2}
-            prefix="$"
-            valueStyle={{ color: capitalBalance.usd >= 0 ? 'var(--color-success)' : 'var(--color-danger)', fontSize: 22 }}
-          />
-        </Card>
+        <div className={styles.balanceCards}>
+          <Card size="small" className={styles.balanceCard}>
+            <Statistic
+              title="Баланс BYN"
+              value={capitalBalance.byn}
+              precision={2}
+              suffix="р."
+              valueStyle={{ color: capitalBalance.byn >= 0 ? 'var(--color-success)' : 'var(--color-danger)', fontSize: 22 }}
+            />
+          </Card>
+          <Card size="small" className={styles.balanceCard}>
+            <Statistic
+              title="Баланс USD"
+              value={capitalBalance.usd}
+              precision={2}
+              prefix="$"
+              valueStyle={{ color: capitalBalance.usd >= 0 ? 'var(--color-success)' : 'var(--color-danger)', fontSize: 22 }}
+            />
+          </Card>
+        </div>
         <div className={styles.actions}>
           <Button icon={<PlusOutlined />} type="primary" onClick={() => setDepositOpen(true)}>
             Внести
@@ -419,7 +421,7 @@ export const AccountingPage: React.FC = () => {
       render: (d: string) => dayjs(d).format('DD.MM.YYYY'),
     },
     {
-      title: 'Чистая прибыль',
+      title: 'Сумма',
       dataIndex: 'totalNetProfit',
       key: 'netProfit',
       width: 140,
@@ -501,7 +503,7 @@ export const AccountingPage: React.FC = () => {
                   pagination={false}
                   columns={[
                     { title: 'Услуга', dataIndex: 'serviceName', key: 'name' },
-                    { title: 'Чистая прибыль', dataIndex: 'netProfit', key: 'netProfit', width: 140, render: (v: number) => formatPrice(v) },
+                    { title: 'Сумма', dataIndex: 'netProfit', key: 'netProfit', width: 140, render: (v: number) => formatPrice(v) },
                     { title: 'К выплате', dataIndex: 'payment', key: 'payment', width: 120, render: (v: number) => <strong style={{ color: 'var(--color-success)' }}>{formatPrice(v)}</strong> },
                   ]}
                 />
@@ -509,7 +511,6 @@ export const AccountingPage: React.FC = () => {
             }}
             footer={() => (
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 32 }}>
-                <span>Итого чистая прибыль: <strong>{formatPrice(salaryData.totalNetProfit)}</strong></span>
                 <span>Итого к выплате: <strong style={{ color: 'var(--color-success)' }}>{formatPrice(salaryData.totalPayment)}</strong></span>
               </div>
             )}

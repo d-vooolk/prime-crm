@@ -26,4 +26,29 @@
 
 .statsRow {
   margin-bottom: var(--spacing-sm) !important;
+
+  @include mobile {
+    :global {
+      .ant-statistic-content {
+        display: flex;
+        align-items: center;
+        flex-wrap: nowrap;
+        gap: 4px;
+      }
+      .ant-statistic-content-value {
+        font-size: 15px !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .ant-statistic-content-prefix {
+        font-size: 14px;
+        flex-shrink: 0;
+      }
+      .ant-statistic-title {
+        font-size: 11px;
+        white-space: nowrap;
+      }
+    }
+  }
 }

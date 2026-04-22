@@ -49,7 +49,7 @@ const App: React.FC = () => {
               <Route path="clients" element={scheduleOnly ? <Navigate to="/schedule" replace /> : <ClientsPage />} />
               <Route path="services" element={scheduleOnly ? <Navigate to="/schedule" replace /> : <ServicesPage />} />
               <Route path="accounting" element={canSeeAccounting ? <AccountingPage /> : <Navigate to="/schedule" replace />} />
-              <Route path="settings" element={scheduleOnly ? <Navigate to="/schedule" replace /> : <SettingsPage />} />
+              <Route path="settings" element={<SettingsPage />} />
             </Route>
           </Routes>
         </BrowserRouter>

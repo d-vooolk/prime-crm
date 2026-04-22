@@ -23,6 +23,21 @@
 
 .balanceCard {
   min-width: 180px;
+
+  @media (max-width: 767px) {
+    min-width: 0;
+    flex: 1;
+  }
+}
+
+.balanceCards {
+  display: flex;
+  gap: 12px;
+  flex-shrink: 0;
+
+  @media (max-width: 767px) {
+    width: 100%;
+  }
 }
 
 .actions {

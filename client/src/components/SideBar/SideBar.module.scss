@@ -237,6 +237,31 @@
   font-weight: 500;
 }
 
+// ─── Mobile top header ─────────────────────────────
+.mobileHeader {
+  display: none;
+
+  @include mobile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 48px;
+    background: var(--color-sidebar-bg);
+    z-index: 100;
+    flex-shrink: 0;
+  }
+}
+
+.mobileHeaderLogo {
+  height: 32px;
+  width: auto;
+  color: #fff;
+}
+
 // ─── Mobile bottom nav ─────────────────────────────
 .bottomNav {
   display: none;

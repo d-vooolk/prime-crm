@@ -1,0 +1,49 @@
+@use '@/styles/variables' as *;
+
+.modalWrap {
+  @include mobile {
+    overflow: hidden !important;
+  }
+}
+
+.modalContent {
+  @include mobile {
+    height: 100dvh;
+    border-radius: 0 !important;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+}
+
+.modalBody {
+  @include mobile {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+}
+
+.modal {
+  @include mobile {
+    top: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    padding-bottom: 0 !important;
+  }
+}
+
+.footer {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 16px;
+
+  @include mobile {
+    :global(.ant-btn) {
+      flex: 1;
+    }
+  }
+}

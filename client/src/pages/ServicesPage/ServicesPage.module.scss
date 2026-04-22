@@ -2,3 +2,28 @@
 .page { padding: var(--spacing-xl); display: flex; flex-direction: column; gap: var(--spacing-lg); @include mobile { padding: var(--spacing-md); } }
 .header { display: flex; align-items: center; justify-content: space-between; }
 .title { font-size: var(--font-size-xl); font-weight: 700; color: var(--color-text-primary); }
+
+.receptionistsHeader {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-bottom: 12px;
+  gap: 8px;
+
+  @include mobile {
+    flex-direction: column-reverse;
+    align-items: stretch;
+
+    :global(.ant-tag) {
+      text-align: center;
+      height: auto;
+      line-height: 1.5;
+      padding: 6px 10px;
+      white-space: normal;
+    }
+
+    :global(.ant-btn) {
+      width: 100%;
+    }
+  }
+}

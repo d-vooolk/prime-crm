@@ -29,11 +29,8 @@
   font-weight: 700;
   color: var(--color-text-primary);
 
-  span {
-    color: var(--color-text-secondary);
-    font-weight: 400;
-    font-size: var(--font-size-md);
-    margin-left: var(--spacing-sm);
+  @include mobile {
+    display: none;
   }
 }
 
@@ -41,6 +38,11 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
+
+  @include mobile {
+    width: 100%;
+    justify-content: space-between;
+  }
 }
 
 .mobilePicker {

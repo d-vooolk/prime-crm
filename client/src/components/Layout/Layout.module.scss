@@ -8,6 +8,7 @@
 
   @include mobile {
     flex-direction: column;
+    padding-top: 48px;
     padding-bottom: var(--bottom-nav-height);
   }
 }
