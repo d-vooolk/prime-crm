@@ -8,7 +8,7 @@ import { accountingService } from './accounting.service';
 const RECORD_INCLUDE = {
   client: true,
   car: true,
-  items: { include: { service: { include: { category: true } } } },
+  items: { include: { service: { include: { category: true } }, equipment: true } },
   deal: { include: { equipment: { include: { equipment: true } } } },
   smsLogs: { orderBy: { sentAt: 'asc' as const } },
 } as const;
@@ -55,6 +55,8 @@ export interface CreateRecordDto {
     quantity: number;
     netProfit?: number;
     servicemanName?: string;
+    equipmentId?: string;
+    servicemanSplit?: Array<{ name: string; amount: number }> | null;
   }>;
 }
 
@@ -62,7 +64,6 @@ export interface CloseDealDto {
   finalPrice: number;
   defects?: string;
   warranty?: string;
-  equipmentIds?: string[];
   isPaidByBankTransfer?: boolean;
 }
 
@@ -91,7 +92,7 @@ export const recordsService = {
       include: {
         client: true,
         car: true,
-        items: { include: { service: { include: { category: true } } } },
+        items: { include: { service: { include: { category: true } }, equipment: true } },
         deal: { include: { equipment: { include: { equipment: true } } } },
         smsLogs: { orderBy: { sentAt: 'asc' } },
       },
@@ -175,7 +176,11 @@ export const recordsService = {
               price: item.price,
               quantity: item.quantity,
               netProfit: item.netProfit,
-              servicemanName: item.servicemanName,
+              servicemanName: item.servicemanSplit?.length ? null : item.servicemanName,
+              servicemanSplit: item.servicemanSplit?.length
+                ? (item.servicemanSplit as Prisma.InputJsonValue)
+                : undefined,
+              equipmentId: item.equipmentId,
             })),
           },
         },
@@ -206,7 +211,11 @@ export const recordsService = {
           price: item.price,
           quantity: item.quantity,
           netProfit: item.netProfit,
-          servicemanName: item.servicemanName,
+          servicemanName: item.servicemanSplit?.length ? null : item.servicemanName,
+          servicemanSplit: item.servicemanSplit?.length
+            ? (item.servicemanSplit as Prisma.InputJsonValue)
+            : undefined,
+          equipmentId: item.equipmentId,
         })),
       };
     }
@@ -218,7 +227,29 @@ export const recordsService = {
     const record = await recordsService.findById(id);
     if (record.status === 'CLOSED') throw new AppError('Сделка уже закрыта', 400);
 
-    const { finalPrice, defects, warranty, equipmentIds, isPaidByBankTransfer = false } = data;
+    // Validate: all hasEquipment services must have equipment selected
+    const missingEquipment = record.items.filter(
+      item => (item.service as unknown as { hasEquipment: boolean }).hasEquipment && !item.equipmentId
+    );
+    if (missingEquipment.length > 0) {
+      const names = missingEquipment.map(i => i.service.name).join(', ');
+      throw new AppError(`Укажите оборудование для услуг: ${names}`, 400);
+    }
+
+    const { finalPrice, defects, warranty, isPaidByBankTransfer = false } = data;
+
+    // Calculate netProfit per item automatically
+    for (const item of record.items) {
+      const hasEquipment = (item.service as unknown as { hasEquipment: boolean }).hasEquipment;
+      const retailPrice = hasEquipment && item.equipment ? (item.equipment.retailPrice ?? 0) : 0;
+      const netProfit = item.price * item.quantity - retailPrice;
+      await prisma.recordItem.update({ where: { id: item.id }, data: { netProfit } });
+    }
+
+    // Collect equipment IDs from record items
+    const equipmentIds = record.items
+      .filter(i => i.equipmentId != null)
+      .map(i => i.equipmentId as string);
 
     await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       await tx.deal.create({
@@ -228,10 +259,8 @@ export const recordsService = {
           defects,
           warranty,
           isPaidByBankTransfer,
-          equipment: equipmentIds?.length
-            ? {
-                create: equipmentIds.map((equipmentId) => ({ equipmentId })),
-              }
+          equipment: equipmentIds.length
+            ? { create: equipmentIds.map((equipmentId) => ({ equipmentId })) }
             : undefined,
         },
       });
@@ -269,6 +298,7 @@ export const recordsService = {
 
   async delete(id: string) {
     await recordsService.findById(id);
+    await prisma.cashTransaction.deleteMany({ where: { recordId: id } });
     await prisma.deal.deleteMany({ where: { recordId: id } });
     await prisma.record.delete({ where: { id } });
   },

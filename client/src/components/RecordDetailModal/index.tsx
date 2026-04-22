@@ -18,6 +18,7 @@ import { CloseRecordModal } from '../CloseRecordModal';
 import { recordsApi } from '@/api/records.api';
 import { servicesApi } from '@/api/services.api';
 import { useAuthStore } from '@/store/authStore';
+import { useNotify } from '@/hooks/useNotify';
 import styles from './RecordDetailModal.module.scss';
 
 interface Props {
@@ -37,12 +38,14 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
   const screens = useBreakpoint();
   const isMobile = !screens.md;
   const { user } = useAuthStore();
+  const notify = useNotify();
   const isEmployee = user?.role === 'Сотрудник';
   const canDelete = user?.isMaster || user?.role === 'Создатель';
   const [closeModalOpen, setCloseModalOpen] = useState(false);
   const [editingServices, setEditingServices] = useState(false);
   const [editItems, setEditItems] = useState<SelectedService[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [editEquipment, setEditEquipment] = useState<import('@/types').Equipment[]>([]);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const [rescheduleDate, setRescheduleDate] = useState<dayjs.Dayjs | null>(null);
   const [rescheduleTime, setRescheduleTime] = useState<dayjs.Dayjs | null>(null);
@@ -135,10 +138,12 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
   // ─── Service editing ──────────────────────────────
 
   const handleStartEditServices = async () => {
-    if (categories.length === 0) {
-      const cats = await servicesApi.getCategories().catch(() => []);
-      setCategories(cats);
-    }
+    const [cats, equip] = await Promise.all([
+      categories.length === 0 ? servicesApi.getCategories().catch(() => []) : Promise.resolve(categories),
+      editEquipment.length === 0 ? servicesApi.getEquipment().catch(() => []) : Promise.resolve(editEquipment),
+    ]);
+    if (cats !== categories) setCategories(cats);
+    if (equip !== editEquipment) setEditEquipment(equip);
     setEditItems(record.items.map(item => ({
       serviceId: item.serviceId,
       serviceName: item.service.name,
@@ -146,6 +151,8 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
       price: item.price,
       quantity: item.quantity,
       estimatedTime: item.service.estimatedTime,
+      hasEquipment: item.service.hasEquipment ?? false,
+      equipmentId: item.equipmentId ?? undefined,
     })));
     setEditingServices(true);
   };
@@ -168,6 +175,7 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
         price: service.standardPrice,
         quantity: 1,
         estimatedTime: service.estimatedTime,
+        hasEquipment: service.hasEquipment ?? false,
       }]);
     }
   };
@@ -180,6 +188,7 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
           serviceId: s.serviceId,
           price: s.price,
           quantity: s.quantity,
+          equipmentId: s.equipmentId,
         })),
       });
       message.success('Услуги обновлены');
@@ -280,6 +289,18 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
 
   // ─── Column definitions ───────────────────────────
 
+  const handleOpenCloseModal = () => {
+    const missingEquipment = record.items.filter(i => i.service.hasEquipment && !i.equipmentId);
+    if (missingEquipment.length > 0) {
+      notify.warning(
+        'Необходимо выбрать оборудование',
+        `Укажите Bi-Led модуль для: ${missingEquipment.map(i => i.service.name).join(', ')}`,
+      );
+      return;
+    }
+    setCloseModalOpen(true);
+  };
+
   const serviceOptions = categories.map(cat => ({
     label: cat.name,
     options: cat.services.map(s => ({
@@ -291,6 +312,8 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
   const employees = servicemen.filter(s => !s.isReceptionist && !s.isDismissed);
   const receptionists = servicemen.filter(s => s.isReceptionist && !s.isDismissed);
 
+  const editEquipmentOptions = editEquipment.map(e => ({ value: e.id, label: e.name }));
+
   const editColumns = [
     {
       title: 'Услуга',
@@ -300,6 +323,20 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
         <div>
           <div style={{ fontWeight: 500 }}>{name}</div>
           <Tag style={{ fontSize: 11, marginTop: 2 }}>{row.categoryName}</Tag>
+          {row.hasEquipment && (
+            <Select
+              size="small"
+              style={{ width: '100%', marginTop: 6 }}
+              placeholder="Выберите Bi-Led модуль..."
+              value={row.equipmentId || undefined}
+              onChange={v => setEditItems(prev => prev.map(s => s.serviceId === row.serviceId ? { ...s, equipmentId: v } : s))}
+              allowClear
+              onClear={() => setEditItems(prev => prev.map(s => s.serviceId === row.serviceId ? { ...s, equipmentId: undefined } : s))}
+              options={editEquipmentOptions}
+              showSearch
+              optionFilterProp="label"
+            />
+          )}
         </div>
       ),
     },
@@ -411,7 +448,7 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
                   type="primary"
                   icon={<CheckCircleOutlined />}
                   block
-                  onClick={() => setCloseModalOpen(true)}
+                  onClick={handleOpenCloseModal}
                 >
                   Закрыть сделку
                 </Button>
@@ -535,7 +572,7 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
                     <Popconfirm title="Отменить запись?" onConfirm={handleCancel} okText="Да" cancelText="Нет">
                       <Button danger icon={<CloseCircleOutlined />}>Отменить</Button>
                     </Popconfirm>
-                    <Button type="primary" icon={<CheckCircleOutlined />} onClick={() => setCloseModalOpen(true)}>
+                    <Button type="primary" icon={<CheckCircleOutlined />} onClick={handleOpenCloseModal}>
                       Закрыть сделку
                     </Button>
                   </>

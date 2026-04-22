@@ -51,13 +51,21 @@ export interface SmsSettings {
   reviewRequestTemplate: string;
 }
 
+export interface ServicemanSplitEntry {
+  name: string;
+  amount: number;
+}
+
 export interface RecordItem {
   id: string;
   serviceId: string;
   price: number;
   quantity: number;
   netProfit?: number;
-  servicemanName?: string;
+  servicemanName?: string | null;
+  servicemanSplit?: ServicemanSplitEntry[] | null;
+  equipmentId?: string | null;
+  equipment?: Equipment | null;
   service: Service & { category: Category };
 }
 
@@ -149,6 +157,7 @@ export interface Service {
   standardPrice: number;
   estimatedTime: number;
   isActive: boolean;
+  hasEquipment?: boolean;
   category?: Category;
 }
 
@@ -168,6 +177,7 @@ export interface Serviceman {
   role?: string;
   email?: string;
   password?: string;
+  plainPassword?: string | null;
   photoUrl?: string;
   isDismissed: boolean;
   isReceptionist: boolean;

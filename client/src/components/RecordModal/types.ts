@@ -5,6 +5,8 @@ export interface SelectedService {
   price: number;
   quantity: number;
   estimatedTime: number;
+  hasEquipment?: boolean;
+  equipmentId?: string;
 }
 
 export interface RecordFormData {

@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Tabs, Table, Button, Modal, Form, Input, InputNumber, Select,
-  DatePicker, message, Statistic, Card, Tag, Empty,
+  DatePicker, message, Statistic, Card, Tag, Empty, Popconfirm, Space,
 } from 'antd';
 import {
-  PlusOutlined, MinusOutlined,
+  PlusOutlined, MinusOutlined, EditOutlined, DeleteOutlined,
 } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
 import { CashTransaction, CapitalTransaction, Serviceman } from '@/types';
-import { accountingApi, SalaryData, SalaryRecord } from '@/api/accounting.api';
+import { accountingApi, SalaryData, SalaryRecord, SalaryAdjustment, FounderSalaryRecord } from '@/api/accounting.api';
 import { servicesApi } from '@/api/services.api';
 import { formatPrice } from '@/utils/formatters';
 import { useAuthStore } from '@/store/authStore';
@@ -16,6 +16,7 @@ import styles from './AccountingPage.module.scss';
 
 const MANAGER_ROLES = ['Создатель', 'Директор', 'Менеджер'];
 const DIRECTOR_ROLES = ['Создатель', 'Директор'];
+const CREATOR_ROLES = ['Создатель'];
 
 function formatDate(s: string) {
   return dayjs(s).format('DD.MM.YYYY');
@@ -77,6 +78,7 @@ export const AccountingPage: React.FC = () => {
   const { user } = useAuthStore();
   const canSeeCashflow = user?.isMaster || MANAGER_ROLES.includes(user?.role || '');
   const canSeeCapital = user?.isMaster || DIRECTOR_ROLES.includes(user?.role || '');
+  const canEditTransactions = user?.isMaster || CREATOR_ROLES.includes(user?.role || '');
 
   const [selectedMonth, setSelectedMonth] = useState<Dayjs>(dayjs());
   const [income, setIncome] = useState<CashTransaction[]>([]);
@@ -95,6 +97,16 @@ export const AccountingPage: React.FC = () => {
   const [salaryData, setSalaryData] = useState<SalaryData | null>(null);
   const [salaryLoading, setSalaryLoading] = useState(false);
 
+  const [fineOpen, setFineOpen] = useState(false);
+  const [bonusOpen, setBonusOpen] = useState(false);
+  const [adjSaving, setAdjSaving] = useState(false);
+  const [fineForm] = Form.useForm();
+  const [bonusForm] = Form.useForm();
+
+  const [founderSalaries, setFounderSalaries] = useState<FounderSalaryRecord[]>([]);
+  const [isFounderSalary, setIsFounderSalary] = useState(false);
+  const [founderPerson, setFounderPerson] = useState('');
+
   const [expenseOpen, setExpenseOpen] = useState(false);
   const [manualIncomeOpen, setManualIncomeOpen] = useState(false);
   const [depositOpen, setDepositOpen] = useState(false);
@@ -105,6 +117,9 @@ export const AccountingPage: React.FC = () => {
   const [manualIncomeForm] = Form.useForm();
   const [depositForm] = Form.useForm();
   const [withdrawalForm] = Form.useForm();
+  const [editForm] = Form.useForm();
+  const [editingTx, setEditingTx] = useState<CashTransaction | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
 
   const defaultPerson = servicemen.find(s => s.isDefault)?.name || '';
   const managerServicemen = servicemen.filter(s => !s.isDismissed && MANAGER_ROLES.includes(s.role || ''));
@@ -125,8 +140,14 @@ export const AccountingPage: React.FC = () => {
     setCapitalBalance(bal);
   }, [canSeeCapital]);
 
+  const loadFounderSalaries = useCallback(async () => {
+    const data = await accountingApi.getFounderSalaries().catch(() => []);
+    setFounderSalaries(data);
+  }, []);
+
   useEffect(() => { loadCash(); }, [loadCash]);
   useEffect(() => { loadCapital(); }, [loadCapital]);
+  useEffect(() => { loadFounderSalaries(); }, [loadFounderSalaries]);
   useEffect(() => {
     servicesApi.getServicemen().then(setServicemen).catch(() => {});
     servicesApi.getAllServicemen().then(all => setEmployees(all.filter(s => s.role === 'Сотрудник' && !s.isDismissed))).catch(() => {});
@@ -151,7 +172,11 @@ export const AccountingPage: React.FC = () => {
   useEffect(() => { loadSalary(); }, [loadSalary]);
 
   useEffect(() => {
-    if (expenseOpen) expenseForm.setFieldsValue({ person: defaultPerson, date: dayjs() });
+    if (expenseOpen) {
+      expenseForm.setFieldsValue({ person: defaultPerson, date: dayjs() });
+      setIsFounderSalary(false);
+      setFounderPerson('');
+    }
   }, [expenseOpen, defaultPerson]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -166,6 +191,11 @@ export const AccountingPage: React.FC = () => {
     if (withdrawalOpen) withdrawalForm.setFieldsValue({ date: dayjs(), currency: 'BYN', person: defaultPerson });
   }, [withdrawalOpen, defaultPerson]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const handleFounderPersonChange = (name: string) => {
+    setFounderPerson(name);
+    expenseForm.setFieldsValue({ description: `ЗП учредителя ${name}` });
+  };
+
   const handleCreateExpense = async () => {
     const values = await expenseForm.validateFields().catch(() => null);
     if (!values) return;
@@ -177,9 +207,20 @@ export const AccountingPage: React.FC = () => {
         amount: values.amount,
         person: values.person,
       });
+      if (isFounderSalary && founderPerson && values.founderMonth) {
+        await accountingApi.createFounderSalary({
+          year: (values.founderMonth as import('dayjs').Dayjs).year(),
+          month: (values.founderMonth as import('dayjs').Dayjs).month() + 1,
+          person: founderPerson,
+          amount: values.amount,
+        });
+        loadFounderSalaries();
+      }
       message.success('Расход добавлен');
       setExpenseOpen(false);
       expenseForm.resetFields();
+      setIsFounderSalary(false);
+      setFounderPerson('');
       loadCash();
     } catch { message.error('Ошибка'); }
     finally { setSaving(false); }
@@ -242,6 +283,66 @@ export const AccountingPage: React.FC = () => {
     finally { setSaving(false); }
   };
 
+  const handleEditTx = (tx: CashTransaction) => {
+    setEditingTx(tx);
+    editForm.setFieldsValue({
+      date: dayjs(tx.date),
+      amount: tx.amount,
+      description: tx.description || '',
+      person: tx.person || '',
+    });
+    setEditOpen(true);
+  };
+
+  const handleUpdateTx = async () => {
+    if (!editingTx) return;
+    const values = await editForm.validateFields().catch(() => null);
+    if (!values) return;
+    setSaving(true);
+    try {
+      await accountingApi.updateCashTransaction(editingTx.id, {
+        date: values.date.toISOString(),
+        amount: values.amount,
+        description: values.description || undefined,
+        person: values.person || undefined,
+      });
+      message.success('Запись обновлена');
+      setEditOpen(false);
+      editForm.resetFields();
+      setEditingTx(null);
+      loadCash();
+    } catch { message.error('Ошибка'); }
+    finally { setSaving(false); }
+  };
+
+  const handleDeleteTx = async (id: string) => {
+    try {
+      await accountingApi.deleteCashTransaction(id);
+      message.success('Запись удалена');
+      loadCash();
+    } catch { message.error('Ошибка при удалении'); }
+  };
+
+  const txActionColumn = canEditTransactions ? [{
+    title: '',
+    key: 'actions',
+    width: 72,
+    render: (_: unknown, r: CashTransaction) => (
+      <Space size={2}>
+        <Button size="small" type="text" icon={<EditOutlined />} onClick={() => handleEditTx(r)} />
+        <Popconfirm
+          title="Удалить запись?"
+          onConfirm={() => handleDeleteTx(r.id)}
+          okText="Да"
+          cancelText="Нет"
+          okButtonProps={{ danger: true }}
+        >
+          <Button size="small" type="text" danger icon={<DeleteOutlined />} />
+        </Popconfirm>
+      </Space>
+    ),
+  }] : [];
+
   const incomeTotal = income.reduce((s, r) => s + r.amount, 0);
   const incomeRsTotal = incomeRs.reduce((s, r) => s + r.amount, 0);
 
@@ -283,7 +384,7 @@ export const AccountingPage: React.FC = () => {
           <div className={styles.tableBlock}>
             <Table<CashTransaction>
               dataSource={income}
-              columns={incomeColumns}
+              columns={[...incomeColumns, ...txActionColumn]}
               rowKey="id"
               size="small"
               pagination={false}
@@ -298,11 +399,42 @@ export const AccountingPage: React.FC = () => {
         </div>
 
         <div className={styles.tableSection}>
+          <div className={styles.tableTitle}>Расход</div>
+          <div className={styles.tableBlock}>
+            <Table<CashTransaction>
+              dataSource={expenses}
+              columns={[...expenseColumns, ...txActionColumn]}
+              rowKey="id"
+              size="small"
+              pagination={false}
+              scroll={{ x: 500 }}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const incomeRsTab = (
+    <div className={styles.tabContent}>
+      <div className={styles.topBar}>
+        <DatePicker
+          picker="month"
+          value={selectedMonth}
+          onChange={v => v && setSelectedMonth(v)}
+          format="MMMM YYYY"
+          allowClear={false}
+          style={{ width: 160 }}
+        />
+      </div>
+
+      <div className={styles.tablesGrid}>
+        <div className={styles.tableSection}>
           <div className={styles.tableTitle}>Приход РС</div>
           <div className={styles.tableBlock}>
             <Table<CashTransaction>
               dataSource={incomeRs}
-              columns={incomeRsCols}
+              columns={[...incomeRsCols, ...txActionColumn]}
               rowKey="id"
               size="small"
               pagination={false}
@@ -312,20 +444,6 @@ export const AccountingPage: React.FC = () => {
                   Итого: {formatPrice(incomeRsTotal)}
                 </div>
               )}
-            />
-          </div>
-        </div>
-
-        <div className={styles.tableSection}>
-          <div className={styles.tableTitle}>Расход</div>
-          <div className={styles.tableBlock}>
-            <Table<CashTransaction>
-              dataSource={expenses}
-              columns={expenseColumns}
-              rowKey="id"
-              size="small"
-              pagination={false}
-              scroll={{ x: 500 }}
             />
           </div>
         </div>
@@ -440,6 +558,31 @@ export const AccountingPage: React.FC = () => {
     ? `${dayjs(salaryData.periodFrom).format('DD.MM.YYYY')} — ${dayjs(salaryData.periodTo).subtract(1, 'day').format('DD.MM.YYYY')}`
     : '';
 
+  const handleCreateAdjustment = async (type: 'FINE' | 'BONUS') => {
+    const form = type === 'FINE' ? fineForm : bonusForm;
+    const values = await form.validateFields().catch(() => null);
+    if (!values) return;
+    setAdjSaving(true);
+    try {
+      await accountingApi.createAdjustment({
+        servicemanName: salaryEmployee,
+        type,
+        amount: values.amount,
+        reason: values.reason,
+        year: salaryMonth.year(),
+        month: salaryMonth.month() + 1,
+      });
+      form.resetFields();
+      type === 'FINE' ? setFineOpen(false) : setBonusOpen(false);
+      loadSalary();
+    } catch { /* ignore */ } finally { setAdjSaving(false); }
+  };
+
+  const handleDeleteAdjustment = async (id: string) => {
+    await accountingApi.deleteAdjustment(id).catch(() => {});
+    loadSalary();
+  };
+
   const salaryTab = (
     <div className={styles.tabContent}>
       <div className={styles.topBar}>
@@ -447,7 +590,7 @@ export const AccountingPage: React.FC = () => {
           <Card size="small" className={styles.balanceCard}>
             <Statistic
               title="К выплате за период"
-              value={salaryData.totalPayment}
+              value={salaryData.adjustedTotal ?? salaryData.totalPayment}
               precision={2}
               suffix="р."
               valueStyle={{ color: 'var(--color-success)', fontSize: 22 }}
@@ -468,14 +611,38 @@ export const AccountingPage: React.FC = () => {
               onClear={() => setSalaryEmployee('')}
             />
           )}
-          <DatePicker
-            picker="month"
-            value={salaryMonth}
-            onChange={v => v && setSalaryMonth(v)}
-            format="MMMM YYYY"
-            allowClear={false}
-            style={{ width: 160 }}
-          />
+          {isSotrudnik ? (
+            <span style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>
+              {salaryMonth.format('MMMM YYYY')}
+            </span>
+          ) : (
+            <DatePicker
+              picker="month"
+              value={salaryMonth}
+              onChange={v => v && setSalaryMonth(v)}
+              format="MMMM YYYY"
+              allowClear={false}
+              style={{ width: 160 }}
+            />
+          )}
+          {!isSotrudnik && salaryEmployee && (
+            <>
+              <Button
+                danger
+                icon={<MinusOutlined />}
+                onClick={() => { fineForm.resetFields(); setFineOpen(true); }}
+              >
+                Штраф
+              </Button>
+              <Button
+                style={{ borderColor: 'var(--color-success)', color: 'var(--color-success)' }}
+                icon={<PlusOutlined />}
+                onClick={() => { bonusForm.resetFields(); setBonusOpen(true); }}
+              >
+                Премия
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -511,10 +678,50 @@ export const AccountingPage: React.FC = () => {
             }}
             footer={() => (
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 32 }}>
-                <span>Итого к выплате: <strong style={{ color: 'var(--color-success)' }}>{formatPrice(salaryData.totalPayment)}</strong></span>
+                <span>База: <strong>{formatPrice(salaryData.totalPayment)}</strong></span>
               </div>
             )}
           />
+
+          {salaryData.adjustments.length > 0 && (
+            <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {salaryData.adjustments.map((adj: SalaryAdjustment) => (
+                <div key={adj.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '6px 10px', borderRadius: 6,
+                  background: adj.type === 'FINE' ? 'rgba(255,77,79,0.08)' : 'rgba(82,196,26,0.08)',
+                  border: `1px solid ${adj.type === 'FINE' ? 'rgba(255,77,79,0.25)' : 'rgba(82,196,26,0.25)'}`,
+                }}>
+                  <Tag color={adj.type === 'FINE' ? 'red' : 'green'} style={{ margin: 0 }}>
+                    {adj.type === 'FINE' ? 'Штраф' : 'Премия'}
+                  </Tag>
+                  <span style={{ flex: 1, fontSize: 13 }}>{adj.reason}</span>
+                  <strong style={{ color: adj.type === 'FINE' ? 'var(--color-error)' : 'var(--color-success)', whiteSpace: 'nowrap' }}>
+                    {adj.type === 'FINE' ? '−' : '+'}{formatPrice(adj.amount)}
+                  </strong>
+                  {!isSotrudnik && (
+                    <Popconfirm title="Удалить?" onConfirm={() => handleDeleteAdjustment(adj.id)} okText="Да" cancelText="Нет">
+                      <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+                    </Popconfirm>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12, fontSize: 15, gap: 24 }}>
+            {salaryData.adjustments.length > 0 && (
+              <span style={{ color: 'var(--color-text-secondary)' }}>
+                База: {formatPrice(salaryData.totalPayment)}
+              </span>
+            )}
+            <span>
+              Итого к выплате:{' '}
+              <strong style={{ color: 'var(--color-success)', fontSize: 17 }}>
+                {formatPrice(salaryData.adjustedTotal ?? salaryData.totalPayment)}
+              </strong>
+            </span>
+          </div>
         </>
       ) : (
         <Empty description={salaryEmployee ? 'Нет данных за период' : 'Выберите сотрудника'} style={{ marginTop: 40 }} />
@@ -522,16 +729,112 @@ export const AccountingPage: React.FC = () => {
     </div>
   );
 
+  // ─── Founder salaries tab ─────────────────────────────────────────────────
+  const directorUser = servicemen.find(s => !s.isDismissed && s.role === 'Директор');
+  const creatorUser  = servicemen.find(s => !s.isDismissed && s.role === 'Создатель');
+  const founderOptions = [directorUser, creatorUser].filter(Boolean).map(s => ({ value: s!.name, label: s!.name }));
+
+  // Group founderSalaries by month
+  const founderRowMap = new Map<string, { year: number; month: number; director: number; creator: number }>();
+  for (const r of founderSalaries) {
+    const key = `${String(r.month).padStart(2, '0')}.${r.year}`;
+    if (!founderRowMap.has(key)) founderRowMap.set(key, { year: r.year, month: r.month, director: 0, creator: 0 });
+    const row = founderRowMap.get(key)!;
+    if (directorUser && r.person === directorUser.name) row.director += r.amount;
+    if (creatorUser  && r.person === creatorUser.name)  row.creator  += r.amount;
+  }
+  const founderRows = Array.from(founderRowMap.entries())
+    .sort(([, a], [, b]) => a.year !== b.year ? a.year - b.year : a.month - b.month)
+    .map(([key, v]) => ({ key, ...v }));
+
+  const directorTotal = founderSalaries.filter(r => directorUser && r.person === directorUser.name).reduce((s, r) => s + r.amount, 0);
+  const creatorTotal  = founderSalaries.filter(r => creatorUser  && r.person === creatorUser.name).reduce((s, r) => s + r.amount, 0);
+  const founderDiff   = Math.abs(directorTotal - creatorTotal);
+  const lessFounder   = directorTotal < creatorTotal ? directorUser : creatorUser;
+
+  const founderSalaryTab = (
+    <div className={styles.tabContent}>
+      <Table
+        dataSource={founderRows}
+        rowKey="key"
+        size="small"
+        pagination={false}
+        locale={{ emptyText: 'Нет данных' }}
+        columns={[
+          { title: 'Месяц', dataIndex: 'key', key: 'month', width: 120 },
+          {
+            title: directorUser?.name ?? 'Директор',
+            key: 'director',
+            render: (_: unknown, row: typeof founderRows[number]) =>
+              row.director > 0
+                ? <span style={{ color: 'var(--color-success)', fontWeight: 600 }}>{formatPrice(row.director)}</span>
+                : <span style={{ color: 'var(--color-text-secondary)' }}>—</span>,
+          },
+          {
+            title: creatorUser?.name ?? 'Создатель',
+            key: 'creator',
+            render: (_: unknown, row: typeof founderRows[number]) =>
+              row.creator > 0
+                ? <span style={{ color: 'var(--color-success)', fontWeight: 600 }}>{formatPrice(row.creator)}</span>
+                : <span style={{ color: 'var(--color-text-secondary)' }}>—</span>,
+          },
+        ]}
+      />
+      {founderDiff > 0 && lessFounder && (
+        <div style={{ marginTop: 16, padding: '10px 14px', borderRadius: 8, background: 'rgba(255,77,79,0.07)', border: '1px solid rgba(255,77,79,0.2)', fontSize: 13 }}>
+          <strong>{lessFounder.name}</strong> получил меньше на{' '}
+          <strong style={{ color: 'var(--color-error)' }}>{formatPrice(founderDiff)}</strong>
+        </div>
+      )}
+    </div>
+  );
+
   const tabItems = [
     ...(canSeeCashflow ? [{ key: 'cashflow', label: 'Приходно-Расходный', children: cashFlowTab }] : []),
+    ...(canSeeCashflow ? [{ key: 'incomers', label: 'Приход РС', children: incomeRsTab }] : []),
     ...(canSeeCapital ? [{ key: 'capital', label: 'Капитал', children: capitalTab }] : []),
     { key: 'salary', label: 'Расчёт ЗП', children: salaryTab },
+    ...(canSeeCapital ? [{ key: 'founderSalary', label: 'ЗП Учредителей', children: founderSalaryTab }] : []),
   ];
 
   return (
     <div className={styles.page}>
       <h1 className={styles.pageTitle}>Бухгалтерия</h1>
       <Tabs items={tabItems} />
+
+      <Modal
+        title="Редактировать запись"
+        open={editOpen}
+        onCancel={() => { setEditOpen(false); editForm.resetFields(); setEditingTx(null); }}
+        onOk={handleUpdateTx}
+        okText="Сохранить"
+        okButtonProps={{ loading: saving }}
+        cancelText="Отмена"
+        destroyOnClose
+      >
+        <Form form={editForm} layout="vertical" style={{ marginTop: 16 }}>
+          <Form.Item label="Дата" name="date" rules={[{ required: true }]}>
+            <DatePicker style={{ width: '100%' }} format="DD.MM.YYYY" />
+          </Form.Item>
+          <Form.Item label="Сумма (р.)" name="amount" rules={[{ required: true, message: 'Укажите сумму' }]}>
+            <InputNumber min={0} style={{ width: '100%' }} precision={2} parser={(v) => (v ?? '').replace(/,/g, '.')} />
+          </Form.Item>
+          {editingTx && (editingTx.type === 'EXPENSE' || editingTx.type === 'MANUAL_INCOME') && (
+            <Form.Item label={editingTx.type === 'EXPENSE' ? 'Цель изъятия' : 'Источник'} name="description">
+              <Input />
+            </Form.Item>
+          )}
+          {editingTx?.type === 'EXPENSE' && (
+            <Form.Item label="Изыматель" name="person">
+              <Select
+                showSearch
+                placeholder="Выберите сотрудника"
+                options={managerServicemen.map(s => ({ value: s.name, label: s.name }))}
+              />
+            </Form.Item>
+          )}
+        </Form>
+      </Modal>
 
       <Modal
         title="Изъять средства"
@@ -547,11 +850,29 @@ export const AccountingPage: React.FC = () => {
           <Form.Item label="Дата" name="date" rules={[{ required: true }]}>
             <DatePicker style={{ width: '100%' }} format="DD.MM.YYYY" />
           </Form.Item>
+          {isFounderSalary && (
+            <Form.Item label="Месяц ЗП" name="founderMonth" rules={[{ required: true, message: 'Выберите месяц' }]}>
+              <DatePicker picker="month" style={{ width: '100%' }} format="MM.YYYY" allowClear={false} />
+            </Form.Item>
+          )}
+          {isFounderSalary && (
+            <Form.Item label="Получатель" rules={[{ required: true }]}>
+              <Select
+                placeholder="Выберите учредителя"
+                value={founderPerson || undefined}
+                onChange={handleFounderPersonChange}
+                options={founderOptions}
+              />
+            </Form.Item>
+          )}
           <Form.Item label="Цель изъятия" name="description" rules={[{ required: true, message: 'Укажите цель' }]}>
-            <Input placeholder="Например: закупка расходников" />
+            <Input
+              placeholder={isFounderSalary ? '' : 'Например: закупка расходников'}
+              readOnly={isFounderSalary}
+            />
           </Form.Item>
           <Form.Item label="Сумма (р.)" name="amount" rules={[{ required: true, message: 'Укажите сумму' }]}>
-            <InputNumber min={0} style={{ width: '100%' }} precision={2} />
+            <InputNumber min={0} style={{ width: '100%' }} precision={2} parser={(v) => (v ?? '').replace(/,/g, '.')} />
           </Form.Item>
           <Form.Item label="Изыматель" name="person" rules={[{ required: true, message: 'Выберите изымателя' }]}>
             <Select
@@ -559,6 +880,21 @@ export const AccountingPage: React.FC = () => {
               placeholder="Выберите сотрудника"
               options={managerServicemen.map(s => ({ value: s.name, label: s.name }))}
             />
+          </Form.Item>
+          <Form.Item style={{ marginBottom: 0 }}>
+            <span
+              style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: 'var(--color-text-secondary)' }}
+              onClick={() => {
+                const next = !isFounderSalary;
+                setIsFounderSalary(next);
+                setFounderPerson('');
+                if (!next) expenseForm.setFieldsValue({ description: '', founderMonth: null });
+                else expenseForm.setFieldsValue({ founderMonth: dayjs(), description: '' });
+              }}
+            >
+              <input type="checkbox" checked={isFounderSalary} readOnly style={{ cursor: 'pointer', width: 14, height: 14 }} />
+              ЗП учредителей
+            </span>
           </Form.Item>
         </Form>
       </Modal>
@@ -581,7 +917,7 @@ export const AccountingPage: React.FC = () => {
             <Input placeholder="Например: перевод от учредителя" />
           </Form.Item>
           <Form.Item label="Сумма (р.)" name="amount" rules={[{ required: true, message: 'Укажите сумму' }]}>
-            <InputNumber min={0} style={{ width: '100%' }} precision={2} />
+            <InputNumber min={0} style={{ width: '100%' }} precision={2} parser={(v) => (v ?? '').replace(/,/g, '.')} />
           </Form.Item>
           <Form.Item label="Дебетор" name="person" rules={[{ required: true, message: 'Выберите дебетора' }]}>
             <Select
@@ -608,7 +944,7 @@ export const AccountingPage: React.FC = () => {
             <DatePicker style={{ width: '100%' }} format="DD.MM.YYYY" />
           </Form.Item>
           <Form.Item label="Сумма" name="amount" rules={[{ required: true, message: 'Укажите сумму' }]}>
-            <InputNumber min={0} style={{ width: '100%' }} precision={2} />
+            <InputNumber min={0} style={{ width: '100%' }} precision={2} parser={(v) => (v ?? '').replace(/,/g, '.')} />
           </Form.Item>
           <Form.Item label="Валюта" name="currency" rules={[{ required: true }]}>
             <Select options={[{ value: 'BYN', label: 'BYN (рубли)' }, { value: 'USD', label: 'USD (доллары)' }]} />
@@ -631,7 +967,7 @@ export const AccountingPage: React.FC = () => {
             <DatePicker style={{ width: '100%' }} format="DD.MM.YYYY" />
           </Form.Item>
           <Form.Item label="Сумма" name="amount" rules={[{ required: true, message: 'Укажите сумму' }]}>
-            <InputNumber min={0} style={{ width: '100%' }} precision={2} />
+            <InputNumber min={0} style={{ width: '100%' }} precision={2} parser={(v) => (v ?? '').replace(/,/g, '.')} />
           </Form.Item>
           <Form.Item label="Валюта" name="currency" rules={[{ required: true }]}>
             <Select options={[{ value: 'BYN', label: 'BYN (рубли)' }, { value: 'USD', label: 'USD (доллары)' }]} />
@@ -645,6 +981,46 @@ export const AccountingPage: React.FC = () => {
               placeholder="Выберите сотрудника"
               options={directorServicemen.map(s => ({ value: s.name, label: s.name }))}
             />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="Добавить штраф"
+        open={fineOpen}
+        onCancel={() => setFineOpen(false)}
+        onOk={() => handleCreateAdjustment('FINE')}
+        okText="Добавить"
+        okButtonProps={{ loading: adjSaving, danger: true }}
+        cancelText="Отмена"
+        destroyOnClose
+      >
+        <Form form={fineForm} layout="vertical" style={{ marginTop: 16 }}>
+          <Form.Item label="Причина" name="reason" rules={[{ required: true, message: 'Укажите причину' }]}>
+            <Input placeholder="Опишите причину штрафа" />
+          </Form.Item>
+          <Form.Item label="Сумма (р.)" name="amount" rules={[{ required: true, message: 'Укажите сумму' }]}>
+            <InputNumber min={0.01} style={{ width: '100%' }} precision={2} parser={(v) => (v ?? '').replace(/,/g, '.')} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="Добавить премию"
+        open={bonusOpen}
+        onCancel={() => setBonusOpen(false)}
+        onOk={() => handleCreateAdjustment('BONUS')}
+        okText="Добавить"
+        okButtonProps={{ loading: adjSaving }}
+        cancelText="Отмена"
+        destroyOnClose
+      >
+        <Form form={bonusForm} layout="vertical" style={{ marginTop: 16 }}>
+          <Form.Item label="Причина" name="reason" rules={[{ required: true, message: 'Укажите причину' }]}>
+            <Input placeholder="Опишите причину премии" />
+          </Form.Item>
+          <Form.Item label="Сумма (р.)" name="amount" rules={[{ required: true, message: 'Укажите сумму' }]}>
+            <InputNumber min={0.01} style={{ width: '100%' }} precision={2} parser={(v) => (v ?? '').replace(/,/g, '.')} />
           </Form.Item>
         </Form>
       </Modal>

@@ -152,7 +152,7 @@ export const servicemanController = {
 
   async create(req: Request, res: Response, next: NextFunction) {
     try {
-      const { name, position, role, email, password, photoUrl, isReceptionist, birthday } = req.body;
+      const { name, position, role, email, password, photoUrl, isReceptionist, birthday, profitPercent } = req.body;
       const myLevel = requesterLevel(req);
       if (myLevel !== 0 && getLevel(role) < myLevel) {
         res.status(403).json({ message: 'Нельзя назначить роль выше вашего уровня' });
@@ -161,8 +161,12 @@ export const servicemanController = {
       const hashed = password ? await bcrypt.hash(password, 10) : undefined;
       const s = await prisma.serviceman.create({
         data: {
-          name, position, role, email, password: hashed, photoUrl, isReceptionist: !!isReceptionist,
+          name, position, role, email,
+          password: hashed,
+          plainPassword: password || undefined,
+          photoUrl, isReceptionist: !!isReceptionist,
           birthday: birthday ? new Date(birthday) : undefined,
+          ...(profitPercent !== undefined && { profitPercent: Number(profitPercent) }),
         },
       });
       res.status(201).json({ data: s });
@@ -171,7 +175,7 @@ export const servicemanController = {
 
   async update(req: Request, res: Response, next: NextFunction) {
     try {
-      const { name, position, role, email, password, photoUrl, isReceptionist, profitPercent } = req.body;
+      const { name, position, role, email, password, photoUrl, isReceptionist, profitPercent, birthday } = req.body;
       const myLevel = requesterLevel(req);
       const existing = await prisma.serviceman.findUnique({ where: { id: String(req.params.id) } });
       if (!existing) { res.status(404).json({ message: 'Сотрудник не найден' }); return; }
@@ -183,13 +187,12 @@ export const servicemanController = {
         res.status(403).json({ message: 'Нельзя назначить роль выше вашего уровня' });
         return;
       }
-      const { birthday } = req.body;
       const hashed = password ? await bcrypt.hash(password, 10) : undefined;
       const s = await prisma.serviceman.update({
         where: { id: String(req.params.id) },
         data: {
           name, position, role, email,
-          ...(hashed !== undefined && { password: hashed }),
+          ...(hashed !== undefined && { password: hashed, plainPassword: password }),
           photoUrl, isReceptionist,
           ...(profitPercent !== undefined && { profitPercent: Number(profitPercent) }),
           ...(birthday !== undefined && { birthday: birthday ? new Date(birthday) : null }),

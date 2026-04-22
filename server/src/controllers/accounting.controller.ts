@@ -55,4 +55,40 @@ export const accountingController = {
     const data = await accountingService.getSalaryData(servicemanName, year, month);
     res.json({ data });
   },
+
+  async updateCashTransaction(req: Request, res: Response) {
+    const id = String(req.params.id);
+    const { date, amount, description, person } = req.body;
+    const tx = await accountingService.updateCashTransaction(id, { date, amount, description, person });
+    res.json({ data: tx });
+  },
+
+  async deleteCashTransaction(req: Request, res: Response) {
+    const id = String(req.params.id);
+    await accountingService.deleteCashTransaction(id);
+    res.status(204).end();
+  },
+
+  async createAdjustment(req: Request, res: Response) {
+    const { servicemanName, type, amount, reason, year, month } = req.body;
+    const adj = await accountingService.createAdjustment({ servicemanName, type, amount: Number(amount), reason, year: Number(year), month: Number(month) });
+    res.status(201).json({ data: adj });
+  },
+
+  async deleteAdjustment(req: Request, res: Response) {
+    const id = String(req.params.id);
+    await accountingService.deleteAdjustment(id);
+    res.status(204).end();
+  },
+
+  async createFounderSalary(req: Request, res: Response) {
+    const { year, month, person, amount } = req.body;
+    const record = await accountingService.createFounderSalary({ year: Number(year), month: Number(month), person, amount: Number(amount) });
+    res.status(201).json({ data: record });
+  },
+
+  async getFounderSalaries(_req: Request, res: Response) {
+    const records = await accountingService.getFounderSalaries();
+    res.json({ data: records });
+  },
 };

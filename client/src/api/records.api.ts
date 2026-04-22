@@ -55,14 +55,13 @@ export interface CreateRecordDto {
   legalBasis?: string;
   legalVin?: string;
   legalEndDate?: string;
-  items: Array<{ serviceId: string; price: number; quantity: number; netProfit?: number; servicemanName?: string }>;
+  items: Array<{ serviceId: string; price: number; quantity: number; netProfit?: number; servicemanName?: string; equipmentId?: string; servicemanSplit?: Array<{ name: string; amount: number }> | null }>;
 }
 
 export interface CloseDealDto {
   finalPrice: number;
   defects?: string;
   warranty?: string;
-  equipmentIds?: string[];
   isPaidByBankTransfer?: boolean;
 }
 

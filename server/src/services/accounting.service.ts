@@ -16,6 +16,17 @@ export interface SalaryRecord {
   totalPayment: number;
 }
 
+export interface SalaryAdjustmentDto {
+  id: string;
+  servicemanName: string;
+  type: 'FINE' | 'BONUS';
+  amount: number;
+  reason: string;
+  year: number;
+  month: number;
+  createdAt: string;
+}
+
 export interface SalaryData {
   servicemanName: string;
   profitPercent: number;
@@ -24,6 +35,8 @@ export interface SalaryData {
   records: SalaryRecord[];
   totalNetProfit: number;
   totalPayment: number;
+  adjustments: SalaryAdjustmentDto[];
+  adjustedTotal: number;
 }
 
 export const accountingService = {
@@ -124,31 +137,34 @@ export const accountingService = {
     const serviceman = await prisma.serviceman.findUnique({ where: { name: servicemanName } });
     const profitPercent = serviceman?.profitPercent ?? 0;
 
-    const items = await prisma.recordItem.findMany({
+    type SplitEntry = { name: string; amount: number };
+
+    // Query all closed items in the period, filter by employee in JS
+    const allItems = await prisma.recordItem.findMany({
       where: {
-        servicemanName,
-        record: {
-          deal: {
-            closedAt: { gte: periodFrom, lt: periodTo },
-          },
-        },
+        record: { deal: { closedAt: { gte: periodFrom, lt: periodTo } } },
       },
       include: {
         service: true,
-        record: {
-          include: {
-            client: true,
-            car: true,
-            deal: true,
-          },
-        },
+        record: { include: { client: true, car: true, deal: true } },
       },
     });
 
     const recordMap = new Map<string, SalaryRecord>();
-    for (const item of items) {
+    for (const item of allItems) {
+      let netProfit: number | null = null;
+
+      if (!item.servicemanSplit) {
+        if (item.servicemanName === servicemanName) netProfit = item.netProfit ?? 0;
+      } else {
+        const split = item.servicemanSplit as SplitEntry[];
+        const entry = Array.isArray(split) ? split.find(s => s.name === servicemanName) : undefined;
+        if (entry) netProfit = entry.amount;
+      }
+
+      if (netProfit === null) continue;
+
       const { record } = item;
-      const netProfit = item.netProfit ?? 0;
       const payment = Math.round(netProfit * profitPercent) / 100;
       if (!recordMap.has(record.id)) {
         recordMap.set(record.id, {
@@ -172,6 +188,24 @@ export const accountingService = {
     const totalNetProfit = records.reduce((s, r) => s + r.totalNetProfit, 0);
     const totalPayment = records.reduce((s, r) => s + r.totalPayment, 0);
 
+    const rawAdjustments = await prisma.salaryAdjustment.findMany({
+      where: { servicemanName, year, month },
+      orderBy: { createdAt: 'asc' },
+    });
+    const adjustments: SalaryAdjustmentDto[] = rawAdjustments.map(a => ({
+      id: a.id,
+      servicemanName: a.servicemanName,
+      type: a.type as 'FINE' | 'BONUS',
+      amount: a.amount,
+      reason: a.reason,
+      year: a.year,
+      month: a.month,
+      createdAt: a.createdAt.toISOString(),
+    }));
+    const bonusTotal = adjustments.filter(a => a.type === 'BONUS').reduce((s, a) => s + a.amount, 0);
+    const fineTotal = adjustments.filter(a => a.type === 'FINE').reduce((s, a) => s + a.amount, 0);
+    const adjustedTotal = totalPayment + bonusTotal - fineTotal;
+
     return {
       servicemanName,
       profitPercent,
@@ -180,7 +214,25 @@ export const accountingService = {
       records,
       totalNetProfit,
       totalPayment,
+      adjustments,
+      adjustedTotal,
     };
+  },
+
+  async createAdjustment(data: { servicemanName: string; type: 'FINE' | 'BONUS'; amount: number; reason: string; year: number; month: number }) {
+    return prisma.salaryAdjustment.create({ data });
+  },
+
+  async deleteAdjustment(id: string) {
+    return prisma.salaryAdjustment.delete({ where: { id } });
+  },
+
+  async createFounderSalary(data: { year: number; month: number; person: string; amount: number }) {
+    return prisma.founderSalary.create({ data });
+  },
+
+  async getFounderSalaries() {
+    return prisma.founderSalary.findMany({ orderBy: [{ year: 'asc' }, { month: 'asc' }, { createdAt: 'asc' }] });
   },
 
   async createWithdrawal(data: { date: string; amount: number; currency: 'BYN' | 'USD'; description?: string; person: string }) {
@@ -194,5 +246,21 @@ export const accountingService = {
         person: data.person,
       },
     });
+  },
+
+  async updateCashTransaction(id: string, data: { date?: string; amount?: number; description?: string; person?: string }) {
+    return prisma.cashTransaction.update({
+      where: { id },
+      data: {
+        ...(data.date !== undefined && { date: new Date(data.date) }),
+        ...(data.amount !== undefined && { amount: data.amount }),
+        ...(data.description !== undefined && { description: data.description }),
+        ...(data.person !== undefined && { person: data.person }),
+      },
+    });
+  },
+
+  async deleteCashTransaction(id: string) {
+    return prisma.cashTransaction.delete({ where: { id } });
   },
 };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Steps, Button, message, Form, Grid } from 'antd';
+import { Modal, Steps, Button, Form, Grid } from 'antd';
 import cn from 'classnames';
 const { useBreakpoint } = Grid;
 import { Step1Client } from './steps/Step1Client';
@@ -8,6 +8,7 @@ import { Step3Summary } from './steps/Step3Summary';
 import { RecordFormData, emptyFormData } from './types';
 import { recordsApi } from '@/api/records.api';
 import { clientsApi } from '@/api/clients.api';
+import { useNotify } from '@/hooks/useNotify';
 import styles from './RecordModal.module.scss';
 
 interface Props {
@@ -26,6 +27,7 @@ const STEPS = [
 export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initialDate }) => {
   const screens = useBreakpoint();
   const isMobile = !screens.md;
+  const notify = useNotify();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<RecordFormData>({
@@ -56,21 +58,24 @@ export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initial
 
   const validateStep = (): boolean => {
     if (step === 0) {
-      if (!data.clientName || !isPhoneValid(data.clientPhone)) {
-        message.warning('Укажите ФИО и полный номер телефона клиента');
-        return false;
-      }
-      if (!data.carBrandId || !data.carModelId || !data.carYear) {
-        message.warning('Выберите марку, модель и год автомобиля');
-        return false;
-      }
-      if (!data.date || !data.time) {
-        message.warning('Укажите дату и время');
+      const missing: string[] = [];
+      if (!data.clientName) missing.push('ФИО клиента');
+      if (!isPhoneValid(data.clientPhone)) missing.push('номер телефона');
+      if (!data.carBrandId) missing.push('марка автомобиля');
+      if (!data.carModelId) missing.push('модель автомобиля');
+      if (!data.carYear) missing.push('год автомобиля');
+      if (!data.date) missing.push('дата');
+      if (!data.time) missing.push('время');
+      if (missing.length > 0) {
+        notify.warning(
+          'Заполните обязательные поля',
+          `Требуется указать: ${missing.join(', ')}`,
+        );
         return false;
       }
     }
     if (step === 1 && data.services.length === 0) {
-      message.warning('Добавьте хотя бы одну услугу');
+      notify.warning('Выберите услуги', 'Добавьте хотя бы одну услугу перед переходом к итогу');
       return false;
     }
     return true;
@@ -143,14 +148,15 @@ export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initial
           serviceId: s.serviceId,
           price: s.price,
           quantity: s.quantity,
+          equipmentId: s.equipmentId,
         })),
       });
 
-      message.success('Запись создана');
+      notify.success('Запись создана');
       onSuccess();
       handleClose();
     } catch (e: unknown) {
-      message.error(e instanceof Error ? e.message : 'Ошибка создания записи');
+      notify.error('Ошибка создания записи', e instanceof Error ? e.message : undefined);
     } finally {
       setLoading(false);
     }

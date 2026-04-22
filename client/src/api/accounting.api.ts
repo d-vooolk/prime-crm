@@ -23,6 +23,17 @@ export interface SalaryRecord {
   totalPayment: number;
 }
 
+export interface SalaryAdjustment {
+  id: string;
+  servicemanName: string;
+  type: 'FINE' | 'BONUS';
+  amount: number;
+  reason: string;
+  year: number;
+  month: number;
+  createdAt: string;
+}
+
 export interface SalaryData {
   servicemanName: string;
   profitPercent: number;
@@ -31,6 +42,8 @@ export interface SalaryData {
   records: SalaryRecord[];
   totalNetProfit: number;
   totalPayment: number;
+  adjustments: SalaryAdjustment[];
+  adjustedTotal: number;
 }
 
 export const accountingApi = {
@@ -60,4 +73,31 @@ export const accountingApi = {
 
   getSalary: (servicemanName: string, year: number, month: number) =>
     http.get<{ data: SalaryData }>('/accounting/salary', { params: { servicemanName, year, month } }).then(r => r.data.data),
+
+  updateCashTransaction: (id: string, data: { date?: string; amount?: number; description?: string; person?: string }) =>
+    http.patch<{ data: CashTransaction }>(`/accounting/cash/${id}`, data).then(r => r.data.data),
+
+  deleteCashTransaction: (id: string) =>
+    http.delete(`/accounting/cash/${id}`),
+
+  createAdjustment: (data: { servicemanName: string; type: 'FINE' | 'BONUS'; amount: number; reason: string; year: number; month: number }) =>
+    http.post<{ data: SalaryAdjustment }>('/accounting/salary-adjustments', data).then(r => r.data.data),
+
+  deleteAdjustment: (id: string) =>
+    http.delete(`/accounting/salary-adjustments/${id}`),
+
+  getFounderSalaries: () =>
+    http.get<{ data: FounderSalaryRecord[] }>('/accounting/founder-salaries').then(r => r.data.data),
+
+  createFounderSalary: (data: { year: number; month: number; person: string; amount: number }) =>
+    http.post<{ data: FounderSalaryRecord }>('/accounting/founder-salaries', data).then(r => r.data.data),
 };
+
+export interface FounderSalaryRecord {
+  id: string;
+  year: number;
+  month: number;
+  person: string;
+  amount: number;
+  createdAt: string;
+}

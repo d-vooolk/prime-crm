@@ -83,6 +83,7 @@ export const ServicesPage: React.FC = () => {
       categoryId: service.categoryId,
       standardPrice: service.standardPrice,
       estimatedTime: service.estimatedTime,
+      hasEquipment: service.hasEquipment ?? false,
     });
     setServiceModal({ open: true, service });
   };
@@ -157,6 +158,7 @@ export const ServicesPage: React.FC = () => {
           password: values.password || undefined,
           isReceptionist: servicemanModal.isReceptionist,
           birthday: birthdayIso,
+          ...(values.role === 'Сотрудник' && { profitPercent: values.profitPercent ?? 0 }),
         });
       }
       message.success('Сохранено');
@@ -276,7 +278,7 @@ export const ServicesPage: React.FC = () => {
           <Space size="small">
             <Button size="small" icon={<EditOutlined />} onClick={() => {
               servicemanForm.resetFields();
-              servicemanForm.setFieldsValue({ name: row.name, position: row.position, role: row.role, email: row.email, password: row.password, profitPercent: row.profitPercent ?? 0, birthday: row.birthday ? dayjs(row.birthday) : null });
+              servicemanForm.setFieldsValue({ name: row.name, position: row.position, role: row.role, email: row.email, password: row.plainPassword ?? '', profitPercent: row.profitPercent ?? 0, birthday: row.birthday ? dayjs(row.birthday) : null });
               setServicemanModal({ open: true, item: row, isReceptionist });
             }} />
             <Popconfirm
@@ -519,6 +521,9 @@ export const ServicesPage: React.FC = () => {
           <Form.Item label="Ориентировочное время (мин)" name="estimatedTime" rules={[{ required: true }]}>
             <InputNumber style={{ width: '100%' }} min={0} step={15} />
           </Form.Item>
+          <Form.Item name="hasEquipment" valuePropName="checked">
+            <Checkbox>Услуга с сопутствующим оборудованием (Bi-Led модули)</Checkbox>
+          </Form.Item>
         </Form>
       </Modal>
 
@@ -589,8 +594,16 @@ export const ServicesPage: React.FC = () => {
           <Form.Item label="Email" name="email">
             <Input type="email" placeholder="example@mail.com" />
           </Form.Item>
-          <Form.Item label="Пароль" name="password">
-            <Input placeholder="Пароль для входа в систему" autoComplete="new-password" />
+          <Form.Item
+            label="Пароль"
+            name="password"
+            extra={servicemanModal.item ? 'Оставьте пустым, чтобы не менять пароль' : undefined}
+          >
+            <Input.Password
+              placeholder={servicemanModal.item ? '••••••••' : 'Пароль для входа в систему'}
+              autoComplete="new-password"
+              visibilityToggle
+            />
           </Form.Item>
           <Form.Item label="Дата рождения" name="birthday">
             <DatePicker style={{ width: '100%' }} format="DD.MM.YYYY" placeholder="Выберите дату" />

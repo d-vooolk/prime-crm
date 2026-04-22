@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Select, InputNumber, Button, Table, Empty, Tag, Space, Grid } from 'antd';
 import { DeleteOutlined } from '@ant-design/icons';
 import { servicesApi } from '@/api/services.api';
-import { Category } from '@/types';
+import { Category, Equipment } from '@/types';
 import { formatPrice } from '@/utils/formatters';
 import { RecordFormData, SelectedService } from '../types';
 import styles from './Step2Services.module.scss';
@@ -17,9 +17,11 @@ export const Step2Services: React.FC<Props> = ({ data, onChange }) => {
   const screens = useBreakpoint();
   const isMobile = !screens.md;
   const [categories, setCategories] = useState<Category[]>([]);
+  const [equipment, setEquipment] = useState<Equipment[]>([]);
 
   useEffect(() => {
     servicesApi.getCategories().then(setCategories).catch(() => {});
+    servicesApi.getEquipment().then(setEquipment).catch(() => {});
   }, []);
 
   const allServices = categories.flatMap(c =>
@@ -47,6 +49,7 @@ export const Step2Services: React.FC<Props> = ({ data, onChange }) => {
             price: service.standardPrice,
             quantity: 1,
             estimatedTime: service.estimatedTime,
+            hasEquipment: service.hasEquipment ?? false,
           },
         ],
       });
@@ -73,6 +76,14 @@ export const Step2Services: React.FC<Props> = ({ data, onChange }) => {
     });
   };
 
+  const updateEquipment = (serviceId: string, equipmentId: string | undefined) => {
+    onChange({
+      services: data.services.map(s =>
+        s.serviceId === serviceId ? { ...s, equipmentId } : s
+      ),
+    });
+  };
+
   const total = data.services.reduce((sum, s) => sum + s.price * s.quantity, 0);
   const totalTime = data.services.reduce((sum, s) => sum + s.estimatedTime * s.quantity, 0);
 
@@ -84,6 +95,8 @@ export const Step2Services: React.FC<Props> = ({ data, onChange }) => {
     })),
   }));
 
+  const equipmentOptions = equipment.map(e => ({ value: e.id, label: e.name }));
+
   const columns = [
     {
       title: 'Услуга',
@@ -93,6 +106,20 @@ export const Step2Services: React.FC<Props> = ({ data, onChange }) => {
         <div>
           <div style={{ fontWeight: 500 }}>{name}</div>
           <Tag style={{ fontSize: 11, marginTop: 2 }}>{row.categoryName}</Tag>
+          {row.hasEquipment && (
+            <Select
+              size="small"
+              style={{ width: '100%', marginTop: 6 }}
+              placeholder="Выберите Bi-Led модуль..."
+              value={row.equipmentId || undefined}
+              onChange={v => updateEquipment(row.serviceId, v)}
+              allowClear
+              onClear={() => updateEquipment(row.serviceId, undefined)}
+              options={equipmentOptions}
+              optionFilterProp="label"
+              showSearch
+            />
+          )}
         </div>
       ),
     },
@@ -192,6 +219,19 @@ export const Step2Services: React.FC<Props> = ({ data, onChange }) => {
                     onClick={() => removeService(row.serviceId)}
                   />
                 </div>
+                {row.hasEquipment && (
+                  <Select
+                    size="small"
+                    style={{ width: '100%', marginBottom: 8 }}
+                    placeholder="Выберите Bi-Led модуль..."
+                    value={row.equipmentId || undefined}
+                    onChange={v => updateEquipment(row.serviceId, v)}
+                    allowClear
+                    onClear={() => updateEquipment(row.serviceId, undefined)}
+                    options={equipmentOptions}
+                    showSearch
+                  />
+                )}
                 <div className={styles.mobileCardControls}>
                   <span className={styles.mobileCardLabel}>Кол-во:</span>
                   <InputNumber

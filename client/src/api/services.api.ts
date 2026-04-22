@@ -14,10 +14,10 @@ export const servicesApi = {
   deleteCategory: (id: string) =>
     http.delete(`/services/categories/${id}`),
 
-  createService: (data: { name: string; categoryId: string; standardPrice: number; estimatedTime: number }) =>
+  createService: (data: { name: string; categoryId: string; standardPrice: number; estimatedTime: number; hasEquipment?: boolean }) =>
     http.post('/services', data).then(r => r.data),
 
-  updateService: (id: string, data: Partial<{ name: string; categoryId: string; standardPrice: number; estimatedTime: number }>) =>
+  updateService: (id: string, data: Partial<{ name: string; categoryId: string; standardPrice: number; estimatedTime: number; hasEquipment: boolean }>) =>
     http.patch(`/services/${id}`, data).then(r => r.data),
 
   deleteService: (id: string) =>
@@ -41,7 +41,7 @@ export const servicesApi = {
   getAllServicemen: () =>
     http.get<{ data: Serviceman[] }>('/services/servicemen/all').then(r => r.data.data),
 
-  createServiceman: (data: { name: string; position?: string; role?: string; email?: string; password?: string; isReceptionist?: boolean; birthday?: string | null }) =>
+  createServiceman: (data: { name: string; position?: string; role?: string; email?: string; password?: string; isReceptionist?: boolean; birthday?: string | null; profitPercent?: number }) =>
     http.post<{ data: Serviceman }>('/services/servicemen', data).then(r => r.data.data),
 
   updateServiceman: (id: string, data: { name?: string; position?: string; role?: string; email?: string; password?: string; isReceptionist?: boolean; profitPercent?: number; birthday?: string | null }) =>

@@ -80,15 +80,18 @@ enum RecordStatus {
 }
 
 model RecordItem {
-  id             String  @id @default(cuid())
-  recordId       String
-  serviceId      String
-  price          Float
-  quantity       Int     @default(1)
-  netProfit      Float?
-  servicemanName String?
-  record         Record  @relation(fields: [recordId], references: [id], onDelete: Cascade)
-  service        Service @relation(fields: [serviceId], references: [id])
+  id              String     @id @default(cuid())
+  recordId        String
+  serviceId       String
+  price           Float
+  quantity        Int        @default(1)
+  netProfit       Float?
+  servicemanName  String?
+  servicemanSplit Json?
+  equipmentId     String?
+  record          Record     @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  service         Service    @relation(fields: [serviceId], references: [id])
+  equipment       Equipment? @relation(fields: [equipmentId], references: [id])
 }
 
 model Service {
@@ -98,6 +101,7 @@ model Service {
   standardPrice Float
   estimatedTime Int
   isActive      Boolean      @default(true)
+  hasEquipment  Boolean      @default(false)
   category      Category     @relation(fields: [categoryId], references: [id])
   recordItems   RecordItem[]
 }
@@ -138,6 +142,7 @@ model Equipment {
   retailPrice    Float?
   isActive       Boolean         @default(true)
   deals          DealEquipment[]
+  recordItems    RecordItem[]
 }
 
 model Serviceman {
@@ -152,6 +157,7 @@ model Serviceman {
   isReceptionist Boolean   @default(false)
   isDefault      Boolean   @default(false)
   profitPercent  Float     @default(0)
+  plainPassword  String?
   birthday       DateTime?
   createdAt      DateTime  @default(now())
 }
@@ -242,6 +248,31 @@ model CashTransaction {
 enum CapitalTransactionType {
   DEPOSIT
   WITHDRAWAL
+}
+
+enum SalaryAdjustmentType {
+  FINE
+  BONUS
+}
+
+model FounderSalary {
+  id        String   @id @default(cuid())
+  year      Int
+  month     Int
+  person    String
+  amount    Float
+  createdAt DateTime @default(now())
+}
+
+model SalaryAdjustment {
+  id             String                @id @default(cuid())
+  servicemanName String
+  type           SalaryAdjustmentType
+  amount         Float
+  reason         String
+  year           Int
+  month          Int
+  createdAt      DateTime              @default(now())
 }
 
 model CapitalTransaction {
