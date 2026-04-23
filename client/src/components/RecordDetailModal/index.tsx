@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal, Button, Descriptions, Tag, Divider, Table, message,
-  Popconfirm, Select, InputNumber, DatePicker, TimePicker, Space, Tooltip, Grid,
+  Popconfirm, Select, InputNumber, Space, Tooltip, Grid,
 } from 'antd';
 const { useBreakpoint } = Grid;
 import {
@@ -9,12 +9,12 @@ import {
   EditOutlined, DeleteOutlined, ReloadOutlined, CalendarOutlined,
   CarOutlined, StarOutlined,
 } from '@ant-design/icons';
-import dayjs from 'dayjs';
-import { Record as CrmRecord, Category, Serviceman } from '@/types';
+import { Record as CrmRecord, Category } from '@/types';
 import { SelectedService } from '@/components/RecordModal/types';
 import { formatPrice, formatDate, formatTime } from '@/utils/formatters';
 import { printWorkOrder, printCompletionAct, printServiceContract, printInvoice, printBlankCompletionAct, printLegalAct } from '@/utils/print';
 import { CloseRecordModal } from '../CloseRecordModal';
+import { RecordModal } from '../RecordModal';
 import { recordsApi } from '@/api/records.api';
 import { servicesApi } from '@/api/services.api';
 import { useAuthStore } from '@/store/authStore';
@@ -42,21 +42,14 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
   const isEmployee = user?.role === 'Сотрудник';
   const canDelete = user?.isMaster || user?.role === 'Создатель';
   const [closeModalOpen, setCloseModalOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [editingServices, setEditingServices] = useState(false);
   const [editItems, setEditItems] = useState<SelectedService[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [editEquipment, setEditEquipment] = useState<import('@/types').Equipment[]>([]);
-  const [rescheduleOpen, setRescheduleOpen] = useState(false);
-  const [rescheduleDate, setRescheduleDate] = useState<dayjs.Dayjs | null>(null);
-  const [rescheduleTime, setRescheduleTime] = useState<dayjs.Dayjs | null>(null);
-  const [reschedulePerson, setReschedulePerson] = useState('');
-  const [rescheduleReceptionist, setRescheduleReceptionist] = useState('');
-  const [servicemen, setServicemen] = useState<Serviceman[]>([]);
   const [saving, setSaving] = useState(false);
   const [printing, setPrinting] = useState(false);
   const [smsSending, setSmsSending] = useState<'CAR_READY' | 'REVIEW_REQUEST' | null>(null);
-  const timePickerRef = useRef<any>(null);
-  const timeCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchPrintData = async () => {
     const [settings, templates] = await Promise.all([
@@ -120,11 +113,6 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
   useEffect(() => {
     if (open && record) {
       setEditingServices(false);
-      setRescheduleOpen(false);
-      setRescheduleDate(dayjs(record.scheduledAt));
-      setRescheduleTime(dayjs(record.scheduledAt));
-      setReschedulePerson(record.serviceman);
-      setRescheduleReceptionist(record.receptionist || '');
     }
   }, [open, record?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -201,44 +189,6 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
     }
   };
 
-  // ─── Reschedule ───────────────────────────────────
-
-  const handleOpenReschedule = async () => {
-    if (servicemen.length === 0) {
-      const sm = await servicesApi.getServicemen().catch(() => []);
-      setServicemen(sm);
-    }
-    setRescheduleOpen(true);
-  };
-
-  const handleSaveReschedule = async () => {
-    if (!rescheduleDate || !rescheduleTime) {
-      message.warning('Укажите дату и время');
-      return;
-    }
-    const scheduledAt = rescheduleDate
-      .hour(rescheduleTime.hour())
-      .minute(rescheduleTime.minute())
-      .second(0)
-      .toISOString();
-    setSaving(true);
-    try {
-      await recordsApi.update(record.id, {
-        scheduledAt,
-        serviceman: reschedulePerson,
-        receptionist: rescheduleReceptionist,
-      });
-      message.success('Запись обновлена');
-      setRescheduleOpen(false);
-      onRefresh();
-      onClose();
-    } catch (e: unknown) {
-      message.error(e instanceof Error ? e.message : 'Ошибка');
-    } finally {
-      setSaving(false);
-    }
-  };
-
   // ─── Cancel / Restore ─────────────────────────────
 
   const handleCancel = async () => {
@@ -308,9 +258,6 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
       label: `${s.name} — ${formatPrice(s.standardPrice)}`,
     })),
   }));
-
-  const employees = servicemen.filter(s => !s.isReceptionist && !s.isDismissed);
-  const receptionists = servicemen.filter(s => s.isReceptionist && !s.isDismissed);
 
   const editEquipmentOptions = editEquipment.map(e => ({ value: e.id, label: e.name }));
 
@@ -432,7 +379,7 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
                 <div className={styles.footerMobileRow}>
                   <Button
                     icon={<CalendarOutlined />}
-                    onClick={handleOpenReschedule}
+                    onClick={() => setEditOpen(true)}
                     className={styles.footerMobileFlex}
                   >
                     Редактировать
@@ -568,7 +515,7 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
               <div className={styles.footerPrimary}>
                 {record.status === 'ACTIVE' && (
                   <>
-                    <Button icon={<CalendarOutlined />} onClick={handleOpenReschedule}>Редактировать</Button>
+                    <Button icon={<CalendarOutlined />} onClick={() => setEditOpen(true)}>Редактировать</Button>
                     <Popconfirm title="Отменить запись?" onConfirm={handleCancel} okText="Да" cancelText="Нет">
                       <Button danger icon={<CloseCircleOutlined />}>Отменить</Button>
                     </Popconfirm>
@@ -722,74 +669,12 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
         )}
       </Modal>
 
-      {/* Редактирование записи */}
-      <Modal
-        title="Редактировать запись"
-        open={rescheduleOpen}
-        onCancel={() => setRescheduleOpen(false)}
-        footer={[
-          <Button key="cancel" onClick={() => setRescheduleOpen(false)}>Отмена</Button>,
-          <Button key="save" type="primary" loading={saving} onClick={handleSaveReschedule}>
-            Сохранить
-          </Button>,
-        ]}
-        width={400}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '16px 0' }}>
-          <div>
-            <div style={{ marginBottom: 6, fontWeight: 500 }}>Дата</div>
-            <DatePicker
-              style={{ width: '100%' }}
-              value={rescheduleDate}
-              onChange={setRescheduleDate}
-              format="DD.MM.YYYY"
-            />
-          </div>
-          <div>
-            <div style={{ marginBottom: 6, fontWeight: 500 }}>Время</div>
-            <TimePicker
-              style={{ width: '100%' }}
-              ref={timePickerRef}
-              value={rescheduleTime}
-              onChange={t => {
-                setRescheduleTime(t);
-                if (timeCloseTimer.current) clearTimeout(timeCloseTimer.current);
-                timeCloseTimer.current = setTimeout(() => {
-                  timePickerRef.current?.blur();
-                  timeCloseTimer.current = null;
-                }, 600);
-              }}
-              format="HH:mm"
-              minuteStep={5}
-              needConfirm={false}
-              disabledTime={() => ({ disabledHours: () => [0, 1, 2, 3, 4, 5, 6, 7, 8, 20, 21, 22, 23] })}
-              hideDisabledOptions
-            />
-          </div>
-          <div>
-            <div style={{ marginBottom: 6, fontWeight: 500 }}>Сотрудник</div>
-            <Select
-              style={{ width: '100%' }}
-              value={reschedulePerson || undefined}
-              onChange={v => setReschedulePerson(v ?? '')}
-              placeholder="Выберите сотрудника"
-              allowClear
-              options={employees.map(s => ({ value: s.name, label: s.name }))}
-            />
-          </div>
-          <div>
-            <div style={{ marginBottom: 6, fontWeight: 500 }}>Мастер приёмщик</div>
-            <Select
-              style={{ width: '100%' }}
-              value={rescheduleReceptionist || undefined}
-              onChange={v => setRescheduleReceptionist(v ?? '')}
-              placeholder="Выберите мастера"
-              allowClear
-              options={receptionists.map(s => ({ value: s.name, label: s.name }))}
-            />
-          </div>
-        </div>
-      </Modal>
+      <RecordModal
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        onSuccess={() => { onRefresh(); onClose(); }}
+        editRecord={record ?? undefined}
+      />
 
       <CloseRecordModal
         record={record}

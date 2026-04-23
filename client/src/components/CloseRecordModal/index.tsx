@@ -228,9 +228,21 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
     }] : []),
   ];
 
+  const missingServiceman = hasEmployees
+    ? items.filter(i => !i.isProduct && !(i.split && i.split.length >= 2) && !i.servicemanName)
+    : [];
+
   const handleClose = async () => {
     const values = await form.validateFields().catch(() => null);
     if (!values) return;
+
+    if (missingServiceman.length > 0) {
+      notify.warning(
+        'Укажите сотрудника',
+        `Не указан сотрудник для: ${missingServiceman.map(i => i.serviceName).join(', ')}`,
+      );
+      return;
+    }
 
     setLoading(true);
     try {

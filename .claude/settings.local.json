@@ -79,7 +79,17 @@
       "Bash(DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/prime_crm\" npx prisma generate)",
       "Bash(pkill -f \"webpack\")",
       "Bash(taskkill *)",
-      "PowerShell(Stop-Process *)"
+      "PowerShell(Stop-Process *)",
+      "Bash(echo \"Server PID: $!\")",
+      "Bash(echo \"Client PID: $!\")",
+      "Bash(kill -9 8288)",
+      "Bash(kill -9 17656)",
+      "Bash(echo \"PID: $!\")",
+      "Bash(pkill -f \"ts-node-dev\")",
+      "Bash(tee /tmp/server4.log)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/prime_crm\" npx prisma migrate status)",
+      "Bash(echo \"server PID: $!\")",
+      "Bash(echo \"client PID: $!\")"
     ]
   }
 }

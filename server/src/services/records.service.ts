@@ -203,6 +203,62 @@ export const recordsService = {
     if (data.receptionist !== undefined) updateData.receptionist = data.receptionist;
     if (data.notes !== undefined) updateData.notes = data.notes;
 
+    // Legal entity fields
+    if (data.isLegalEntity !== undefined) updateData.isLegalEntity = data.isLegalEntity;
+    const legalFields = [
+      'legalCompanyName', 'legalAddress', 'legalActualAddress', 'legalPostalAddress',
+      'legalBankDetails', 'legalBic', 'legalUnp', 'legalOkpo', 'legalPhone', 'legalEmail',
+      'legalRepresentativePosition', 'legalRepresentativePositionGenitive',
+      'legalRepresentative', 'legalRepresentativeGenitive', 'legalBasis', 'legalVin', 'legalEndDate',
+    ] as const;
+    for (const field of legalFields) {
+      if (field in data) updateData[field] = (data as Record<string, unknown>)[field] ?? null;
+    }
+
+    // Car update
+    if (data.car) {
+      const car = data.car;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const existingCar = (record as any).car as { id: string; brandId: string; modelId: string; year: string };
+      if (car.brandId !== existingCar.brandId || car.modelId !== existingCar.modelId || car.year !== existingCar.year) {
+        let carRecord = await prisma.car.findFirst({
+          where: { clientId: record.clientId, brandId: car.brandId, modelId: car.modelId, year: car.year },
+        });
+        if (!carRecord) {
+          carRecord = await prisma.car.create({
+            data: {
+              clientId: record.clientId,
+              brand: car.brand,
+              brandId: car.brandId,
+              model: car.model,
+              modelId: car.modelId,
+              generation: car.generation,
+              generationId: car.generationId != null ? String(car.generationId) : undefined,
+              generationName: car.generationName,
+              year: car.year,
+              plateNumber: car.plateNumber,
+              mileage: car.mileage,
+            },
+          });
+        } else {
+          const carUp: { plateNumber?: string; mileage?: string } = {};
+          if (car.plateNumber) carUp.plateNumber = car.plateNumber;
+          if (car.mileage) carUp.mileage = car.mileage;
+          if (Object.keys(carUp).length > 0) {
+            await prisma.car.update({ where: { id: carRecord.id }, data: carUp });
+          }
+        }
+        updateData.carId = carRecord.id;
+      } else {
+        const carUp: { plateNumber?: string | null; mileage?: string | null } = {};
+        if (car.plateNumber !== undefined) carUp.plateNumber = car.plateNumber || null;
+        if (car.mileage !== undefined) carUp.mileage = car.mileage || null;
+        if (Object.keys(carUp).length > 0) {
+          await prisma.car.update({ where: { id: existingCar.id }, data: carUp });
+        }
+      }
+    }
+
     if (data.items) {
       await prisma.recordItem.deleteMany({ where: { recordId: id } });
       updateData.items = {

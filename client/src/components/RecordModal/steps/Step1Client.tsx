@@ -215,6 +215,7 @@ export const Step1Client: React.FC<Props> = ({ data, onChange }) => {
         <Col xs={24} sm={12}>
           <Form.Item label="Телефон" required>
             <AutoComplete
+              value={data.clientPhone}
               options={phoneOptions}
               onSelect={handleSelectClient}
               onSearch={handlePhoneSearch}
