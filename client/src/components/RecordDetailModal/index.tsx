@@ -66,6 +66,7 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
   };
 
   const handlePrintWorkOrder = async () => {
+    if (!record) return;
     setPrinting(true);
     try {
       const { settings, templates } = await fetchPrintData();
@@ -80,6 +81,7 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
   };
 
   const handlePrintAct = async () => {
+    if (!record) return;
     setPrinting(true);
     try {
       const { settings, templates } = await fetchPrintData();
@@ -115,7 +117,7 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
   };
 
   const handleTemplateModalPrint = () => {
-    if (!templateModal) return;
+    if (!templateModal || !record) return;
     const template = templateModal.templates.find(t => t.id === templateModal.selectedId);
     if (record.deal) printCompletionAct(record, templateModal.settings, template?.content);
     else printBlankCompletionAct(record, templateModal.settings, template?.content);
@@ -123,6 +125,7 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
   };
 
   const handlePrintContract = async () => {
+    if (!record) return;
     setPrinting(true);
     try {
       const { settings } = await fetchPrintData();
@@ -133,6 +136,7 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
   };
 
   const handlePrintInvoice = async () => {
+    if (!record) return;
     setPrinting(true);
     try {
       const { settings } = await fetchPrintData();
@@ -150,6 +154,7 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
   }, [open, record?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSavedClosed = async () => {
+    if (!record) return;
     try {
       const fresh = await recordsApi.getById(record.id);
       setLocalRecord(fresh);
@@ -723,7 +728,7 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
       />
 
       <CloseRecordModal
-        record={localRecord ?? record}
+        record={(localRecord ?? record)!}
         open={closeModalOpen}
         onClose={() => setCloseModalOpen(false)}
         onSuccess={() => { onRefresh(); onClose(); }}

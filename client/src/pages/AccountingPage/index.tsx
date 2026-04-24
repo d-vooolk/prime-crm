@@ -878,7 +878,7 @@ export const AccountingPage: React.FC = () => {
             <DatePicker style={{ width: '100%' }} format="DD.MM.YYYY" />
           </Form.Item>
           <Form.Item label="Сумма (р.)" name="amount" rules={[{ required: true, message: 'Укажите сумму' }]}>
-            <InputNumber min={0} style={{ width: '100%' }} precision={2} parser={(v) => (v ?? '').replace(/,/g, '.')} />
+            <InputNumber min={0} style={{ width: '100%' }} precision={2} parser={(v) => parseFloat((v ?? '').replace(/,/g, '.')) || 0} />
           </Form.Item>
           {editingTx && (editingTx.type === 'EXPENSE' || editingTx.type === 'MANUAL_INCOME') && (
             <Form.Item label={editingTx.type === 'EXPENSE' ? 'Цель изъятия' : 'Источник'} name="description">
@@ -933,7 +933,7 @@ export const AccountingPage: React.FC = () => {
             />
           </Form.Item>
           <Form.Item label="Сумма (р.)" name="amount" rules={[{ required: true, message: 'Укажите сумму' }]}>
-            <InputNumber min={0} style={{ width: '100%' }} precision={2} parser={(v) => (v ?? '').replace(/,/g, '.')} />
+            <InputNumber min={0} style={{ width: '100%' }} precision={2} parser={(v) => parseFloat((v ?? '').replace(/,/g, '.')) || 0} />
           </Form.Item>
           <Form.Item label="Изыматель" name="person" rules={[{ required: true, message: 'Выберите изымателя' }]}>
             <Select
@@ -978,7 +978,7 @@ export const AccountingPage: React.FC = () => {
             <Input placeholder="Например: перевод от учредителя" />
           </Form.Item>
           <Form.Item label="Сумма (р.)" name="amount" rules={[{ required: true, message: 'Укажите сумму' }]}>
-            <InputNumber min={0} style={{ width: '100%' }} precision={2} parser={(v) => (v ?? '').replace(/,/g, '.')} />
+            <InputNumber min={0} style={{ width: '100%' }} precision={2} parser={(v) => parseFloat((v ?? '').replace(/,/g, '.')) || 0} />
           </Form.Item>
           <Form.Item label="Дебетор" name="person" rules={[{ required: true, message: 'Выберите дебетора' }]}>
             <Select
@@ -1005,7 +1005,7 @@ export const AccountingPage: React.FC = () => {
             <DatePicker style={{ width: '100%' }} format="DD.MM.YYYY" />
           </Form.Item>
           <Form.Item label="Сумма" name="amount" rules={[{ required: true, message: 'Укажите сумму' }]}>
-            <InputNumber min={0} style={{ width: '100%' }} precision={2} parser={(v) => (v ?? '').replace(/,/g, '.')} />
+            <InputNumber min={0} style={{ width: '100%' }} precision={2} parser={(v) => parseFloat((v ?? '').replace(/,/g, '.')) || 0} />
           </Form.Item>
           <Form.Item label="Валюта" name="currency" rules={[{ required: true }]}>
             <Select options={[{ value: 'BYN', label: 'BYN (рубли)' }, { value: 'USD', label: 'USD (доллары)' }]} />
@@ -1028,7 +1028,7 @@ export const AccountingPage: React.FC = () => {
             <DatePicker style={{ width: '100%' }} format="DD.MM.YYYY" />
           </Form.Item>
           <Form.Item label="Сумма" name="amount" rules={[{ required: true, message: 'Укажите сумму' }]}>
-            <InputNumber min={0} style={{ width: '100%' }} precision={2} parser={(v) => (v ?? '').replace(/,/g, '.')} />
+            <InputNumber min={0} style={{ width: '100%' }} precision={2} parser={(v) => parseFloat((v ?? '').replace(/,/g, '.')) || 0} />
           </Form.Item>
           <Form.Item label="Валюта" name="currency" rules={[{ required: true }]}>
             <Select options={[{ value: 'BYN', label: 'BYN (рубли)' }, { value: 'USD', label: 'USD (доллары)' }]} />
@@ -1061,7 +1061,7 @@ export const AccountingPage: React.FC = () => {
             <Input placeholder="Опишите причину штрафа" />
           </Form.Item>
           <Form.Item label="Сумма (р.)" name="amount" rules={[{ required: true, message: 'Укажите сумму' }]}>
-            <InputNumber min={0.01} style={{ width: '100%' }} precision={2} parser={(v) => (v ?? '').replace(/,/g, '.')} />
+            <InputNumber min={0.01} style={{ width: '100%' }} precision={2} parser={(v) => parseFloat((v ?? '').replace(/,/g, '.')) || 0} />
           </Form.Item>
         </Form>
       </Modal>
@@ -1081,7 +1081,7 @@ export const AccountingPage: React.FC = () => {
             <Input placeholder="Опишите причину премии" />
           </Form.Item>
           <Form.Item label="Сумма (р.)" name="amount" rules={[{ required: true, message: 'Укажите сумму' }]}>
-            <InputNumber min={0.01} style={{ width: '100%' }} precision={2} parser={(v) => (v ?? '').replace(/,/g, '.')} />
+            <InputNumber min={0.01} style={{ width: '100%' }} precision={2} parser={(v) => parseFloat((v ?? '').replace(/,/g, '.')) || 0} />
           </Form.Item>
         </Form>
       </Modal>

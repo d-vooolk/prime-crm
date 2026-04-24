@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import dayjs from 'dayjs';
 import cn from 'classnames';
-import { MessageOutlined, BellOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { Record as CrmRecord } from '@/types';
 import { formatPrice } from '@/utils/formatters';
 import { useAuthStore } from '@/store/authStore';

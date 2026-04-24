@@ -75,6 +75,7 @@ export interface Deal {
   finalPrice: number;
   defects?: string;
   warranty?: string;
+  priceIncreaseReason?: string;
   isPaidByBankTransfer: boolean;
   closedAt: string;
   salaryDate?: string | null;

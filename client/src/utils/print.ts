@@ -578,9 +578,7 @@ export function printServiceContract(record: Record, settings?: CompanySettings)
 export function printInvoice(record: Record, settings?: CompanySettings): void {
   const date = formatDate(record.scheduledAt);
   const docNum = record.documentNumber || record.id.slice(-8).toUpperCase();
-  const companyName = settings?.name || '—';
   const directorName = settings?.directorName || '';
-  const customerName = record.legalCompanyName || record.client.name;
   const repPosition = record.legalRepresentativePosition || '';
   const repName = record.legalRepresentative || '';
   const total = record.deal
@@ -661,9 +659,7 @@ export function printInvoice(record: Record, settings?: CompanySettings): void {
 export function printLegalAct(record: Record, settings?: CompanySettings): void {
   const date = record.deal ? formatDate(record.deal.closedAt) : formatDate(record.scheduledAt);
   const docNum = record.documentNumber || record.id.slice(-8).toUpperCase();
-  const companyName = settings?.name || '—';
   const directorName = settings?.directorName || '';
-  const customerName = record.legalCompanyName || record.client.name;
   const repPosition = record.legalRepresentativePosition || '';
   const repName = record.legalRepresentative || '';
   const total = record.deal
