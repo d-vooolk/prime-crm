@@ -195,7 +195,6 @@ export const recordsService = {
 
   async update(id: string, data: Partial<CreateRecordDto>) {
     const record = await recordsService.findById(id);
-    if (record.status === 'CLOSED') throw new AppError('Закрытую сделку нельзя редактировать', 400);
 
     const updateData: Record<string, unknown> = {};
     if (data.scheduledAt) updateData.scheduledAt = new Date(data.scheduledAt);
@@ -276,12 +275,60 @@ export const recordsService = {
       };
     }
 
-    return prisma.record.update({ where: { id }, data: updateData, include: RECORD_INCLUDE });
+    const updated = await prisma.record.update({ where: { id }, data: updateData, include: RECORD_INCLUDE });
+
+    if (record.status === 'CLOSED' && data.items) {
+      for (const item of updated.items) {
+        const svc = item.service as unknown as { hasEquipment: boolean; isProduct: boolean };
+        if (svc.isProduct) {
+          await prisma.recordItem.update({ where: { id: item.id }, data: { netProfit: 0, servicemanName: null } });
+        } else {
+          const retailPrice = svc.hasEquipment && item.equipment
+            ? ((item.equipment as unknown as { retailPrice?: number }).retailPrice ?? 0)
+            : 0;
+          await prisma.recordItem.update({
+            where: { id: item.id },
+            data: { netProfit: item.price * item.quantity - retailPrice },
+          });
+        }
+      }
+
+      const newFinalPrice = data.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+      await prisma.deal.update({ where: { recordId: id }, data: { finalPrice: newFinalPrice } });
+
+      await prisma.cashTransaction.updateMany({
+        where: { recordId: id, type: { in: ['INCOME', 'INCOME_RS'] } },
+        data: { amount: newFinalPrice },
+      });
+
+      return recordsService.findById(id);
+    }
+
+    return updated;
   },
 
   async close(id: string, data: CloseDealDto) {
     const record = await recordsService.findById(id);
-    if (record.status === 'CLOSED') throw new AppError('Сделка уже закрыта', 400);
+
+    const { finalPrice, defects, warranty, isPaidByBankTransfer = false } = data;
+
+    if (record.status === 'CLOSED') {
+      await prisma.deal.update({
+        where: { recordId: id },
+        data: { finalPrice, defects, warranty, isPaidByBankTransfer },
+      });
+      const existingTx = await prisma.cashTransaction.findFirst({
+        where: { recordId: id, type: { in: ['INCOME', 'INCOME_RS'] } },
+      });
+      if (existingTx) {
+        await prisma.cashTransaction.update({
+          where: { id: existingTx.id },
+          data: { amount: finalPrice, type: isPaidByBankTransfer ? 'INCOME_RS' : 'INCOME' },
+        });
+      }
+      return recordsService.findById(id);
+    }
 
     // Validate: all hasEquipment services must have equipment selected
     const missingEquipment = record.items.filter(
@@ -291,8 +338,6 @@ export const recordsService = {
       const names = missingEquipment.map(i => i.service.name).join(', ');
       throw new AppError(`Укажите оборудование для услуг: ${names}`, 400);
     }
-
-    const { finalPrice, defects, warranty, isPaidByBankTransfer = false } = data;
 
     // Calculate netProfit per item automatically; products contribute 0 to salary
     for (const item of record.items) {

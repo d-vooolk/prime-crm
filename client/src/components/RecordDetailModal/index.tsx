@@ -41,6 +41,7 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
   const notify = useNotify();
   const isEmployee = user?.role === 'Сотрудник';
   const canDelete = user?.isMaster || user?.role === 'Создатель';
+  const [localRecord, setLocalRecord] = useState(record);
   const [closeModalOpen, setCloseModalOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editingServices, setEditingServices] = useState(false);
@@ -113,8 +114,19 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
   useEffect(() => {
     if (open && record) {
       setEditingServices(false);
+      setLocalRecord(record);
     }
   }, [open, record?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleSavedClosed = async () => {
+    try {
+      const fresh = await recordsApi.getById(record.id);
+      setLocalRecord(fresh);
+      setCloseModalOpen(true);
+    } catch {
+      message.error('Не удалось обновить данные записи');
+    }
+  };
 
   if (!record) return null;
 
@@ -373,33 +385,33 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
         footer={isMobile ? (
           // ─── Mobile footer ──────────────────────────
           <div className={styles.footerMobile}>
-            {record.status === 'ACTIVE' && !isEmployee && (
-              <>
-                {/* Row 1: Редактировать + Отменить */}
-                <div className={styles.footerMobileRow}>
-                  <Button
-                    icon={<CalendarOutlined />}
-                    onClick={() => setEditOpen(true)}
-                    className={styles.footerMobileFlex}
-                  >
-                    Редактировать
-                  </Button>
+            {(record.status === 'ACTIVE' || record.status === 'CLOSED') && !isEmployee && (
+              <div className={styles.footerMobileRow}>
+                <Button
+                  icon={<CalendarOutlined />}
+                  onClick={() => setEditOpen(true)}
+                  className={styles.footerMobileFlex}
+                >
+                  Редактировать
+                </Button>
+                {record.status === 'ACTIVE' && (
                   <Popconfirm title="Отменить запись?" onConfirm={handleCancel} okText="Да" cancelText="Нет">
                     <Button danger icon={<CloseCircleOutlined />} className={styles.footerMobileFlex}>
                       Отменить
                     </Button>
                   </Popconfirm>
-                </div>
-                {/* Row 2: Закрыть сделку */}
-                <Button
-                  type="primary"
-                  icon={<CheckCircleOutlined />}
-                  block
-                  onClick={handleOpenCloseModal}
-                >
-                  Закрыть сделку
-                </Button>
-              </>
+                )}
+              </div>
+            )}
+            {record.status === 'ACTIVE' && !isEmployee && (
+              <Button
+                type="primary"
+                icon={<CheckCircleOutlined />}
+                block
+                onClick={handleOpenCloseModal}
+              >
+                Закрыть сделку
+              </Button>
             )}
             {record.status === 'CANCELLED' && !isEmployee && (
               <Popconfirm title="Восстановить запись?" onConfirm={handleRestore} okText="Да" cancelText="Нет">
@@ -513,9 +525,11 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
             )}
             {!isEmployee && (
               <div className={styles.footerPrimary}>
+                {(record.status === 'ACTIVE' || record.status === 'CLOSED') && (
+                  <Button icon={<CalendarOutlined />} onClick={() => setEditOpen(true)}>Редактировать</Button>
+                )}
                 {record.status === 'ACTIVE' && (
                   <>
-                    <Button icon={<CalendarOutlined />} onClick={() => setEditOpen(true)}>Редактировать</Button>
                     <Popconfirm title="Отменить запись?" onConfirm={handleCancel} okText="Да" cancelText="Нет">
                       <Button danger icon={<CloseCircleOutlined />}>Отменить</Button>
                     </Popconfirm>
@@ -674,10 +688,11 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
         onClose={() => setEditOpen(false)}
         onSuccess={() => { onRefresh(); onClose(); }}
         editRecord={record ?? undefined}
+        onSavedClosed={record?.status === 'CLOSED' ? handleSavedClosed : undefined}
       />
 
       <CloseRecordModal
-        record={record}
+        record={localRecord ?? record}
         open={closeModalOpen}
         onClose={() => setCloseModalOpen(false)}
         onSuccess={() => { onRefresh(); onClose(); }}

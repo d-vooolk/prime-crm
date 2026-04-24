@@ -19,6 +19,7 @@ interface Props {
   onSuccess: () => void;
   initialDate?: string;
   editRecord?: CrmRecord;
+  onSavedClosed?: () => void;
 }
 
 function recordToFormData(record: CrmRecord): RecordFormData {
@@ -78,7 +79,7 @@ const STEPS = [
   { title: 'Итог' },
 ];
 
-export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initialDate, editRecord }) => {
+export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initialDate, editRecord, onSavedClosed }) => {
   const screens = useBreakpoint();
   const isMobile = !screens.md;
   const notify = useNotify();
@@ -193,6 +194,11 @@ export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initial
     try {
       if (editRecord) {
         await recordsApi.update(editRecord.id, buildPayload(editRecord.clientId));
+        if (editRecord.status === 'CLOSED' && onSavedClosed) {
+          handleClose();
+          onSavedClosed();
+          return;
+        }
         notify.success('Запись обновлена');
       } else {
         let clientId = data.clientId;

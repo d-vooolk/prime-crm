@@ -4,13 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="45f6dddb-f82f-43d5-b121-b81757ed27dc" name="Changes" comment="workspace">
+    <list default="true" id="45f6dddb-f82f-43d5-b121-b81757ed27dc" name="Changes" comment="изменил страницу редактирования записи, добавил обязательность сотрудника для закрытия сделки">
       <change beforePath="$PROJECT_DIR$/.claude/settings.local.json" beforeDir="false" afterPath="$PROJECT_DIR$/.claude/settings.local.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/components/CloseRecordModal/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/CloseRecordModal/index.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/components/RecordDetailModal/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/RecordDetailModal/index.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/components/RecordModal/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/RecordModal/index.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/components/RecordModal/steps/Step1Client.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/RecordModal/steps/Step1Client.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/utils/print.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/utils/print.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/server/src/services/records.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/services/records.service.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -97,7 +97,9 @@
       <workItem from="1776773986054" duration="15773000" />
       <workItem from="1776873325142" duration="10319000" />
       <workItem from="1776884163729" duration="630000" />
-      <workItem from="1776933228574" duration="4056000" />
+      <workItem from="1776933228574" duration="4785000" />
+      <workItem from="1776970076527" duration="427000" />
+      <workItem from="1777067997894" duration="2909000" />
     </task>
     <task id="LOCAL-00001" summary="init new version of product">
       <option name="closed" value="true" />
@@ -179,7 +181,15 @@
       <option name="project" value="LOCAL" />
       <updated>1776883755281</updated>
     </task>
-    <option name="localTasksCounter" value="11" />
+    <task id="LOCAL-00011" summary="изменил страницу редактирования записи, добавил обязательность сотрудника для закрытия сделки">
+      <option name="closed" value="true" />
+      <created>1776937441840</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1776937441841</updated>
+    </task>
+    <option name="localTasksCounter" value="12" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -203,6 +213,7 @@
     <MESSAGE value="fix mobile version" />
     <MESSAGE value="fix bugs and add new features" />
     <MESSAGE value="workspace" />
-    <option name="LAST_COMMIT_MESSAGE" value="workspace" />
+    <MESSAGE value="изменил страницу редактирования записи, добавил обязательность сотрудника для закрытия сделки" />
+    <option name="LAST_COMMIT_MESSAGE" value="изменил страницу редактирования записи, добавил обязательность сотрудника для закрытия сделки" />
   </component>
 </project>

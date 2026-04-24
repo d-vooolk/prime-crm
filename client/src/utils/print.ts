@@ -298,6 +298,26 @@ function buildCompletionActHtml(
       </div>
     </div>
 
+    <h2>Транспортное средство (ТС)</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Марка, модель</th>
+          <th>Гос. рег. знак</th>
+          <th>Год выпуска</th>
+          <th>Пробег</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>${record.car.brand} ${record.car.model}</td>
+          <td>${record.car.plateNumber || '—'}</td>
+          <td>${record.car.year}</td>
+          <td>${record.car.mileage || '—'}</td>
+        </tr>
+      </tbody>
+    </table>
+
     <div style="margin:10px 0 4px;font-weight:700;font-size:12px">Перечень работ, которые Заказчик просил произвести:</div>
     <table>
       <thead>

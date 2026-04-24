@@ -89,7 +89,8 @@
       "Bash(tee /tmp/server4.log)",
       "Bash(DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/prime_crm\" npx prisma migrate status)",
       "Bash(echo \"server PID: $!\")",
-      "Bash(echo \"client PID: $!\")"
+      "Bash(echo \"client PID: $!\")",
+      "Bash(npm start *)"
     ]
   }
 }

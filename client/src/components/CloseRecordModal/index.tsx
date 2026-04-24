@@ -90,7 +90,15 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
         };
       }));
 
-      form.resetFields();
+      if (record.deal) {
+        form.setFieldsValue({
+          defects: record.deal.defects || '',
+          warranty: record.deal.warranty || '',
+          isPaidByBankTransfer: record.deal.isPaidByBankTransfer || false,
+        });
+      } else {
+        form.resetFields();
+      }
     }
   }, [open, record, form]);
 
