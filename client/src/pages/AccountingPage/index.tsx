@@ -92,7 +92,10 @@ export const AccountingPage: React.FC = () => {
   const [capitalBalance, setCapitalBalance] = useState({ byn: 0, usd: 0 });
 
   const [employees, setEmployees] = useState<Serviceman[]>([]);
-  const [salaryMonth, setSalaryMonth] = useState<Dayjs>(dayjs());
+  const [salaryMonth, setSalaryMonth] = useState<Dayjs>(() => {
+    const today = dayjs();
+    return today.date() >= 25 ? today.add(1, 'month').startOf('month') : today.startOf('month');
+  });
   const [salaryEmployee, setSalaryEmployee] = useState<string>('');
   const [salaryData, setSalaryData] = useState<SalaryData | null>(null);
   const [salaryLoading, setSalaryLoading] = useState(false);
@@ -517,6 +520,12 @@ export const AccountingPage: React.FC = () => {
 
   const isSotrudnik = user?.role === 'Сотрудник';
 
+  const effectiveCurrentMonth = (() => {
+    const today = dayjs();
+    return today.date() >= 25 ? today.add(1, 'month').startOf('month') : today.startOf('month');
+  })();
+  const effectivePrevMonth = effectiveCurrentMonth.subtract(1, 'month');
+
   const canSeeClientName = user?.isMaster || MANAGER_ROLES.includes(user?.role || '');
 
   const salaryColumns = [
@@ -612,9 +621,21 @@ export const AccountingPage: React.FC = () => {
             />
           )}
           {isSotrudnik ? (
-            <span style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>
-              {salaryMonth.format('MMMM YYYY')}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Button
+                size="small"
+                disabled={!salaryMonth.isAfter(effectivePrevMonth, 'month')}
+                onClick={() => setSalaryMonth(prev => prev.subtract(1, 'month'))}
+              >←</Button>
+              <span style={{ fontSize: 14, minWidth: 110, textAlign: 'center' }}>
+                {salaryMonth.format('MMMM YYYY')}
+              </span>
+              <Button
+                size="small"
+                disabled={!salaryMonth.isBefore(effectiveCurrentMonth, 'month')}
+                onClick={() => setSalaryMonth(prev => prev.add(1, 'month'))}
+              >→</Button>
+            </div>
           ) : (
             <DatePicker
               picker="month"

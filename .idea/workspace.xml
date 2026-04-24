@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="45f6dddb-f82f-43d5-b121-b81757ed27dc" name="Changes" comment="Добавил возможность редактирования закрытой сделки&#10;Добавил таблицу с информацией о ТС в АКТ для физ лиц">
+    <list default="true" id="45f6dddb-f82f-43d5-b121-b81757ed27dc" name="Changes" comment="Исправил баг с неверным выбором акта выполненных работ для разных категорий">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -93,7 +93,7 @@
       <workItem from="1776884163729" duration="630000" />
       <workItem from="1776933228574" duration="4785000" />
       <workItem from="1776970076527" duration="427000" />
-      <workItem from="1777067997894" duration="3947000" />
+      <workItem from="1777067997894" duration="4670000" />
     </task>
     <task id="LOCAL-00001" summary="init new version of product">
       <option name="closed" value="true" />
@@ -191,7 +191,15 @@
       <option name="project" value="LOCAL" />
       <updated>1777071250811</updated>
     </task>
-    <option name="localTasksCounter" value="13" />
+    <task id="LOCAL-00013" summary="Исправил баг с неверным выбором акта выполненных работ для разных категорий">
+      <option name="closed" value="true" />
+      <created>1777072344379</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1777072344379</updated>
+    </task>
+    <option name="localTasksCounter" value="14" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -217,6 +225,7 @@
     <MESSAGE value="workspace" />
     <MESSAGE value="изменил страницу редактирования записи, добавил обязательность сотрудника для закрытия сделки" />
     <MESSAGE value="Добавил возможность редактирования закрытой сделки&#10;Добавил таблицу с информацией о ТС в АКТ для физ лиц" />
-    <option name="LAST_COMMIT_MESSAGE" value="Добавил возможность редактирования закрытой сделки&#10;Добавил таблицу с информацией о ТС в АКТ для физ лиц" />
+    <MESSAGE value="Исправил баг с неверным выбором акта выполненных работ для разных категорий" />
+    <option name="LAST_COMMIT_MESSAGE" value="Исправил баг с неверным выбором акта выполненных работ для разных категорий" />
   </component>
 </project>
