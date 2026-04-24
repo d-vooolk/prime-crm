@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Modal, Button, Descriptions, Tag, Divider, Table, message,
-  Popconfirm, Select, InputNumber, Space, Tooltip, Grid,
+  Popconfirm, Select, InputNumber, Space, Tooltip, Grid, Radio,
 } from 'antd';
 const { useBreakpoint } = Grid;
 import {
@@ -9,7 +9,7 @@ import {
   EditOutlined, DeleteOutlined, ReloadOutlined, CalendarOutlined,
   CarOutlined, StarOutlined,
 } from '@ant-design/icons';
-import { Record as CrmRecord, Category } from '@/types';
+import { Record as CrmRecord, Category, DocumentTemplate, CompanySettings } from '@/types';
 import { SelectedService } from '@/components/RecordModal/types';
 import { formatPrice, formatDate, formatTime } from '@/utils/formatters';
 import { printWorkOrder, printCompletionAct, printServiceContract, printInvoice, printBlankCompletionAct, printLegalAct } from '@/utils/print';
@@ -50,6 +50,11 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
   const [editEquipment, setEditEquipment] = useState<import('@/types').Equipment[]>([]);
   const [saving, setSaving] = useState(false);
   const [printing, setPrinting] = useState(false);
+  const [templateModal, setTemplateModal] = useState<{
+    templates: DocumentTemplate[];
+    settings: CompanySettings | undefined;
+    selectedId: string | null;
+  } | null>(null);
   const [smsSending, setSmsSending] = useState<'CAR_READY' | 'REVIEW_REQUEST' | null>(null);
 
   const fetchPrintData = async () => {
@@ -80,15 +85,41 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
       const { settings, templates } = await fetchPrintData();
       if (record.isLegalEntity) {
         printLegalAct(record, settings);
-      } else {
-        const actTemplate = templates.find(t => t.type === 'completion_act' && t.isDefault)
-          || templates.find(t => t.type === 'completion_act');
-        if (record.deal) printCompletionAct(record, settings, actTemplate?.content);
-        else printBlankCompletionAct(record, settings, actTemplate?.content);
+        return;
       }
+
+      const actTemplates = templates.filter(t => t.type === 'completion_act');
+      const categoryIds = [...new Set(
+        record.items.map(i => i.service?.categoryId).filter((id): id is string => !!id)
+      )];
+
+      if (categoryIds.length > 1 && actTemplates.length > 1) {
+        const defaultTemplate = actTemplates.find(t => !t.categoryId && t.isDefault)
+          ?? actTemplates.find(t => t.isDefault)
+          ?? actTemplates[0];
+        setTemplateModal({ templates: actTemplates, settings, selectedId: defaultTemplate?.id ?? null });
+        return;
+      }
+
+      const categoryId = categoryIds[0] ?? null;
+      const actTemplate = (categoryId ? actTemplates.find(t => t.categoryId === categoryId) : null)
+        ?? actTemplates.find(t => !t.categoryId && t.isDefault)
+        ?? actTemplates.find(t => t.isDefault)
+        ?? actTemplates[0];
+
+      if (record.deal) printCompletionAct(record, settings, actTemplate?.content);
+      else printBlankCompletionAct(record, settings, actTemplate?.content);
     } finally {
       setPrinting(false);
     }
+  };
+
+  const handleTemplateModalPrint = () => {
+    if (!templateModal) return;
+    const template = templateModal.templates.find(t => t.id === templateModal.selectedId);
+    if (record.deal) printCompletionAct(record, templateModal.settings, template?.content);
+    else printBlankCompletionAct(record, templateModal.settings, template?.content);
+    setTemplateModal(null);
   };
 
   const handlePrintContract = async () => {
@@ -697,6 +728,40 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
         onClose={() => setCloseModalOpen(false)}
         onSuccess={() => { onRefresh(); onClose(); }}
       />
+
+      <Modal
+        open={!!templateModal}
+        onCancel={() => setTemplateModal(null)}
+        title="Выбор шаблона акта"
+        footer={[
+          <Button key="cancel" onClick={() => setTemplateModal(null)}>Отмена</Button>,
+          <Button key="print" type="primary" icon={<PrinterOutlined />} onClick={handleTemplateModalPrint}>
+            Печатать
+          </Button>,
+        ]}
+        width={480}
+      >
+        <p style={{ marginBottom: 16, color: 'var(--color-text-secondary)', fontSize: 13 }}>
+          В записи услуги из разных категорий. Выберите шаблон акта для печати:
+        </p>
+        <Radio.Group
+          value={templateModal?.selectedId}
+          onChange={e => setTemplateModal(prev => prev ? { ...prev, selectedId: e.target.value } : prev)}
+          style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
+        >
+          {templateModal?.templates.map(t => (
+            <Radio key={t.id} value={t.id}>
+              {t.name}
+              {t.isDefault && !t.categoryId && (
+                <Tag color="blue" style={{ marginLeft: 8, fontSize: 11 }}>по умолчанию</Tag>
+              )}
+              {t.category && (
+                <Tag style={{ marginLeft: 8, fontSize: 11 }}>{t.category.name}</Tag>
+              )}
+            </Radio>
+          ))}
+        </Radio.Group>
+      </Modal>
     </>
   );
 };
