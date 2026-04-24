@@ -297,7 +297,7 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
         title={splitItem ? `Разделить: ${splitItem.serviceName}` : 'Разделить между сотрудниками'}
         width={480}
         footer={null}
-        destroyOnClose
+        destroyOnHidden
       >
         {splitItem && (
           <div style={{ marginBottom: 12, color: 'var(--color-text-secondary)', fontSize: 13 }}>
@@ -356,7 +356,7 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
         title="Закрыть сделку"
         width={hasEmployees ? 820 : 620}
         footer={null}
-        destroyOnClose
+        destroyOnHidden
         className={styles.modal}
         classNames={{
           wrapper: styles.modalWrap,
