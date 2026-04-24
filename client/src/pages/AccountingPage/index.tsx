@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Tabs, Table, Button, Modal, Form, Input, InputNumber, Select,
-  DatePicker, message, Statistic, Card, Tag, Empty, Popconfirm, Space,
+  DatePicker, message, Statistic, Card, Tag, Empty, Popconfirm, Space, Tooltip,
 } from 'antd';
 import {
-  PlusOutlined, MinusOutlined, EditOutlined, DeleteOutlined,
+  PlusOutlined, MinusOutlined, EditOutlined, DeleteOutlined, RetweetOutlined,
 } from '@ant-design/icons';
+import { recordsApi } from '@/api/records.api';
 import dayjs, { Dayjs } from 'dayjs';
 import { CashTransaction, CapitalTransaction, Serviceman } from '@/types';
 import { accountingApi, SalaryData, SalaryRecord, SalaryAdjustment, FounderSalaryRecord } from '@/api/accounting.api';
@@ -123,6 +124,9 @@ export const AccountingPage: React.FC = () => {
   const [editForm] = Form.useForm();
   const [editingTx, setEditingTx] = useState<CashTransaction | null>(null);
   const [editOpen, setEditOpen] = useState(false);
+
+  const [transferModal, setTransferModal] = useState<{ recordId: string; salaryDate: Dayjs | null } | null>(null);
+  const [transferSaving, setTransferSaving] = useState(false);
 
   const defaultPerson = servicemen.find(s => s.isDefault)?.name || '';
   const managerServicemen = servicemen.filter(s => !s.isDismissed && MANAGER_ROLES.includes(s.role || ''));
@@ -528,6 +532,24 @@ export const AccountingPage: React.FC = () => {
 
   const canSeeClientName = user?.isMaster || MANAGER_ROLES.includes(user?.role || '');
 
+  const handleTransferSalary = async () => {
+    if (!transferModal) return;
+    setTransferSaving(true);
+    try {
+      await recordsApi.setSalaryDate(
+        transferModal.recordId,
+        transferModal.salaryDate ? transferModal.salaryDate.toISOString() : null,
+      );
+      message.success('Период перенесён');
+      setTransferModal(null);
+      loadSalary();
+    } catch {
+      message.error('Не удалось перенести');
+    } finally {
+      setTransferSaving(false);
+    }
+  };
+
   const salaryColumns = [
     {
       title: canSeeClientName ? 'Клиент / Авто' : 'Авто',
@@ -561,6 +583,24 @@ export const AccountingPage: React.FC = () => {
       width: 120,
       render: (v: number) => <strong style={{ color: 'var(--color-success)' }}>{formatPrice(v)}</strong>,
     },
+    ...(canSeeCashflow ? [{
+      title: '',
+      key: 'transfer',
+      width: 40,
+      render: (_: unknown, row: SalaryRecord) => (
+        <Tooltip title={row.salaryDate ? 'Период перенесён — изменить' : 'Перенести на другой период'}>
+          <Button
+            type="text"
+            size="small"
+            icon={<RetweetOutlined style={{ color: row.salaryDate ? 'var(--color-primary)' : undefined }} />}
+            onClick={() => setTransferModal({
+              recordId: row.recordId,
+              salaryDate: row.salaryDate ? dayjs(row.salaryDate) : null,
+            })}
+          />
+        </Tooltip>
+      ),
+    }] : []),
   ];
 
   const periodLabel = salaryData
@@ -582,7 +622,7 @@ export const AccountingPage: React.FC = () => {
         month: salaryMonth.month() + 1,
       });
       form.resetFields();
-      type === 'FINE' ? setFineOpen(false) : setBonusOpen(false);
+      if (type === 'FINE') setFineOpen(false); else setBonusOpen(false);
       loadSalary();
     } catch { /* ignore */ } finally { setAdjSaving(false); }
   };
@@ -831,7 +871,7 @@ export const AccountingPage: React.FC = () => {
         okText="Сохранить"
         okButtonProps={{ loading: saving }}
         cancelText="Отмена"
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={editForm} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item label="Дата" name="date" rules={[{ required: true }]}>
@@ -865,7 +905,7 @@ export const AccountingPage: React.FC = () => {
         okText="Добавить"
         okButtonProps={{ loading: saving, danger: true }}
         cancelText="Отмена"
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={expenseForm} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item label="Дата" name="date" rules={[{ required: true }]}>
@@ -928,7 +968,7 @@ export const AccountingPage: React.FC = () => {
         okText="Добавить"
         okButtonProps={{ loading: saving }}
         cancelText="Отмена"
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={manualIncomeForm} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item label="Дата" name="date" rules={[{ required: true }]}>
@@ -958,7 +998,7 @@ export const AccountingPage: React.FC = () => {
         okText="Внести"
         okButtonProps={{ loading: saving }}
         cancelText="Отмена"
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={depositForm} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item label="Дата" name="date" rules={[{ required: true }]}>
@@ -981,7 +1021,7 @@ export const AccountingPage: React.FC = () => {
         okText="Списать"
         okButtonProps={{ loading: saving, danger: true }}
         cancelText="Отмена"
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={withdrawalForm} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item label="Дата" name="date" rules={[{ required: true }]}>
@@ -1014,7 +1054,7 @@ export const AccountingPage: React.FC = () => {
         okText="Добавить"
         okButtonProps={{ loading: adjSaving, danger: true }}
         cancelText="Отмена"
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={fineForm} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item label="Причина" name="reason" rules={[{ required: true, message: 'Укажите причину' }]}>
@@ -1034,7 +1074,7 @@ export const AccountingPage: React.FC = () => {
         okText="Добавить"
         okButtonProps={{ loading: adjSaving }}
         cancelText="Отмена"
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={bonusForm} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item label="Причина" name="reason" rules={[{ required: true, message: 'Укажите причину' }]}>
@@ -1044,6 +1084,52 @@ export const AccountingPage: React.FC = () => {
             <InputNumber min={0.01} style={{ width: '100%' }} precision={2} parser={(v) => (v ?? '').replace(/,/g, '.')} />
           </Form.Item>
         </Form>
+      </Modal>
+      <Modal
+        title="Перенести на другой период"
+        open={!!transferModal}
+        onCancel={() => setTransferModal(null)}
+        onOk={handleTransferSalary}
+        okText="Перенести"
+        okButtonProps={{ loading: transferSaving }}
+        cancelText="Отмена"
+        destroyOnHidden
+        footer={(_, { OkBtn, CancelBtn }) => (
+          <Space style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Button
+              danger
+              disabled={!transferModal?.salaryDate}
+              onClick={async () => {
+                setTransferSaving(true);
+                try {
+                  await recordsApi.setSalaryDate(transferModal!.recordId, null);
+                  message.success('Перенос сброшен');
+                  setTransferModal(null);
+                  loadSalary();
+                } catch { message.error('Ошибка'); }
+                finally { setTransferSaving(false); }
+              }}
+            >
+              Сбросить перенос
+            </Button>
+            <Space>
+              <CancelBtn />
+              <OkBtn />
+            </Space>
+          </Space>
+        )}
+      >
+        <p style={{ marginBottom: 12, color: 'var(--color-text-secondary)', fontSize: 13 }}>
+          Выберите дату, в период которой нужно перенести эту запись в расчёте ЗП.
+          Касса и приходно-расходная таблица не изменятся.
+        </p>
+        <DatePicker
+          style={{ width: '100%' }}
+          value={transferModal?.salaryDate ?? null}
+          onChange={v => setTransferModal(prev => prev ? { ...prev, salaryDate: v } : prev)}
+          format="DD.MM.YYYY"
+          allowClear
+        />
       </Modal>
     </div>
   );

@@ -11,6 +11,7 @@ export interface SalaryRecord {
   clientName: string;
   carInfo: string;
   scheduledAt: string;
+  salaryDate: string | null;
   items: SalaryRecordItem[];
   totalNetProfit: number;
   totalPayment: number;
@@ -139,14 +140,21 @@ export const accountingService = {
 
     type SplitEntry = { name: string; amount: number };
 
-    // Query all closed items in the period, filter by employee in JS
+    // Query all closed items in the period (use salaryDate override if set)
     const allItems = await prisma.recordItem.findMany({
       where: {
-        record: { deal: { closedAt: { gte: periodFrom, lt: periodTo } } },
+        record: {
+          deal: {
+            OR: [
+              { salaryDate: { gte: periodFrom, lt: periodTo } },
+              { salaryDate: null, closedAt: { gte: periodFrom, lt: periodTo } },
+            ],
+          },
+        },
       },
       include: {
         service: true,
-        record: { include: { client: true, car: true, deal: true } },
+        record: { include: { client: true, car: true, deal: { select: { salaryDate: true } } } },
       },
     });
 
@@ -172,6 +180,7 @@ export const accountingService = {
           clientName: record.client.name,
           carInfo: `${record.car.brand} ${record.car.model} ${record.car.year}${record.car.plateNumber ? ' ' + record.car.plateNumber : ''}`,
           scheduledAt: record.scheduledAt.toISOString(),
+          salaryDate: record.deal?.salaryDate?.toISOString() ?? null,
           items: [],
           totalNetProfit: 0,
           totalPayment: 0,

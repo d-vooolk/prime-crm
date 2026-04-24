@@ -77,6 +77,7 @@ export interface Deal {
   warranty?: string;
   isPaidByBankTransfer: boolean;
   closedAt: string;
+  salaryDate?: string | null;
   equipment: Array<{ equipment: Equipment }>;
 }
 

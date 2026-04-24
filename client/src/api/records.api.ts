@@ -99,6 +99,9 @@ export const recordsApi = {
   sendSms: (id: string, type: 'CAR_READY' | 'REVIEW_REQUEST') =>
     http.post(`/records/${id}/send-sms`, { type }).then(r => r.data),
 
+  setSalaryDate: (id: string, salaryDate: string | null) =>
+    http.patch(`/records/${id}/salary-date`, { salaryDate }),
+
   delete: (id: string) =>
     http.delete(`/records/${id}`),
 };

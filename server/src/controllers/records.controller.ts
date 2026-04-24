@@ -76,6 +76,14 @@ export const recordsController = {
     } catch (e) { next(e); }
   },
 
+  async setSalaryDate(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { salaryDate } = req.body as { salaryDate: string | null };
+      const record = await recordsService.setSalaryDate(String(req.params.id), salaryDate ?? null);
+      res.json({ data: record });
+    } catch (e) { next(e); }
+  },
+
   async searchCompanies(req: Request, res: Response, next: NextFunction) {
     try {
       const search = String(req.query.search || '');

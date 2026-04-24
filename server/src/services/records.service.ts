@@ -387,6 +387,16 @@ export const recordsService = {
     return closed;
   },
 
+  async setSalaryDate(id: string, salaryDate: string | null) {
+    const record = await recordsService.findById(id);
+    if (!record.deal) throw new AppError('Запись не закрыта', 400);
+    await prisma.deal.update({
+      where: { recordId: id },
+      data: { salaryDate: salaryDate ? new Date(salaryDate) : null },
+    });
+    return recordsService.findById(id);
+  },
+
   async cancel(id: string) {
     await recordsService.findById(id);
     return prisma.record.update({

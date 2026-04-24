@@ -4,9 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="45f6dddb-f82f-43d5-b121-b81757ed27dc" name="Changes" comment="Исправил баг с неверным выбором акта выполненных работ для разных категорий">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-    </list>
+    <list default="true" id="45f6dddb-f82f-43d5-b121-b81757ed27dc" name="Changes" comment="Изменил видимость таблицы ЗП для сотрудников на текущий и прошлый месяц.&#10;Показ нового периода после 24 числа." />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -93,7 +91,7 @@
       <workItem from="1776884163729" duration="630000" />
       <workItem from="1776933228574" duration="4785000" />
       <workItem from="1776970076527" duration="427000" />
-      <workItem from="1777067997894" duration="4670000" />
+      <workItem from="1777067997894" duration="5553000" />
     </task>
     <task id="LOCAL-00001" summary="init new version of product">
       <option name="closed" value="true" />
@@ -199,7 +197,15 @@
       <option name="project" value="LOCAL" />
       <updated>1777072344379</updated>
     </task>
-    <option name="localTasksCounter" value="14" />
+    <task id="LOCAL-00014" summary="Изменил видимость таблицы ЗП для сотрудников на текущий и прошлый месяц.&#10;Показ нового периода после 24 числа.">
+      <option name="closed" value="true" />
+      <created>1777073075253</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1777073075253</updated>
+    </task>
+    <option name="localTasksCounter" value="15" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -226,6 +232,7 @@
     <MESSAGE value="изменил страницу редактирования записи, добавил обязательность сотрудника для закрытия сделки" />
     <MESSAGE value="Добавил возможность редактирования закрытой сделки&#10;Добавил таблицу с информацией о ТС в АКТ для физ лиц" />
     <MESSAGE value="Исправил баг с неверным выбором акта выполненных работ для разных категорий" />
-    <option name="LAST_COMMIT_MESSAGE" value="Исправил баг с неверным выбором акта выполненных работ для разных категорий" />
+    <MESSAGE value="Изменил видимость таблицы ЗП для сотрудников на текущий и прошлый месяц.&#10;Показ нового периода после 24 числа." />
+    <option name="LAST_COMMIT_MESSAGE" value="Изменил видимость таблицы ЗП для сотрудников на текущий и прошлый месяц.&#10;Показ нового периода после 24 числа." />
   </component>
 </project>

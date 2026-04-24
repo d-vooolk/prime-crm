@@ -123,6 +123,7 @@ model Deal {
   warranty            String?
   isPaidByBankTransfer Boolean        @default(false)
   closedAt            DateTime        @default(now())
+  salaryDate          DateTime?
   record              Record          @relation(fields: [recordId], references: [id])
   equipment           DealEquipment[]
 }

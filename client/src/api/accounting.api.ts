@@ -18,6 +18,7 @@ export interface SalaryRecord {
   clientName: string;
   carInfo: string;
   scheduledAt: string;
+  salaryDate?: string | null;
   items: SalaryRecordItem[];
   totalNetProfit: number;
   totalPayment: number;
