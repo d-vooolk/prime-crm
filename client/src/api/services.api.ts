@@ -5,11 +5,11 @@ export const servicesApi = {
   getCategories: () =>
     http.get<{ data: Category[] }>('/services/categories').then(r => r.data.data),
 
-  createCategory: (name: string) =>
-    http.post<{ data: Category }>('/services/categories', { name }).then(r => r.data.data),
+  createCategory: (name: string, color?: string | null) =>
+    http.post<{ data: Category }>('/services/categories', { name, color }).then(r => r.data.data),
 
-  updateCategory: (id: string, name: string) =>
-    http.patch<{ data: Category }>(`/services/categories/${id}`, { name }).then(r => r.data.data),
+  updateCategory: (id: string, data: { name?: string; color?: string | null }) =>
+    http.patch<{ data: Category }>(`/services/categories/${id}`, data).then(r => r.data.data),
 
   deleteCategory: (id: string) =>
     http.delete(`/services/categories/${id}`),

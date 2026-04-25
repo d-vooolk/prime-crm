@@ -4,10 +4,15 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="45f6dddb-f82f-43d5-b121-b81757ed27dc" name="Changes" comment="eslint fix">
+    <list default="true" id="45f6dddb-f82f-43d5-b121-b81757ed27dc" name="Changes" comment="изменил вид карточки, вынес информацию по ТС вверх">
+      <change beforePath="$PROJECT_DIR$/.claude/settings.local.json" beforeDir="false" afterPath="$PROJECT_DIR$/.claude/settings.local.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/components/RecordCard/RecordCard.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/RecordCard/RecordCard.module.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/api/services.api.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/api/services.api.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/components/RecordCard/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/RecordCard/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/pages/ServicesPage/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/pages/ServicesPage/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/types/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/types/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/prisma/schema.prisma" beforeDir="false" afterPath="$PROJECT_DIR$/server/prisma/schema.prisma" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/src/controllers/services.controller.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/controllers/services.controller.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -95,7 +100,7 @@
       <workItem from="1776884163729" duration="630000" />
       <workItem from="1776933228574" duration="4785000" />
       <workItem from="1776970076527" duration="427000" />
-      <workItem from="1777067997894" duration="7145000" />
+      <workItem from="1777067997894" duration="8633000" />
     </task>
     <task id="LOCAL-00001" summary="init new version of product">
       <option name="closed" value="true" />
@@ -233,7 +238,15 @@
       <option name="project" value="LOCAL" />
       <updated>1777074715943</updated>
     </task>
-    <option name="localTasksCounter" value="18" />
+    <task id="LOCAL-00018" summary="изменил вид карточки, вынес информацию по ТС вверх">
+      <option name="closed" value="true" />
+      <created>1777075527255</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1777075527255</updated>
+    </task>
+    <option name="localTasksCounter" value="19" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -263,6 +276,7 @@
     <MESSAGE value="Изменил видимость таблицы ЗП для сотрудников на текущий и прошлый месяц.&#10;Показ нового периода после 24 числа." />
     <MESSAGE value="добавил возможность переноса сумм на другой период у сотрудников" />
     <MESSAGE value="eslint fix" />
-    <option name="LAST_COMMIT_MESSAGE" value="eslint fix" />
+    <MESSAGE value="изменил вид карточки, вынес информацию по ТС вверх" />
+    <option name="LAST_COMMIT_MESSAGE" value="изменил вид карточки, вынес информацию по ТС вверх" />
   </component>
 </project>

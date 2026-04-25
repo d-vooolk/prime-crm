@@ -90,7 +90,9 @@
       "Bash(DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/prime_crm\" npx prisma migrate status)",
       "Bash(echo \"server PID: $!\")",
       "Bash(echo \"client PID: $!\")",
-      "Bash(npm start *)"
+      "Bash(npm start *)",
+      "PowerShell(docker exec prime-crm-server-1 *)",
+      "PowerShell(docker exec prime-crm-postgres-1 *)"
     ]
   }
 }

@@ -30,16 +30,21 @@ export const servicesController = {
 
   async createCategory(req: Request, res: Response, next: NextFunction) {
     try {
-      const category = await prisma.category.create({ data: { name: req.body.name } });
+      const { name, color } = req.body;
+      const category = await prisma.category.create({ data: { name, color: color ?? null } });
       res.status(201).json({ data: category });
     } catch (e) { next(e); }
   },
 
   async updateCategory(req: Request, res: Response, next: NextFunction) {
     try {
+      const { name, color } = req.body;
       const category = await prisma.category.update({
         where: { id: String(req.params.id) },
-        data: { name: req.body.name },
+        data: {
+          ...(name !== undefined && { name }),
+          ...(color !== undefined && { color: color ?? null }),
+        },
       });
       res.json({ data: category });
     } catch (e) { next(e); }

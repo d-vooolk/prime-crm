@@ -17,6 +17,16 @@ const STATUS_LABELS: Record<string, string> = {
   CANCELLED: 'Отменена',
 };
 
+function toRgba(color: string, alpha: number): string {
+  const rgbMatch = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+  if (rgbMatch) return `rgba(${rgbMatch[1]}, ${rgbMatch[2]}, ${rgbMatch[3]}, ${alpha})`;
+  const clean = color.replace('#', '');
+  const r = parseInt(clean.slice(0, 2), 16);
+  const g = parseInt(clean.slice(2, 4), 16);
+  const b = parseInt(clean.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 export const RecordCard: React.FC<Props> = ({ record, onClick }) => {
   const { client, car, items, status, scheduledAt, serviceman, deal, smsLogs } = record;
   const [photoLoaded, setPhotoLoaded] = useState(false);
@@ -31,12 +41,18 @@ export const RecordCard: React.FC<Props> = ({ record, onClick }) => {
   const time = dayjs(scheduledAt).format('HH:mm');
   const showPhoto = !!car.generationId && !photoError;
 
+  const categoryColor = status === 'ACTIVE'
+    ? (items[0]?.service?.category?.color ?? null)
+    : null;
+  const cardStyle = categoryColor ? { background: toRgba(categoryColor, 0.14) } : undefined;
+
   return (
     <div
       className={cn(styles.card, {
         [styles.closed]: status === 'CLOSED',
         [styles.cancelled]: status === 'CANCELLED',
       })}
+      style={cardStyle}
       onClick={onClick}
     >
       <div className={styles.statusBar} />

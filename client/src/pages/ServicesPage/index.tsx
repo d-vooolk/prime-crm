@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Button, Card, Table, Modal, Form, Input, InputNumber, Select,
-  Popconfirm, message, Tabs, Checkbox, Tag, Space, Collapse, DatePicker,
+  Button, Table, Modal, Form, Input, InputNumber, Select,
+  Popconfirm, message, Tabs, Checkbox, Tag, Space, Collapse, DatePicker, ColorPicker,
 } from 'antd';
 import {
   PlusOutlined, EditOutlined, DeleteOutlined,
-  StopOutlined, UserOutlined,
+  StopOutlined, UserOutlined, BgColorsOutlined,
 } from '@ant-design/icons';
 import { servicesApi } from '@/api/services.api';
 import { useAuthStore } from '@/store/authStore';
@@ -38,6 +38,7 @@ export const ServicesPage: React.FC = () => {
 
   const [serviceModal, setServiceModal] = useState<{ open: boolean; service?: Service; categoryId?: string }>({ open: false });
   const [categoryModal, setCategoryModal] = useState<{ open: boolean; category?: Category }>({ open: false });
+  const [categoryColor, setCategoryColor] = useState<string | null>(null);
   const [equipmentModal, setEquipmentModal] = useState<{ open: boolean; item?: Equipment }>({ open: false });
   const [servicemanModal, setServicemanModal] = useState<{ open: boolean; item?: Serviceman; isReceptionist?: boolean }>({ open: false });
 
@@ -95,17 +96,25 @@ export const ServicesPage: React.FC = () => {
     const values = await categoryForm.validateFields();
     try {
       if (categoryModal.category) {
-        await servicesApi.updateCategory(categoryModal.category.id, values.name);
+        await servicesApi.updateCategory(categoryModal.category.id, { name: values.name, color: categoryColor });
       } else {
-        await servicesApi.createCategory(values.name);
+        await servicesApi.createCategory(values.name, categoryColor);
       }
       message.success('Сохранено');
       setCategoryModal({ open: false });
       categoryForm.resetFields();
+      setCategoryColor(null);
       fetchAll();
     } catch {
       message.error('Ошибка сохранения');
     }
+  };
+
+  const openEditCategory = (cat: Category) => {
+    categoryForm.resetFields();
+    categoryForm.setFieldsValue({ name: cat.name });
+    setCategoryColor(cat.color ?? null);
+    setCategoryModal({ open: true, category: cat });
   };
 
   // ─── Equipment ────────────────────────────────────
@@ -339,41 +348,55 @@ export const ServicesPage: React.FC = () => {
                     Услуга
                   </Button>
                 </div>
-                {categories.map(cat => (
-                  <Card
-                    key={cat.id}
-                    size="small"
-                    title={
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span>{cat.name}</span>
-                        <div style={{ display: 'flex', gap: 4 }}>
-                          <Button size="small" icon={<PlusOutlined />} onClick={() => openAddService(cat.id)}>
-                            Добавить
-                          </Button>
-                          <Popconfirm title="Удалить категорию?" onConfirm={async () => {
-                            try {
-                              await servicesApi.deleteCategory(cat.id);
-                              fetchAll();
-                            } catch {
-                              message.error('Ошибка удаления');
-                            }
-                          }}>
-                            <Button size="small" danger icon={<DeleteOutlined />} />
-                          </Popconfirm>
-                        </div>
+                <Collapse
+                  defaultActiveKey={[]}
+                  collapsible="icon"
+                  items={categories.map(cat => ({
+                    key: cat.id,
+                    label: (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {cat.color && (
+                          <span style={{
+                            width: 12, height: 12, borderRadius: '50%',
+                            background: cat.color, display: 'inline-block', flexShrink: 0,
+                          }} />
+                        )}
+                        <span style={{ fontWeight: 600 }}>{cat.name}</span>
+                        <span style={{ color: 'var(--color-text-secondary)', fontSize: 12, fontWeight: 400 }}>
+                          ({cat.services.length})
+                        </span>
                       </div>
-                    }
-                  >
-                    <Table
-                      dataSource={cat.services}
-                      columns={serviceColumns}
-                      rowKey="id"
-                      pagination={false}
-                      size="small"
-                      locale={{ emptyText: 'Нет услуг' }}
-                    />
-                  </Card>
-                ))}
+                    ),
+                    extra: (
+                      <div style={{ display: 'flex', gap: 4 }} onClick={e => e.stopPropagation()}>
+                        <Button size="small" icon={<PlusOutlined />} onClick={() => openAddService(cat.id)}>
+                          Добавить
+                        </Button>
+                        <Button size="small" icon={<BgColorsOutlined />} onClick={() => openEditCategory(cat)} />
+                        <Popconfirm title="Удалить категорию?" onConfirm={async () => {
+                          try {
+                            await servicesApi.deleteCategory(cat.id);
+                            fetchAll();
+                          } catch {
+                            message.error('Ошибка удаления');
+                          }
+                        }}>
+                          <Button size="small" danger icon={<DeleteOutlined />} />
+                        </Popconfirm>
+                      </div>
+                    ),
+                    children: (
+                      <Table
+                        dataSource={cat.services}
+                        columns={serviceColumns}
+                        rowKey="id"
+                        pagination={false}
+                        size="small"
+                        locale={{ emptyText: 'Нет услуг' }}
+                      />
+                    ),
+                  }))}
+                />
               </div>
             ),
           },
@@ -534,7 +557,7 @@ export const ServicesPage: React.FC = () => {
       {/* Category modal */}
       <Modal
         open={categoryModal.open}
-        onCancel={() => { setCategoryModal({ open: false }); categoryForm.resetFields(); }}
+        onCancel={() => { setCategoryModal({ open: false }); categoryForm.resetFields(); setCategoryColor(null); }}
         onOk={handleSaveCategory}
         title={categoryModal.category ? 'Редактировать категорию' : 'Новая категория'}
         destroyOnHidden
@@ -542,6 +565,21 @@ export const ServicesPage: React.FC = () => {
         <Form form={categoryForm} layout="vertical">
           <Form.Item label="Название" name="name" rules={[{ required: true }]}>
             <Input />
+          </Form.Item>
+          <Form.Item label="Цвет карточек">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <ColorPicker
+                value={categoryColor ?? undefined}
+                onChange={(_, hex) => setCategoryColor(hex)}
+                format="hex"
+                showText
+              />
+              {categoryColor && (
+                <Button size="small" type="link" style={{ padding: 0 }} onClick={() => setCategoryColor(null)}>
+                  Сбросить
+                </Button>
+              )}
+            </div>
           </Form.Item>
         </Form>
       </Modal>
