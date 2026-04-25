@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Modal, Form, Input, Select, Button, Divider, message,
-  Table, Empty, Checkbox, Tag, Tooltip, InputNumber,
+  Table, Empty, Tag, Tooltip, InputNumber, Switch,
 } from 'antd';
 import { useNotify } from '@/hooks/useNotify';
 import { TeamOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
@@ -53,10 +53,15 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
   const [celebrating, setCelebrating] = useState(false);
   const [items, setItems] = useState<ItemRow[]>([]);
 
-  // Split modal state
+  // Serviceman split modal state
   const [splitOpen, setSplitOpen] = useState(false);
   const [splitItemId, setSplitItemId] = useState<string | null>(null);
   const [splitEntries, setSplitEntries] = useState<ServicemanSplitEntry[]>([]);
+
+  // Payment split state
+  const [paymentSplitOpen, setPaymentSplitOpen] = useState(false);
+  const [paymentSplitCard, setPaymentSplitCard] = useState<number | null>(null);
+  const [paymentSplitDraft, setPaymentSplitDraft] = useState<number | null>(null);
 
   const notify = useNotify();
   const [form] = Form.useForm();
@@ -96,8 +101,10 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
           warranty: record.deal.warranty || '',
           isPaidByBankTransfer: record.deal.isPaidByBankTransfer || false,
         });
+        setPaymentSplitCard(record.deal.splitCardAmount ?? null);
       } else {
         form.resetFields();
+        setPaymentSplitCard(null);
       }
     }
   }, [open, record, form]);
@@ -265,11 +272,16 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
         })),
       });
 
+      const finalPrice = items.reduce((s, i) => s + i.price * i.quantity, 0);
       await recordsApi.close(record.id, {
-        finalPrice: items.reduce((s, i) => s + i.price * i.quantity, 0),
+        finalPrice,
         defects: values.defects || undefined,
         warranty: values.warranty || undefined,
         isPaidByBankTransfer: values.isPaidByBankTransfer || false,
+        ...(paymentSplitCard != null ? {
+          splitCashAmount: finalPrice - paymentSplitCard,
+          splitCardAmount: paymentSplitCard,
+        } : {}),
       });
 
       onClose();
@@ -283,6 +295,7 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
   };
 
   const total = items.reduce((s, i) => s + i.price * i.quantity, 0);
+  const splitCashDisplay = paymentSplitCard != null ? total - paymentSplitCard : null;
 
   const splitItem = items.find(i => i.itemId === splitItemId);
 
@@ -350,6 +363,48 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
         </div>
       </Modal>
 
+      {/* Payment split modal */}
+      <Modal
+        open={paymentSplitOpen}
+        onCancel={() => setPaymentSplitOpen(false)}
+        title="Раздельная оплата"
+        width={380}
+        onOk={() => {
+          setPaymentSplitCard(paymentSplitDraft);
+          setPaymentSplitOpen(false);
+        }}
+        okText="Применить"
+        cancelText="Отмена"
+        destroyOnHidden
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '8px 0' }}>
+          <div>
+            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 4 }}>Наличные</div>
+            <InputNumber
+              style={{ width: '100%' }}
+              value={paymentSplitDraft != null ? total - paymentSplitDraft : total}
+              disabled
+              suffix="BYN"
+              precision={2}
+            />
+          </div>
+          <div>
+            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 4 }}>Безнал (карта / РС)</div>
+            <InputNumber
+              style={{ width: '100%' }}
+              min={0}
+              max={total}
+              precision={2}
+              suffix="BYN"
+              placeholder="0.00"
+              value={paymentSplitDraft ?? undefined}
+              onChange={v => setPaymentSplitDraft(v ?? 0)}
+              autoFocus
+            />
+          </div>
+        </div>
+      </Modal>
+
       <Modal
         open={open}
         onCancel={onClose}
@@ -402,9 +457,39 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
             />
           </Form.Item>
 
-          <Form.Item name="isPaidByBankTransfer" valuePropName="checked" style={{ marginBottom: 0 }}>
-            <Checkbox>Оплата по расчётному счёту (РС)</Checkbox>
-          </Form.Item>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+            <Form.Item name="isPaidByBankTransfer" valuePropName="checked" noStyle>
+              <Switch />
+            </Form.Item>
+            <span style={{ fontSize: 14 }}>Оплата по расчётному счёту (РС)</span>
+          </div>
+
+          {paymentSplitCard == null ? (
+            <Button
+              type="dashed"
+              size="small"
+              onClick={() => {
+                setPaymentSplitDraft(paymentSplitCard ?? 0);
+                setPaymentSplitOpen(true);
+              }}
+              style={{ marginBottom: 16, width: 'fit-content' }}
+            >
+              Раздельная оплата
+            </Button>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, padding: '8px 12px', background: 'var(--color-surface-2)', borderRadius: 6, fontSize: 13 }}>
+              <span>💵 Наличные: <strong>{formatPrice(splitCashDisplay!)}</strong></span>
+              <span>💳 Безнал: <strong>{formatPrice(paymentSplitCard)}</strong></span>
+              <Button
+                type="text"
+                size="small"
+                style={{ marginLeft: 'auto', color: 'var(--color-text-secondary)' }}
+                onClick={() => setPaymentSplitCard(null)}
+              >
+                Отменить
+              </Button>
+            </div>
+          )}
 
           <div className={styles.footer}>
             <Button onClick={onClose}>Отмена</Button>

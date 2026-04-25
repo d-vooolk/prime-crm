@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Form, Input, Select, DatePicker, AutoComplete,
-  Row, Col, Divider, Card, Checkbox,
+  Row, Col, Divider, Card, Checkbox, Switch,
 } from 'antd';
 import type { Dayjs } from 'dayjs';
 import { CarOutlined } from '@ant-design/icons';
@@ -251,13 +251,12 @@ export const Step1Client: React.FC<Props> = ({ data, onChange }) => {
             />
           </Form.Item>
         </Col>
-        <Col xs={24} sm={12} style={{ display: 'flex', alignItems: 'flex-start', paddingTop: 30 }}>
-          <Checkbox
+        <Col xs={24} sm={12} style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 30 }}>
+          <Switch
             checked={!!data.isLegalEntity}
-            onChange={e => onChange({ isLegalEntity: e.target.checked })}
-          >
-            Юридическое лицо
-          </Checkbox>
+            onChange={v => onChange({ isLegalEntity: v })}
+          />
+          <span style={{ fontSize: 14 }}>Юридическое лицо</span>
         </Col>
       </Row>
 

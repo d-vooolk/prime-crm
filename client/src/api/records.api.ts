@@ -63,6 +63,8 @@ export interface CloseDealDto {
   defects?: string;
   warranty?: string;
   isPaidByBankTransfer?: boolean;
+  splitCashAmount?: number;
+  splitCardAmount?: number;
 }
 
 export const recordsApi = {

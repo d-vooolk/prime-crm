@@ -65,6 +65,8 @@ export interface CloseDealDto {
   defects?: string;
   warranty?: string;
   isPaidByBankTransfer?: boolean;
+  splitCashAmount?: number;
+  splitCardAmount?: number;
 }
 
 export const recordsService = {
@@ -311,22 +313,28 @@ export const recordsService = {
   async close(id: string, data: CloseDealDto) {
     const record = await recordsService.findById(id);
 
-    const { finalPrice, defects, warranty, isPaidByBankTransfer = false } = data;
+    const { finalPrice, defects, warranty, isPaidByBankTransfer = false, splitCashAmount, splitCardAmount } = data;
+    const isSplit = splitCashAmount != null && splitCardAmount != null;
 
     if (record.status === 'CLOSED') {
       await prisma.deal.update({
         where: { recordId: id },
-        data: { finalPrice, defects, warranty, isPaidByBankTransfer },
+        data: { finalPrice, defects, warranty, isPaidByBankTransfer, splitCashAmount: isSplit ? splitCashAmount : null, splitCardAmount: isSplit ? splitCardAmount : null },
       });
-      const existingTx = await prisma.cashTransaction.findFirst({
+      await prisma.cashTransaction.deleteMany({
         where: { recordId: id, type: { in: ['INCOME', 'INCOME_RS'] } },
       });
-      if (existingTx) {
-        await prisma.cashTransaction.update({
-          where: { id: existingTx.id },
-          data: { amount: finalPrice, type: isPaidByBankTransfer ? 'INCOME_RS' : 'INCOME' },
-        });
-      }
+      await accountingService.createIncomeFromDeal({
+        recordId: id,
+        clientName: record.client.name,
+        clientPhone: record.client.phone,
+        carInfo: `${record.car.brand} ${record.car.model} ${record.car.year}${record.car.plateNumber ? ' ' + record.car.plateNumber : ''}`,
+        amount: finalPrice,
+        isPaidByBankTransfer,
+        splitCashAmount: isSplit ? splitCashAmount : undefined,
+        splitCardAmount: isSplit ? splitCardAmount : undefined,
+        closedAt: new Date(),
+      });
       return recordsService.findById(id);
     }
 
@@ -364,6 +372,8 @@ export const recordsService = {
           defects,
           warranty,
           isPaidByBankTransfer,
+          splitCashAmount: isSplit ? splitCashAmount : null,
+          splitCardAmount: isSplit ? splitCardAmount : null,
           equipment: equipmentIds.length
             ? { create: equipmentIds.map((equipmentId) => ({ equipmentId })) }
             : undefined,
@@ -381,6 +391,8 @@ export const recordsService = {
       carInfo: `${record.car.brand} ${record.car.model} ${record.car.year}${record.car.plateNumber ? ' ' + record.car.plateNumber : ''}`,
       amount: finalPrice,
       isPaidByBankTransfer,
+      splitCashAmount: isSplit ? splitCashAmount : undefined,
+      splitCardAmount: isSplit ? splitCardAmount : undefined,
       closedAt: new Date(),
     });
 

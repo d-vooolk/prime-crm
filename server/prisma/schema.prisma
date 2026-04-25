@@ -123,6 +123,8 @@ model Deal {
   defects             String?
   warranty            String?
   isPaidByBankTransfer Boolean        @default(false)
+  splitCashAmount     Float?
+  splitCardAmount     Float?
   closedAt            DateTime        @default(now())
   salaryDate          DateTime?
   record              Record          @relation(fields: [recordId], references: [id])

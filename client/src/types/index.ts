@@ -77,6 +77,8 @@ export interface Deal {
   warranty?: string;
   priceIncreaseReason?: string;
   isPaidByBankTransfer: boolean;
+  splitCashAmount?: number | null;
+  splitCardAmount?: number | null;
   closedAt: string;
   salaryDate?: string | null;
   equipment: Array<{ equipment: Equipment }>;

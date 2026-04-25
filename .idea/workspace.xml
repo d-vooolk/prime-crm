@@ -4,14 +4,16 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="45f6dddb-f82f-43d5-b121-b81757ed27dc" name="Changes" comment="добавил изменение цветов карточек в зависимости от категорий">
+    <list default="true" id="45f6dddb-f82f-43d5-b121-b81757ed27dc" name="Changes" comment="сделал точки календаря зелёными">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/src/api/records.api.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/api/records.api.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/components/SideBar/SideBar.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/SideBar/SideBar.module.scss" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/components/SideBar/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/SideBar/index.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/config/antdTheme.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/config/antdTheme.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/src/controllers/records.controller.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/controllers/records.controller.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/src/routes/records.routes.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/routes/records.routes.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/components/CloseRecordModal/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/CloseRecordModal/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/components/RecordModal/steps/Step1Client.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/RecordModal/steps/Step1Client.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/pages/AccountingPage/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/pages/AccountingPage/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/types/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/types/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/prisma/schema.prisma" beforeDir="false" afterPath="$PROJECT_DIR$/server/prisma/schema.prisma" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/src/services/accounting.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/services/accounting.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/src/services/records.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/services/records.service.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -99,7 +101,7 @@
       <workItem from="1776884163729" duration="630000" />
       <workItem from="1776933228574" duration="4785000" />
       <workItem from="1776970076527" duration="427000" />
-      <workItem from="1777067997894" duration="10290000" />
+      <workItem from="1777067997894" duration="14250000" />
     </task>
     <task id="LOCAL-00001" summary="init new version of product">
       <option name="closed" value="true" />
@@ -253,7 +255,23 @@
       <option name="project" value="LOCAL" />
       <updated>1777077253080</updated>
     </task>
-    <option name="localTasksCounter" value="20" />
+    <task id="LOCAL-00020" summary="Исправил баги тёмной темы, и переключения календаря при клике на текущую дату, добавил точки на датах календаря где есть хоть одна запись">
+      <option name="closed" value="true" />
+      <created>1777078643557</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1777078643557</updated>
+    </task>
+    <task id="LOCAL-00021" summary="сделал точки календаря зелёными">
+      <option name="closed" value="true" />
+      <created>1777078892688</created>
+      <option name="number" value="00021" />
+      <option name="presentableId" value="LOCAL-00021" />
+      <option name="project" value="LOCAL" />
+      <updated>1777078892688</updated>
+    </task>
+    <option name="localTasksCounter" value="22" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -285,6 +303,8 @@
     <MESSAGE value="eslint fix" />
     <MESSAGE value="изменил вид карточки, вынес информацию по ТС вверх" />
     <MESSAGE value="добавил изменение цветов карточек в зависимости от категорий" />
-    <option name="LAST_COMMIT_MESSAGE" value="добавил изменение цветов карточек в зависимости от категорий" />
+    <MESSAGE value="Исправил баги тёмной темы, и переключения календаря при клике на текущую дату, добавил точки на датах календаря где есть хоть одна запись" />
+    <MESSAGE value="сделал точки календаря зелёными" />
+    <option name="LAST_COMMIT_MESSAGE" value="сделал точки календаря зелёными" />
   </component>
 </project>

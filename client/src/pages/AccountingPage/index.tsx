@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Tabs, Table, Button, Modal, Form, Input, InputNumber, Select,
-  DatePicker, message, Statistic, Card, Tag, Empty, Popconfirm, Space, Tooltip,
+  DatePicker, message, Statistic, Card, Tag, Empty, Popconfirm, Space, Tooltip, Switch,
 } from 'antd';
 import {
   PlusOutlined, MinusOutlined, EditOutlined, DeleteOutlined, RetweetOutlined,
@@ -943,19 +943,18 @@ export const AccountingPage: React.FC = () => {
             />
           </Form.Item>
           <Form.Item style={{ marginBottom: 0 }}>
-            <span
-              style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: 'var(--color-text-secondary)' }}
-              onClick={() => {
-                const next = !isFounderSalary;
-                setIsFounderSalary(next);
-                setFounderPerson('');
-                if (!next) expenseForm.setFieldsValue({ description: '', founderMonth: null });
-                else expenseForm.setFieldsValue({ founderMonth: dayjs(), description: '' });
-              }}
-            >
-              <input type="checkbox" checked={isFounderSalary} readOnly style={{ cursor: 'pointer', width: 14, height: 14 }} />
-              ЗП учредителей
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Switch
+                checked={isFounderSalary}
+                onChange={next => {
+                  setIsFounderSalary(next);
+                  setFounderPerson('');
+                  if (!next) expenseForm.setFieldsValue({ description: '', founderMonth: null });
+                  else expenseForm.setFieldsValue({ founderMonth: dayjs(), description: '' });
+                }}
+              />
+              <span style={{ fontSize: 14 }}>ЗП учредителей</span>
+            </div>
           </Form.Item>
         </Form>
       </Modal>

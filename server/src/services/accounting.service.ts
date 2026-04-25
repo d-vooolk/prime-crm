@@ -84,18 +84,30 @@ export const accountingService = {
     carInfo: string;
     amount: number;
     isPaidByBankTransfer: boolean;
+    splitCashAmount?: number;
+    splitCardAmount?: number;
     closedAt: Date;
   }) {
+    const base = {
+      date: data.closedAt,
+      clientName: data.clientName,
+      clientPhone: data.clientPhone,
+      carInfo: data.carInfo,
+      recordId: data.recordId,
+    };
+    if (data.splitCashAmount != null && data.splitCardAmount != null) {
+      const ops = [];
+      if (data.splitCashAmount > 0) {
+        ops.push(prisma.cashTransaction.create({ data: { ...base, type: 'INCOME', amount: data.splitCashAmount } }));
+      }
+      if (data.splitCardAmount > 0) {
+        ops.push(prisma.cashTransaction.create({ data: { ...base, type: 'INCOME_RS', amount: data.splitCardAmount } }));
+      }
+      await Promise.all(ops);
+      return;
+    }
     return prisma.cashTransaction.create({
-      data: {
-        type: data.isPaidByBankTransfer ? 'INCOME_RS' : 'INCOME',
-        date: data.closedAt,
-        amount: data.amount,
-        clientName: data.clientName,
-        clientPhone: data.clientPhone,
-        carInfo: data.carInfo,
-        recordId: data.recordId,
-      },
+      data: { ...base, type: data.isPaidByBankTransfer ? 'INCOME_RS' : 'INCOME', amount: data.amount },
     });
   },
 
