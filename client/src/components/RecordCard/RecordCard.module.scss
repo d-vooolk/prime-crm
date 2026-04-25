@@ -123,7 +123,7 @@
 
 .header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--spacing-sm);
 }
 
@@ -141,16 +141,13 @@
 }
 
 .clientName {
-  flex: 1;
-  min-width: 0;
-  font-weight: 600;
-  font-size: var(--font-size-md);
-  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 
-  @include mobile { font-size: var(--font-size-sm); }
+  @include mobile { display: none; }
 }
 
 .phone {
@@ -181,25 +178,22 @@
   }
 }
 
-.carInfo {
-  padding-top: 2px;
-
-  @include mobile { padding-top: 0; }
-}
-
 .carName {
-  font-size: var(--font-size-sm);
+  flex: 1;
+  min-width: 0;
+  font-size: var(--font-size-md);
   font-weight: 600;
   color: var(--color-text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 
-  @include mobile { font-size: var(--font-size-xs); }
+  @include mobile { font-size: var(--font-size-sm); }
 }
 
 .carDetails {
   font-size: var(--font-size-xs);
+  font-weight: 400;
   color: var(--color-text-secondary);
 
   @include mobile { display: none; }

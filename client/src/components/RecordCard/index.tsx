@@ -71,18 +71,18 @@ export const RecordCard: React.FC<Props> = ({ record, onClick }) => {
       <div className={styles.content}>
         <div className={styles.header}>
           <div className={styles.time}>{time}</div>
-          <div className={cn(styles.clientName, { [styles.blurred]: isEmployee })}>{client.name}</div>
+          <div className={styles.carName}>
+            {car.brand} {car.model}
+            <span className={styles.carDetails}>
+              {' ('}
+              {[car.generationName, car.year, car.plateNumber].filter(Boolean).join(' · ')}
+              {')'}
+            </span>
+          </div>
           <div className={styles.statusBadge}>{STATUS_LABELS[status]}</div>
         </div>
         <div className={cn(styles.phone, { [styles.blurred]: isEmployee })}>{client.phone}</div>
-
-        <div className={styles.carInfo}>
-          <div className={styles.carName}>{car.brand} {car.model}</div>
-          <div className={styles.carDetails}>
-            {car.generationName ? `${car.generationName} · ` : ''}{car.year}
-            {car.plateNumber ? ` · ${car.plateNumber}` : ''}
-          </div>
-        </div>
+        <div className={cn(styles.clientName, { [styles.blurred]: isEmployee })}>{client.name}</div>
 
         {items.length > 0 && (
           <div className={styles.services}>
