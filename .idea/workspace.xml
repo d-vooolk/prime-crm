@@ -4,15 +4,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="45f6dddb-f82f-43d5-b121-b81757ed27dc" name="Changes" comment="изменил вид карточки, вынес информацию по ТС вверх">
-      <change beforePath="$PROJECT_DIR$/.claude/settings.local.json" beforeDir="false" afterPath="$PROJECT_DIR$/.claude/settings.local.json" afterDir="false" />
+    <list default="true" id="45f6dddb-f82f-43d5-b121-b81757ed27dc" name="Changes" comment="добавил изменение цветов карточек в зависимости от категорий">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/api/services.api.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/api/services.api.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/components/RecordCard/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/RecordCard/index.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/pages/ServicesPage/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/pages/ServicesPage/index.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/types/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/types/index.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/prisma/schema.prisma" beforeDir="false" afterPath="$PROJECT_DIR$/server/prisma/schema.prisma" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/src/controllers/services.controller.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/controllers/services.controller.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/api/records.api.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/api/records.api.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/components/SideBar/SideBar.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/SideBar/SideBar.module.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/components/SideBar/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/SideBar/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/config/antdTheme.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/config/antdTheme.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/src/controllers/records.controller.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/controllers/records.controller.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/src/routes/records.routes.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/routes/records.routes.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -100,7 +99,7 @@
       <workItem from="1776884163729" duration="630000" />
       <workItem from="1776933228574" duration="4785000" />
       <workItem from="1776970076527" duration="427000" />
-      <workItem from="1777067997894" duration="8633000" />
+      <workItem from="1777067997894" duration="10290000" />
     </task>
     <task id="LOCAL-00001" summary="init new version of product">
       <option name="closed" value="true" />
@@ -246,7 +245,15 @@
       <option name="project" value="LOCAL" />
       <updated>1777075527255</updated>
     </task>
-    <option name="localTasksCounter" value="19" />
+    <task id="LOCAL-00019" summary="добавил изменение цветов карточек в зависимости от категорий">
+      <option name="closed" value="true" />
+      <created>1777077253080</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1777077253080</updated>
+    </task>
+    <option name="localTasksCounter" value="20" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -277,6 +284,7 @@
     <MESSAGE value="добавил возможность переноса сумм на другой период у сотрудников" />
     <MESSAGE value="eslint fix" />
     <MESSAGE value="изменил вид карточки, вынес информацию по ТС вверх" />
-    <option name="LAST_COMMIT_MESSAGE" value="изменил вид карточки, вынес информацию по ТС вверх" />
+    <MESSAGE value="добавил изменение цветов карточек в зависимости от категорий" />
+    <option name="LAST_COMMIT_MESSAGE" value="добавил изменение цветов карточек в зависимости от категорий" />
   </component>
 </project>

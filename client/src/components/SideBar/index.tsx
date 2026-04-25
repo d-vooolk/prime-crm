@@ -17,6 +17,7 @@ import 'dayjs/locale/ru';
 import { useUiStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/authStore';
 import { Logo } from '@/components/Logo';
+import { recordsApi } from '@/api/records.api';
 import styles from './SideBar.module.scss';
 import cn from 'classnames';
 
@@ -43,10 +44,17 @@ export const SideBar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [calendarValue, setCalendarValue] = useState<Dayjs>(dayjs(selectedDate));
+  const [datesWithRecords, setDatesWithRecords] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     setCalendarValue(dayjs(selectedDate));
   }, [selectedDate]);
+
+  useEffect(() => {
+    recordsApi.getDatesWithRecords(calendarValue.year(), calendarValue.month() + 1)
+      .then(dates => setDatesWithRecords(new Set(dates)))
+      .catch(() => {});
+  }, [calendarValue.year(), calendarValue.month()]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const prevMonth = () => setCalendarValue(v => v.subtract(1, 'month'));
   const nextMonth = () => setCalendarValue(v => v.add(1, 'month'));
@@ -58,7 +66,8 @@ export const SideBar: React.FC = () => {
     if (location.pathname !== '/schedule') navigate('/schedule');
   };
 
-  const handleDateSelect = (date: Dayjs) => {
+  const handleDateSelect = (date: Dayjs, info: { source: string }) => {
+    if (info.source !== 'date') return;
     setCalendarValue(date);
     setSelectedDate(date.format('YYYY-MM-DD'));
     if (location.pathname !== '/schedule') navigate('/schedule');
@@ -80,7 +89,14 @@ export const SideBar: React.FC = () => {
             <Calendar
               fullscreen={false}
               value={calendarValue}
-              onChange={handleDateSelect}
+              onSelect={handleDateSelect}
+              cellRender={(current, info) => {
+                if (info.type !== 'date') return null;
+                const dateStr = (current as Dayjs).format('YYYY-MM-DD');
+                return datesWithRecords.has(dateStr)
+                  ? <span className={styles.calendarDot} />
+                  : null;
+              }}
               headerRender={({ value }) => (
                 <div className={styles.calendarHeader}>
                   <button className={styles.calendarArrow} onClick={prevMonth}>

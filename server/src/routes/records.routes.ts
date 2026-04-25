@@ -6,6 +6,7 @@ const router = Router();
 router.get('/', recordsController.getByDate);
 router.get('/incomplete', recordsController.getIncomplete);
 router.get('/companies', recordsController.searchCompanies);
+router.get('/dates', recordsController.getDatesWithRecords);
 router.get('/:id', recordsController.getById);
 router.post('/', recordsController.create);
 router.patch('/:id', recordsController.update);

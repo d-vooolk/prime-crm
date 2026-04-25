@@ -81,6 +81,7 @@
       font-size: 11px;
     }
     .ant-picker-calendar-full .ant-picker-panel .ant-picker-cell-inner {
+      position: relative;
       padding: 0;
       height: 28px;
       line-height: 28px;
@@ -98,6 +99,19 @@
       padding: 0 0 4px;
     }
   }
+}
+
+.calendarDot {
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.55);
+  pointer-events: none;
+  display: block;
 }
 
 .calendarHeader {

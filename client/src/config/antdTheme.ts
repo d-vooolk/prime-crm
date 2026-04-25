@@ -1,4 +1,4 @@
-import { ThemeConfig } from 'antd';
+import { ThemeConfig, theme } from 'antd';
 
 export const lightTheme: ThemeConfig = {
   token: {
@@ -24,9 +24,13 @@ export const lightTheme: ThemeConfig = {
 };
 
 export const darkTheme: ThemeConfig = {
+  algorithm: theme.darkAlgorithm,
   token: {
     colorPrimary: '#60a5fa',
-    colorBgBase: '#1e293b',
+    colorBgBase: '#0f172a',
+    colorBgContainer: '#1e293b',
+    colorBgElevated: '#263346',
+    colorBgLayout: '#0f172a',
     colorTextBase: '#f1f5f9',
     borderRadius: 8,
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
@@ -38,5 +42,10 @@ export const darkTheme: ThemeConfig = {
     Menu: { darkItemBg: '#0f172a', darkSubMenuItemBg: '#1e293b', darkItemSelectedBg: '#1e293b' },
     Card: { borderRadius: 12 },
     Modal: { borderRadiusLG: 16 },
+    Button: {
+      defaultShadow: 'none',
+      primaryShadow: 'none',
+      dangerShadow: 'none',
+    },
   },
 };

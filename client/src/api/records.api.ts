@@ -69,6 +69,9 @@ export const recordsApi = {
   getByDate: (date: string) =>
     http.get<{ data: Record[] }>('/records', { params: { date } }).then(r => r.data.data),
 
+  getDatesWithRecords: (year: number, month: number) =>
+    http.get<{ data: string[] }>('/records/dates', { params: { year, month } }).then(r => r.data.data),
+
   getIncomplete: () => {
     const date = new Date();
     date.setHours(0, 0, 0, 0);

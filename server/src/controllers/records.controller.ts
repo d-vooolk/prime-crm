@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { recordsService } from '../services/records.service';
 import { smsService } from '../services/sms.service';
+import { prisma } from '../prisma/client';
 
 export const recordsController = {
   async getByDate(req: Request, res: Response, next: NextFunction) {
@@ -8,6 +9,24 @@ export const recordsController = {
       const date = String(req.query.date || new Date().toISOString().split('T')[0]);
       const records = await recordsService.findByDate(date);
       res.json({ data: records });
+    } catch (e) { next(e); }
+  },
+
+  async getDatesWithRecords(req: Request, res: Response, next: NextFunction) {
+    try {
+      const year = parseInt(String(req.query.year));
+      const month = parseInt(String(req.query.month));
+      const from = new Date(year, month - 1, 1);
+      const to = new Date(year, month, 1);
+      const records = await prisma.record.findMany({
+        where: { scheduledAt: { gte: from, lt: to }, status: { not: 'CANCELLED' } },
+        select: { scheduledAt: true },
+      });
+      const dates = [...new Set(records.map(r => {
+        const d = r.scheduledAt;
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      }))];
+      res.json({ data: dates });
     } catch (e) { next(e); }
   },
 
