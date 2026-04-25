@@ -193,6 +193,10 @@ export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initial
     setLoading(true);
     try {
       if (editRecord) {
+        await clientsApi.update(editRecord.clientId, {
+          name: data.clientName,
+          phone: data.clientPhone,
+        });
         await recordsApi.update(editRecord.id, buildPayload(editRecord.clientId));
         if (editRecord.status === 'CLOSED' && onSavedClosed) {
           handleClose();

@@ -92,7 +92,8 @@
       "Bash(echo \"client PID: $!\")",
       "Bash(npm start *)",
       "PowerShell(docker exec prime-crm-server-1 *)",
-      "PowerShell(docker exec prime-crm-postgres-1 *)"
+      "PowerShell(docker exec prime-crm-postgres-1 *)",
+      "Bash(git rm *)"
     ]
   }
 }
