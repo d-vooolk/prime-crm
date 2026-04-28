@@ -222,6 +222,25 @@ export interface DocumentTemplate {
   updatedAt: string;
 }
 
+export type NotePriority = 'LOW' | 'MEDIUM' | 'HIGH';
+export type NoteRepeat = 'DAILY' | 'WEEKLY' | 'MONTHLY';
+
+export interface Note {
+  id: string;
+  servicemanId: string;
+  text: string;
+  date?: string | null;
+  allDay: boolean;
+  time?: string | null;
+  repeat?: NoteRepeat | null;
+  priority: NotePriority;
+  isDone: boolean;
+  doneAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  serviceman?: { id: string; name: string };
+}
+
 // Cars API
 export interface CarBrand {
   id: string;

@@ -12,6 +12,7 @@ import { ClientsPage } from '@/pages/ClientsPage';
 import { ServicesPage } from '@/pages/ServicesPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { AccountingPage } from '@/pages/AccountingPage';
+import { NotesPage } from '@/pages/NotesPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { useUiStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/authStore';
@@ -24,6 +25,7 @@ const App: React.FC = () => {
   const { user } = useAuthStore();
   const scheduleOnly = user?.role === 'Сотрудник';
   const canSeeAccounting = !!user;
+  const canSeeNotes = (user?.isMaster || ['Создатель', 'Директор', 'Менеджер'].includes(user?.role || ''));
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -49,6 +51,7 @@ const App: React.FC = () => {
               <Route path="clients" element={scheduleOnly ? <Navigate to="/schedule" replace /> : <ClientsPage />} />
               <Route path="services" element={scheduleOnly ? <Navigate to="/schedule" replace /> : <ServicesPage />} />
               <Route path="accounting" element={canSeeAccounting ? <AccountingPage /> : <Navigate to="/schedule" replace />} />
+              <Route path="notes" element={canSeeNotes ? <NotesPage /> : <Navigate to="/schedule" replace />} />
               <Route path="settings" element={<SettingsPage />} />
             </Route>
           </Routes>

@@ -24,41 +24,41 @@ function formatDate(s: string) {
 }
 
 const incomeColumns = [
-  { title: 'Дата', dataIndex: 'date', key: 'date', width: 100, render: (d: string) => formatDate(d) },
+  { title: 'Дата', dataIndex: 'date', key: 'date', width: 90, render: (d: string) => formatDate(d) },
   {
-    title: 'Клиент / Источник', key: 'client', ellipsis: true,
+    title: 'Клиент / Источник', key: 'client', width: 160, ellipsis: true,
     render: (_: unknown, r: CashTransaction) =>
       r.type === 'MANUAL_INCOME'
         ? <Tag color="blue">Ввод: {r.description}</Tag>
         : r.clientName,
   },
   {
-    title: 'Авто', key: 'car', ellipsis: true,
+    title: 'Авто', key: 'car', width: 140, ellipsis: true,
     render: (_: unknown, r: CashTransaction) => r.carInfo || '—',
   },
   {
-    title: 'Телефон', key: 'phone', width: 130,
+    title: 'Телефон', key: 'phone', width: 120,
     render: (_: unknown, r: CashTransaction) => r.clientPhone || '—',
   },
   {
-    title: 'Сумма', dataIndex: 'amount', key: 'amount', width: 110,
+    title: 'Сумма', dataIndex: 'amount', key: 'amount', width: 100,
     render: (v: number) => <strong>{formatPrice(v)}</strong>,
   },
 ];
 
 const incomeRsCols = [
-  { title: 'Дата', dataIndex: 'date', key: 'date', width: 100, render: (d: string) => formatDate(d) },
-  { title: 'Клиент', key: 'client', ellipsis: true, render: (_: unknown, r: CashTransaction) => r.clientName },
-  { title: 'Авто', key: 'car', ellipsis: true, render: (_: unknown, r: CashTransaction) => r.carInfo || '—' },
-  { title: 'Телефон', key: 'phone', width: 130, render: (_: unknown, r: CashTransaction) => r.clientPhone || '—' },
-  { title: 'Сумма', dataIndex: 'amount', key: 'amount', width: 110, render: (v: number) => <strong>{formatPrice(v)}</strong> },
+  { title: 'Дата', dataIndex: 'date', key: 'date', width: 90, render: (d: string) => formatDate(d) },
+  { title: 'Клиент', key: 'client', width: 160, ellipsis: true, render: (_: unknown, r: CashTransaction) => r.clientName },
+  { title: 'Авто', key: 'car', width: 140, ellipsis: true, render: (_: unknown, r: CashTransaction) => r.carInfo || '—' },
+  { title: 'Телефон', key: 'phone', width: 120, render: (_: unknown, r: CashTransaction) => r.clientPhone || '—' },
+  { title: 'Сумма', dataIndex: 'amount', key: 'amount', width: 100, render: (v: number) => <strong>{formatPrice(v)}</strong> },
 ];
 
 const expenseColumns = [
-  { title: 'Дата', dataIndex: 'date', key: 'date', width: 100, render: (d: string) => formatDate(d) },
-  { title: 'Цель', dataIndex: 'description', key: 'desc', ellipsis: true },
-  { title: 'Сумма', dataIndex: 'amount', key: 'amount', width: 110, render: (v: number) => <strong>{formatPrice(v)}</strong> },
-  { title: 'Изыматель', dataIndex: 'person', key: 'person', width: 130 },
+  { title: 'Дата', dataIndex: 'date', key: 'date', width: 90, render: (d: string) => formatDate(d) },
+  { title: 'Цель', dataIndex: 'description', key: 'desc', width: 160, ellipsis: true },
+  { title: 'Сумма', dataIndex: 'amount', key: 'amount', width: 100, render: (v: number) => <strong>{formatPrice(v)}</strong> },
+  { title: 'Изыматель', dataIndex: 'person', key: 'person', width: 120 },
 ];
 
 const depositColumns = [
@@ -395,7 +395,7 @@ export const AccountingPage: React.FC = () => {
               rowKey="id"
               size="small"
               pagination={false}
-              scroll={{ x: 500 }}
+              scroll={{ x: 700 }}
               footer={() => (
                 <div style={{ textAlign: 'right', fontWeight: 700 }}>
                   Итого: {formatPrice(incomeTotal)}
@@ -414,7 +414,7 @@ export const AccountingPage: React.FC = () => {
               rowKey="id"
               size="small"
               pagination={false}
-              scroll={{ x: 500 }}
+              scroll={{ x: 560 }}
             />
           </div>
         </div>
@@ -445,7 +445,7 @@ export const AccountingPage: React.FC = () => {
               rowKey="id"
               size="small"
               pagination={false}
-              scroll={{ x: 500 }}
+              scroll={{ x: 700 }}
               footer={() => (
                 <div style={{ textAlign: 'right', fontWeight: 700 }}>
                   Итого: {formatPrice(incomeRsTotal)}

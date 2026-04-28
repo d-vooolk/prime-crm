@@ -165,6 +165,7 @@ model Serviceman {
   plainPassword  String?
   birthday       DateTime?
   createdAt      DateTime  @default(now())
+  notes          Note[]
 }
 
 model CompanySettings {
@@ -289,4 +290,26 @@ model CapitalTransaction {
   description String?
   person      String?
   createdAt   DateTime               @default(now())
+}
+
+enum NotePriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model Note {
+  id           String       @id @default(cuid())
+  servicemanId String
+  text         String
+  date         DateTime?
+  allDay       Boolean      @default(true)
+  time         String?
+  repeat       String?
+  priority     NotePriority @default(MEDIUM)
+  isDone       Boolean      @default(false)
+  doneAt       DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  serviceman   Serviceman   @relation(fields: [servicemanId], references: [id], onDelete: Cascade)
 }
