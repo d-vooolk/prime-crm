@@ -36,7 +36,7 @@ export const notesController = {
   },
 
   async update(req: Request, res: Response) {
-    const id = req.params.id;
+    const id = String(req.params.id);
     const requesterId = req.user!.id;
     const creator = isCreator(req);
     try {
@@ -51,7 +51,7 @@ export const notesController = {
   },
 
   async delete(req: Request, res: Response) {
-    const id = req.params.id;
+    const id = String(req.params.id);
     const requesterId = req.user!.id;
     const creator = isCreator(req);
     try {
