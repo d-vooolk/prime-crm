@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import {
   Card, Form, Input, Button, Switch, message, Row, Col, Checkbox,
-  Modal, Table, Tag, Select, Space, Popconfirm, Tabs, Alert, Typography,
+  Modal, Table, Tag, Select, Space, Popconfirm, Tabs, Alert, Typography, Divider,
 } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, LogoutOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { servicesApi } from '@/api/services.api';
 import { useUiStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/authStore';
-import { CompanySettings, DocumentTemplate, Category, SmsSettings } from '@/types';
+import { CompanySettings, DocumentTemplate, Category, SmsSettings, AuthorizedPerson } from '@/types';
 import styles from './SettingsPage.module.scss';
 
 const { Text } = Typography;
@@ -58,12 +58,20 @@ export const SettingsPage: React.FC = () => {
   const [templateForm] = Form.useForm();
   const [templateSaving, setTemplateSaving] = useState(false);
 
+  const [authorizedPersons, setAuthorizedPersons] = useState<AuthorizedPerson[]>([]);
+  const [personModal, setPersonModal] = useState(false);
+  const [personForm] = Form.useForm();
+
   const [smsForm] = Form.useForm();
   const [smsSaving, setSmsSaving] = useState(false);
 
   useEffect(() => {
     servicesApi.getSettings().then(s => {
-      if (s) form.setFieldsValue(s);
+      if (s) {
+        const { authorizedPersons: ap, ...rest } = s;
+        form.setFieldsValue(rest);
+        setAuthorizedPersons(ap || []);
+      }
     }).catch(() => {});
     loadTemplates();
     servicesApi.getCategories().then(setCategories).catch(() => {});
@@ -84,7 +92,7 @@ export const SettingsPage: React.FC = () => {
   const handleSave = async () => {
     const values = await form.validateFields().catch(() => null);
     if (!values) return;
-    const data = { ...values };
+    const data = { ...values, authorizedPersons };
     if (actualSameAsLegal) data.actualAddress = values.legalAddress;
     if (postalSameAsLegal) data.postalAddress = values.legalAddress;
     setLoading(true);
@@ -251,19 +259,6 @@ export const SettingsPage: React.FC = () => {
               <Input placeholder="ООО «Прайм Авто»" />
             </Form.Item>
 
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item label="ФИО директора (именит. падеж)" name="directorName">
-                  <Input placeholder="Иванов Иван Иванович" />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item label="ФИО директора (в склонении)" name="directorNameGenitive">
-                  <Input placeholder="Иванова Ивана Ивановича" />
-                </Form.Item>
-              </Col>
-            </Row>
-
             <Form.Item label="Юридический адрес" name="legalAddress">
               <Input placeholder="220000, г. Минск, ул. Примерная, д. 1" />
             </Form.Item>
@@ -328,6 +323,77 @@ export const SettingsPage: React.FC = () => {
               </Col>
             </Row>
 
+            <Divider orientation="left" style={{ fontSize: 13, marginTop: 8 }}>Подписанты</Divider>
+
+            <div style={{ fontWeight: 500, marginBottom: 12, color: 'var(--color-text-secondary)', fontSize: 13 }}>
+              Директор
+            </div>
+
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item label="ФИО (именит. падеж)" name="directorName">
+                  <Input placeholder="Иванов Иван Иванович" />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item label="ФИО (в склонении)" name="directorNameGenitive">
+                  <Input placeholder="Иванова Ивана Ивановича" />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item label="Должность (именит.)" name="directorPosition">
+                  <Input placeholder="Директор" />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item label="Должность (в склонении)" name="directorPositionGenitive">
+                  <Input placeholder="директора" />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item label="Основание" name="directorBasis">
+                  <Input placeholder="устава" />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <div style={{ fontWeight: 500, marginTop: 8, marginBottom: 10, color: 'var(--color-text-secondary)', fontSize: 13 }}>
+              Доверенные лица
+            </div>
+
+            {authorizedPersons.map((p, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8, padding: '8px 12px', background: 'var(--color-surface-2)', borderRadius: 6 }}>
+                <div style={{ flex: 1 }}>
+                  <span style={{ fontWeight: 500 }}>{p.nameNominative}</span>
+                  <span style={{ color: 'var(--color-text-secondary)', marginLeft: 8, fontSize: 13 }}>
+                    {p.positionNominative}
+                  </span>
+                </div>
+                <Button
+                  size="small"
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={() => setAuthorizedPersons(prev => prev.filter((_, j) => j !== i))}
+                />
+              </div>
+            ))}
+
+            <Button
+              icon={<PlusOutlined />}
+              size="small"
+              style={{ marginBottom: 24 }}
+              onClick={() => { personForm.resetFields(); setPersonModal(true); }}
+            >
+              Добавить доверенное лицо
+            </Button>
+
+            <br />
             <Button type="primary" loading={loading} onClick={handleSave}>Сохранить</Button>
           </Form>
         </Card>
@@ -480,6 +546,50 @@ export const SettingsPage: React.FC = () => {
       <h1 className={styles.title}>Настройки</h1>
 
       <Tabs items={visibleTabItems} />
+
+      <Modal
+        open={personModal}
+        title="Доверенное лицо"
+        onCancel={() => setPersonModal(false)}
+        onOk={async () => {
+          const values = await personForm.validateFields().catch(() => null);
+          if (!values) return;
+          setAuthorizedPersons(prev => [...prev, values as AuthorizedPerson]);
+          setPersonModal(false);
+        }}
+        okText="Добавить"
+        cancelText="Отмена"
+      >
+        <Form form={personForm} layout="vertical" style={{ marginTop: 16 }}>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item label="ФИО (именит.)" name="nameNominative" rules={[{ required: true, message: 'Обязательное поле' }]}>
+                <Input placeholder="Петрова Анна Сергеевна" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="ФИО (в склонении)" name="nameGenitive" rules={[{ required: true, message: 'Обязательное поле' }]}>
+                <Input placeholder="Петровой Анны Сергеевны" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item label="Должность (именит.)" name="positionNominative" rules={[{ required: true, message: 'Обязательное поле' }]}>
+                <Input placeholder="Менеджер" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="Должность (в склонении)" name="positionGenitive" rules={[{ required: true, message: 'Обязательное поле' }]}>
+                <Input placeholder="менеджера" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item label="Основание" name="basis" rules={[{ required: true, message: 'Обязательное поле' }]}>
+            <Input placeholder="доверенности №1 от 01.01.2024" />
+          </Form.Item>
+        </Form>
+      </Modal>
 
       <Modal
         open={templateModal}

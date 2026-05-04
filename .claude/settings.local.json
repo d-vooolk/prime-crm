@@ -104,7 +104,21 @@
       "Bash(sshpass *)",
       "Bash(git -C C:/Users/Dmitriy/Desktop/prime-crm add server/src/services/records.service.ts server/src/controllers/records.controller.ts server/src/routes/records.routes.ts client/src/api/records.api.ts client/src/components/RecordCard/index.tsx client/src/components/RecordCard/RecordCard.module.scss client/src/pages/SchedulePage/index.tsx client/src/pages/SchedulePage/SchedulePage.module.scss)",
       "Bash(git -C C:/Users/Dmitriy/Desktop/prime-crm commit -m ' *)",
-      "Bash(git *)"
+      "Bash(git *)",
+      "Bash(cat .env.development)",
+      "Bash(cat .env)",
+      "Bash(DATABASE_URL=postgresql://postgres:postgres@localhost:5432/prime_crm npx prisma *)",
+      "Bash(DATABASE_URL=postgresql://postgres:postgres@localhost:5432/prime_crm npx *)",
+      "PowerShell(docker exec prime-crm-client-1 *)",
+      "Bash(docker restart prime-crm-client-1 *)",
+      "Bash(winpty docker *)",
+      "Bash(docker exec *)",
+      "Bash(kill %1)",
+      "Bash(wait)",
+      "Bash(grep -v \"^$\")",
+      "PowerShell(Get-Process *)",
+      "PowerShell(Get-NetTCPConnection *)",
+      "PowerShell(Get-WmiObject *)"
     ]
   }
 }

@@ -194,11 +194,23 @@ export interface Serviceman {
   birthday?: string | null;
 }
 
+export interface AuthorizedPerson {
+  nameNominative: string;
+  nameGenitive: string;
+  positionNominative: string;
+  positionGenitive: string;
+  basis: string;
+}
+
 export interface CompanySettings {
   id: string;
   name: string;
   directorName?: string;
   directorNameGenitive?: string;
+  directorPosition?: string;
+  directorPositionGenitive?: string;
+  directorBasis?: string;
+  authorizedPersons?: AuthorizedPerson[];
   legalAddress?: string;
   actualAddress?: string;
   postalAddress?: string;

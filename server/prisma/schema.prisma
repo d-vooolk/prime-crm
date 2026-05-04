@@ -173,8 +173,12 @@ model Serviceman {
 model CompanySettings {
   id                 String  @id @default(cuid())
   name                  String
-  directorName          String?
-  directorNameGenitive  String?
+  directorName                  String?
+  directorNameGenitive          String?
+  directorPosition              String?
+  directorPositionGenitive      String?
+  directorBasis                 String?
+  authorizedPersons             Json?
   legalAddress          String?
   actualAddress      String?
   postalAddress      String?

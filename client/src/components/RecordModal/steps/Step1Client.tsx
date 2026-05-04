@@ -11,7 +11,7 @@ import { clientsApi } from '@/api/clients.api';
 import { servicesApi } from '@/api/services.api';
 import { carsApi } from '@/api/cars.api';
 import { recordsApi, CompanySuggestion } from '@/api/records.api';
-import { Client, Car, CarBrand, CarModel, CarGeneration, Serviceman } from '@/types';
+import { Client, Car, CarBrand, CarModel, CarGeneration, Serviceman, CompanySettings } from '@/types';
 import { RecordFormData } from '../types';
 
 const formatPlateNumber = (value: string): string => {
@@ -48,9 +48,13 @@ export const Step1Client: React.FC<Props> = ({ data, onChange }) => {
   const [legalActualSameAsLegal, setLegalActualSameAsLegal] = useState(false);
   const [legalPostalSameAsLegal, setLegalPostalSameAsLegal] = useState(false);
   const [companySuggestions, setCompanySuggestions] = useState<CompanySuggestion[]>([]);
+  const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
+  const [signatoryKey, setSignatoryKey] = useState<string | undefined>(undefined);
+
   useEffect(() => {
     servicesApi.getServicemen().then(setServicemen).catch(() => {});
     carsApi.getBrands().then(setBrands).catch(() => {});
+    servicesApi.getSettings().then(setCompanySettings).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -176,6 +180,60 @@ export const Step1Client: React.FC<Props> = ({ data, onChange }) => {
       legalBasis: company.legalBasis || '',
     });
   };
+
+  const applySignatory = useCallback((key: string, settings: CompanySettings) => {
+    setSignatoryKey(key);
+    if (key === 'director') {
+      onChange({
+        legalRepresentativePosition: settings.directorPosition || '',
+        legalRepresentativePositionGenitive: settings.directorPositionGenitive || '',
+        legalRepresentative: settings.directorName || '',
+        legalRepresentativeGenitive: settings.directorNameGenitive || '',
+        legalBasis: settings.directorBasis || '',
+      });
+    } else {
+      const idx = parseInt(key.replace('person_', ''), 10);
+      const person = (settings.authorizedPersons || [])[idx];
+      if (person) {
+        onChange({
+          legalRepresentativePosition: person.positionNominative,
+          legalRepresentativePositionGenitive: person.positionGenitive,
+          legalRepresentative: person.nameNominative,
+          legalRepresentativeGenitive: person.nameGenitive,
+          legalBasis: person.basis,
+        });
+      }
+    }
+  }, [onChange]);
+
+  useEffect(() => {
+    if (!companySettings || signatoryKey !== undefined) return;
+    if (data.legalRepresentative) {
+      if (data.legalRepresentative === companySettings.directorName) {
+        setSignatoryKey('director');
+      } else {
+        const idx = (companySettings.authorizedPersons || []).findIndex(
+          p => p.nameNominative === data.legalRepresentative
+        );
+        setSignatoryKey(idx >= 0 ? `person_${idx}` : 'director');
+      }
+    }
+  }, [companySettings]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!data.isLegalEntity || !companySettings || data.legalRepresentative) return;
+    applySignatory('director', companySettings);
+  }, [data.isLegalEntity, companySettings]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const signatoryOptions = companySettings
+    ? [
+        { value: 'director', label: companySettings.directorName || 'Директор' },
+        ...(companySettings.authorizedPersons || []).map((p, i) => ({
+          value: `person_${i}`,
+          label: p.nameNominative,
+        })),
+      ]
+    : [];
 
   const selectedGeneration = generations.find(g => g.id === data.carGenerationId);
   const yearOptions = selectedGeneration
@@ -407,63 +465,14 @@ export const Step1Client: React.FC<Props> = ({ data, onChange }) => {
             </Col>
           </Row>
 
-          <Divider orientation="left" style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
-            Представитель и основание
-          </Divider>
-
-          <Row gutter={16}>
-            <Col xs={24} sm={12}>
-              <Form.Item label="Должность">
-                <Input
-                  value={data.legalRepresentativePosition}
-                  onChange={e => onChange({ legalRepresentativePosition: e.target.value })}
-                  placeholder="Директор"
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12}>
-              <Form.Item label="Должность (род. падеж)">
-                <Input
-                  value={data.legalRepresentativePositionGenitive}
-                  onChange={e => onChange({ legalRepresentativePositionGenitive: e.target.value })}
-                  placeholder="директора"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col xs={24} sm={12}>
-              <Form.Item label="Представитель (ФИО)">
-                <Input
-                  value={data.legalRepresentative}
-                  onChange={e => onChange({ legalRepresentative: e.target.value })}
-                  placeholder="Иванов Иван Иванович"
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12}>
-              <Form.Item label="Представитель (род. падеж)">
-                <Input
-                  value={data.legalRepresentativeGenitive}
-                  onChange={e => onChange({ legalRepresentativeGenitive: e.target.value })}
-                  placeholder="Иванова Ивана Ивановича"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col xs={24} sm={12}>
-              <Form.Item label="Основание">
-                <Input
-                  value={data.legalBasis}
-                  onChange={e => onChange({ legalBasis: e.target.value })}
-                  placeholder="устава"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
+          <Form.Item label="Подписант">
+            <Select
+              value={signatoryKey}
+              onChange={key => companySettings && applySignatory(key, companySettings)}
+              placeholder="Выберите подписанта"
+              options={signatoryOptions}
+            />
+          </Form.Item>
         </>
       )}
 
