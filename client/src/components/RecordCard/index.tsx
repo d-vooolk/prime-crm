@@ -41,6 +41,10 @@ export const RecordCard: React.FC<Props> = ({ record, onClick }) => {
   const time = dayjs(scheduledAt).format('HH:mm');
   const showPhoto = !!car.generationId && !photoError;
 
+  const acceptedDate = dayjs(scheduledAt).format('DD.MM');
+  const closedDate = deal ? dayjs(deal.closedAt).format('DD.MM') : null;
+  const showDates = status === 'CLOSED' && closedDate !== null;
+
   const categoryColor = status === 'ACTIVE'
     ? (items[0]?.service?.category?.color ?? null)
     : null;
@@ -97,6 +101,14 @@ export const RecordCard: React.FC<Props> = ({ record, onClick }) => {
           </div>
           <div className={styles.statusBadge}>{STATUS_LABELS[status]}</div>
         </div>
+        {showDates && (
+          <div className={styles.dates}>
+            <span>Принято <strong>{acceptedDate}</strong></span>
+            <span className={styles.dateArrow}>→</span>
+            <span>Выдано <strong>{closedDate}</strong></span>
+          </div>
+        )}
+
         <div className={cn(styles.phone, { [styles.blurred]: isEmployee })}>{client.phone}</div>
         <div className={cn(styles.clientName, { [styles.blurred]: isEmployee })}>{client.name}</div>
 

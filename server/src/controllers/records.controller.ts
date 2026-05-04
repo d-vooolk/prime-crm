@@ -38,6 +38,14 @@ export const recordsController = {
     } catch (e) { next(e); }
   },
 
+  async getClosedOnDate(req: Request, res: Response, next: NextFunction) {
+    try {
+      const date = String(req.query.date || new Date().toISOString().split('T')[0]);
+      const records = await recordsService.findClosedOnDate(date);
+      res.json({ data: records });
+    } catch (e) { next(e); }
+  },
+
   async getById(req: Request, res: Response, next: NextFunction) {
     try {
       const record = await recordsService.findById(String(req.params.id));

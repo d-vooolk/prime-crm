@@ -20,6 +20,7 @@ export const SchedulePage: React.FC = () => {
   const isEmployee = user?.role === 'Сотрудник';
   const [todayRecords, setTodayRecords] = useState<Record[]>([]);
   const [incompleteRecords, setIncompleteRecords] = useState<Record[]>([]);
+  const [closedTodayRecords, setClosedTodayRecords] = useState<Record[]>([]);
   const [loading, setLoading] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<Record | null>(null);
@@ -27,16 +28,18 @@ export const SchedulePage: React.FC = () => {
   const fetchRecords = useCallback(async () => {
     setLoading(true);
     try {
-      const [today, incomplete] = await Promise.all([
+      const [today, incomplete, closedToday] = await Promise.all([
         recordsApi.getByDate(selectedDate),
         recordsApi.getIncomplete(),
+        recordsApi.getClosedOnDate(selectedDate),
       ]);
       setTodayRecords(today);
       setIncompleteRecords(incomplete);
+      setClosedTodayRecords(closedToday);
       // Обновляем открытую карточку, если она есть
       setSelectedRecord(prev => {
         if (!prev) return null;
-        return [...today, ...incomplete].find(r => r.id === prev.id) || prev;
+        return [...today, ...incomplete, ...closedToday].find(r => r.id === prev.id) || prev;
       });
     } catch {
       /* silent */
@@ -122,6 +125,29 @@ export const SchedulePage: React.FC = () => {
               </div>
             ) : (
               incompleteRecords.map(record => (
+                <RecordCard
+                  key={record.id}
+                  record={record}
+                  onClick={() => setSelectedRecord(record)}
+                />
+              ))
+            )}
+          </div>
+        </div>
+
+        <div className={styles.column}>
+          <div className={`${styles.columnHeader} ${styles.columnClosed}`}>
+            Завершены {dateLabel}
+            <span className={`${styles.columnCount} ${styles.columnCountClosed}`}>{closedTodayRecords.length}</span>
+          </div>
+          <div className={styles.columnBody}>
+            {closedTodayRecords.length === 0 ? (
+              <div className={styles.emptyState}>
+                <div className={styles.emptyIcon}>🏁</div>
+                <p>Нет завершённых в этот день</p>
+              </div>
+            ) : (
+              closedTodayRecords.map(record => (
                 <RecordCard
                   key={record.id}
                   record={record}

@@ -88,6 +88,21 @@ export const recordsService = {
     });
   },
 
+  async findClosedOnDate(date: string) {
+    const d = new Date(date);
+    const dayStart = startOfDay(d);
+    const dayEnd = endOfDay(d);
+    return prisma.record.findMany({
+      where: {
+        status: 'CLOSED',
+        deal: { closedAt: { gte: dayStart, lte: dayEnd } },
+        NOT: { scheduledAt: { gte: dayStart, lte: dayEnd } },
+      },
+      include: RECORD_INCLUDE,
+      orderBy: { scheduledAt: 'asc' },
+    });
+  },
+
   async findById(id: string) {
     const record = await prisma.record.findUnique({
       where: { id },

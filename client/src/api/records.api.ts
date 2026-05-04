@@ -80,6 +80,9 @@ export const recordsApi = {
     return http.get<{ data: Record[] }>('/records/incomplete', { params: { date: date.toISOString() } }).then(r => r.data.data);
   },
 
+  getClosedOnDate: (date: string) =>
+    http.get<{ data: Record[] }>('/records/closed-on', { params: { date } }).then(r => r.data.data),
+
   getById: (id: string) =>
     http.get<{ data: Record }>(`/records/${id}`).then(r => r.data.data),
 

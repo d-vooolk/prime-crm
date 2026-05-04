@@ -73,7 +73,7 @@
   min-width: 0;
   min-height: 0;
 
-  &:first-child {
+  &:not(:last-child) {
     border-right: 1px solid var(--color-border);
 
     @include mobile {
@@ -109,6 +109,14 @@
 
 .columnOverdue .columnCount {
   background: var(--color-error);
+}
+
+.columnClosed {
+  color: var(--color-status-closed);
+}
+
+.columnCountClosed {
+  background: var(--color-status-closed);
 }
 
 .columnBody {
