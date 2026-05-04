@@ -1,14 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Modal, Form, Input, Select, Button, Divider, message,
   Table, Empty, Tag, Tooltip, InputNumber, Switch,
 } from 'antd';
 import { useNotify } from '@/hooks/useNotify';
 import { TeamOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
-import { Record, Serviceman } from '@/types';
+import { Record, Serviceman, CompanySettings, DocumentTemplate } from '@/types';
 import { servicesApi } from '@/api/services.api';
 import { recordsApi } from '@/api/records.api';
 import { formatPrice } from '@/utils/formatters';
+import { printCompletionAct } from '@/utils/print';
 import { DealCelebration } from '../DealCelebration';
 import styles from './CloseRecordModal.module.scss';
 
@@ -52,6 +53,12 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
   const [employees, setEmployees] = useState<Serviceman[]>([]);
   const [celebrating, setCelebrating] = useState(false);
   const [items, setItems] = useState<ItemRow[]>([]);
+
+  const pendingPrintRef = useRef<{
+    record: Record;
+    settings: CompanySettings | undefined;
+    templateContent: string | undefined;
+  } | null>(null);
 
   // Serviceman split modal state
   const [splitOpen, setSplitOpen] = useState(false);
@@ -284,9 +291,33 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
         } : {}),
       });
 
+      const [freshRecord, settings, allTemplates] = await Promise.all([
+        recordsApi.getById(record.id),
+        servicesApi.getSettings().catch(() => undefined as CompanySettings | undefined),
+        servicesApi.getDocTemplates().catch(() => [] as DocumentTemplate[]),
+      ]);
+
+      const actTemplates = allTemplates.filter((t: DocumentTemplate) => t.type === 'completion_act');
+      const categoryIds = [...new Set(
+        freshRecord.items.map(i => i.service?.categoryId).filter((id): id is string => !!id)
+      )];
+      const categoryId = categoryIds[0] ?? null;
+      const actTemplate = (categoryId ? actTemplates.find((t: DocumentTemplate) => t.categoryId === categoryId) : null)
+        ?? actTemplates.find((t: DocumentTemplate) => !t.categoryId && t.isDefault)
+        ?? actTemplates.find((t: DocumentTemplate) => t.isDefault)
+        ?? actTemplates[0];
+      pendingPrintRef.current = { record: freshRecord, settings, templateContent: actTemplate?.content };
+
       onClose();
       setCelebrating(true);
       setTimeout(() => onSuccess(), 2100);
+      setTimeout(() => {
+        const pd = pendingPrintRef.current;
+        if (pd?.record.deal) {
+          printCompletionAct(pd.record, pd.settings, pd.templateContent);
+        }
+        pendingPrintRef.current = null;
+      }, 2400);
     } catch (e: unknown) {
       message.error(e instanceof Error ? e.message : 'Ошибка');
     } finally {

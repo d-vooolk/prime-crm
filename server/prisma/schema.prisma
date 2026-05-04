@@ -103,6 +103,7 @@ model Service {
   isActive      Boolean      @default(true)
   hasEquipment  Boolean      @default(false)
   isProduct     Boolean      @default(false)
+  customPercent Float?
   category      Category     @relation(fields: [categoryId], references: [id])
   recordItems   RecordItem[]
 }
@@ -111,6 +112,7 @@ model Category {
   id                String             @id @default(cuid())
   name              String             @unique
   color             String?
+  customPercent     Float?
   services          Service[]
   documentTemplates DocumentTemplate[]
 }

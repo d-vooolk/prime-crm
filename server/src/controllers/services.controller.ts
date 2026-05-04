@@ -38,12 +38,13 @@ export const servicesController = {
 
   async updateCategory(req: Request, res: Response, next: NextFunction) {
     try {
-      const { name, color } = req.body;
+      const { name, color, customPercent } = req.body;
       const category = await prisma.category.update({
         where: { id: String(req.params.id) },
         data: {
           ...(name !== undefined && { name }),
           ...(color !== undefined && { color: color ?? null }),
+          ...(customPercent !== undefined && { customPercent: customPercent ?? null }),
         },
       });
       res.json({ data: category });

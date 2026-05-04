@@ -165,7 +165,7 @@ export const accountingService = {
         },
       },
       include: {
-        service: true,
+        service: { include: { category: true } },
         record: { include: { client: true, car: true, deal: { select: { salaryDate: true } } } },
       },
     });
@@ -185,7 +185,10 @@ export const accountingService = {
       if (netProfit === null) continue;
 
       const { record } = item;
-      const payment = Math.round(netProfit * profitPercent) / 100;
+      const effectivePercent = item.service.customPercent
+        ?? (item.service as { customPercent?: number | null; category: { customPercent?: number | null } }).category?.customPercent
+        ?? profitPercent;
+      const payment = Math.round(netProfit * effectivePercent) / 100;
       if (!recordMap.has(record.id)) {
         recordMap.set(record.id, {
           recordId: record.id,

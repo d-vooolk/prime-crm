@@ -152,6 +152,7 @@ export interface Category {
   id: string;
   name: string;
   color?: string | null;
+  customPercent?: number | null;
   services: Service[];
 }
 
@@ -164,6 +165,7 @@ export interface Service {
   isActive: boolean;
   hasEquipment?: boolean;
   isProduct?: boolean;
+  customPercent?: number | null;
   category?: Category;
 }
 

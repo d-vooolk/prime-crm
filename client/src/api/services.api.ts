@@ -8,7 +8,7 @@ export const servicesApi = {
   createCategory: (name: string, color?: string | null) =>
     http.post<{ data: Category }>('/services/categories', { name, color }).then(r => r.data.data),
 
-  updateCategory: (id: string, data: { name?: string; color?: string | null }) =>
+  updateCategory: (id: string, data: { name?: string; color?: string | null; customPercent?: number | null }) =>
     http.patch<{ data: Category }>(`/services/categories/${id}`, data).then(r => r.data.data),
 
   deleteCategory: (id: string) =>
@@ -17,7 +17,7 @@ export const servicesApi = {
   createService: (data: { name: string; categoryId: string; standardPrice: number; estimatedTime: number; hasEquipment?: boolean; isProduct?: boolean }) =>
     http.post('/services', data).then(r => r.data),
 
-  updateService: (id: string, data: Partial<{ name: string; categoryId: string; standardPrice: number; estimatedTime: number; hasEquipment: boolean; isProduct: boolean }>) =>
+  updateService: (id: string, data: Partial<{ name: string; categoryId: string; standardPrice: number; estimatedTime: number; hasEquipment: boolean; isProduct: boolean; customPercent: number | null }>) =>
     http.patch(`/services/${id}`, data).then(r => r.data),
 
   deleteService: (id: string) =>

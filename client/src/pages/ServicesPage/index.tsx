@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import {
   Button, Table, Modal, Form, Input, InputNumber, Select,
   Popconfirm, message, Tabs, Checkbox, Tag, Space, Collapse, DatePicker, ColorPicker,
+  Tooltip, Switch,
 } from 'antd';
 import {
   PlusOutlined, EditOutlined, DeleteOutlined,
-  StopOutlined, UserOutlined, BgColorsOutlined,
+  StopOutlined, UserOutlined, BgColorsOutlined, PercentageOutlined,
 } from '@ant-design/icons';
 import { servicesApi } from '@/api/services.api';
 import { useAuthStore } from '@/store/authStore';
@@ -41,6 +42,42 @@ export const ServicesPage: React.FC = () => {
   const [categoryColor, setCategoryColor] = useState<string | null>(null);
   const [equipmentModal, setEquipmentModal] = useState<{ open: boolean; item?: Equipment }>({ open: false });
   const [servicemanModal, setServicemanModal] = useState<{ open: boolean; item?: Serviceman; isReceptionist?: boolean }>({ open: false });
+
+  const [percentModal, setPercentModal] = useState<{
+    type: 'service' | 'category';
+    id: string;
+    name: string;
+  } | null>(null);
+  const [percentValue, setPercentValue] = useState<number | null>(null);
+  const [percentIsDefault, setPercentIsDefault] = useState(true);
+
+  const openPercentModal = (type: 'service' | 'category', id: string, name: string, current: number | null | undefined) => {
+    setPercentModal({ type, id, name });
+    if (current != null) {
+      setPercentValue(current);
+      setPercentIsDefault(false);
+    } else {
+      setPercentValue(null);
+      setPercentIsDefault(true);
+    }
+  };
+
+  const handleSavePercent = async () => {
+    if (!percentModal) return;
+    const customPercent = percentIsDefault ? null : percentValue;
+    try {
+      if (percentModal.type === 'service') {
+        await servicesApi.updateService(percentModal.id, { customPercent });
+      } else {
+        await servicesApi.updateCategory(percentModal.id, { customPercent });
+      }
+      message.success('Сохранено');
+      setPercentModal(null);
+      fetchAll();
+    } catch {
+      message.error('Ошибка сохранения');
+    }
+  };
 
   const fetchAll = async () => {
     await Promise.all([
@@ -205,9 +242,18 @@ export const ServicesPage: React.FC = () => {
     { title: 'Цена', dataIndex: 'standardPrice', key: 'price', width: 120, render: (v: number) => formatPrice(v) },
     { title: 'Время', dataIndex: 'estimatedTime', key: 'time', width: 100, render: (v: number) => formatDuration(v) },
     {
-      title: '', key: 'actions', width: 80,
+      title: '', key: 'actions', width: 100,
       render: (_: unknown, row: Service) => (
         <div style={{ display: 'flex', gap: 4 }}>
+          <Tooltip title={row.customPercent != null ? `Кастомный %: ${row.customPercent}%` : 'Процент от прибыли'}>
+            <Button
+              size="small"
+              icon={<PercentageOutlined />}
+              type={row.customPercent != null ? 'primary' : 'default'}
+              ghost={row.customPercent != null}
+              onClick={() => openPercentModal('service', row.id, row.name, row.customPercent)}
+            />
+          </Tooltip>
           <Button size="small" icon={<EditOutlined />} onClick={() => openEditService(row)} />
           <Popconfirm title="Удалить услугу?" onConfirm={async () => {
             try {
@@ -368,10 +414,19 @@ export const ServicesPage: React.FC = () => {
                       </div>
                     ),
                     extra: (
-                      <div style={{ display: 'flex', gap: 4 }} onClick={e => e.stopPropagation()}>
+                      <div style={{ display: 'flex', gap: 4, alignItems: 'center' }} onClick={e => e.stopPropagation()}>
                         <Button size="small" icon={<PlusOutlined />} onClick={() => openAddService(cat.id)}>
                           Добавить
                         </Button>
+                        <Tooltip title={cat.customPercent != null ? `Кастомный %: ${cat.customPercent}%` : 'Процент от прибыли'}>
+                          <Button
+                            size="small"
+                            icon={<PercentageOutlined />}
+                            type={cat.customPercent != null ? 'primary' : 'default'}
+                            ghost={cat.customPercent != null}
+                            onClick={() => openPercentModal('category', cat.id, cat.name, cat.customPercent)}
+                          />
+                        </Tooltip>
                         <Button size="small" icon={<BgColorsOutlined />} onClick={() => openEditCategory(cat)} />
                         <Popconfirm title="Удалить категорию?" onConfirm={async () => {
                           try {
@@ -607,6 +662,55 @@ export const ServicesPage: React.FC = () => {
             <InputNumber style={{ width: '100%' }} min={0} formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} placeholder="0" />
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* Percent modal */}
+      <Modal
+        open={percentModal !== null}
+        onCancel={() => setPercentModal(null)}
+        onOk={handleSavePercent}
+        title={`Процент: ${percentModal?.name}`}
+        width={360}
+        okText="Сохранить"
+        cancelText="Отмена"
+        destroyOnHidden
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '8px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Switch
+              checked={percentIsDefault}
+              onChange={v => {
+                setPercentIsDefault(v);
+                if (v) setPercentValue(null);
+              }}
+            />
+            <span style={{ fontSize: 14 }}>По умолчанию (% из профиля сотрудника)</span>
+          </div>
+          <div>
+            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 4 }}>
+              Кастомный процент
+            </div>
+            <InputNumber
+              style={{ width: '100%' }}
+              min={0}
+              max={100}
+              step={0.5}
+              suffix="%"
+              placeholder="Например: 50"
+              disabled={percentIsDefault}
+              value={percentIsDefault ? undefined : (percentValue ?? undefined)}
+              onChange={v => {
+                setPercentValue(v ?? null);
+                if (v != null) setPercentIsDefault(false);
+              }}
+            />
+          </div>
+          {!percentIsDefault && percentModal?.type === 'category' && (
+            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', padding: '6px 10px', background: 'var(--color-surface-2)', borderRadius: 6 }}>
+              Все услуги этой категории будут использовать этот процент, если у самой услуги не задан свой.
+            </div>
+          )}
+        </div>
       </Modal>
 
       {/* Serviceman modal */}
