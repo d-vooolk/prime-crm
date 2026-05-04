@@ -284,23 +284,6 @@
   color: var(--color-text-muted);
 }
 
-.dates {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-
-  strong { font-weight: 600; color: var(--color-text-primary); }
-
-  @include mobile { display: none; }
-}
-
-.dateArrow {
-  color: var(--color-text-muted);
-  font-size: 10px;
-}
-
 // ─── SMS значки-оверлей ────────────────────────────
 
 .smsLabels {

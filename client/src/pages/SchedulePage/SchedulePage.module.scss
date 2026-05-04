@@ -111,14 +111,6 @@
   background: var(--color-error);
 }
 
-.columnClosed {
-  color: var(--color-status-closed);
-}
-
-.columnCountClosed {
-  background: var(--color-status-closed);
-}
-
 .columnBody {
   flex: 1;
   min-height: 0;

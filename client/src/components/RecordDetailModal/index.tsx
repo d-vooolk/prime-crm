@@ -629,7 +629,7 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
 
         <Divider orientation="left" style={{ fontSize: 13 }}>Запись</Divider>
         <Descriptions size="small" column={{ xs: 1, sm: 2 }}>
-          <Descriptions.Item label="Дата">{formatDate(record.scheduledAt)}</Descriptions.Item>
+          <Descriptions.Item label="Принято">{formatDate(record.scheduledAt)}</Descriptions.Item>
           <Descriptions.Item label="Время">{formatTime(record.scheduledAt)}</Descriptions.Item>
           {record.serviceman && (
             <Descriptions.Item label="Сотрудник">{record.serviceman}</Descriptions.Item>
@@ -698,7 +698,7 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
           <>
             <Divider orientation="left" style={{ fontSize: 13 }}>Сделка закрыта</Divider>
             <Descriptions size="small" column={{ xs: 1, sm: 2 }}>
-              <Descriptions.Item label="Дата закрытия">
+              <Descriptions.Item label="Выдано">
                 {formatDate(record.deal.closedAt)}
               </Descriptions.Item>
               {record.deal.warranty && (

@@ -72,8 +72,31 @@ export interface CloseDealDto {
 export const recordsService = {
   async findByDate(date: string) {
     const d = new Date(date);
+    const dayStart = startOfDay(d);
+    const dayEnd = endOfDay(d);
+
+    // Сравниваем строки дат чтобы избежать проблем с часовыми поясами
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const isFuture = date > todayStr;
+
+    if (!isFuture) {
+      // Прошедшие дни и сегодня: закрытые в этот день + незакрытые записанные на этот день
+      return prisma.record.findMany({
+        where: {
+          OR: [
+            { status: 'CLOSED', deal: { closedAt: { gte: dayStart, lte: dayEnd } } },
+            { scheduledAt: { gte: dayStart, lte: dayEnd }, status: { not: 'CLOSED' } },
+          ],
+        },
+        include: RECORD_INCLUDE,
+        orderBy: { scheduledAt: 'asc' },
+      });
+    }
+
+    // Будущие даты: по дате записи
     return prisma.record.findMany({
-      where: { scheduledAt: { gte: startOfDay(d), lte: endOfDay(d) } },
+      where: { scheduledAt: { gte: dayStart, lte: dayEnd } },
       include: RECORD_INCLUDE,
       orderBy: { scheduledAt: 'asc' },
     });
