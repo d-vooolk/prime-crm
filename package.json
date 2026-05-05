@@ -2,6 +2,7 @@
   "name": "prime-crm",
   "private": true,
   "scripts": {
+    "dev": "npx kill-port 3000 && concurrently -n client,server -c blue,green \"npm run dev --prefix client\" \"npm run dev --prefix server\"",
     "deploy": "bash deploy.sh",
     "start": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d",
     "stop": "docker compose down",
@@ -10,5 +11,8 @@
     "logs": "docker compose logs -f",
     "logs:server": "docker compose logs -f server",
     "logs:client": "docker compose logs -f client"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
   }
 }

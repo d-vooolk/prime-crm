@@ -527,8 +527,29 @@ export const Step1Client: React.FC<Props> = ({ data, onChange }) => {
               onChange={handleBrandChange}
               placeholder="Выберите марку"
               optionFilterProp="label"
-              options={brands.map(b => ({ value: b.id, label: b.name }))}
-            />
+              labelRender={({ value }) => {
+                const brand = brands.find(b => b.id === value);
+                return (
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {brand?.logo && (
+                      <img src={`https://${brand.logo}`} alt="" style={{ width: 16, height: 16, objectFit: 'contain' }} />
+                    )}
+                    {brand?.name}
+                  </span>
+                );
+              }}
+            >
+              {brands.map(b => (
+                <Select.Option key={b.id} value={b.id} label={b.name}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {b.logo && (
+                      <img src={`https://${b.logo}`} alt="" style={{ width: 20, height: 20, objectFit: 'contain' }} />
+                    )}
+                    {b.name}
+                  </span>
+                </Select.Option>
+              ))}
+            </Select>
           </Form.Item>
         </Col>
         <Col xs={24} sm={8}>

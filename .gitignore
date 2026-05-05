@@ -9,6 +9,7 @@ docker-compose.override.yml
 __ssh_*.py
 __fix*.txt
 _debug*
+.claude/
 server/src/**/*.js
 server/src/**/*.js.map
 server/src/**/*.d.ts
