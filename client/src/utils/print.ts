@@ -184,7 +184,7 @@ export function printWorkOrder(record: Record, settings?: CompanySettings, templ
         `).join('')}
       </tbody>
     </table>
-    <div class="total">Предварительная стоимость заказа: ${formatPrice(total)} бел. руб.</div>
+    <div class="total">Предварительная стоимость заказа: ${formatPrice(total).replace(' р.', '')} бел. руб.</div>
 
     <div class="legal-text" style="margin-top:12px">${legalText}</div>
 
@@ -341,7 +341,7 @@ function buildCompletionActHtml(
         `).join('')}
       </tbody>
     </table>
-    <div class="total">Итоговая стоимость: ${formatPrice(total)} бел. руб.</div>
+    <div class="total">Итоговая стоимость: ${formatPrice(total).replace(' р.', '')} бел. руб.</div>
 
     ${field('Обнаруженные недостатки:', defects)}
     ${equipmentBlock}
@@ -530,7 +530,7 @@ export function printServiceContract(record: Record, settings?: CompanySettings)
 
     <div class="section">
       <div class="section-title">3. Цена договора</div>
-      <div class="clause">3.1 Цена настоящего договора составляет: ${formatPrice(total)} бел.руб. (${totalWords} белорусских рублей) (Без НДС)</div>
+      <div class="clause">3.1 Цена настоящего договора составляет: ${formatPrice(total).replace(' р.', '')} бел. руб. (${totalWords} белорусских рублей) (Без НДС)</div>
     </div>
 
     <div class="section">
@@ -623,17 +623,17 @@ export function printInvoice(record: Record, settings?: CompanySettings): void {
         ${servicesTableRows(record)}
         <tr class="total-row">
           <td colspan="2" style="text-align:right">Итого по счёту</td>
-          <td style="text-align:right">${formatPrice(total)} (Без НДС)</td>
+          <td style="text-align:right">${formatPrice(total).replace(' р.', '')} бел. руб. (Без НДС)</td>
         </tr>
       </tbody>
     </table>
 
     <p style="margin:14px 0;text-align:justify;font-size:11px">
       Настоящий счёт подтверждает факт оказания услуг по договору №${docNum} от ${date}г. и служит основанием
-      для зачисления суммы в размере ${formatPrice(total)} (${totalWords}) белорусских рублей. (Без НДС)
+      для зачисления суммы в размере ${formatPrice(total).replace(' р.', '')} бел. руб. (${totalWords}) белорусских рублей. (Без НДС)
     </p>
     <p style="font-size:11px;margin-bottom:16px">
-      <strong>Итого, сумма:</strong> ${formatPrice(total)} (${totalWords}) белорусских рублей (Без НДС)
+      <strong>Итого, сумма:</strong> ${formatPrice(total).replace(' р.', '')} бел. руб. (${totalWords}) белорусских рублей (Без НДС)
     </p>
 
     <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:40px;margin-top:28px">
@@ -693,6 +693,10 @@ export function printLegalAct(record: Record, settings?: CompanySettings): void 
       Автомобиль: <strong>${car}</strong>
     </div>
 
+    <p style="font-size:11px;margin-bottom:8px">
+      Настоящий акт составлен к Договору № ${docNum} на оказание услуг от ${date}г.
+    </p>
+
     <table>
       <thead>
         <tr>
@@ -705,13 +709,13 @@ export function printLegalAct(record: Record, settings?: CompanySettings): void 
         ${servicesTableRows(record)}
         <tr class="total-row">
           <td colspan="2" style="text-align:right">Итого по счёту</td>
-          <td style="text-align:right">${formatPrice(total)} (Без НДС)</td>
+          <td style="text-align:right">${formatPrice(total).replace(' р.', '')} бел. руб. (Без НДС)</td>
         </tr>
       </tbody>
     </table>
 
     <p style="margin:14px 0;font-size:11px">
-      Всего оказано услуг на сумму ${formatPrice(total)} бел. руб. (${totalWords} белорусских рублей) (Без НДС)
+      Всего оказано услуг на сумму ${formatPrice(total).replace(' р.', '')} бел. руб. (${totalWords} белорусских рублей) (Без НДС)
     </p>
     <p style="margin-bottom:28px;font-size:11px;text-align:justify">
       Вышеперечисленные работы (услуги) выполнены полностью и в срок. Заказчик претензий по объему, качеству и срокам оказания услуг претензий не имеет.
