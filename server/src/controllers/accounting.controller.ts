@@ -69,6 +69,12 @@ export const accountingController = {
     res.status(204).end();
   },
 
+  async getSalaryHistory(req: Request, res: Response) {
+    const servicemanName = String(req.query.servicemanName || '');
+    const data = await accountingService.getSalaryHistory(servicemanName);
+    res.json({ data });
+  },
+
   async createAdjustment(req: Request, res: Response) {
     const { servicemanName, type, amount, reason, year, month } = req.body;
     const adj = await accountingService.createAdjustment({ servicemanName, type, amount: Number(amount), reason, year: Number(year), month: Number(month) });

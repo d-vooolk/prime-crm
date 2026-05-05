@@ -12,6 +12,7 @@ router.get('/capital/balance', accountingController.getCapitalBalance);
 router.post('/capital/deposit', accountingController.createDeposit);
 router.post('/capital/withdrawal', accountingController.createWithdrawal);
 router.get('/salary', accountingController.getSalary);
+router.get('/salary/history', accountingController.getSalaryHistory);
 router.patch('/cash/:id', accountingController.updateCashTransaction);
 router.delete('/cash/:id', accountingController.deleteCashTransaction);
 router.post('/salary-adjustments', accountingController.createAdjustment);

@@ -6,10 +6,11 @@ import {
 import {
   PlusOutlined, MinusOutlined, EditOutlined, DeleteOutlined, RetweetOutlined,
 } from '@ant-design/icons';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import { recordsApi } from '@/api/records.api';
 import dayjs, { Dayjs } from 'dayjs';
 import { CashTransaction, CapitalTransaction, Serviceman } from '@/types';
-import { accountingApi, SalaryData, SalaryRecord, SalaryAdjustment, FounderSalaryRecord } from '@/api/accounting.api';
+import { accountingApi, SalaryData, SalaryRecord, SalaryAdjustment, FounderSalaryRecord, SalaryHistoryItem } from '@/api/accounting.api';
 import { servicesApi } from '@/api/services.api';
 import { formatPrice } from '@/utils/formatters';
 import { useAuthStore } from '@/store/authStore';
@@ -100,6 +101,8 @@ export const AccountingPage: React.FC = () => {
   const [salaryEmployee, setSalaryEmployee] = useState<string>('');
   const [salaryData, setSalaryData] = useState<SalaryData | null>(null);
   const [salaryLoading, setSalaryLoading] = useState(false);
+  const [salaryHistory, setSalaryHistory] = useState<SalaryHistoryItem[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const [fineOpen, setFineOpen] = useState(false);
   const [bonusOpen, setBonusOpen] = useState(false);
@@ -177,6 +180,15 @@ export const AccountingPage: React.FC = () => {
   }, [salaryEmployee, salaryMonth]);
 
   useEffect(() => { loadSalary(); }, [loadSalary]);
+
+  useEffect(() => {
+    if (!salaryEmployee) { setSalaryHistory([]); return; }
+    setHistoryLoading(true);
+    accountingApi.getSalaryHistory(salaryEmployee)
+      .then(setSalaryHistory)
+      .catch(() => setSalaryHistory([]))
+      .finally(() => setHistoryLoading(false));
+  }, [salaryEmployee]);
 
   useEffect(() => {
     if (expenseOpen) {
@@ -647,6 +659,25 @@ export const AccountingPage: React.FC = () => {
           </Card>
         )}
 
+        {salaryEmployee && salaryHistory.length > 0 && (() => {
+          const recordEntry = salaryHistory.reduce((max, h) => h.adjustedTotal > max.adjustedTotal ? h : max);
+          const isFirstMonth = salaryHistory.length === 1;
+          const amount = isFirstMonth ? (salaryData?.adjustedTotal ?? recordEntry.adjustedTotal) : recordEntry.adjustedTotal;
+          const label = isFirstMonth ? 'Первый месяц' : recordEntry.label;
+          return (
+            <Card size="small" className={styles.balanceCard}>
+              <Statistic
+                title="Рекорд заработка"
+                value={amount}
+                precision={2}
+                suffix="р."
+                valueStyle={{ color: '#f59e0b', fontSize: 22 }}
+              />
+              <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 4 }}>{label}</div>
+            </Card>
+          );
+        })()}
+
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           {!isSotrudnik && (
             <Select
@@ -706,6 +737,37 @@ export const AccountingPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {salaryEmployee && salaryHistory.length > 1 && (
+        <Card
+          size="small"
+          title="Динамика заработка по месяцам"
+          loading={historyLoading}
+          style={{ marginBottom: 16 }}
+        >
+          <ResponsiveContainer width="100%" height={180}>
+            <LineChart data={salaryHistory} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+              <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `${(v / 1000).toFixed(0)}к`} width={40} />
+              <RechartsTooltip
+                content={({ active, payload, label: lbl }) => {
+                  if (!active || !payload?.length) return null;
+                  const item = payload[0].payload as SalaryHistoryItem;
+                  return (
+                    <div style={{ background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)', borderRadius: 6, padding: '8px 12px', fontSize: 13 }}>
+                      <div style={{ fontWeight: 600, marginBottom: 4 }}>{lbl}</div>
+                      <div>Заработок: <strong style={{ color: '#22c55e' }}>{formatPrice(item.adjustedTotal)}</strong></div>
+                      <div style={{ color: 'var(--color-text-muted)' }}>Машин: {item.recordCount}</div>
+                    </div>
+                  );
+                }}
+              />
+              <Line type="monotone" dataKey="adjustedTotal" stroke="var(--color-primary)" strokeWidth={2} dot={salaryHistory.length <= 12} activeDot={{ r: 4 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </Card>
+      )}
 
       {salaryEmployee && salaryData ? (
         <>

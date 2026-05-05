@@ -75,6 +75,9 @@ export const accountingApi = {
   getSalary: (servicemanName: string, year: number, month: number) =>
     http.get<{ data: SalaryData }>('/accounting/salary', { params: { servicemanName, year, month } }).then(r => r.data.data),
 
+  getSalaryHistory: (servicemanName: string) =>
+    http.get<{ data: SalaryHistoryItem[] }>('/accounting/salary/history', { params: { servicemanName } }).then(r => r.data.data),
+
   updateCashTransaction: (id: string, data: { date?: string; amount?: number; description?: string; person?: string }) =>
     http.patch<{ data: CashTransaction }>(`/accounting/cash/${id}`, data).then(r => r.data.data),
 
@@ -93,6 +96,14 @@ export const accountingApi = {
   createFounderSalary: (data: { year: number; month: number; person: string; amount: number }) =>
     http.post<{ data: FounderSalaryRecord }>('/accounting/founder-salaries', data).then(r => r.data.data),
 };
+
+export interface SalaryHistoryItem {
+  year: number;
+  month: number;
+  label: string;
+  adjustedTotal: number;
+  recordCount: number;
+}
 
 export interface FounderSalaryRecord {
   id: string;

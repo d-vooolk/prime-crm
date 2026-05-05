@@ -24,9 +24,18 @@
   color: var(--color-text-primary);
 }
 
-.statsRow {
-  margin-bottom: var(--spacing-sm) !important;
+.tabContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
 
+.tabHeader {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.statsRow {
   @include mobile {
     :global {
       .ant-statistic-content {
@@ -51,4 +60,129 @@
       }
     }
   }
+}
+
+.employeesTab {
+  padding-top: var(--spacing-sm);
+}
+
+.employeeCard {
+  height: 100%;
+}
+
+.employeeHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.employeeAvatar {
+  background-color: var(--color-primary) !important;
+  flex-shrink: 0;
+  font-size: 20px;
+}
+
+.employeeInfo {
+  min-width: 0;
+}
+
+.employeeName {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.employeePosition {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.employeeStats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--color-border);
+}
+
+.employeeStat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.statLabel {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.statValue {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.statEarnings {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: #22c55e;
+}
+
+.statRecord {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: #f59e0b;
+}
+
+.sparkline {
+  margin-top: var(--spacing-sm);
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--spacing-sm);
+}
+
+.empty {
+  text-align: center;
+  color: var(--color-text-muted);
+  padding: 40px;
+}
+
+.modalContent {
+  padding-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.modalName {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.chartTooltip {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.tooltipLabel {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.tooltipMuted {
+  color: var(--color-text-muted);
 }

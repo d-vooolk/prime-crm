@@ -243,6 +243,81 @@ export const accountingService = {
     };
   },
 
+  async getSalaryHistory(servicemanName: string) {
+    const serviceman = await prisma.serviceman.findUnique({ where: { name: servicemanName } });
+    const profitPercent = serviceman?.profitPercent ?? 0;
+
+    type SplitEntry = { name: string; amount: number };
+
+    const allItems = await prisma.recordItem.findMany({
+      where: { record: { deal: { isNot: null } } },
+      include: {
+        service: { include: { category: true } },
+        record: { include: { deal: { select: { salaryDate: true, closedAt: true } } } },
+      },
+    });
+
+    const monthMap = new Map<string, { year: number; month: number; totalPayment: number; recordIds: Set<string> }>();
+
+    for (const item of allItems) {
+      let netProfit: number | null = null;
+
+      if (!item.servicemanSplit) {
+        if (item.servicemanName === servicemanName) netProfit = item.netProfit ?? 0;
+      } else {
+        const split = item.servicemanSplit as SplitEntry[];
+        const entry = Array.isArray(split) ? split.find(s => s.name === servicemanName) : undefined;
+        if (entry) netProfit = entry.amount;
+      }
+
+      if (netProfit === null || !item.record.deal) continue;
+
+      const effectiveDate = item.record.deal.salaryDate ?? item.record.deal.closedAt;
+      const d = new Date(effectiveDate);
+      let year = d.getFullYear();
+      let month = d.getMonth() + 1;
+      if (d.getDate() >= 25) {
+        month++;
+        if (month > 12) { month = 1; year++; }
+      }
+
+      const key = `${year}-${String(month).padStart(2, '0')}`;
+      const effectivePercent = item.service.customPercent
+        ?? (item.service as { customPercent?: number | null; category: { customPercent?: number | null } }).category?.customPercent
+        ?? profitPercent;
+      const payment = Math.round(netProfit * effectivePercent) / 100;
+
+      if (!monthMap.has(key)) monthMap.set(key, { year, month, totalPayment: 0, recordIds: new Set() });
+      const m = monthMap.get(key)!;
+      m.totalPayment += payment;
+      m.recordIds.add(item.recordId);
+    }
+
+    const adjustments = await prisma.salaryAdjustment.findMany({ where: { servicemanName } });
+    for (const adj of adjustments) {
+      const key = `${adj.year}-${String(adj.month).padStart(2, '0')}`;
+      if (!monthMap.has(key)) monthMap.set(key, { year: adj.year, month: adj.month, totalPayment: 0, recordIds: new Set() });
+    }
+
+    const MONTH_NAMES = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
+
+    return Array.from(monthMap.entries())
+      .sort(([a], [b]) => (a < b ? -1 : 1))
+      .map(([, m]) => {
+        const monthAdj = adjustments.filter(a => a.year === m.year && a.month === m.month);
+        const bonus = monthAdj.filter(a => a.type === 'BONUS').reduce((s, a) => s + a.amount, 0);
+        const fine = monthAdj.filter(a => a.type === 'FINE').reduce((s, a) => s + a.amount, 0);
+        const adjustedTotal = Math.max(0, m.totalPayment + bonus - fine);
+        return {
+          year: m.year,
+          month: m.month,
+          label: `${MONTH_NAMES[m.month - 1]} ${m.year}`,
+          adjustedTotal,
+          recordCount: m.recordIds.size,
+        };
+      });
+  },
+
   async createAdjustment(data: { servicemanName: string; type: 'FINE' | 'BONUS'; amount: number; reason: string; year: number; month: number }) {
     return prisma.salaryAdjustment.create({ data });
   },
