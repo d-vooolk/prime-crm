@@ -318,6 +318,51 @@ export const accountingService = {
       });
   },
 
+  async getMonthlyRevenue() {
+    const MONTH_NAMES = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+    const MONTH_NAMES_SHORT = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
+
+    const transactions = await prisma.cashTransaction.findMany({
+      where: { type: { in: ['INCOME', 'MANUAL_INCOME', 'INCOME_RS'] } },
+    });
+    const calcMap = new Map<string, number>();
+    for (const tx of transactions) {
+      const year = tx.date.getFullYear();
+      const month = tx.date.getMonth() + 1;
+      const key = `${year}-${String(month).padStart(2, '0')}`;
+      calcMap.set(key, (calcMap.get(key) ?? 0) + tx.amount);
+    }
+
+    const overrides = await prisma.monthlyRevenue.findMany();
+    const overrideMap = new Map(overrides.map(o => [`${o.year}-${String(o.month).padStart(2, '0')}`, o.amount]));
+
+    const allKeys = new Set([...calcMap.keys(), ...overrideMap.keys()]);
+
+    return Array.from(allKeys)
+      .sort((a, b) => (a > b ? -1 : 1))
+      .map(key => {
+        const [y, m] = key.split('-').map(Number);
+        const amount = overrideMap.has(key) ? overrideMap.get(key)! : (calcMap.get(key) ?? 0);
+        return {
+          key,
+          year: y,
+          month: m,
+          label: `${MONTH_NAMES[m - 1]} ${y}`,
+          labelShort: `${MONTH_NAMES_SHORT[m - 1]} ${y}`,
+          amount,
+          isOverride: overrideMap.has(key),
+        };
+      });
+  },
+
+  async setMonthlyRevenue(year: number, month: number, amount: number) {
+    return prisma.monthlyRevenue.upsert({
+      where: { year_month: { year, month } },
+      update: { amount },
+      create: { year, month, amount },
+    });
+  },
+
   async createAdjustment(data: { servicemanName: string; type: 'FINE' | 'BONUS'; amount: number; reason: string; year: number; month: number }) {
     return prisma.salaryAdjustment.create({ data });
   },

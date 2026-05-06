@@ -304,6 +304,17 @@ enum NotePriority {
   HIGH
 }
 
+model MonthlyRevenue {
+  id        String   @id @default(cuid())
+  year      Int
+  month     Int
+  amount    Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([year, month])
+}
+
 model Note {
   id           String       @id @default(cuid())
   servicemanId String

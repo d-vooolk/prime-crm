@@ -10,7 +10,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsToolti
 import { recordsApi } from '@/api/records.api';
 import dayjs, { Dayjs } from 'dayjs';
 import { CashTransaction, CapitalTransaction, Serviceman } from '@/types';
-import { accountingApi, SalaryData, SalaryRecord, SalaryAdjustment, FounderSalaryRecord, SalaryHistoryItem } from '@/api/accounting.api';
+import { accountingApi, SalaryData, SalaryRecord, SalaryAdjustment, FounderSalaryRecord, SalaryHistoryItem, MonthlyRevenueItem } from '@/api/accounting.api';
 import { servicesApi } from '@/api/services.api';
 import { formatPrice } from '@/utils/formatters';
 import { useAuthStore } from '@/store/authStore';
@@ -114,6 +114,13 @@ export const AccountingPage: React.FC = () => {
   const [isFounderSalary, setIsFounderSalary] = useState(false);
   const [founderPerson, setFounderPerson] = useState('');
 
+  const [monthlyRevenue, setMonthlyRevenue] = useState<MonthlyRevenueItem[]>([]);
+  const [revenueEditOpen, setRevenueEditOpen] = useState(false);
+  const [revenueEditMonth, setRevenueEditMonth] = useState<Dayjs>(dayjs().startOf('month'));
+  const [revenueEditAmount, setRevenueEditAmount] = useState<number>(0);
+  const [revenueSaving, setRevenueSaving] = useState(false);
+  const [revenueForm] = Form.useForm();
+
   const [expenseOpen, setExpenseOpen] = useState(false);
   const [manualIncomeOpen, setManualIncomeOpen] = useState(false);
   const [depositOpen, setDepositOpen] = useState(false);
@@ -155,9 +162,15 @@ export const AccountingPage: React.FC = () => {
     setFounderSalaries(data);
   }, []);
 
+  const loadMonthlyRevenue = useCallback(async () => {
+    const data = await accountingApi.getMonthlyRevenue().catch(() => []);
+    setMonthlyRevenue(data);
+  }, []);
+
   useEffect(() => { loadCash(); }, [loadCash]);
   useEffect(() => { loadCapital(); }, [loadCapital]);
   useEffect(() => { loadFounderSalaries(); }, [loadFounderSalaries]);
+  useEffect(() => { loadMonthlyRevenue(); }, [loadMonthlyRevenue]);
   useEffect(() => {
     servicesApi.getServicemen().then(setServicemen).catch(() => {});
     servicesApi.getAllServicemen().then(all => setEmployees(all.filter(s => s.role === 'Сотрудник' && !s.isDismissed))).catch(() => {});
@@ -912,18 +925,174 @@ export const AccountingPage: React.FC = () => {
     </div>
   );
 
+  // ─── Monthly revenue tab ──────────────────────────────────────────────────
+  const revenueChartData = [...monthlyRevenue].reverse(); // oldest first for chart
+
+  const handleRevenueMonthChange = (v: Dayjs | null) => {
+    if (!v) return;
+    setRevenueEditMonth(v);
+    const key = `${v.year()}-${String(v.month() + 1).padStart(2, '0')}`;
+    const existing = monthlyRevenue.find(r => r.key === key);
+    setRevenueEditAmount(existing?.amount ?? 0);
+  };
+
+  const handleRevenueSave = async () => {
+    setRevenueSaving(true);
+    try {
+      await accountingApi.setMonthlyRevenue(
+        revenueEditMonth.year(),
+        revenueEditMonth.month() + 1,
+        revenueEditAmount,
+      );
+      await loadMonthlyRevenue();
+      setRevenueEditOpen(false);
+      message.success('Данные обновлены');
+    } catch { message.error('Ошибка сохранения'); }
+    finally { setRevenueSaving(false); }
+  };
+
+  const statsTab = (
+    <div className={styles.tabContent}>
+      <div className={styles.topBar}>
+        <Button
+          icon={<EditOutlined />}
+          onClick={() => {
+            const now = dayjs().startOf('month');
+            setRevenueEditMonth(now);
+            const key = `${now.year()}-${String(now.month() + 1).padStart(2, '0')}`;
+            const existing = monthlyRevenue.find(r => r.key === key);
+            setRevenueEditAmount(existing?.amount ?? 0);
+            setRevenueEditOpen(true);
+          }}
+        >
+          Изменить данные
+        </Button>
+      </div>
+
+      <div className={styles.statsLayout}>
+        <div>
+          <Table<MonthlyRevenueItem>
+            dataSource={monthlyRevenue}
+            rowKey="key"
+            size="small"
+            pagination={false}
+            locale={{ emptyText: 'Нет данных' }}
+            columns={[
+              {
+                title: 'Период',
+                dataIndex: 'label',
+                key: 'period',
+              },
+              {
+                title: 'Сумма',
+                dataIndex: 'amount',
+                key: 'amount',
+                align: 'right' as const,
+                render: (v: number, row: MonthlyRevenueItem) => (
+                  <span style={{ color: 'var(--color-success)', fontWeight: 600 }}>
+                    {formatPrice(v)}
+                    {row.isOverride && (
+                      <Tooltip title="Значение задано вручную">
+                        <span style={{ marginLeft: 6, fontSize: 11, color: 'var(--color-text-muted)' }}>●</span>
+                      </Tooltip>
+                    )}
+                  </span>
+                ),
+              },
+            ]}
+          />
+        </div>
+
+        <Card size="small" title="Выручка по месяцам">
+          {revenueChartData.length > 1 ? (
+            <ResponsiveContainer width="100%" height={320}>
+              <LineChart data={revenueChartData} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                <XAxis dataKey="labelShort" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `${(v / 1000).toFixed(0)}к`} width={44} />
+                <RechartsTooltip
+                  content={({ active, payload, label: lbl }) => {
+                    if (!active || !payload?.length) return null;
+                    const item = payload[0].payload as MonthlyRevenueItem;
+                    return (
+                      <div className={styles.chartTooltip}>
+                        <div className={styles.tooltipLabel}>{item.label}</div>
+                        <div>Выручка: <strong style={{ color: 'var(--color-success)' }}>{formatPrice(item.amount)}</strong></div>
+                      </div>
+                    );
+                  }}
+                />
+                <Line type="monotone" dataKey="amount" stroke="var(--color-primary)" strokeWidth={2} dot={revenueChartData.length <= 12} activeDot={{ r: 4 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div style={{ height: 320, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)' }}>
+              Недостаточно данных для графика
+            </div>
+          )}
+        </Card>
+      </div>
+    </div>
+  );
+
   const tabItems = [
     ...(canSeeCashflow ? [{ key: 'cashflow', label: 'Приходно-Расходный', children: cashFlowTab }] : []),
     ...(canSeeCashflow ? [{ key: 'incomers', label: 'Приход РС', children: incomeRsTab }] : []),
     ...(canSeeCapital ? [{ key: 'capital', label: 'Капитал', children: capitalTab }] : []),
     { key: 'salary', label: 'Расчёт ЗП', children: salaryTab },
     ...(canSeeCapital ? [{ key: 'founderSalary', label: 'ЗП Учредителей', children: founderSalaryTab }] : []),
+    ...(canSeeCashflow ? [{ key: 'stats', label: 'Статистика', children: statsTab }] : []),
   ];
 
   return (
     <div className={styles.page}>
       <h1 className={styles.pageTitle}>Бухгалтерия</h1>
       <Tabs items={tabItems} />
+
+      <Modal
+        title="Изменить данные выручки"
+        open={revenueEditOpen}
+        onCancel={() => setRevenueEditOpen(false)}
+        onOk={handleRevenueSave}
+        okText="Сохранить"
+        okButtonProps={{ loading: revenueSaving }}
+        cancelText="Отмена"
+        destroyOnHidden
+        width={380}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 16 }}>
+          <div>
+            <div style={{ marginBottom: 6, fontWeight: 500 }}>Период</div>
+            <DatePicker
+              picker="month"
+              value={revenueEditMonth}
+              onChange={handleRevenueMonthChange}
+              format="MMMM YYYY"
+              allowClear={false}
+              style={{ width: '100%' }}
+              disabledDate={d => d.isAfter(dayjs(), 'month')}
+            />
+          </div>
+          <div>
+            <div style={{ marginBottom: 6, fontWeight: 500 }}>Сумма (р.)</div>
+            <InputNumber
+              value={revenueEditAmount}
+              onChange={v => setRevenueEditAmount(v ?? 0)}
+              min={0}
+              precision={2}
+              style={{ width: '100%' }}
+              parser={(v) => parseFloat((v ?? '').replace(/,/g, '.')) || 0}
+            />
+            <div style={{ marginTop: 6, fontSize: 12, color: 'var(--color-text-muted)' }}>
+              Текущее значение за выбранный период: <strong>{(() => {
+                const key = `${revenueEditMonth.year()}-${String(revenueEditMonth.month() + 1).padStart(2, '0')}`;
+                const existing = monthlyRevenue.find(r => r.key === key);
+                return formatPrice(existing?.amount ?? 0);
+              })()}</strong>
+            </div>
+          </div>
+        </div>
+      </Modal>
 
       <Modal
         title="Редактировать запись"

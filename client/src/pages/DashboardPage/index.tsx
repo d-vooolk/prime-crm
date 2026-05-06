@@ -6,7 +6,7 @@ import {
   BarChart, Bar,
 } from 'recharts';
 import { analyticsApi, Period } from '@/api/analytics.api';
-import { accountingApi, SalaryData, SalaryHistoryItem } from '@/api/accounting.api';
+import { accountingApi, SalaryData, SalaryHistoryItem, MonthlyRevenueItem } from '@/api/accounting.api';
 import { servicesApi } from '@/api/services.api';
 import { formatPrice } from '@/utils/formatters';
 import { Serviceman } from '@/types';
@@ -38,6 +38,7 @@ export const DashboardPage: React.FC = () => {
   const [revenueData, setRevenueData] = useState<Array<{ date: string; revenue: number }>>([]);
   const [topServices, setTopServices] = useState<Array<{ service: { name: string }; count: number; total: number }>>([]);
   const [loading, setLoading] = useState(false);
+  const [monthlyRevenue, setMonthlyRevenue] = useState<MonthlyRevenueItem[]>([]);
 
   const [servicemen, setServicemen] = useState<Serviceman[]>([]);
   const [salaries, setSalaries] = useState<Record<string, SalaryData>>({});
@@ -56,11 +57,13 @@ export const DashboardPage: React.FC = () => {
       analyticsApi.getSummary(period),
       analyticsApi.getRevenue(from, to),
       analyticsApi.getTopServices(period),
+      accountingApi.getMonthlyRevenue().catch(() => [] as MonthlyRevenueItem[]),
     ])
-      .then(([s, r, t]) => {
+      .then(([s, r, t, mr]) => {
         setSummary(s);
         setRevenueData(r);
         setTopServices(t);
+        setMonthlyRevenue([...mr].reverse()); // oldest first for chart
       })
       .finally(() => setLoading(false));
   }, [period]);
@@ -160,16 +163,33 @@ export const DashboardPage: React.FC = () => {
 
                 <Row gutter={[16, 16]}>
                   <Col xs={24} lg={14}>
-                    <Card title="Выручка (30 дней)">
-                      <ResponsiveContainer width="100%" height={240}>
-                        <LineChart data={revenueData}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                          <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                          <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `${(v / 1000).toFixed(0)}к`} />
-                          <Tooltip formatter={(v) => formatPrice(Number(v))} />
-                          <Line type="monotone" dataKey="revenue" stroke="#3b82f6" strokeWidth={2} dot={false} />
-                        </LineChart>
-                      </ResponsiveContainer>
+                    <Card title="Выручка по месяцам">
+                      {monthlyRevenue.length > 1 ? (
+                        <ResponsiveContainer width="100%" height={240}>
+                          <LineChart data={monthlyRevenue}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                            <XAxis dataKey="labelShort" tick={{ fontSize: 11 }} />
+                            <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `${(v / 1000).toFixed(0)}к`} width={44} />
+                            <Tooltip
+                              content={({ active, payload }) => {
+                                if (!active || !payload?.length) return null;
+                                const item = payload[0].payload as MonthlyRevenueItem;
+                                return (
+                                  <div className={styles.chartTooltip}>
+                                    <div className={styles.tooltipLabel}>{item.label}</div>
+                                    <div>Выручка: <strong style={{ color: '#22c55e' }}>{formatPrice(item.amount)}</strong></div>
+                                  </div>
+                                );
+                              }}
+                            />
+                            <Line type="monotone" dataKey="amount" stroke="#3b82f6" strokeWidth={2} dot={monthlyRevenue.length <= 12} activeDot={{ r: 4 }} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <div style={{ height: 240, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)' }}>
+                          Нет данных
+                        </div>
+                      )}
                     </Card>
                   </Col>
                   <Col xs={24} lg={10}>

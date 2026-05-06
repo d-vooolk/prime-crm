@@ -69,6 +69,17 @@ export const accountingController = {
     res.status(204).end();
   },
 
+  async getMonthlyRevenue(_req: Request, res: Response) {
+    const data = await accountingService.getMonthlyRevenue();
+    res.json({ data });
+  },
+
+  async setMonthlyRevenue(req: Request, res: Response) {
+    const { year, month, amount } = req.body;
+    const data = await accountingService.setMonthlyRevenue(Number(year), Number(month), Number(amount));
+    res.json({ data });
+  },
+
   async getSalaryHistory(req: Request, res: Response) {
     const servicemanName = String(req.query.servicemanName || '');
     const data = await accountingService.getSalaryHistory(servicemanName);
