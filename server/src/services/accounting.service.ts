@@ -322,13 +322,13 @@ export const accountingService = {
     const MONTH_NAMES = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
     const MONTH_NAMES_SHORT = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
 
-    const transactions = await prisma.cashTransaction.findMany({
-      where: { type: { in: ['INCOME', 'MANUAL_INCOME', 'INCOME_RS'] } },
-    });
+    const allTransactions = await prisma.cashTransaction.findMany();
     const calcMap = new Map<string, number>();
-    for (const tx of transactions) {
-      const year = tx.date.getFullYear();
-      const month = tx.date.getMonth() + 1;
+    for (const tx of allTransactions) {
+      if (tx.type !== 'INCOME' && tx.type !== 'MANUAL_INCOME' && tx.type !== 'INCOME_RS') continue;
+      const d = new Date(tx.date);
+      const year = d.getFullYear();
+      const month = d.getMonth() + 1;
       const key = `${year}-${String(month).padStart(2, '0')}`;
       calcMap.set(key, (calcMap.get(key) ?? 0) + tx.amount);
     }
