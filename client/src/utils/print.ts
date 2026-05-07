@@ -343,7 +343,7 @@ function buildCompletionActHtml(
     </table>
     <div class="total">Итоговая стоимость: ${formatPrice(total).replace(' р.', '')} бел. руб.</div>
 
-    ${field('Обнаруженные недостатки:', defects)}
+    ${defects ? field('Обнаруженные недостатки:', defects) : ''}
     ${equipmentBlock}
 
     <div style="margin-top:10px;font-size:12px;font-weight:700">Гарантийные обязательства:</div>
