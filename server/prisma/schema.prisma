@@ -65,6 +65,11 @@ model Record {
   legalBasis                           String?
   legalVin                     String?
   legalEndDate                 String?
+  executorSignatoryName                String?
+  executorSignatoryNameGenitive        String?
+  executorSignatoryPosition            String?
+  executorSignatoryPositionGenitive    String?
+  executorSignatoryBasis               String?
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
   client             Client       @relation(fields: [clientId], references: [id])

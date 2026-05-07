@@ -60,6 +60,11 @@ function recordToFormData(record: CrmRecord): RecordFormData {
     legalBasis: record.legalBasis || '',
     legalVin: record.legalVin || '',
     legalEndDate: record.legalEndDate || '',
+    executorSignatoryName: record.executorSignatoryName || '',
+    executorSignatoryNameGenitive: record.executorSignatoryNameGenitive || '',
+    executorSignatoryPosition: record.executorSignatoryPosition || '',
+    executorSignatoryPositionGenitive: record.executorSignatoryPositionGenitive || '',
+    executorSignatoryBasis: record.executorSignatoryBasis || '',
     services: record.items.map(item => ({
       serviceId: item.serviceId,
       serviceName: item.service.name,
@@ -180,6 +185,11 @@ export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initial
       legalBasis: data.legalBasis,
       legalVin: data.legalVin,
       legalEndDate: data.legalEndDate,
+      executorSignatoryName: data.executorSignatoryName,
+      executorSignatoryNameGenitive: data.executorSignatoryNameGenitive,
+      executorSignatoryPosition: data.executorSignatoryPosition,
+      executorSignatoryPositionGenitive: data.executorSignatoryPositionGenitive,
+      executorSignatoryBasis: data.executorSignatoryBasis,
       items: data.services.map(s => ({
         serviceId: s.serviceId,
         price: s.price,

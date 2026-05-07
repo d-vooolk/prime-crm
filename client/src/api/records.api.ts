@@ -17,6 +17,11 @@ export interface CompanySuggestion {
   legalRepresentative?: string | null;
   legalRepresentativeGenitive?: string | null;
   legalBasis?: string | null;
+  executorSignatoryName?: string | null;
+  executorSignatoryNameGenitive?: string | null;
+  executorSignatoryPosition?: string | null;
+  executorSignatoryPositionGenitive?: string | null;
+  executorSignatoryBasis?: string | null;
 }
 
 export interface CreateRecordDto {
@@ -55,6 +60,11 @@ export interface CreateRecordDto {
   legalBasis?: string;
   legalVin?: string;
   legalEndDate?: string;
+  executorSignatoryName?: string;
+  executorSignatoryNameGenitive?: string;
+  executorSignatoryPosition?: string;
+  executorSignatoryPositionGenitive?: string;
+  executorSignatoryBasis?: string;
   items: Array<{ serviceId: string; price: number; quantity: number; netProfit?: number; servicemanName?: string; equipmentId?: string; servicemanSplit?: Array<{ name: string; amount: number }> | null }>;
 }
 

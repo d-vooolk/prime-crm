@@ -453,16 +453,18 @@ export function printServiceContract(record: Record, settings?: CompanySettings)
   const date = formatDate(record.scheduledAt);
   const docNum = record.documentNumber || record.id.slice(-8).toUpperCase();
   const companyName = settings?.name || '—';
-  const directorNameGenitive = settings?.directorNameGenitive || settings?.directorName || '';
-  const directorName = settings?.directorName || '';
   const customerName = record.legalCompanyName || record.client.name;
-  // Поля для вступительного абзаца (род. падеж)
+  // Представитель заказчика
   const repPositionGenitive = record.legalRepresentativePositionGenitive || '';
   const repNameGenitive = record.legalRepresentativeGenitive || '';
-  // Поля для подписи (именит. падеж)
   const repPosition = record.legalRepresentativePosition || '';
   const repName = record.legalRepresentative || '';
-  const basis = record.legalBasis || 'устава';
+  const repBasis = record.legalBasis || 'устава';
+  // Подписант исполнителя (из записи, иначе директор из настроек)
+  const execName = record.executorSignatoryName || settings?.directorName || '';
+  const execNameGenitive = record.executorSignatoryNameGenitive || settings?.directorNameGenitive || settings?.directorName || '';
+  const execPositionGenitive = record.executorSignatoryPositionGenitive || settings?.directorPositionGenitive || 'директора';
+  const execBasis = record.executorSignatoryBasis || settings?.directorBasis || 'устава';
   const endDate = record.legalEndDate ? formatDate(record.legalEndDate) : '';
   const total = record.deal
     ? record.deal.finalPrice
@@ -475,13 +477,13 @@ export function printServiceContract(record: Record, settings?: CompanySettings)
   const platePart = record.car.plateNumber ? `, г/н ${record.car.plateNumber}` : '';
   const car = `${record.car.brand} ${record.car.model} ${record.car.year}${vinPart}${platePart}`;
 
-  // Вступительный абзац — род. падеж, только заполненные поля
+  // Вступительный абзац — род. падеж
   const repPartGenitive = [repPositionGenitive, repNameGenitive].filter(Boolean).join(' ');
   const customerIntro = repPartGenitive
-    ? `${customerName}, в лице ${repPartGenitive} действующего на основании ${basis}`
+    ? `${customerName}, в лице ${repPartGenitive} действующего на основании ${repBasis}`
     : `${customerName}`;
-  const executorIntro = directorNameGenitive
-    ? `${companyName}, в лице директора ${directorNameGenitive} на основании устава`
+  const executorIntro = execNameGenitive
+    ? `${companyName}, в лице ${execPositionGenitive} ${execNameGenitive} на основании ${execBasis}`
     : `${companyName}`;
 
   // Подпись заказчика снизу — именит. падеж
@@ -558,7 +560,7 @@ export function printServiceContract(record: Record, settings?: CompanySettings)
         <div style="flex:1;font-size:11px">
           Исполнитель ______________________________<br>
           <br>
-          ${directorName ? `Директор ${directorName}&nbsp;&nbsp;&nbsp;&nbsp;МП` : 'МП'}
+          ${execName ? `${execName}&nbsp;&nbsp;&nbsp;&nbsp;МП` : 'МП'}
         </div>
         <div style="flex:1;font-size:11px">
           Заказчик ______________________________<br>
@@ -578,7 +580,7 @@ export function printServiceContract(record: Record, settings?: CompanySettings)
 export function printInvoice(record: Record, settings?: CompanySettings): void {
   const date = formatDate(record.scheduledAt);
   const docNum = record.documentNumber || record.id.slice(-8).toUpperCase();
-  const directorName = settings?.directorName || '';
+  const execName = record.executorSignatoryName || settings?.directorName || '';
   const repPosition = record.legalRepresentativePosition || '';
   const repName = record.legalRepresentative || '';
   const total = record.deal
@@ -640,7 +642,7 @@ export function printInvoice(record: Record, settings?: CompanySettings): void {
       <div style="flex:1;font-size:11px">
         Исполнитель ______________________________<br>
         <br>
-        ${directorName ? `Директор ${directorName}&nbsp;&nbsp;&nbsp;&nbsp;МП` : 'МП'}
+        ${execName ? `${execName}&nbsp;&nbsp;&nbsp;&nbsp;МП` : 'МП'}
       </div>
       <div style="flex:1;font-size:11px">
         Заказчик ______________________________<br>
@@ -659,7 +661,7 @@ export function printInvoice(record: Record, settings?: CompanySettings): void {
 export function printLegalAct(record: Record, settings?: CompanySettings): void {
   const date = record.deal ? formatDate(record.deal.closedAt) : formatDate(record.scheduledAt);
   const docNum = record.documentNumber || record.id.slice(-8).toUpperCase();
-  const directorName = settings?.directorName || '';
+  const execName = record.executorSignatoryName || settings?.directorName || '';
   const repPosition = record.legalRepresentativePosition || '';
   const repName = record.legalRepresentative || '';
   const total = record.deal
@@ -725,7 +727,7 @@ export function printLegalAct(record: Record, settings?: CompanySettings): void 
       <div style="flex:1;font-size:11px">
         Исполнитель ______________________________<br>
         <br>
-        ${directorName ? `Директор ${directorName}&nbsp;&nbsp;&nbsp;&nbsp;МП` : 'МП'}
+        ${execName ? `${execName}&nbsp;&nbsp;&nbsp;&nbsp;МП` : 'МП'}
       </div>
       <div style="flex:1;font-size:11px">
         Заказчик ______________________________<br>

@@ -140,6 +140,11 @@ export interface Record {
   legalBasis?: string;
   legalVin?: string;
   legalEndDate?: string;
+  executorSignatoryName?: string;
+  executorSignatoryNameGenitive?: string;
+  executorSignatoryPosition?: string;
+  executorSignatoryPositionGenitive?: string;
+  executorSignatoryBasis?: string;
   createdAt: string;
   client: Client;
   car: Car;

@@ -50,6 +50,11 @@ export interface RecordFormData {
   legalBasis?: string;
   legalVin?: string;
   legalEndDate?: string;
+  executorSignatoryName?: string;
+  executorSignatoryNameGenitive?: string;
+  executorSignatoryPosition?: string;
+  executorSignatoryPositionGenitive?: string;
+  executorSignatoryBasis?: string;
   // Услуги
   services: SelectedService[];
 }

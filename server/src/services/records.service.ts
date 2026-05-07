@@ -49,6 +49,11 @@ export interface CreateRecordDto {
   legalBasis?: string;
   legalVin?: string;
   legalEndDate?: string;
+  executorSignatoryName?: string;
+  executorSignatoryNameGenitive?: string;
+  executorSignatoryPosition?: string;
+  executorSignatoryPositionGenitive?: string;
+  executorSignatoryBasis?: string;
   items: Array<{
     serviceId: string;
     price: number;
@@ -149,6 +154,8 @@ export const recordsService = {
       legalRepresentativePosition, legalRepresentativePositionGenitive,
       legalRepresentative, legalRepresentativeGenitive,
       legalBasis, legalVin, legalEndDate,
+      executorSignatoryName, executorSignatoryNameGenitive,
+      executorSignatoryPosition, executorSignatoryPositionGenitive, executorSignatoryBasis,
     } = data;
 
     const newRecord = await prisma.$transaction(async (tx) => {
@@ -210,6 +217,8 @@ export const recordsService = {
           legalRepresentativePosition, legalRepresentativePositionGenitive,
           legalRepresentative, legalRepresentativeGenitive,
           legalBasis, legalVin, legalEndDate,
+          executorSignatoryName, executorSignatoryNameGenitive,
+          executorSignatoryPosition, executorSignatoryPositionGenitive, executorSignatoryBasis,
           items: {
             create: items.map((item) => ({
               serviceId: item.serviceId,
@@ -249,6 +258,8 @@ export const recordsService = {
       'legalBankDetails', 'legalBic', 'legalUnp', 'legalOkpo', 'legalPhone', 'legalEmail',
       'legalRepresentativePosition', 'legalRepresentativePositionGenitive',
       'legalRepresentative', 'legalRepresentativeGenitive', 'legalBasis', 'legalVin', 'legalEndDate',
+      'executorSignatoryName', 'executorSignatoryNameGenitive',
+      'executorSignatoryPosition', 'executorSignatoryPositionGenitive', 'executorSignatoryBasis',
     ] as const;
     for (const field of legalFields) {
       if (field in data) updateData[field] = (data as Record<string, unknown>)[field] ?? null;
@@ -492,6 +503,11 @@ export const recordsService = {
         legalRepresentative: true,
         legalRepresentativeGenitive: true,
         legalBasis: true,
+        executorSignatoryName: true,
+        executorSignatoryNameGenitive: true,
+        executorSignatoryPosition: true,
+        executorSignatoryPositionGenitive: true,
+        executorSignatoryBasis: true,
       },
       orderBy: { createdAt: 'desc' },
       take: 50,

@@ -49,7 +49,7 @@ export const Step1Client: React.FC<Props> = ({ data, onChange }) => {
   const [legalPostalSameAsLegal, setLegalPostalSameAsLegal] = useState(false);
   const [companySuggestions, setCompanySuggestions] = useState<CompanySuggestion[]>([]);
   const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
-  const [signatoryKey, setSignatoryKey] = useState<string | undefined>(undefined);
+  const [executorSignatoryKey, setExecutorSignatoryKey] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     servicesApi.getServicemen().then(setServicemen).catch(() => {});
@@ -178,54 +178,59 @@ export const Step1Client: React.FC<Props> = ({ data, onChange }) => {
       legalRepresentative: company.legalRepresentative || '',
       legalRepresentativeGenitive: company.legalRepresentativeGenitive || '',
       legalBasis: company.legalBasis || '',
+      executorSignatoryName: company.executorSignatoryName || '',
+      executorSignatoryNameGenitive: company.executorSignatoryNameGenitive || '',
+      executorSignatoryPosition: company.executorSignatoryPosition || '',
+      executorSignatoryPositionGenitive: company.executorSignatoryPositionGenitive || '',
+      executorSignatoryBasis: company.executorSignatoryBasis || '',
     });
   };
 
-  const applySignatory = useCallback((key: string, settings: CompanySettings) => {
-    setSignatoryKey(key);
+  const applyExecutorSignatory = useCallback((key: string, settings: CompanySettings) => {
+    setExecutorSignatoryKey(key);
     if (key === 'director') {
       onChange({
-        legalRepresentativePosition: settings.directorPosition || '',
-        legalRepresentativePositionGenitive: settings.directorPositionGenitive || '',
-        legalRepresentative: settings.directorName || '',
-        legalRepresentativeGenitive: settings.directorNameGenitive || '',
-        legalBasis: settings.directorBasis || '',
+        executorSignatoryName: settings.directorName || '',
+        executorSignatoryNameGenitive: settings.directorNameGenitive || '',
+        executorSignatoryPosition: settings.directorPosition || '',
+        executorSignatoryPositionGenitive: settings.directorPositionGenitive || '',
+        executorSignatoryBasis: settings.directorBasis || '',
       });
     } else {
       const idx = parseInt(key.replace('person_', ''), 10);
       const person = (settings.authorizedPersons || [])[idx];
       if (person) {
         onChange({
-          legalRepresentativePosition: person.positionNominative,
-          legalRepresentativePositionGenitive: person.positionGenitive,
-          legalRepresentative: person.nameNominative,
-          legalRepresentativeGenitive: person.nameGenitive,
-          legalBasis: person.basis,
+          executorSignatoryName: person.nameNominative,
+          executorSignatoryNameGenitive: person.nameGenitive,
+          executorSignatoryPosition: person.positionNominative,
+          executorSignatoryPositionGenitive: person.positionGenitive,
+          executorSignatoryBasis: person.basis,
         });
       }
     }
   }, [onChange]);
 
   useEffect(() => {
-    if (!companySettings || signatoryKey !== undefined) return;
-    if (data.legalRepresentative) {
-      if (data.legalRepresentative === companySettings.directorName) {
-        setSignatoryKey('director');
+    if (!companySettings || executorSignatoryKey !== undefined) return;
+    if (data.executorSignatoryName) {
+      if (data.executorSignatoryName === companySettings.directorName) {
+        setExecutorSignatoryKey('director');
       } else {
         const idx = (companySettings.authorizedPersons || []).findIndex(
-          p => p.nameNominative === data.legalRepresentative
+          p => p.nameNominative === data.executorSignatoryName
         );
-        setSignatoryKey(idx >= 0 ? `person_${idx}` : 'director');
+        setExecutorSignatoryKey(idx >= 0 ? `person_${idx}` : 'director');
       }
     }
   }, [companySettings]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!data.isLegalEntity || !companySettings || data.legalRepresentative) return;
-    applySignatory('director', companySettings);
+    if (!data.isLegalEntity || !companySettings || data.executorSignatoryName) return;
+    applyExecutorSignatory('director', companySettings);
   }, [data.isLegalEntity, companySettings]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const signatoryOptions = companySettings
+  const executorSignatoryOptions = companySettings
     ? [
         { value: 'director', label: companySettings.directorName || 'Директор' },
         ...(companySettings.authorizedPersons || []).map((p, i) => ({
@@ -465,12 +470,74 @@ export const Step1Client: React.FC<Props> = ({ data, onChange }) => {
             </Col>
           </Row>
 
-          <Form.Item label="Подписант">
+          <Divider orientation="left" style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
+            Представитель заказчика
+          </Divider>
+
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item label="ФИО (именительный падеж)">
+                <Input
+                  value={data.legalRepresentative}
+                  onChange={e => onChange({ legalRepresentative: e.target.value })}
+                  placeholder="Иванов Иван Иванович"
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item label="ФИО (в склонении)">
+                <Input
+                  value={data.legalRepresentativeGenitive}
+                  onChange={e => onChange({ legalRepresentativeGenitive: e.target.value })}
+                  placeholder="Иванова Ивана Ивановича"
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item label="Должность (именительный)">
+                <Input
+                  value={data.legalRepresentativePosition}
+                  onChange={e => onChange({ legalRepresentativePosition: e.target.value })}
+                  placeholder="Директор"
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item label="Должность (в склонении)">
+                <Input
+                  value={data.legalRepresentativePositionGenitive}
+                  onChange={e => onChange({ legalRepresentativePositionGenitive: e.target.value })}
+                  placeholder="директора"
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item label="Основание">
+                <Input
+                  value={data.legalBasis}
+                  onChange={e => onChange({ legalBasis: e.target.value })}
+                  placeholder="устава"
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Divider orientation="left" style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
+            Подписант с нашей стороны
+          </Divider>
+
+          <Form.Item label="Подписант (исполнитель)">
             <Select
-              value={signatoryKey}
-              onChange={key => companySettings && applySignatory(key, companySettings)}
+              value={executorSignatoryKey}
+              onChange={key => companySettings && applyExecutorSignatory(key, companySettings)}
               placeholder="Выберите подписанта"
-              options={signatoryOptions}
+              options={executorSignatoryOptions}
             />
           </Form.Item>
         </>
