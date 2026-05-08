@@ -6,7 +6,7 @@ import {
   BarChart, Bar,
 } from 'recharts';
 import { analyticsApi, Period } from '@/api/analytics.api';
-import { accountingApi, SalaryData, SalaryHistoryItem, MonthlyRevenueItem } from '@/api/accounting.api';
+import { accountingApi, SalaryData, SalaryHistoryItem, MonthlyRevenueItem, MonthlyRecordCountItem } from '@/api/accounting.api';
 import { servicesApi } from '@/api/services.api';
 import { formatPrice } from '@/utils/formatters';
 import { Serviceman } from '@/types';
@@ -36,12 +36,14 @@ const SalaryTooltip = ({ active, payload, label }: { active?: boolean; payload?:
 export const DashboardPage: React.FC = () => {
   const { user } = useAuthStore();
   const canSeeRevenue = user?.isMaster || ['Создатель', 'Директор'].includes(user?.role || '');
+  const canSeeAvgCard = user?.isMaster || ['Создатель', 'Директор', 'Менеджер'].includes(user?.role || '');
   const [period, setPeriod] = useState<Period>('month');
   const [summary, setSummary] = useState<{ closedCount: number; totalRevenue: number; activeRecords: number } | null>(null);
   const [revenueData, setRevenueData] = useState<Array<{ date: string; revenue: number }>>([]);
   const [topServices, setTopServices] = useState<Array<{ service: { name: string }; count: number; total: number }>>([]);
   const [loading, setLoading] = useState(false);
   const [monthlyRevenue, setMonthlyRevenue] = useState<MonthlyRevenueItem[]>([]);
+  const [monthlyRecordCount, setMonthlyRecordCount] = useState<MonthlyRecordCountItem[]>([]);
 
   const [servicemen, setServicemen] = useState<Serviceman[]>([]);
   const [salaries, setSalaries] = useState<Record<string, SalaryData>>({});
@@ -61,12 +63,14 @@ export const DashboardPage: React.FC = () => {
       analyticsApi.getRevenue(from, to),
       analyticsApi.getTopServices(period),
       accountingApi.getMonthlyRevenue().catch(() => [] as MonthlyRevenueItem[]),
+      accountingApi.getMonthlyRecordCount().catch(() => [] as MonthlyRecordCountItem[]),
     ])
-      .then(([s, r, t, mr]) => {
+      .then(([s, r, t, mr, mrc]) => {
         setSummary(s);
         setRevenueData(r);
         setTopServices(t);
         setMonthlyRevenue([...mr].reverse()); // oldest first for chart
+        setMonthlyRecordCount([...mrc].reverse());
       })
       .finally(() => setLoading(false));
   }, [period]);
@@ -104,6 +108,23 @@ export const DashboardPage: React.FC = () => {
   const selectedSalary = selectedEmployee ? salaries[selectedEmployee.name] : null;
   const selectedRecord = getRecord(selectedHistory);
 
+  // Avg check per month from monthly revenue / record count
+  const avgCheckData = (() => {
+    const rcMap = new Map(monthlyRecordCount.map(r => [r.key, r.count]));
+    return monthlyRevenue.map(r => ({
+      key: r.key,
+      labelShort: r.labelShort,
+      label: r.label,
+      avg: (rcMap.get(r.key) ?? 0) > 0 ? r.amount / rcMap.get(r.key)! : 0,
+    }));
+  })();
+
+  const overallAvgCheck = (() => {
+    const months = avgCheckData.filter(r => r.avg > 0);
+    if (months.length === 0) return 0;
+    return months.reduce((s, r) => s + r.avg, 0) / months.length;
+  })();
+
   return (
     <div className={styles.page}>
       <div className={styles.header}>
@@ -127,7 +148,7 @@ export const DashboardPage: React.FC = () => {
                 </div>
 
                 <Row gutter={[16, 16]} className={styles.statsRow}>
-                  <Col xs={12} sm={8}>
+                  <Col xs={12} sm={canSeeAvgCard ? 6 : 8}>
                     <Card>
                       {loading ? <Skeleton active paragraph={{ rows: 1 }} /> : (
                         <Statistic
@@ -138,7 +159,7 @@ export const DashboardPage: React.FC = () => {
                       )}
                     </Card>
                   </Col>
-                  <Col xs={12} sm={8}>
+                  <Col xs={12} sm={canSeeAvgCard ? 6 : 8}>
                     <Card>
                       {loading ? <Skeleton active paragraph={{ rows: 1 }} /> : (
                         <Statistic
@@ -150,7 +171,7 @@ export const DashboardPage: React.FC = () => {
                       )}
                     </Card>
                   </Col>
-                  <Col xs={12} sm={8}>
+                  <Col xs={12} sm={canSeeAvgCard ? 6 : 8}>
                     <Card>
                       {loading ? <Skeleton active paragraph={{ rows: 1 }} /> : (
                         <Statistic
@@ -162,39 +183,107 @@ export const DashboardPage: React.FC = () => {
                       )}
                     </Card>
                   </Col>
+                  {canSeeAvgCard && (
+                    <Col xs={12} sm={6}>
+                      <Card>
+                        {loading ? <Skeleton active paragraph={{ rows: 1 }} /> : (
+                          <Statistic
+                            title="Ср. чек (за всё время)"
+                            value={overallAvgCheck}
+                            formatter={v => formatPrice(Number(v))}
+                            prefix={<TrophyOutlined style={{ color: '#f59e0b' }} />}
+                          />
+                        )}
+                      </Card>
+                    </Col>
+                  )}
                 </Row>
 
                 <Row gutter={[16, 16]}>
                   {canSeeRevenue && (
                     <Col xs={24} lg={14}>
-                      <Card title="Выручка по месяцам">
-                        {monthlyRevenue.length > 1 ? (
-                          <ResponsiveContainer width="100%" height={240}>
-                            <LineChart data={monthlyRevenue}>
-                              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                              <XAxis dataKey="labelShort" tick={{ fontSize: 11 }} />
-                              <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `${(v / 1000).toFixed(0)}к`} width={44} />
-                              <Tooltip
-                                content={({ active, payload }) => {
-                                  if (!active || !payload?.length) return null;
-                                  const item = payload[0].payload as MonthlyRevenueItem;
-                                  return (
-                                    <div className={styles.chartTooltip}>
-                                      <div className={styles.tooltipLabel}>{item.label}</div>
-                                      <div>Выручка: <strong style={{ color: '#22c55e' }}>{formatPrice(item.amount)}</strong></div>
-                                    </div>
-                                  );
-                                }}
-                              />
-                              <Line type="monotone" dataKey="amount" stroke="#3b82f6" strokeWidth={2} dot={monthlyRevenue.length <= 12} activeDot={{ r: 4 }} />
-                            </LineChart>
-                          </ResponsiveContainer>
-                        ) : (
-                          <div style={{ height: 240, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)' }}>
-                            Нет данных
-                          </div>
-                        )}
-                      </Card>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                        <Card title="Выручка по месяцам">
+                          {monthlyRevenue.length > 1 ? (
+                            <ResponsiveContainer width="100%" height={160}>
+                              <LineChart data={monthlyRevenue}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                                <XAxis dataKey="labelShort" tick={{ fontSize: 11 }} />
+                                <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `${(v / 1000).toFixed(0)}к`} width={44} />
+                                <Tooltip
+                                  content={({ active, payload }) => {
+                                    if (!active || !payload?.length) return null;
+                                    const item = payload[0].payload as MonthlyRevenueItem;
+                                    return (
+                                      <div className={styles.chartTooltip}>
+                                        <div className={styles.tooltipLabel}>{item.label}</div>
+                                        <div>Выручка: <strong style={{ color: '#22c55e' }}>{formatPrice(item.amount)}</strong></div>
+                                      </div>
+                                    );
+                                  }}
+                                />
+                                <Line type="monotone" dataKey="amount" stroke="#3b82f6" strokeWidth={2} dot={monthlyRevenue.length <= 12} activeDot={{ r: 4 }} />
+                              </LineChart>
+                            </ResponsiveContainer>
+                          ) : (
+                            <div style={{ height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)' }}>Нет данных</div>
+                          )}
+                        </Card>
+
+                        <Card title="Количество записей по месяцам">
+                          {monthlyRecordCount.length > 1 ? (
+                            <ResponsiveContainer width="100%" height={160}>
+                              <LineChart data={monthlyRecordCount}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                                <XAxis dataKey="labelShort" tick={{ fontSize: 11 }} />
+                                <YAxis tick={{ fontSize: 11 }} width={32} />
+                                <Tooltip
+                                  content={({ active, payload }) => {
+                                    if (!active || !payload?.length) return null;
+                                    const item = payload[0].payload as MonthlyRecordCountItem;
+                                    return (
+                                      <div className={styles.chartTooltip}>
+                                        <div className={styles.tooltipLabel}>{item.label}</div>
+                                        <div>Записей: <strong style={{ color: '#3b82f6' }}>{item.count}</strong></div>
+                                      </div>
+                                    );
+                                  }}
+                                />
+                                <Line type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={2} dot={monthlyRecordCount.length <= 12} activeDot={{ r: 4 }} />
+                              </LineChart>
+                            </ResponsiveContainer>
+                          ) : (
+                            <div style={{ height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)' }}>Нет данных</div>
+                          )}
+                        </Card>
+
+                        <Card title="Средний чек по месяцам">
+                          {avgCheckData.filter(r => r.avg > 0).length > 1 ? (
+                            <ResponsiveContainer width="100%" height={160}>
+                              <LineChart data={avgCheckData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                                <XAxis dataKey="labelShort" tick={{ fontSize: 11 }} />
+                                <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `${(v / 1000).toFixed(0)}к`} width={44} />
+                                <Tooltip
+                                  content={({ active, payload }) => {
+                                    if (!active || !payload?.length) return null;
+                                    const item = payload[0].payload as typeof avgCheckData[number];
+                                    return (
+                                      <div className={styles.chartTooltip}>
+                                        <div className={styles.tooltipLabel}>{item.label}</div>
+                                        <div>Средний чек: <strong style={{ color: '#f59e0b' }}>{item.avg > 0 ? formatPrice(item.avg) : '—'}</strong></div>
+                                      </div>
+                                    );
+                                  }}
+                                />
+                                <Line type="monotone" dataKey="avg" stroke="#f59e0b" strokeWidth={2} dot={avgCheckData.length <= 12} activeDot={{ r: 4 }} />
+                              </LineChart>
+                            </ResponsiveContainer>
+                          ) : (
+                            <div style={{ height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)' }}>Нет данных</div>
+                          )}
+                        </Card>
+                      </div>
                     </Col>
                   )}
                   <Col xs={24} lg={canSeeRevenue ? 10 : 24}>
