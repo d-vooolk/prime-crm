@@ -39,7 +39,6 @@ export const DashboardPage: React.FC = () => {
   const canSeeAvgCard = user?.isMaster || ['Создатель', 'Директор', 'Менеджер'].includes(user?.role || '');
   const [period, setPeriod] = useState<Period>('month');
   const [summary, setSummary] = useState<{ closedCount: number; totalRevenue: number; activeRecords: number } | null>(null);
-  const [revenueData, setRevenueData] = useState<Array<{ date: string; revenue: number }>>([]);
   const [topServices, setTopServices] = useState<Array<{ service: { name: string }; count: number; total: number }>>([]);
   const [loading, setLoading] = useState(false);
   const [monthlyRevenue, setMonthlyRevenue] = useState<MonthlyRevenueItem[]>([]);
@@ -54,20 +53,15 @@ export const DashboardPage: React.FC = () => {
 
   useEffect(() => {
     setLoading(true);
-    const now = new Date();
-    const from = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate()).toISOString();
-    const to = now.toISOString();
 
     Promise.all([
       analyticsApi.getSummary(period),
-      analyticsApi.getRevenue(from, to),
       analyticsApi.getTopServices(period),
       accountingApi.getMonthlyRevenue().catch(() => [] as MonthlyRevenueItem[]),
       accountingApi.getMonthlyRecordCount().catch(() => [] as MonthlyRecordCountItem[]),
     ])
-      .then(([s, r, t, mr, mrc]) => {
+      .then(([s, t, mr, mrc]) => {
         setSummary(s);
-        setRevenueData(r);
         setTopServices(t);
         setMonthlyRevenue([...mr].reverse()); // oldest first for chart
         setMonthlyRecordCount([...mrc].reverse());

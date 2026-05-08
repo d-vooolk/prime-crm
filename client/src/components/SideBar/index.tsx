@@ -23,8 +23,6 @@ import cn from 'classnames';
 
 dayjs.locale('ru');
 
-const MANAGER_ROLES = ['Создатель', 'Директор', 'Менеджер'];
-
 const NAV_ITEMS = [
   { path: '/schedule', label: 'Расписание', icon: <CalendarOutlined /> },
   { path: '/dashboard', label: 'Дашборд', icon: <DashboardOutlined /> },

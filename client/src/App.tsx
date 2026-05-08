@@ -8,7 +8,6 @@ import { Layout } from '@/components/Layout';
 import { PrivateRoute } from '@/components/PrivateRoute';
 import { SchedulePage } from '@/pages/SchedulePage';
 import { DashboardPage } from '@/pages/DashboardPage';
-import { ClientsPage } from '@/pages/ClientsPage';
 import { ServicesPage } from '@/pages/ServicesPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { AccountingPage } from '@/pages/AccountingPage';

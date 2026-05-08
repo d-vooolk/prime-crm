@@ -267,7 +267,7 @@ export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initial
         <div className={styles.steps}>
           {isMobile ? (
             <div className={styles.mobileSteps}>
-              {STEPS.map((s, i) => (
+              {STEPS.map((_s, i) => (
                 <React.Fragment key={i}>
                   {i > 0 && (
                     <div className={cn(styles.mobileStepLine, { [styles.mobileStepLineDone]: step >= i })} />

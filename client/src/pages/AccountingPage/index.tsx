@@ -132,14 +132,12 @@ export const AccountingPage: React.FC = () => {
   const [revenueEditMonth, setRevenueEditMonth] = useState<Dayjs>(dayjs().startOf('month'));
   const [revenueEditAmount, setRevenueEditAmount] = useState<number>(0);
   const [revenueSaving, setRevenueSaving] = useState(false);
-  const [revenueForm] = Form.useForm();
 
   const [monthlyRecordCount, setMonthlyRecordCount] = useState<MonthlyRecordCountItem[]>([]);
   const [recordCountEditOpen, setRecordCountEditOpen] = useState(false);
   const [recordCountEditMonth, setRecordCountEditMonth] = useState<Dayjs>(dayjs().startOf('month'));
   const [recordCountEditValue, setRecordCountEditValue] = useState<number>(0);
   const [recordCountSaving, setRecordCountSaving] = useState(false);
-  const [recordCountForm] = Form.useForm();
 
   const [expenseOpen, setExpenseOpen] = useState(false);
   const [manualIncomeOpen, setManualIncomeOpen] = useState(false);
@@ -1011,12 +1009,15 @@ export const AccountingPage: React.FC = () => {
       .sort()
       .map(key => {
         const rev = revenueChartData.find(r => r.key === key);
+        const count = rcMap.get(key) ?? 0;
+        const amount = rev?.amount ?? 0;
         return {
           key,
           labelShort: rev?.labelShort ?? key,
           label: rev?.label ?? key,
-          amount: rev?.amount ?? 0,
-          count: rcMap.get(key) ?? 0,
+          amount,
+          count,
+          avg: count > 0 ? amount / count : 0,
         };
       });
   })();
@@ -1063,7 +1064,9 @@ export const AccountingPage: React.FC = () => {
                           <div key={p.dataKey as string}>
                             {p.dataKey === 'amount'
                               ? <>Выручка: <strong style={{ color: 'var(--color-success)' }}>{formatPrice(p.value as number)}</strong></>
-                              : <>Записей: <strong style={{ color: '#3b82f6' }}>{p.value}</strong></>
+                              : p.dataKey === 'count'
+                              ? <>Записей: <strong style={{ color: '#3b82f6' }}>{p.value}</strong></>
+                              : <>Средний чек: <strong style={{ color: '#f59e0b' }}>{formatPrice(p.value as number)}</strong></>
                             }
                           </div>
                         ))}
@@ -1073,6 +1076,7 @@ export const AccountingPage: React.FC = () => {
                 />
                 <Line yAxisId="revenue" type="monotone" dataKey="amount" name="Выручка" stroke="var(--color-primary)" strokeWidth={2} dot={statsChartData.length <= 12} activeDot={{ r: 4 }} />
                 <Line yAxisId="count" type="monotone" dataKey="count" name="Записей" stroke="#3b82f6" strokeWidth={2} dot={statsChartData.length <= 12} activeDot={{ r: 4 }} strokeDasharray="5 3" />
+                <Line yAxisId="revenue" type="monotone" dataKey="avg" name="Средний чек" stroke="#f59e0b" strokeWidth={2} dot={statsChartData.length <= 12} activeDot={{ r: 4 }} strokeDasharray="3 3" />
               </LineChart>
             </ResponsiveContainer>
           ) : (
