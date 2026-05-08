@@ -13,6 +13,8 @@ router.post('/capital/deposit', accountingController.createDeposit);
 router.post('/capital/withdrawal', accountingController.createWithdrawal);
 router.get('/monthly-revenue', accountingController.getMonthlyRevenue);
 router.post('/monthly-revenue', accountingController.setMonthlyRevenue);
+router.get('/monthly-record-count', accountingController.getMonthlyRecordCount);
+router.post('/monthly-record-count', accountingController.setMonthlyRecordCount);
 router.get('/salary', accountingController.getSalary);
 router.get('/salary/history', accountingController.getSalaryHistory);
 router.patch('/cash/:id', accountingController.updateCashTransaction);

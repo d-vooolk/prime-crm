@@ -10,7 +10,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsToolti
 import { recordsApi } from '@/api/records.api';
 import dayjs, { Dayjs } from 'dayjs';
 import { CashTransaction, CapitalTransaction, Serviceman } from '@/types';
-import { accountingApi, SalaryData, SalaryRecord, SalaryAdjustment, FounderSalaryRecord, SalaryHistoryItem, MonthlyRevenueItem } from '@/api/accounting.api';
+import { accountingApi, SalaryData, SalaryRecord, SalaryAdjustment, FounderSalaryRecord, SalaryHistoryItem, MonthlyRevenueItem, MonthlyRecordCountItem } from '@/api/accounting.api';
 import { servicesApi } from '@/api/services.api';
 import { formatPrice } from '@/utils/formatters';
 import { useAuthStore } from '@/store/authStore';
@@ -134,6 +134,13 @@ export const AccountingPage: React.FC = () => {
   const [revenueSaving, setRevenueSaving] = useState(false);
   const [revenueForm] = Form.useForm();
 
+  const [monthlyRecordCount, setMonthlyRecordCount] = useState<MonthlyRecordCountItem[]>([]);
+  const [recordCountEditOpen, setRecordCountEditOpen] = useState(false);
+  const [recordCountEditMonth, setRecordCountEditMonth] = useState<Dayjs>(dayjs().startOf('month'));
+  const [recordCountEditValue, setRecordCountEditValue] = useState<number>(0);
+  const [recordCountSaving, setRecordCountSaving] = useState(false);
+  const [recordCountForm] = Form.useForm();
+
   const [expenseOpen, setExpenseOpen] = useState(false);
   const [manualIncomeOpen, setManualIncomeOpen] = useState(false);
   const [depositOpen, setDepositOpen] = useState(false);
@@ -180,10 +187,16 @@ export const AccountingPage: React.FC = () => {
     setMonthlyRevenue(data);
   }, []);
 
+  const loadMonthlyRecordCount = useCallback(async () => {
+    const data = await accountingApi.getMonthlyRecordCount().catch(() => []);
+    setMonthlyRecordCount(data);
+  }, []);
+
   useEffect(() => { loadCash(); }, [loadCash]);
   useEffect(() => { loadCapital(); }, [loadCapital]);
   useEffect(() => { loadFounderSalaries(); }, [loadFounderSalaries]);
   useEffect(() => { loadMonthlyRevenue(); }, [loadMonthlyRevenue]);
+  useEffect(() => { loadMonthlyRecordCount(); }, [loadMonthlyRecordCount]);
   useEffect(() => {
     servicesApi.getServicemen().then(setServicemen).catch(() => {});
     servicesApi.getAllServicemen().then(all => setEmployees(all.filter(s => s.role === 'Сотрудник' && !s.isDismissed))).catch(() => {});
@@ -964,26 +977,110 @@ export const AccountingPage: React.FC = () => {
     finally { setRevenueSaving(false); }
   };
 
+  const handleRecordCountMonthChange = (v: Dayjs | null) => {
+    if (!v) return;
+    setRecordCountEditMonth(v);
+    const key = `${v.year()}-${String(v.month() + 1).padStart(2, '0')}`;
+    const existing = monthlyRecordCount.find(r => r.key === key);
+    setRecordCountEditValue(existing?.count ?? 0);
+  };
+
+  const handleRecordCountSave = async () => {
+    setRecordCountSaving(true);
+    try {
+      await accountingApi.setMonthlyRecordCount(
+        recordCountEditMonth.year(),
+        recordCountEditMonth.month() + 1,
+        recordCountEditValue,
+      );
+      await loadMonthlyRecordCount();
+      setRecordCountEditOpen(false);
+      message.success('Данные обновлены');
+    } catch { message.error('Ошибка сохранения'); }
+    finally { setRecordCountSaving(false); }
+  };
+
+  // Merge revenue and record-count by key for dual-line chart
+  const statsChartData = (() => {
+    const allKeys = new Set([
+      ...revenueChartData.map(r => r.key),
+      ...([...monthlyRecordCount].reverse()).map(r => r.key),
+    ]);
+    const rcMap = new Map(monthlyRecordCount.map(r => [r.key, r.count]));
+    return Array.from(allKeys)
+      .sort()
+      .map(key => {
+        const rev = revenueChartData.find(r => r.key === key);
+        return {
+          key,
+          labelShort: rev?.labelShort ?? key,
+          label: rev?.label ?? key,
+          amount: rev?.amount ?? 0,
+          count: rcMap.get(key) ?? 0,
+        };
+      });
+  })();
+
   const statsTab = (
     <div className={styles.tabContent}>
-      <div className={styles.topBar}>
-        <Button
-          icon={<EditOutlined />}
-          onClick={() => {
-            const now = dayjs().startOf('month');
-            setRevenueEditMonth(now);
-            const key = `${now.year()}-${String(now.month() + 1).padStart(2, '0')}`;
-            const existing = monthlyRevenue.find(r => r.key === key);
-            setRevenueEditAmount(existing?.amount ?? 0);
-            setRevenueEditOpen(true);
-          }}
-        >
-          Изменить данные
-        </Button>
-      </div>
+      {/* Chart on top */}
+      <Card size="small" title="Выручка и записи по месяцам" style={{ marginBottom: 16 }}>
+        {statsChartData.length > 1 ? (
+          <ResponsiveContainer width="100%" height={280}>
+            <LineChart data={statsChartData} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+              <XAxis dataKey="labelShort" tick={{ fontSize: 11 }} />
+              <YAxis yAxisId="revenue" tick={{ fontSize: 11 }} tickFormatter={v => `${(v / 1000).toFixed(0)}к`} width={44} />
+              <YAxis yAxisId="count" orientation="right" tick={{ fontSize: 11 }} width={32} />
+              <RechartsTooltip
+                content={({ active, payload, label: lbl }) => {
+                  if (!active || !payload?.length) return null;
+                  return (
+                    <div className={styles.chartTooltip}>
+                      <div className={styles.tooltipLabel}>{lbl}</div>
+                      {payload.map(p => (
+                        <div key={p.dataKey as string}>
+                          {p.dataKey === 'amount'
+                            ? <>Выручка: <strong style={{ color: 'var(--color-success)' }}>{formatPrice(p.value as number)}</strong></>
+                            : <>Записей: <strong style={{ color: '#3b82f6' }}>{p.value}</strong></>
+                          }
+                        </div>
+                      ))}
+                    </div>
+                  );
+                }}
+              />
+              <Line yAxisId="revenue" type="monotone" dataKey="amount" name="Выручка" stroke="var(--color-primary)" strokeWidth={2} dot={statsChartData.length <= 12} activeDot={{ r: 4 }} />
+              <Line yAxisId="count" type="monotone" dataKey="count" name="Записей" stroke="#3b82f6" strokeWidth={2} dot={statsChartData.length <= 12} activeDot={{ r: 4 }} strokeDasharray="5 3" />
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <div style={{ height: 280, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)' }}>
+            Недостаточно данных для графика
+          </div>
+        )}
+      </Card>
 
+      {/* Two tables side by side */}
       <div className={styles.statsLayout}>
         <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <span style={{ fontWeight: 600 }}>Выручка по месяцам</span>
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => {
+                const now = dayjs().startOf('month');
+                setRevenueEditMonth(now);
+                const key = `${now.year()}-${String(now.month() + 1).padStart(2, '0')}`;
+                const existing = monthlyRevenue.find(r => r.key === key);
+                setRevenueEditAmount(existing?.amount ?? 0);
+                setRevenueEditOpen(true);
+              }}
+            >
+              Изменить
+            </Button>
+          </div>
           <Table<MonthlyRevenueItem>
             dataSource={monthlyRevenue}
             rowKey="key"
@@ -991,11 +1088,7 @@ export const AccountingPage: React.FC = () => {
             pagination={false}
             locale={{ emptyText: 'Нет данных' }}
             columns={[
-              {
-                title: 'Период',
-                dataIndex: 'label',
-                key: 'period',
-              },
+              { title: 'Период', dataIndex: 'label', key: 'period' },
               {
                 title: 'Сумма',
                 dataIndex: 'amount',
@@ -1016,34 +1109,51 @@ export const AccountingPage: React.FC = () => {
           />
         </div>
 
-        <Card size="small" title="Выручка по месяцам">
-          {revenueChartData.length > 1 ? (
-            <ResponsiveContainer width="100%" height={320}>
-              <LineChart data={revenueChartData} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                <XAxis dataKey="labelShort" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `${(v / 1000).toFixed(0)}к`} width={44} />
-                <RechartsTooltip
-                  content={({ active, payload, label: lbl }) => {
-                    if (!active || !payload?.length) return null;
-                    const item = payload[0].payload as MonthlyRevenueItem;
-                    return (
-                      <div className={styles.chartTooltip}>
-                        <div className={styles.tooltipLabel}>{item.label}</div>
-                        <div>Выручка: <strong style={{ color: 'var(--color-success)' }}>{formatPrice(item.amount)}</strong></div>
-                      </div>
-                    );
-                  }}
-                />
-                <Line type="monotone" dataKey="amount" stroke="var(--color-primary)" strokeWidth={2} dot={revenueChartData.length <= 12} activeDot={{ r: 4 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          ) : (
-            <div style={{ height: 320, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)' }}>
-              Недостаточно данных для графика
-            </div>
-          )}
-        </Card>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <span style={{ fontWeight: 600 }}>Количество записей по месяцам</span>
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => {
+                const now = dayjs().startOf('month');
+                setRecordCountEditMonth(now);
+                const key = `${now.year()}-${String(now.month() + 1).padStart(2, '0')}`;
+                const existing = monthlyRecordCount.find(r => r.key === key);
+                setRecordCountEditValue(existing?.count ?? 0);
+                setRecordCountEditOpen(true);
+              }}
+            >
+              Изменить
+            </Button>
+          </div>
+          <Table<MonthlyRecordCountItem>
+            dataSource={monthlyRecordCount}
+            rowKey="key"
+            size="small"
+            pagination={false}
+            locale={{ emptyText: 'Нет данных' }}
+            columns={[
+              { title: 'Период', dataIndex: 'label', key: 'period' },
+              {
+                title: 'Записей',
+                dataIndex: 'count',
+                key: 'count',
+                align: 'right' as const,
+                render: (v: number, row: MonthlyRecordCountItem) => (
+                  <span style={{ color: '#3b82f6', fontWeight: 600 }}>
+                    {v}
+                    {row.isOverride && (
+                      <Tooltip title="Значение задано вручную">
+                        <span style={{ marginLeft: 6, fontSize: 11, color: 'var(--color-text-muted)' }}>●</span>
+                      </Tooltip>
+                    )}
+                  </span>
+                ),
+              },
+            ]}
+          />
+        </div>
       </div>
     </div>
   );
@@ -1101,6 +1211,50 @@ export const AccountingPage: React.FC = () => {
                 const key = `${revenueEditMonth.year()}-${String(revenueEditMonth.month() + 1).padStart(2, '0')}`;
                 const existing = monthlyRevenue.find(r => r.key === key);
                 return formatPrice(existing?.amount ?? 0);
+              })()}</strong>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        title="Изменить данные записей"
+        open={recordCountEditOpen}
+        onCancel={() => setRecordCountEditOpen(false)}
+        onOk={handleRecordCountSave}
+        okText="Сохранить"
+        okButtonProps={{ loading: recordCountSaving }}
+        cancelText="Отмена"
+        destroyOnHidden
+        width={380}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 16 }}>
+          <div>
+            <div style={{ marginBottom: 6, fontWeight: 500 }}>Период</div>
+            <DatePicker
+              picker="month"
+              value={recordCountEditMonth}
+              onChange={handleRecordCountMonthChange}
+              format="MMMM YYYY"
+              allowClear={false}
+              style={{ width: '100%' }}
+              disabledDate={d => d.isAfter(dayjs(), 'month')}
+            />
+          </div>
+          <div>
+            <div style={{ marginBottom: 6, fontWeight: 500 }}>Количество записей</div>
+            <InputNumber
+              value={recordCountEditValue}
+              onChange={v => setRecordCountEditValue(v ?? 0)}
+              min={0}
+              precision={0}
+              style={{ width: '100%' }}
+            />
+            <div style={{ marginTop: 6, fontSize: 12, color: 'var(--color-text-muted)' }}>
+              Текущее значение за выбранный период: <strong>{(() => {
+                const key = `${recordCountEditMonth.year()}-${String(recordCountEditMonth.month() + 1).padStart(2, '0')}`;
+                const existing = monthlyRecordCount.find(r => r.key === key);
+                return existing?.count ?? 0;
               })()}</strong>
             </div>
           </div>

@@ -84,6 +84,12 @@ export const accountingApi = {
   setMonthlyRevenue: (year: number, month: number, amount: number) =>
     http.post<{ data: MonthlyRevenueItem }>('/accounting/monthly-revenue', { year, month, amount }).then(r => r.data.data),
 
+  getMonthlyRecordCount: () =>
+    http.get<{ data: MonthlyRecordCountItem[] }>('/accounting/monthly-record-count').then(r => r.data.data),
+
+  setMonthlyRecordCount: (year: number, month: number, count: number) =>
+    http.post<{ data: MonthlyRecordCountItem }>('/accounting/monthly-record-count', { year, month, count }).then(r => r.data.data),
+
   updateCashTransaction: (id: string, data: { date?: string; amount?: number; description?: string; person?: string }) =>
     http.patch<{ data: CashTransaction }>(`/accounting/cash/${id}`, data).then(r => r.data.data),
 
@@ -110,6 +116,16 @@ export interface MonthlyRevenueItem {
   label: string;
   labelShort: string;
   amount: number;
+  isOverride: boolean;
+}
+
+export interface MonthlyRecordCountItem {
+  key: string;
+  year: number;
+  month: number;
+  label: string;
+  labelShort: string;
+  count: number;
   isOverride: boolean;
 }
 

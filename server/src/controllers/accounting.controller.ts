@@ -80,6 +80,17 @@ export const accountingController = {
     res.json({ data });
   },
 
+  async getMonthlyRecordCount(_req: Request, res: Response) {
+    const data = await accountingService.getMonthlyRecordCount();
+    res.json({ data });
+  },
+
+  async setMonthlyRecordCount(req: Request, res: Response) {
+    const { year, month, count } = req.body;
+    const data = await accountingService.setMonthlyRecordCount(Number(year), Number(month), Number(count));
+    res.json({ data });
+  },
+
   async getSalaryHistory(req: Request, res: Response) {
     const servicemanName = String(req.query.servicemanName || '');
     const data = await accountingService.getSalaryHistory(servicemanName);
