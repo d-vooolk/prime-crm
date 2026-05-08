@@ -12,6 +12,7 @@ import { servicesApi } from '@/api/services.api';
 import { useAuthStore } from '@/store/authStore';
 import { Category, Service, Equipment, Serviceman } from '@/types';
 import { formatPrice, formatDuration } from '@/utils/formatters';
+import { ClientsPage } from '@/pages/ClientsPage';
 import dayjs from 'dayjs';
 import styles from './ServicesPage.module.scss';
 
@@ -546,6 +547,11 @@ export const ServicesPage: React.FC = () => {
                 {dismissedSection(dismissedEmployees, false)}
               </div>
             ),
+          },
+          {
+            key: 'clients',
+            label: 'Клиенты',
+            children: <ClientsPage />,
           },
           {
             key: 'receptionists',

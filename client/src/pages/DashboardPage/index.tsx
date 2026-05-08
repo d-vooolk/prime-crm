@@ -10,6 +10,7 @@ import { accountingApi, SalaryData, SalaryHistoryItem, MonthlyRevenueItem } from
 import { servicesApi } from '@/api/services.api';
 import { formatPrice } from '@/utils/formatters';
 import { Serviceman } from '@/types';
+import { useAuthStore } from '@/store/authStore';
 import styles from './DashboardPage.module.scss';
 
 const PERIOD_OPTIONS = [
@@ -33,6 +34,8 @@ const SalaryTooltip = ({ active, payload, label }: { active?: boolean; payload?:
 };
 
 export const DashboardPage: React.FC = () => {
+  const { user } = useAuthStore();
+  const canSeeRevenue = user?.isMaster || ['Создатель', 'Директор'].includes(user?.role || '');
   const [period, setPeriod] = useState<Period>('month');
   const [summary, setSummary] = useState<{ closedCount: number; totalRevenue: number; activeRecords: number } | null>(null);
   const [revenueData, setRevenueData] = useState<Array<{ date: string; revenue: number }>>([]);
@@ -162,37 +165,39 @@ export const DashboardPage: React.FC = () => {
                 </Row>
 
                 <Row gutter={[16, 16]}>
-                  <Col xs={24} lg={14}>
-                    <Card title="Выручка по месяцам">
-                      {monthlyRevenue.length > 1 ? (
-                        <ResponsiveContainer width="100%" height={240}>
-                          <LineChart data={monthlyRevenue}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                            <XAxis dataKey="labelShort" tick={{ fontSize: 11 }} />
-                            <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `${(v / 1000).toFixed(0)}к`} width={44} />
-                            <Tooltip
-                              content={({ active, payload }) => {
-                                if (!active || !payload?.length) return null;
-                                const item = payload[0].payload as MonthlyRevenueItem;
-                                return (
-                                  <div className={styles.chartTooltip}>
-                                    <div className={styles.tooltipLabel}>{item.label}</div>
-                                    <div>Выручка: <strong style={{ color: '#22c55e' }}>{formatPrice(item.amount)}</strong></div>
-                                  </div>
-                                );
-                              }}
-                            />
-                            <Line type="monotone" dataKey="amount" stroke="#3b82f6" strokeWidth={2} dot={monthlyRevenue.length <= 12} activeDot={{ r: 4 }} />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      ) : (
-                        <div style={{ height: 240, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)' }}>
-                          Нет данных
-                        </div>
-                      )}
-                    </Card>
-                  </Col>
-                  <Col xs={24} lg={10}>
+                  {canSeeRevenue && (
+                    <Col xs={24} lg={14}>
+                      <Card title="Выручка по месяцам">
+                        {monthlyRevenue.length > 1 ? (
+                          <ResponsiveContainer width="100%" height={240}>
+                            <LineChart data={monthlyRevenue}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                              <XAxis dataKey="labelShort" tick={{ fontSize: 11 }} />
+                              <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `${(v / 1000).toFixed(0)}к`} width={44} />
+                              <Tooltip
+                                content={({ active, payload }) => {
+                                  if (!active || !payload?.length) return null;
+                                  const item = payload[0].payload as MonthlyRevenueItem;
+                                  return (
+                                    <div className={styles.chartTooltip}>
+                                      <div className={styles.tooltipLabel}>{item.label}</div>
+                                      <div>Выручка: <strong style={{ color: '#22c55e' }}>{formatPrice(item.amount)}</strong></div>
+                                    </div>
+                                  );
+                                }}
+                              />
+                              <Line type="monotone" dataKey="amount" stroke="#3b82f6" strokeWidth={2} dot={monthlyRevenue.length <= 12} activeDot={{ r: 4 }} />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        ) : (
+                          <div style={{ height: 240, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)' }}>
+                            Нет данных
+                          </div>
+                        )}
+                      </Card>
+                    </Col>
+                  )}
+                  <Col xs={24} lg={canSeeRevenue ? 10 : 24}>
                     <Card title="Топ услуг">
                       {topServices.length > 0 ? (
                         <ResponsiveContainer width="100%" height={240}>

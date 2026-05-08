@@ -1054,7 +1054,7 @@ export const AccountingPage: React.FC = () => {
     ...(canSeeCapital ? [{ key: 'capital', label: 'Капитал', children: capitalTab }] : []),
     { key: 'salary', label: 'Расчёт ЗП', children: salaryTab },
     ...(canSeeCapital ? [{ key: 'founderSalary', label: 'ЗП Учредителей', children: founderSalaryTab }] : []),
-    ...(canSeeCashflow ? [{ key: 'stats', label: 'Статистика', children: statsTab }] : []),
+    ...(canSeeCapital ? [{ key: 'stats', label: 'Статистика', children: statsTab }] : []),
   ];
 
   return (

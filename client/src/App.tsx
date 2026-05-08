@@ -25,7 +25,7 @@ const App: React.FC = () => {
   const { user } = useAuthStore();
   const scheduleOnly = user?.role === 'Сотрудник';
   const canSeeAccounting = !!user;
-  const canSeeNotes = (user?.isMaster || ['Создатель', 'Директор', 'Менеджер'].includes(user?.role || ''));
+  const canSeeNotes = !!user;
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -48,7 +48,7 @@ const App: React.FC = () => {
               <Route index element={<Navigate to="/schedule" replace />} />
               <Route path="schedule" element={<SchedulePage />} />
               <Route path="dashboard" element={scheduleOnly ? <Navigate to="/schedule" replace /> : <DashboardPage />} />
-              <Route path="clients" element={scheduleOnly ? <Navigate to="/schedule" replace /> : <ClientsPage />} />
+              <Route path="clients" element={<Navigate to="/services" replace />} />
               <Route path="services" element={scheduleOnly ? <Navigate to="/schedule" replace /> : <ServicesPage />} />
               <Route path="accounting" element={canSeeAccounting ? <AccountingPage /> : <Navigate to="/schedule" replace />} />
               <Route path="notes" element={canSeeNotes ? <NotesPage /> : <Navigate to="/schedule" replace />} />

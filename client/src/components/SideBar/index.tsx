@@ -3,7 +3,6 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   CalendarOutlined,
   DashboardOutlined,
-  TeamOutlined,
   ToolOutlined,
   SettingOutlined,
   AccountBookOutlined,
@@ -29,7 +28,6 @@ const MANAGER_ROLES = ['Создатель', 'Директор', 'Менедже
 const NAV_ITEMS = [
   { path: '/schedule', label: 'Расписание', icon: <CalendarOutlined /> },
   { path: '/dashboard', label: 'Дашборд', icon: <DashboardOutlined /> },
-  { path: '/clients', label: 'Клиенты', icon: <TeamOutlined /> },
   { path: '/services', label: 'Справочник', icon: <ToolOutlined /> },
   { path: '/accounting', label: 'Бухгалтерия', icon: <AccountBookOutlined /> },
   { path: '/notes', label: 'Заметки', icon: <FileTextOutlined /> },
@@ -42,9 +40,6 @@ export const SideBar: React.FC = () => {
   const visibleNavItems = NAV_ITEMS.filter(item => {
     if (user?.role === 'Сотрудник') {
       return item.path === '/schedule' || item.path === '/accounting' || item.path === '/settings';
-    }
-    if (item.path === '/notes') {
-      return (user?.isMaster || MANAGER_ROLES.includes(user?.role || ''));
     }
     return true;
   });
