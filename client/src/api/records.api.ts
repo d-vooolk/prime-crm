@@ -65,7 +65,7 @@ export interface CreateRecordDto {
   executorSignatoryPosition?: string;
   executorSignatoryPositionGenitive?: string;
   executorSignatoryBasis?: string;
-  items: Array<{ serviceId: string; price: number; quantity: number; netProfit?: number; servicemanName?: string; equipmentId?: string; servicemanSplit?: Array<{ name: string; amount: number }> | null }>;
+  items: Array<{ serviceId: string; price: number; quantity: number; netProfit?: number; servicemanName?: string; equipmentId?: string; servicemanSplit?: Array<{ name: string; amount: number }> | null; prepaidAmount?: number; prepaidByCard?: boolean }>;
 }
 
 export interface CloseDealDto {
@@ -105,8 +105,8 @@ export const recordsApi = {
   close: (id: string, data: CloseDealDto) =>
     http.post<{ data: Record }>(`/records/${id}/close`, data).then(r => r.data.data),
 
-  cancel: (id: string) =>
-    http.post<{ data: Record }>(`/records/${id}/cancel`).then(r => r.data.data),
+  cancel: (id: string, body?: { retainedCashAmount?: number; retainedCardAmount?: number }) =>
+    http.post<{ data: Record }>(`/records/${id}/cancel`, body || {}).then(r => r.data.data),
 
   restore: (id: string) =>
     http.post<{ data: Record }>(`/records/${id}/restore`).then(r => r.data.data),

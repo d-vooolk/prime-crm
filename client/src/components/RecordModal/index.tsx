@@ -74,6 +74,8 @@ function recordToFormData(record: CrmRecord): RecordFormData {
       estimatedTime: item.service.estimatedTime,
       hasEquipment: item.service.hasEquipment ?? false,
       equipmentId: item.equipmentId ?? undefined,
+      prepaidAmount: item.prepaidAmount ?? 0,
+      prepaidByCard: item.prepaidByCard ?? false,
     })),
   };
 }
@@ -195,6 +197,8 @@ export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initial
         price: s.price,
         quantity: s.quantity,
         equipmentId: s.equipmentId,
+        prepaidAmount: s.prepaidAmount || 0,
+        prepaidByCard: s.prepaidByCard || false,
       })),
     };
   };
@@ -285,7 +289,7 @@ export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initial
 
         <Form layout="vertical" className={styles.content}>
           {step === 0 && <Step1Client data={data} onChange={handleChange} />}
-          {step === 1 && <Step2Services data={data} onChange={handleChange} />}
+          {step === 1 && <Step2Services data={data} onChange={handleChange} prepaymentLocked={editRecord?.status === 'CLOSED'} />}
           {step === 2 && <Step3Summary data={data} />}
         </Form>
 

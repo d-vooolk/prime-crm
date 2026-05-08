@@ -76,7 +76,7 @@ export const recordsController = {
 
   async cancel(req: Request, res: Response, next: NextFunction) {
     try {
-      const record = await recordsService.cancel(String(req.params.id));
+      const record = await recordsService.cancel(String(req.params.id), req.body || {});
       res.json({ data: record });
     } catch (e) { next(e); }
   },

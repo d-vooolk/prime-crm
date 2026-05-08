@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import {
   Modal, Button, Descriptions, Tag, Divider, Table, message,
-  Popconfirm, Select, InputNumber, Space, Tooltip, Grid, Radio,
+  Popconfirm, InputNumber, Tooltip, Grid, Radio, Form,
 } from 'antd';
 const { useBreakpoint } = Grid;
 import {
   PrinterOutlined, CheckCircleOutlined, CloseCircleOutlined,
-  EditOutlined, DeleteOutlined, ReloadOutlined, CalendarOutlined,
+  DeleteOutlined, ReloadOutlined, CalendarOutlined,
   CarOutlined, StarOutlined,
 } from '@ant-design/icons';
-import { Record as CrmRecord, Category, DocumentTemplate, CompanySettings } from '@/types';
-import { SelectedService } from '@/components/RecordModal/types';
+import { Record as CrmRecord, DocumentTemplate, CompanySettings } from '@/types';
 import { formatPrice, formatDate, formatTime } from '@/utils/formatters';
 import { printWorkOrder, printCompletionAct, printServiceContract, printInvoice, printBlankCompletionAct, printLegalAct } from '@/utils/print';
 import { CloseRecordModal } from '../CloseRecordModal';
@@ -44,11 +43,6 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
   const [localRecord, setLocalRecord] = useState(record);
   const [closeModalOpen, setCloseModalOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
-  const [editingServices, setEditingServices] = useState(false);
-  const [editItems, setEditItems] = useState<SelectedService[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [editEquipment, setEditEquipment] = useState<import('@/types').Equipment[]>([]);
-  const [saving, setSaving] = useState(false);
   const [printing, setPrinting] = useState(false);
   const [templateModal, setTemplateModal] = useState<{
     templates: DocumentTemplate[];
@@ -56,6 +50,9 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
     selectedId: string | null;
   } | null>(null);
   const [smsSending, setSmsSending] = useState<'CAR_READY' | 'REVIEW_REQUEST' | null>(null);
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [retainedCash, setRetainedCash] = useState(0);
+  const [retainedCard, setRetainedCard] = useState(0);
 
   const fetchPrintData = async () => {
     const [settings, templates] = await Promise.all([
@@ -153,7 +150,6 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
 
   useEffect(() => {
     if (open && record) {
-      setEditingServices(false);
       setLocalRecord(record);
     }
   }, [open, record?.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -177,80 +173,28 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
     ? r.deal.finalPrice
     : r.items.reduce((s, i) => s + i.price * i.quantity, 0);
 
-  // ─── Service editing ──────────────────────────────
-
-  const handleStartEditServices = async () => {
-    const [cats, equip] = await Promise.all([
-      categories.length === 0 ? servicesApi.getCategories().catch(() => []) : Promise.resolve(categories),
-      editEquipment.length === 0 ? servicesApi.getEquipment().catch(() => []) : Promise.resolve(editEquipment),
-    ]);
-    if (cats !== categories) setCategories(cats);
-    if (equip !== editEquipment) setEditEquipment(equip);
-    setEditItems(r.items.map(item => ({
-      serviceId: item.serviceId,
-      serviceName: item.service.name,
-      categoryName: item.service.category?.name || '',
-      price: item.price,
-      quantity: item.quantity,
-      estimatedTime: item.service.estimatedTime,
-      hasEquipment: item.service.hasEquipment ?? false,
-      equipmentId: item.equipmentId ?? undefined,
-    })));
-    setEditingServices(true);
-  };
-
-  const allServices = categories.flatMap(c => c.services.map(s => ({ ...s, category: c })));
-
-  const handleServiceAdd = (serviceId: string) => {
-    const service = allServices.find(s => s.id === serviceId);
-    if (!service) return;
-    const existing = editItems.find(s => s.serviceId === serviceId);
-    if (existing) {
-      setEditItems(prev => prev.map(s =>
-        s.serviceId === serviceId ? { ...s, quantity: s.quantity + 1 } : s
-      ));
-    } else {
-      setEditItems(prev => [...prev, {
-        serviceId: service.id,
-        serviceName: service.name,
-        categoryName: service.category.name,
-        price: service.standardPrice,
-        quantity: 1,
-        estimatedTime: service.estimatedTime,
-        hasEquipment: service.hasEquipment ?? false,
-      }]);
-    }
-  };
-
-  const handleSaveServices = async () => {
-    setSaving(true);
-    try {
-      await recordsApi.update(record.id, {
-        items: editItems.map(s => ({
-          serviceId: s.serviceId,
-          price: s.price,
-          quantity: s.quantity,
-          equipmentId: s.equipmentId,
-        })),
-      });
-      const fresh = await recordsApi.getById(record.id);
-      setLocalRecord(fresh);
-      setEditingServices(false);
-      message.success('Услуги обновлены');
-      onRefresh();
-    } catch (e: unknown) {
-      message.error(e instanceof Error ? e.message : 'Ошибка');
-    } finally {
-      setSaving(false);
-    }
-  };
-
   // ─── Cancel / Restore ─────────────────────────────
 
-  const handleCancel = async () => {
+  const openCancelFlow = () => {
+    const totalPrepaidCash = r.items.reduce((s, i) => s + (!i.prepaidByCard ? (i.prepaidAmount || 0) : 0), 0);
+    const totalPrepaidCard = r.items.reduce((s, i) => s + (i.prepaidByCard ? (i.prepaidAmount || 0) : 0), 0);
+    if (totalPrepaidCash > 0 || totalPrepaidCard > 0) {
+      setRetainedCash(totalPrepaidCash);
+      setRetainedCard(totalPrepaidCard);
+      setCancelModalOpen(true);
+    } else {
+      handleCancel();
+    }
+  };
+
+  const handleCancel = async (retainCash?: number, retainCard?: number) => {
     try {
-      await recordsApi.cancel(record.id);
+      await recordsApi.cancel(record.id, {
+        retainedCashAmount: retainCash,
+        retainedCardAmount: retainCard,
+      });
       message.success('Запись отменена');
+      setCancelModalOpen(false);
       onRefresh();
       onClose();
     } catch (e: unknown) {
@@ -307,88 +251,30 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
     setCloseModalOpen(true);
   };
 
-  const serviceOptions = categories.map(cat => ({
-    label: cat.name,
-    options: cat.services.map(s => ({
-      value: s.id,
-      label: `${s.name} — ${formatPrice(s.standardPrice)}`,
-    })),
-  }));
-
-  const editEquipmentOptions = editEquipment.map(e => ({ value: e.id, label: e.name }));
-
-  const editColumns = [
-    {
-      title: 'Услуга',
-      dataIndex: 'serviceName',
-      key: 'name',
-      render: (name: string, row: SelectedService) => (
-        <div>
-          <div style={{ fontWeight: 500 }}>{name}</div>
-          <Tag style={{ fontSize: 11, marginTop: 2 }}>{row.categoryName}</Tag>
-          {row.hasEquipment && (
-            <Select
-              size="small"
-              style={{ width: '100%', marginTop: 6 }}
-              placeholder="Выберите Bi-Led модуль..."
-              value={row.equipmentId || undefined}
-              onChange={v => setEditItems(prev => prev.map(s => s.serviceId === row.serviceId ? { ...s, equipmentId: v } : s))}
-              allowClear
-              onClear={() => setEditItems(prev => prev.map(s => s.serviceId === row.serviceId ? { ...s, equipmentId: undefined } : s))}
-              options={editEquipmentOptions}
-              showSearch
-              optionFilterProp="label"
-            />
-          )}
-        </div>
-      ),
-    },
-    {
-      title: 'Кол-во', key: 'quantity', width: 100,
-      render: (_: unknown, row: SelectedService) => (
-        <InputNumber
-          min={1} max={99} value={row.quantity} size="small"
-          controls
-          style={{ width: 80 }}
-          onChange={v => setEditItems(prev =>
-            prev.map(s => s.serviceId === row.serviceId ? { ...s, quantity: v || 1 } : s)
-          )}
-        />
-      ),
-    },
-    {
-      title: 'Цена', key: 'price', width: 150,
-      render: (_: unknown, row: SelectedService) => (
-        <Space.Compact size="small">
-          <InputNumber
-            min={0} value={row.price} style={{ width: 100 }}
-            formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}
-            onChange={v => setEditItems(prev =>
-              prev.map(s => s.serviceId === row.serviceId ? { ...s, price: v || 0 } : s)
-            )}
-          />
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', padding: '0 8px',
-            background: 'var(--color-surface-2)', border: '1px solid var(--color-border)',
-            borderLeft: 'none', borderRadius: '0 6px 6px 0', fontSize: 13,
-            color: 'var(--color-text-secondary)',
-          }}>р.</span>
-        </Space.Compact>
-      ),
-    },
-    {
-      title: '', key: 'action', width: 40,
-      render: (_: unknown, row: SelectedService) => (
-        <Button
-          type="text" danger icon={<DeleteOutlined />} size="small"
-          onClick={() => setEditItems(prev => prev.filter(s => s.serviceId !== row.serviceId))}
-        />
-      ),
-    },
-  ];
+  const totalPrepaid = r.deal ? 0 : r.items.reduce((s, i) => s + (i.prepaidAmount || 0), 0);
 
   const viewColumns = [
-    { title: 'Услуга', dataIndex: ['service', 'name'], key: 'name' },
+    {
+      title: 'Услуга', key: 'name',
+      render: (_: unknown, row: typeof record.items[0]) => {
+        const paid = row.prepaidAmount || 0;
+        const rowTotal = row.price * row.quantity;
+        return (
+          <div>
+            <div>{row.service.name}</div>
+            {!isEmployee && paid > 0 && (
+              <Tag
+                color={paid >= rowTotal ? 'success' : 'processing'}
+                style={{ fontSize: 10, marginTop: 2 }}
+              >
+                {paid >= rowTotal ? 'Оплачено' : `Предоплата ${formatPrice(paid)}`}
+                {row.prepaidByCard ? ' (РС)' : ' (нал)'}
+              </Tag>
+            )}
+          </div>
+        );
+      },
+    },
     {
       title: 'Категория', key: 'cat',
       render: (_: unknown, row: typeof record.items[0]) =>
@@ -439,7 +325,7 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
                   Редактировать
                 </Button>
                 {r.status === 'ACTIVE' && (
-                  <Popconfirm title="Отменить запись?" onConfirm={handleCancel} okText="Да" cancelText="Нет">
+                  <Popconfirm title="Отменить запись?" onConfirm={openCancelFlow} okText="Да" cancelText="Нет">
                     <Button danger icon={<CloseCircleOutlined />} className={styles.footerMobileFlex}>
                       Отменить
                     </Button>
@@ -574,7 +460,7 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
                 )}
                 {r.status === 'ACTIVE' && (
                   <>
-                    <Popconfirm title="Отменить запись?" onConfirm={handleCancel} okText="Да" cancelText="Нет">
+                    <Popconfirm title="Отменить запись?" onConfirm={openCancelFlow} okText="Да" cancelText="Нет">
                       <Button danger icon={<CloseCircleOutlined />}>Отменить</Button>
                     </Popconfirm>
                     <Button type="primary" icon={<CheckCircleOutlined />} onClick={handleOpenCloseModal}>
@@ -654,53 +540,32 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
         )}
 
         <Divider orientation="left" style={{ fontSize: 13 }}>Услуги</Divider>
-        {r.status === 'ACTIVE' && !r.deal && !editingServices && !isEmployee && (
-          <div style={{ marginBottom: 8, textAlign: 'right' }}>
-            <Button size="small" icon={<EditOutlined />} onClick={handleStartEditServices}>
-              Изменить услуги
-            </Button>
-          </div>
-        )}
-
-        {editingServices ? (
-          <div style={{ marginTop: 8 }}>
-            <Select
-              showSearch
-              style={{ width: '100%', marginBottom: 12 }}
-              value={undefined}
-              onChange={handleServiceAdd}
-              placeholder="Добавить услугу..."
-              optionFilterProp="label"
-              options={serviceOptions}
-            />
-            <Table
-              dataSource={editItems}
-              columns={editColumns}
-              rowKey="serviceId"
-              pagination={false}
-              size="small"
-            />
-            <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'flex-end' }}>
-              <Button onClick={() => setEditingServices(false)}>Отмена</Button>
-              <Button type="primary" loading={saving} onClick={handleSaveServices}>
-                Сохранить
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <Table
-            dataSource={r.items}
-            columns={viewColumns}
-            rowKey="id"
-            pagination={false}
-            size="small"
-            footer={isEmployee ? undefined : () => (
+        <Table
+          dataSource={r.items}
+          columns={viewColumns}
+          rowKey="id"
+          pagination={false}
+          size="small"
+          footer={isEmployee ? undefined : () => (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {totalPrepaid > 0 && (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--color-text-secondary)' }}>
+                    <span>Предоплата:</span>
+                    <span style={{ color: 'var(--color-status-closed)', fontWeight: 600 }}>− {formatPrice(totalPrepaid)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--color-text-secondary)' }}>
+                    <span>Остаток к оплате:</span>
+                    <span style={{ fontWeight: 600 }}>{formatPrice(total - totalPrepaid)}</span>
+                  </div>
+                </>
+              )}
               <div style={{ textAlign: 'right', fontSize: 16, fontWeight: 700 }}>
                 {r.deal ? 'Итого: ' : 'Предв. итого: '}{formatPrice(total)}
               </div>
-            )}
-          />
-        )}
+            </div>
+          )}
+        />
 
         {r.deal && (
           <>
@@ -774,6 +639,45 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
             </Radio>
           ))}
         </Radio.Group>
+      </Modal>
+
+      <Modal
+        title="Отмена записи с предоплатой"
+        open={cancelModalOpen}
+        onCancel={() => setCancelModalOpen(false)}
+        onOk={() => handleCancel(retainedCash, retainedCard)}
+        okText="Отменить запись"
+        okButtonProps={{ danger: true }}
+        cancelText="Назад"
+        width={400}
+      >
+        <p style={{ marginBottom: 16, color: 'var(--color-text-secondary)', fontSize: 13 }}>
+          По этой записи есть предоплата. Укажите, какую сумму оставить в кассе.
+        </p>
+        {r.items.reduce((s, i) => s + (!i.prepaidByCard ? (i.prepaidAmount || 0) : 0), 0) > 0 && (
+          <Form.Item label="Наличные (оставить в кассе)">
+            <InputNumber
+              min={0}
+              max={r.items.reduce((s, i) => s + (!i.prepaidByCard ? (i.prepaidAmount || 0) : 0), 0)}
+              value={retainedCash}
+              onChange={v => setRetainedCash(v || 0)}
+              style={{ width: '100%' }}
+              addonAfter="р."
+            />
+          </Form.Item>
+        )}
+        {r.items.reduce((s, i) => s + (i.prepaidByCard ? (i.prepaidAmount || 0) : 0), 0) > 0 && (
+          <Form.Item label="Безнал РС (оставить в кассе)">
+            <InputNumber
+              min={0}
+              max={r.items.reduce((s, i) => s + (i.prepaidByCard ? (i.prepaidAmount || 0) : 0), 0)}
+              value={retainedCard}
+              onChange={v => setRetainedCard(v || 0)}
+              style={{ width: '100%' }}
+              addonAfter="р."
+            />
+          </Form.Item>
+        )}
       </Modal>
     </>
   );

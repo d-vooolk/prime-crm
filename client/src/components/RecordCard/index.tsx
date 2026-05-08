@@ -37,6 +37,9 @@ export const RecordCard: React.FC<Props> = ({ record, onClick }) => {
   const total = deal
     ? deal.finalPrice
     : items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const totalPrepaid = !deal
+    ? items.reduce((sum, item) => sum + (item.prepaidAmount || 0), 0)
+    : 0;
 
   const time = dayjs(scheduledAt).format('HH:mm');
   const showPhoto = !!car.generationId && !photoError;
@@ -130,7 +133,18 @@ export const RecordCard: React.FC<Props> = ({ record, onClick }) => {
           {!isEmployee && (
             <div className={styles.total}>
               <span className={styles.totalLabel}>{deal ? 'Итого' : 'Предв. сумма'}</span>
-              <span className={styles.totalAmount}>{formatPrice(total)}</span>
+              {totalPrepaid > 0 ? (
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span className={styles.totalAmount} style={{ textDecoration: 'line-through', opacity: 0.5, fontSize: 13 }}>
+                    {formatPrice(total)}
+                  </span>
+                  <span className={styles.totalAmount} style={{ color: 'var(--color-accent)' }}>
+                    {formatPrice(total - totalPrepaid)}
+                  </span>
+                </span>
+              ) : (
+                <span className={styles.totalAmount}>{formatPrice(total)}</span>
+              )}
             </div>
           )}
           <div className={styles.serviceman}>{serviceman}</div>

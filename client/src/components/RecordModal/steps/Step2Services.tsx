@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Select, InputNumber, Button, Table, Empty, Tag, Space, Grid } from 'antd';
-import { DeleteOutlined } from '@ant-design/icons';
+import { Select, InputNumber, Button, Table, Empty, Tag, Space, Grid, Modal, Form, Input, Switch, Tooltip } from 'antd';
+import { DeleteOutlined, DollarOutlined } from '@ant-design/icons';
 import { servicesApi } from '@/api/services.api';
 import { Category, Equipment } from '@/types';
 import { formatPrice } from '@/utils/formatters';
@@ -11,13 +11,19 @@ const { useBreakpoint } = Grid;
 interface Props {
   data: RecordFormData;
   onChange: (data: Partial<RecordFormData>) => void;
+  prepaymentLocked?: boolean;
 }
 
-export const Step2Services: React.FC<Props> = ({ data, onChange }) => {
+export const Step2Services: React.FC<Props> = ({ data, onChange, prepaymentLocked }) => {
   const screens = useBreakpoint();
   const isMobile = !screens.md;
   const [categories, setCategories] = useState<Category[]>([]);
   const [equipment, setEquipment] = useState<Equipment[]>([]);
+
+  // Prepayment modal state
+  const [prepayServiceId, setPrepayServiceId] = useState<string | null>(null);
+  const [prepayAmount, setPrepayAmount] = useState(0);
+  const [prepayByCard, setPrepayByCard] = useState(false);
 
   useEffect(() => {
     servicesApi.getCategories().then(setCategories).catch(() => {});
@@ -50,6 +56,8 @@ export const Step2Services: React.FC<Props> = ({ data, onChange }) => {
             quantity: 1,
             estimatedTime: service.estimatedTime,
             hasEquipment: service.hasEquipment ?? false,
+            prepaidAmount: 0,
+            prepaidByCard: false,
           },
         ],
       });
@@ -84,8 +92,31 @@ export const Step2Services: React.FC<Props> = ({ data, onChange }) => {
     });
   };
 
+  const openPrepayModal = (row: SelectedService) => {
+    setPrepayServiceId(row.serviceId);
+    setPrepayAmount(row.prepaidAmount || 0);
+    setPrepayByCard(row.prepaidByCard || false);
+  };
+
+  const savePrepayment = () => {
+    if (!prepayServiceId) return;
+    onChange({
+      services: data.services.map(s =>
+        s.serviceId === prepayServiceId
+          ? { ...s, prepaidAmount: prepayAmount, prepaidByCard: prepayByCard }
+          : s
+      ),
+    });
+    setPrepayServiceId(null);
+  };
+
   const total = data.services.reduce((sum, s) => sum + s.price * s.quantity, 0);
   const totalTime = data.services.reduce((sum, s) => sum + s.estimatedTime * s.quantity, 0);
+  const totalPrepaid = data.services.reduce((sum, s) => sum + (s.prepaidAmount || 0), 0);
+  const remaining = total - totalPrepaid;
+
+  const prepayService = prepayServiceId ? data.services.find(s => s.serviceId === prepayServiceId) : null;
+  const prepayMax = prepayService ? prepayService.price * prepayService.quantity : 0;
 
   const serviceOptions = categories.map(cat => ({
     label: cat.name,
@@ -97,6 +128,16 @@ export const Step2Services: React.FC<Props> = ({ data, onChange }) => {
 
   const equipmentOptions = equipment.map(e => ({ value: e.id, label: e.name }));
 
+  const getPrepayTag = (row: SelectedService) => {
+    const paid = row.prepaidAmount || 0;
+    if (paid <= 0) return null;
+    const rowTotal = row.price * row.quantity;
+    if (paid >= rowTotal) {
+      return <Tag color="success" style={{ fontSize: 10, marginTop: 2 }}>Оплачено полностью</Tag>;
+    }
+    return <Tag color="processing" style={{ fontSize: 10, marginTop: 2 }}>Предоплата {formatPrice(paid)}</Tag>;
+  };
+
   const columns = [
     {
       title: 'Услуга',
@@ -106,6 +147,7 @@ export const Step2Services: React.FC<Props> = ({ data, onChange }) => {
         <div>
           <div style={{ fontWeight: 500 }}>{name}</div>
           <Tag style={{ fontSize: 11, marginTop: 2 }}>{row.categoryName}</Tag>
+          {getPrepayTag(row)}
           {row.hasEquipment && (
             <Select
               size="small"
@@ -171,8 +213,25 @@ export const Step2Services: React.FC<Props> = ({ data, onChange }) => {
     },
     {
       title: '',
+      key: 'prepay',
+      width: 36,
+      render: (_: unknown, row: SelectedService) => (
+        <Tooltip title={prepaymentLocked ? 'Предоплата недоступна для закрытых записей' : 'Предоплата'}>
+          <Button
+            type="text"
+            icon={<DollarOutlined />}
+            size="small"
+            disabled={prepaymentLocked}
+            onClick={() => openPrepayModal(row)}
+            style={{ color: (row.prepaidAmount || 0) > 0 ? 'var(--color-accent)' : undefined }}
+          />
+        </Tooltip>
+      ),
+    },
+    {
+      title: '',
       key: 'action',
-      width: 40,
+      width: 36,
       render: (_: unknown, row: SelectedService) => (
         <Button
           type="text"
@@ -184,6 +243,37 @@ export const Step2Services: React.FC<Props> = ({ data, onChange }) => {
       ),
     },
   ];
+
+  const footerTotals = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      {totalPrepaid > 0 && (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--color-text-secondary)' }}>
+            <span>Предоплата:</span>
+            <span style={{ color: 'var(--color-status-closed)', fontWeight: 600 }}>− {formatPrice(totalPrepaid)}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--color-text-secondary)' }}>
+            <span>Остаток к оплате:</span>
+            <span style={{ fontWeight: 600 }}>{formatPrice(remaining)}</span>
+          </div>
+          <div style={{ borderTop: '1px solid var(--color-border)', marginTop: 4, paddingTop: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>
+              Ориентировочное время: {Math.floor(totalTime / 60)}ч {totalTime % 60}м
+            </span>
+            <span style={{ fontSize: 18, fontWeight: 700 }}>{formatPrice(total)}</span>
+          </div>
+        </>
+      )}
+      {totalPrepaid === 0 && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>
+            Ориентировочное время: {Math.floor(totalTime / 60)}ч {totalTime % 60}м
+          </span>
+          <span style={{ fontSize: 18, fontWeight: 700 }}>{formatPrice(total)}</span>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div>
@@ -210,14 +300,26 @@ export const Step2Services: React.FC<Props> = ({ data, onChange }) => {
                   <div className={styles.mobileCardInfo}>
                     <div className={styles.mobileCardName}>{row.serviceName}</div>
                     <div className={styles.mobileCardCategory}>{row.categoryName}</div>
+                    {getPrepayTag(row)}
                   </div>
-                  <Button
-                    type="text"
-                    danger
-                    icon={<DeleteOutlined />}
-                    size="small"
-                    onClick={() => removeService(row.serviceId)}
-                  />
+                  <Space size={4}>
+                    {!prepaymentLocked && (
+                      <Button
+                        type="text"
+                        icon={<DollarOutlined />}
+                        size="small"
+                        onClick={() => openPrepayModal(row)}
+                        style={{ color: (row.prepaidAmount || 0) > 0 ? 'var(--color-accent)' : undefined }}
+                      />
+                    )}
+                    <Button
+                      type="text"
+                      danger
+                      icon={<DeleteOutlined />}
+                      size="small"
+                      onClick={() => removeService(row.serviceId)}
+                    />
+                  </Space>
                 </div>
                 {row.hasEquipment && (
                   <Select
@@ -257,11 +359,25 @@ export const Step2Services: React.FC<Props> = ({ data, onChange }) => {
               </div>
             ))}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTop: '1px solid var(--color-border)', marginTop: 4 }}>
-            <span style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>
-              ~{Math.floor(totalTime / 60)}ч {totalTime % 60}м
-            </span>
-            <span style={{ fontSize: 16, fontWeight: 700 }}>{formatPrice(total)}</span>
+          <div style={{ paddingTop: 10, borderTop: '1px solid var(--color-border)', marginTop: 4 }}>
+            {totalPrepaid > 0 && (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 2 }}>
+                  <span>Предоплата:</span>
+                  <span style={{ color: 'var(--color-status-closed)', fontWeight: 600 }}>− {formatPrice(totalPrepaid)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 4 }}>
+                  <span>Остаток:</span>
+                  <span style={{ fontWeight: 600 }}>{formatPrice(remaining)}</span>
+                </div>
+              </>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>
+                ~{Math.floor(totalTime / 60)}ч {totalTime % 60}м
+              </span>
+              <span style={{ fontSize: 16, fontWeight: 700 }}>{formatPrice(total)}</span>
+            </div>
           </div>
         </>
       ) : (
@@ -271,18 +387,47 @@ export const Step2Services: React.FC<Props> = ({ data, onChange }) => {
           rowKey="serviceId"
           pagination={false}
           size="small"
-          footer={() => (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>
-                Ориентировочное время: {Math.floor(totalTime / 60)}ч {totalTime % 60}м
-              </span>
-              <span style={{ fontSize: 18, fontWeight: 700 }}>
-                {formatPrice(total)}
-              </span>
-            </div>
-          )}
+          footer={() => footerTotals}
         />
       )}
+
+      <Modal
+        title="Предоплата"
+        open={!!prepayServiceId}
+        onOk={savePrepayment}
+        onCancel={() => setPrepayServiceId(null)}
+        okText="Сохранить"
+        cancelText="Отмена"
+        width={400}
+      >
+        <Form layout="vertical" style={{ marginTop: 12 }}>
+          <Form.Item label="Услуга">
+            <Input value={prepayService?.serviceName} disabled />
+          </Form.Item>
+          <Form.Item label="Полная сумма">
+            <Input value={prepayService ? formatPrice(prepayService.price * prepayService.quantity) : ''} disabled />
+          </Form.Item>
+          <Form.Item label="Сумма предоплаты">
+            <InputNumber
+              min={0}
+              max={prepayMax}
+              value={prepayAmount}
+              onChange={v => setPrepayAmount(v || 0)}
+              style={{ width: '100%' }}
+              formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}
+              addonAfter="р."
+            />
+          </Form.Item>
+          <Form.Item label="Способ оплаты">
+            <Switch
+              checked={prepayByCard}
+              onChange={setPrepayByCard}
+              checkedChildren="Безнал (РС)"
+              unCheckedChildren="Наличные"
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };

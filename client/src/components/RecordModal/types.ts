@@ -7,6 +7,8 @@ export interface SelectedService {
   estimatedTime: number;
   hasEquipment?: boolean;
   equipmentId?: string;
+  prepaidAmount?: number;
+  prepaidByCard?: boolean;
 }
 
 export interface RecordFormData {

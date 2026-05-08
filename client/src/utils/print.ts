@@ -108,6 +108,8 @@ export function printWorkOrder(record: Record, settings?: CompanySettings, templ
   const companyPhone = settings?.phone ? `Телефон: ${settings.phone}` : '';
   const executorLines = [companyName, companyUnp, companyLegal, companyActual, companyPhone]
     .filter(Boolean).join('<br>');
+  const totalPrepaid = record.items.reduce((s, i) => s + (i.prepaidAmount || 0), 0);
+  const remaining = total - totalPrepaid;
 
   const carPlate = record.car.plateNumber || '—';
   const carMileage = record.car.mileage || '—';
@@ -185,6 +187,11 @@ export function printWorkOrder(record: Record, settings?: CompanySettings, templ
       </tbody>
     </table>
     <div class="total">Предварительная стоимость заказа: ${formatPrice(total).replace(' р.', '')} бел. руб.</div>
+    ${totalPrepaid > 0 ? `
+    <div style="margin-top:6px;font-size:12px;display:flex;justify-content:flex-end;gap:32px">
+      <span>Предоплата: <strong>${formatPrice(totalPrepaid).replace(' р.', '')} бел. руб.</strong></span>
+      <span>Остаток к оплате: <strong>${formatPrice(remaining).replace(' р.', '')} бел. руб.</strong></span>
+    </div>` : ''}
 
     <div class="legal-text" style="margin-top:12px">${legalText}</div>
 

@@ -62,6 +62,8 @@ export interface CreateRecordDto {
     servicemanName?: string;
     equipmentId?: string;
     servicemanSplit?: Array<{ name: string; amount: number }> | null;
+    prepaidAmount?: number;
+    prepaidByCard?: boolean;
   }>;
 }
 
@@ -230,6 +232,8 @@ export const recordsService = {
                 ? (item.servicemanSplit as Prisma.InputJsonValue)
                 : undefined,
               equipmentId: item.equipmentId,
+              prepaidAmount: item.prepaidAmount || 0,
+              prepaidByCard: item.prepaidByCard || false,
             })),
           },
         },
@@ -239,6 +243,15 @@ export const recordsService = {
 
     // fire-and-forget: не блокируем ответ
     smsService.sendForRecord(newRecord.id, 'ON_CREATE');
+
+    await recordsService.syncPrepaymentTransactions(
+      newRecord.id,
+      newRecord.client.name,
+      newRecord.client.phone,
+      `${newRecord.car.brand} ${newRecord.car.model} ${newRecord.car.year}${newRecord.car.plateNumber ? ' ' + newRecord.car.plateNumber : ''}`,
+      items,
+    );
+
     return newRecord;
   },
 
@@ -310,23 +323,44 @@ export const recordsService = {
     }
 
     if (data.items) {
-      await prisma.recordItem.deleteMany({ where: { recordId: id } });
-      updateData.items = {
-        create: data.items.map((item) => ({
-          serviceId: item.serviceId,
-          price: item.price,
-          quantity: item.quantity,
-          netProfit: item.netProfit,
-          servicemanName: item.servicemanSplit?.length ? null : item.servicemanName,
-          servicemanSplit: item.servicemanSplit?.length
-            ? (item.servicemanSplit as Prisma.InputJsonValue)
-            : undefined,
-          equipmentId: item.equipmentId,
-        })),
-      };
+      const itemsCreate = data.items.map((item) => ({
+        serviceId: item.serviceId,
+        price: item.price,
+        quantity: item.quantity,
+        netProfit: item.netProfit,
+        servicemanName: item.servicemanSplit?.length ? null : item.servicemanName,
+        servicemanSplit: item.servicemanSplit?.length
+          ? (item.servicemanSplit as Prisma.InputJsonValue)
+          : undefined,
+        equipmentId: item.equipmentId,
+        prepaidAmount: item.prepaidAmount || 0,
+        prepaidByCard: item.prepaidByCard || false,
+      }));
+
+      await prisma.$transaction(async (tx) => {
+        await tx.recordItem.deleteMany({ where: { recordId: id } });
+        await tx.record.update({
+          where: { id },
+          data: { ...updateData, items: { create: itemsCreate } },
+        });
+      });
+    } else if (Object.keys(updateData).length > 0) {
+      await prisma.record.update({ where: { id }, data: updateData });
     }
 
-    const updated = await prisma.record.update({ where: { id }, data: updateData, include: RECORD_INCLUDE });
+    const updated = await recordsService.findById(id);
+
+    if (record.status === 'ACTIVE' && data.items) {
+      const client = record.client as unknown as { name: string; phone: string };
+      const car = record.car as unknown as { brand: string; model: string; year: string; plateNumber?: string };
+      await recordsService.syncPrepaymentTransactions(
+        id,
+        client.name,
+        client.phone,
+        `${car.brand} ${car.model} ${car.year}${car.plateNumber ? ' ' + car.plateNumber : ''}`,
+        data.items,
+      );
+    }
 
     if (record.status === 'CLOSED' && data.items) {
       for (const item of updated.items) {
@@ -348,10 +382,28 @@ export const recordsService = {
 
       await prisma.deal.update({ where: { recordId: id }, data: { finalPrice: newFinalPrice } });
 
-      await prisma.cashTransaction.updateMany({
-        where: { recordId: id, type: { in: ['INCOME', 'INCOME_RS'] } },
-        data: { amount: newFinalPrice },
+      // Пересчитываем только закрывающие транзакции (не предоплату)
+      const prepaidAgg = await prisma.cashTransaction.aggregate({
+        where: { recordId: id, isPrepayment: true },
+        _sum: { amount: true },
       });
+      const prepaidSum = prepaidAgg._sum.amount || 0;
+      const remainingAmount = Math.max(0, newFinalPrice - prepaidSum);
+
+      await prisma.cashTransaction.deleteMany({
+        where: { recordId: id, isPrepayment: false, type: { in: ['INCOME', 'INCOME_RS'] } },
+      });
+      if (remainingAmount > 0) {
+        const baseClosing = {
+          recordId: id,
+          clientName: record.client.name,
+          clientPhone: record.client.phone,
+          carInfo: `${record.car.brand} ${record.car.model} ${record.car.year}`,
+          date: record.deal ? (record.deal as unknown as { closedAt: Date }).closedAt : new Date(),
+          isPrepayment: false,
+        };
+        await prisma.cashTransaction.create({ data: { ...baseClosing, type: 'INCOME', amount: remainingAmount } });
+      }
 
       return recordsService.findById(id);
     }
@@ -370,20 +422,29 @@ export const recordsService = {
         where: { recordId: id },
         data: { finalPrice, defects, warranty, isPaidByBankTransfer, splitCashAmount: isSplit ? splitCashAmount : null, splitCardAmount: isSplit ? splitCardAmount : null },
       });
+      // Удаляем только закрывающие транзакции, предоплату не трогаем
       await prisma.cashTransaction.deleteMany({
-        where: { recordId: id, type: { in: ['INCOME', 'INCOME_RS'] } },
+        where: { recordId: id, isPrepayment: false, type: { in: ['INCOME', 'INCOME_RS'] } },
       });
-      await accountingService.createIncomeFromDeal({
-        recordId: id,
-        clientName: record.client.name,
-        clientPhone: record.client.phone,
-        carInfo: `${record.car.brand} ${record.car.model} ${record.car.year}${record.car.plateNumber ? ' ' + record.car.plateNumber : ''}`,
-        amount: finalPrice,
-        isPaidByBankTransfer,
-        splitCashAmount: isSplit ? splitCashAmount : undefined,
-        splitCardAmount: isSplit ? splitCardAmount : undefined,
-        closedAt: new Date(),
+      const prepaidAggReclose = await prisma.cashTransaction.aggregate({
+        where: { recordId: id, isPrepayment: true },
+        _sum: { amount: true },
       });
+      const prepaidSumReclose = prepaidAggReclose._sum.amount || 0;
+      const remainingReclose = Math.max(0, finalPrice - prepaidSumReclose);
+      if (remainingReclose > 0) {
+        await accountingService.createIncomeFromDeal({
+          recordId: id,
+          clientName: record.client.name,
+          clientPhone: record.client.phone,
+          carInfo: `${record.car.brand} ${record.car.model} ${record.car.year}${record.car.plateNumber ? ' ' + record.car.plateNumber : ''}`,
+          amount: remainingReclose,
+          isPaidByBankTransfer,
+          splitCashAmount: isSplit ? splitCashAmount : undefined,
+          splitCardAmount: isSplit ? splitCardAmount : undefined,
+          closedAt: new Date(),
+        });
+      }
       return recordsService.findById(id);
     }
 
@@ -433,17 +494,29 @@ export const recordsService = {
 
     const closed = await recordsService.findById(id);
 
-    await accountingService.createIncomeFromDeal({
-      recordId: id,
-      clientName: record.client.name,
-      clientPhone: record.client.phone,
-      carInfo: `${record.car.brand} ${record.car.model} ${record.car.year}${record.car.plateNumber ? ' ' + record.car.plateNumber : ''}`,
-      amount: finalPrice,
-      isPaidByBankTransfer,
-      splitCashAmount: isSplit ? splitCashAmount : undefined,
-      splitCardAmount: isSplit ? splitCardAmount : undefined,
-      closedAt: new Date(),
+    // Вычитаем предоплату — в кассу попадает только остаток
+    const prepaidAggClose = await prisma.cashTransaction.aggregate({
+      where: { recordId: id, isPrepayment: true },
+      _sum: { amount: true },
     });
+    const prepaidSumClose = prepaidAggClose._sum.amount || 0;
+    const remainingClose = Math.max(0, finalPrice - prepaidSumClose);
+
+    if (remainingClose > 0) {
+      const splitCash = isSplit ? splitCashAmount : undefined;
+      const splitCard = isSplit ? splitCardAmount : undefined;
+      await accountingService.createIncomeFromDeal({
+        recordId: id,
+        clientName: record.client.name,
+        clientPhone: record.client.phone,
+        carInfo: `${record.car.brand} ${record.car.model} ${record.car.year}${record.car.plateNumber ? ' ' + record.car.plateNumber : ''}`,
+        amount: remainingClose,
+        isPaidByBankTransfer,
+        splitCashAmount: splitCash,
+        splitCardAmount: splitCard,
+        closedAt: new Date(),
+      });
+    }
 
     return closed;
   },
@@ -458,11 +531,44 @@ export const recordsService = {
     return recordsService.findById(id);
   },
 
-  async cancel(id: string) {
-    await recordsService.findById(id);
+  async cancel(id: string, data?: { retainedCashAmount?: number; retainedCardAmount?: number }) {
+    const record = await recordsService.findById(id);
+
+    // Получаем текущие prepayment-транзакции
+    const prepayTxs = await prisma.cashTransaction.findMany({
+      where: { recordId: id, isPrepayment: true },
+    });
+    const totalPrepaidCash = prepayTxs.filter(t => t.type === 'INCOME').reduce((s, t) => s + t.amount, 0);
+    const totalPrepaidCard = prepayTxs.filter(t => t.type === 'INCOME_RS').reduce((s, t) => s + t.amount, 0);
+
+    const retainedCash = data?.retainedCashAmount ?? totalPrepaidCash;
+    const retainedCard = data?.retainedCardAmount ?? totalPrepaidCard;
+
+    const cashChanged = retainedCash !== totalPrepaidCash || retainedCard !== totalPrepaidCard;
+
+    if (cashChanged) {
+      await prisma.cashTransaction.deleteMany({ where: { recordId: id, isPrepayment: true } });
+      const baseData = {
+        clientName: record.client.name,
+        clientPhone: record.client.phone,
+        carInfo: `${record.car.brand} ${record.car.model} ${record.car.year}`,
+        recordId: id,
+        date: new Date(),
+        isPrepayment: true,
+        description: 'Предоплата сохранена при отмене',
+      };
+      if (retainedCash > 0) {
+        await prisma.cashTransaction.create({ data: { ...baseData, type: 'INCOME', amount: retainedCash } });
+      }
+      if (retainedCard > 0) {
+        await prisma.cashTransaction.create({ data: { ...baseData, type: 'INCOME_RS', amount: retainedCard } });
+      }
+    }
+
     return prisma.record.update({
       where: { id },
       data: { status: 'CANCELLED' },
+      include: RECORD_INCLUDE,
     });
   },
 
@@ -521,5 +627,33 @@ export const recordsService = {
       seen.add(key);
       return true;
     }).slice(0, 10);
+  },
+
+  async syncPrepaymentTransactions(
+    recordId: string,
+    clientName: string,
+    clientPhone: string,
+    carInfo: string,
+    items: Array<{ serviceId: string; prepaidAmount?: number; prepaidByCard?: boolean }>,
+  ) {
+    await prisma.cashTransaction.deleteMany({ where: { recordId, isPrepayment: true } });
+
+    const prepaidItems = items.filter(i => (i.prepaidAmount || 0) > 0);
+    if (prepaidItems.length === 0) return;
+
+    const serviceIds = prepaidItems.map(i => i.serviceId);
+    const services = await prisma.service.findMany({ where: { id: { in: serviceIds } }, select: { id: true, name: true } });
+    const serviceNames = prepaidItems
+      .map(i => services.find(s => s.id === i.serviceId)?.name || '')
+      .filter(Boolean)
+      .join(', ');
+    const description = `Предоплата: ${serviceNames}`;
+
+    const cashTotal = prepaidItems.filter(i => !i.prepaidByCard).reduce((s, i) => s + (i.prepaidAmount || 0), 0);
+    const cardTotal = prepaidItems.filter(i => i.prepaidByCard).reduce((s, i) => s + (i.prepaidAmount || 0), 0);
+
+    const base = { recordId, clientName, clientPhone, carInfo, date: new Date(), isPrepayment: true, description };
+    if (cashTotal > 0) await prisma.cashTransaction.create({ data: { ...base, type: 'INCOME', amount: cashTotal } });
+    if (cardTotal > 0) await prisma.cashTransaction.create({ data: { ...base, type: 'INCOME_RS', amount: cardTotal } });
   },
 };

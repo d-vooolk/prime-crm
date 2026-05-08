@@ -66,6 +66,8 @@ export interface RecordItem {
   servicemanSplit?: ServicemanSplitEntry[] | null;
   equipmentId?: string | null;
   equipment?: Equipment | null;
+  prepaidAmount?: number;
+  prepaidByCard?: boolean;
   service: Service & { category: Category };
 }
 
@@ -98,6 +100,7 @@ export interface CashTransaction {
   description?: string;
   person?: string;
   recordId?: string;
+  isPrepayment?: boolean;
   createdAt: string;
 }
 

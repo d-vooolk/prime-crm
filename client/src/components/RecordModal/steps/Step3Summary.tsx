@@ -10,6 +10,7 @@ interface Props {
 
 export const Step3Summary: React.FC<Props> = ({ data }) => {
   const total = data.services.reduce((sum, s) => sum + s.price * s.quantity, 0);
+  const totalPrepaid = data.services.reduce((sum, s) => sum + (s.prepaidAmount || 0), 0);
 
   return (
     <div>
@@ -67,18 +68,40 @@ export const Step3Summary: React.FC<Props> = ({ data }) => {
 
       <Divider orientation="left" style={{ fontSize: 13 }}>Услуги</Divider>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {data.services.map(s => (
-          <div key={s.serviceId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <span style={{ fontWeight: 500 }}>{s.serviceName}</span>
-              {s.quantity > 1 && <Tag style={{ marginLeft: 6 }}>×{s.quantity}</Tag>}
+        {data.services.map(s => {
+          const paid = s.prepaidAmount || 0;
+          const rowTotal = s.price * s.quantity;
+          return (
+            <div key={s.serviceId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <span style={{ fontWeight: 500 }}>{s.serviceName}</span>
+                {s.quantity > 1 && <Tag style={{ marginLeft: 6 }}>×{s.quantity}</Tag>}
+                {paid > 0 && (
+                  <Tag color={paid >= rowTotal ? 'success' : 'processing'} style={{ marginLeft: 6, fontSize: 11 }}>
+                    {paid >= rowTotal ? 'Оплачено' : `Предоплата ${formatPrice(paid)}`}
+                    {s.prepaidByCard ? ' (РС)' : ' (нал)'}
+                  </Tag>
+                )}
+              </div>
+              <span style={{ fontWeight: 600 }}>{formatPrice(rowTotal)}</span>
             </div>
-            <span style={{ fontWeight: 600 }}>{formatPrice(s.price * s.quantity)}</span>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <Divider />
+      {totalPrepaid > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: 'var(--color-text-secondary)' }}>
+            <span>Предоплата:</span>
+            <span style={{ color: 'var(--color-status-closed)', fontWeight: 600 }}>− {formatPrice(totalPrepaid)}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: 'var(--color-text-secondary)' }}>
+            <span>Остаток к оплате:</span>
+            <span style={{ fontWeight: 600 }}>{formatPrice(total - totalPrepaid)}</span>
+          </div>
+        </div>
+      )}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ fontWeight: 600, fontSize: 16 }}>Итого</span>
         <span style={{ fontWeight: 700, fontSize: 20, color: 'var(--color-accent)' }}>

@@ -94,6 +94,8 @@ model RecordItem {
   servicemanName  String?
   servicemanSplit Json?
   equipmentId     String?
+  prepaidAmount   Float   @default(0)
+  prepaidByCard   Boolean @default(false)
   record          Record     @relation(fields: [recordId], references: [id], onDelete: Cascade)
   service         Service    @relation(fields: [serviceId], references: [id])
   equipment       Equipment? @relation(fields: [equipmentId], references: [id])
@@ -258,8 +260,9 @@ model CashTransaction {
   carInfo     String?
   description String?
   person      String?
-  recordId    String?
-  createdAt   DateTime            @default(now())
+  recordId     String?
+  isPrepayment Boolean             @default(false)
+  createdAt    DateTime            @default(now())
 }
 
 enum CapitalTransactionType {

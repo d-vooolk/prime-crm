@@ -32,6 +32,8 @@ interface ItemRow {
   isProduct: boolean;
   equipmentId?: string;
   split?: ServicemanSplitEntry[] | null;
+  prepaidAmount: number;
+  prepaidByCard: boolean;
 }
 
 interface Props {
@@ -99,6 +101,8 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
           isProduct,
           equipmentId: i.equipmentId ?? undefined,
           split: !isProduct && i.servicemanSplit?.length ? i.servicemanSplit : null,
+          prepaidAmount: i.prepaidAmount ?? 0,
+          prepaidByCard: i.prepaidByCard ?? false,
         };
       }));
 
@@ -276,17 +280,22 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
           servicemanName: i.split?.length ? undefined : i.servicemanName,
           equipmentId: i.equipmentId,
           servicemanSplit: i.split?.length ? i.split : null,
+          prepaidAmount: i.prepaidAmount,
+          prepaidByCard: i.prepaidByCard,
         })),
       });
 
       const finalPrice = items.reduce((s, i) => s + i.price * i.quantity, 0);
+      const prepaidCash = items.reduce((s, i) => s + (!i.prepaidByCard ? i.prepaidAmount : 0), 0);
+      const prepaidCard = items.reduce((s, i) => s + (i.prepaidByCard ? i.prepaidAmount : 0), 0);
+      const remainingAmount = Math.max(0, finalPrice - prepaidCash - prepaidCard);
       await recordsApi.close(record.id, {
         finalPrice,
         defects: values.defects || undefined,
         warranty: values.warranty || undefined,
         isPaidByBankTransfer: values.isPaidByBankTransfer || false,
-        ...(paymentSplitCard != null ? {
-          splitCashAmount: finalPrice - paymentSplitCard,
+        ...(paymentSplitCard != null && remainingAmount > 0 ? {
+          splitCashAmount: remainingAmount - paymentSplitCard,
           splitCardAmount: paymentSplitCard,
         } : {}),
       });
@@ -326,7 +335,11 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
   };
 
   const total = items.reduce((s, i) => s + i.price * i.quantity, 0);
-  const splitCashDisplay = paymentSplitCard != null ? total - paymentSplitCard : null;
+  const totalPrepaidCash = items.reduce((s, i) => s + (!i.prepaidByCard ? i.prepaidAmount : 0), 0);
+  const totalPrepaidCard = items.reduce((s, i) => s + (i.prepaidByCard ? i.prepaidAmount : 0), 0);
+  const totalPrepaid = totalPrepaidCash + totalPrepaidCard;
+  const remaining = Math.max(0, total - totalPrepaid);
+  const splitCashDisplay = paymentSplitCard != null ? remaining - paymentSplitCard : null;
 
   const splitItem = items.find(i => i.itemId === splitItemId);
 
@@ -413,7 +426,7 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
             <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 4 }}>Наличные</div>
             <InputNumber
               style={{ width: '100%' }}
-              value={paymentSplitDraft != null ? total - paymentSplitDraft : total}
+              value={paymentSplitDraft != null ? remaining - paymentSplitDraft : remaining}
               disabled
               suffix="BYN"
               precision={2}
@@ -424,7 +437,7 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
             <InputNumber
               style={{ width: '100%' }}
               min={0}
-              max={total}
+              max={remaining}
               precision={2}
               suffix="BYN"
               placeholder="0.00"
@@ -465,8 +478,29 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
               scroll={{ x: 'max-content' }}
               style={{ marginBottom: 8 }}
               footer={() => (
-                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <span style={{ fontSize: 16, fontWeight: 700 }}>{formatPrice(total)}</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>Итого:</span>
+                    <span style={{ fontSize: 16, fontWeight: 700 }}>{formatPrice(total)}</span>
+                  </div>
+                  {totalPrepaidCash > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--color-text-secondary)' }}>
+                      <span>Предоплата (нал):</span>
+                      <span style={{ color: 'var(--color-status-closed)', fontWeight: 600 }}>− {formatPrice(totalPrepaidCash)}</span>
+                    </div>
+                  )}
+                  {totalPrepaidCard > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--color-text-secondary)' }}>
+                      <span>Предоплата (РС):</span>
+                      <span style={{ color: 'var(--color-status-closed)', fontWeight: 600 }}>− {formatPrice(totalPrepaidCard)}</span>
+                    </div>
+                  )}
+                  {totalPrepaid > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 4, borderTop: '1px solid var(--color-border)', marginTop: 2 }}>
+                      <span style={{ fontWeight: 600 }}>К оплате:</span>
+                      <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-accent)' }}>{formatPrice(remaining)}</span>
+                    </div>
+                  )}
                 </div>
               )}
             />
@@ -488,38 +522,42 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
             />
           </Form.Item>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-            <Form.Item name="isPaidByBankTransfer" valuePropName="checked" noStyle>
-              <Switch />
-            </Form.Item>
-            <span style={{ fontSize: 14 }}>Оплата по расчётному счёту (РС)</span>
-          </div>
+          {remaining > 0 && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <Form.Item name="isPaidByBankTransfer" valuePropName="checked" noStyle>
+                  <Switch />
+                </Form.Item>
+                <span style={{ fontSize: 14 }}>Оплата по расчётному счёту (РС)</span>
+              </div>
 
-          {paymentSplitCard == null ? (
-            <Button
-              type="dashed"
-              size="small"
-              onClick={() => {
-                setPaymentSplitDraft(paymentSplitCard ?? 0);
-                setPaymentSplitOpen(true);
-              }}
-              style={{ marginBottom: 16, width: 'fit-content' }}
-            >
-              Раздельная оплата
-            </Button>
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, padding: '8px 12px', background: 'var(--color-surface-2)', borderRadius: 6, fontSize: 13 }}>
-              <span>💵 Наличные: <strong>{formatPrice(splitCashDisplay!)}</strong></span>
-              <span>💳 Безнал: <strong>{formatPrice(paymentSplitCard)}</strong></span>
-              <Button
-                type="text"
-                size="small"
-                style={{ marginLeft: 'auto', color: 'var(--color-text-secondary)' }}
-                onClick={() => setPaymentSplitCard(null)}
-              >
-                Отменить
-              </Button>
-            </div>
+              {paymentSplitCard == null ? (
+                <Button
+                  type="dashed"
+                  size="small"
+                  onClick={() => {
+                    setPaymentSplitDraft(paymentSplitCard ?? 0);
+                    setPaymentSplitOpen(true);
+                  }}
+                  style={{ marginBottom: 16, width: 'fit-content' }}
+                >
+                  Раздельная оплата
+                </Button>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, padding: '8px 12px', background: 'var(--color-surface-2)', borderRadius: 6, fontSize: 13 }}>
+                  <span>💵 Наличные: <strong>{formatPrice(splitCashDisplay!)}</strong></span>
+                  <span>💳 Безнал: <strong>{formatPrice(paymentSplitCard)}</strong></span>
+                  <Button
+                    type="text"
+                    size="small"
+                    style={{ marginLeft: 'auto', color: 'var(--color-text-secondary)' }}
+                    onClick={() => setPaymentSplitCard(null)}
+                  >
+                    Отменить
+                  </Button>
+                </div>
+              )}
+            </>
           )}
 
           <div className={styles.footer}>

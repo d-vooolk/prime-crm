@@ -42,8 +42,13 @@ const incomeColumns = [
     render: (_: unknown, r: CashTransaction) => r.clientPhone || '—',
   },
   {
-    title: 'Сумма', dataIndex: 'amount', key: 'amount', width: 100,
-    render: (v: number) => <strong>{formatPrice(v)}</strong>,
+    title: 'Сумма', key: 'amount', width: 120,
+    render: (_: unknown, r: CashTransaction) => (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'flex-start' }}>
+        <strong>{formatPrice(r.amount)}</strong>
+        {r.isPrepayment && <Tag color="processing" style={{ fontSize: 10, lineHeight: '16px', padding: '0 4px', margin: 0 }}>Предоплата</Tag>}
+      </div>
+    ),
   },
 ];
 
@@ -52,7 +57,15 @@ const incomeRsCols = [
   { title: 'Клиент', key: 'client', width: 160, ellipsis: true, render: (_: unknown, r: CashTransaction) => r.clientName },
   { title: 'Авто', key: 'car', width: 140, ellipsis: true, render: (_: unknown, r: CashTransaction) => r.carInfo || '—' },
   { title: 'Телефон', key: 'phone', width: 120, render: (_: unknown, r: CashTransaction) => r.clientPhone || '—' },
-  { title: 'Сумма', dataIndex: 'amount', key: 'amount', width: 100, render: (v: number) => <strong>{formatPrice(v)}</strong> },
+  {
+    title: 'Сумма', key: 'amount', width: 120,
+    render: (_: unknown, r: CashTransaction) => (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'flex-start' }}>
+        <strong>{formatPrice(r.amount)}</strong>
+        {r.isPrepayment && <Tag color="processing" style={{ fontSize: 10, lineHeight: '16px', padding: '0 4px', margin: 0 }}>Предоплата</Tag>}
+      </div>
+    ),
+  },
 ];
 
 const expenseColumns = [
