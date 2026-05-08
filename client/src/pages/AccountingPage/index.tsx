@@ -1000,7 +1000,7 @@ export const AccountingPage: React.FC = () => {
     finally { setRecordCountSaving(false); }
   };
 
-  // Merge revenue and record-count by key for dual-line chart
+  // Merge revenue and record-count by key for chart and avg check table
   const statsChartData = (() => {
     const allKeys = new Set([
       ...revenueChartData.map(r => r.key),
@@ -1021,47 +1021,79 @@ export const AccountingPage: React.FC = () => {
       });
   })();
 
+  // Средний чек по месяцам — только месяцы где есть и выручка и записи
+  const avgCheckRows = (() => {
+    const revMap = new Map(monthlyRevenue.map(r => [r.key, r]));
+    const rcMap = new Map(monthlyRecordCount.map(r => [r.key, r.count]));
+    const keys = Array.from(new Set([...revMap.keys(), ...rcMap.keys()])).sort().reverse();
+    return keys.map(key => {
+      const rev = revMap.get(key);
+      const count = rcMap.get(key) ?? 0;
+      const amount = rev?.amount ?? 0;
+      const avg = count > 0 ? amount / count : 0;
+      return { key, label: rev?.label ?? key, avg };
+    });
+  })();
+
+  const overallAvgCheck = (() => {
+    const months = avgCheckRows.filter(r => r.avg > 0);
+    if (months.length === 0) return 0;
+    return months.reduce((s, r) => s + r.avg, 0) / months.length;
+  })();
+
   const statsTab = (
     <div className={styles.tabContent}>
-      {/* Chart on top */}
-      <Card size="small" title="Выручка и записи по месяцам" style={{ marginBottom: 16 }}>
-        {statsChartData.length > 1 ? (
-          <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={statsChartData} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-              <XAxis dataKey="labelShort" tick={{ fontSize: 11 }} />
-              <YAxis yAxisId="revenue" tick={{ fontSize: 11 }} tickFormatter={v => `${(v / 1000).toFixed(0)}к`} width={44} />
-              <YAxis yAxisId="count" orientation="right" tick={{ fontSize: 11 }} width={32} />
-              <RechartsTooltip
-                content={({ active, payload, label: lbl }) => {
-                  if (!active || !payload?.length) return null;
-                  return (
-                    <div className={styles.chartTooltip}>
-                      <div className={styles.tooltipLabel}>{lbl}</div>
-                      {payload.map(p => (
-                        <div key={p.dataKey as string}>
-                          {p.dataKey === 'amount'
-                            ? <>Выручка: <strong style={{ color: 'var(--color-success)' }}>{formatPrice(p.value as number)}</strong></>
-                            : <>Записей: <strong style={{ color: '#3b82f6' }}>{p.value}</strong></>
-                          }
-                        </div>
-                      ))}
-                    </div>
-                  );
-                }}
-              />
-              <Line yAxisId="revenue" type="monotone" dataKey="amount" name="Выручка" stroke="var(--color-primary)" strokeWidth={2} dot={statsChartData.length <= 12} activeDot={{ r: 4 }} />
-              <Line yAxisId="count" type="monotone" dataKey="count" name="Записей" stroke="#3b82f6" strokeWidth={2} dot={statsChartData.length <= 12} activeDot={{ r: 4 }} strokeDasharray="5 3" />
-            </LineChart>
-          </ResponsiveContainer>
-        ) : (
-          <div style={{ height: 280, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)' }}>
-            Недостаточно данных для графика
-          </div>
-        )}
-      </Card>
+      {/* Chart + avg check card */}
+      <div style={{ display: 'flex', gap: 16, marginBottom: 16, alignItems: 'stretch' }}>
+        <Card size="small" title="Выручка и записи по месяцам" style={{ flex: 1, minWidth: 0 }}>
+          {statsChartData.length > 1 ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <LineChart data={statsChartData} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                <XAxis dataKey="labelShort" tick={{ fontSize: 11 }} />
+                <YAxis yAxisId="revenue" tick={{ fontSize: 11 }} tickFormatter={v => `${(v / 1000).toFixed(0)}к`} width={44} />
+                <YAxis yAxisId="count" orientation="right" tick={{ fontSize: 11 }} width={32} />
+                <RechartsTooltip
+                  content={({ active, payload, label: lbl }) => {
+                    if (!active || !payload?.length) return null;
+                    return (
+                      <div className={styles.chartTooltip}>
+                        <div className={styles.tooltipLabel}>{lbl}</div>
+                        {payload.map(p => (
+                          <div key={p.dataKey as string}>
+                            {p.dataKey === 'amount'
+                              ? <>Выручка: <strong style={{ color: 'var(--color-success)' }}>{formatPrice(p.value as number)}</strong></>
+                              : <>Записей: <strong style={{ color: '#3b82f6' }}>{p.value}</strong></>
+                            }
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  }}
+                />
+                <Line yAxisId="revenue" type="monotone" dataKey="amount" name="Выручка" stroke="var(--color-primary)" strokeWidth={2} dot={statsChartData.length <= 12} activeDot={{ r: 4 }} />
+                <Line yAxisId="count" type="monotone" dataKey="count" name="Записей" stroke="#3b82f6" strokeWidth={2} dot={statsChartData.length <= 12} activeDot={{ r: 4 }} strokeDasharray="5 3" />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div style={{ height: 280, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)' }}>
+              Недостаточно данных для графика
+            </div>
+          )}
+        </Card>
 
-      {/* Two tables side by side */}
+        <Card size="small" style={{ width: 200, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Statistic
+            title="Средний чек (за всё время)"
+            value={overallAvgCheck}
+            precision={2}
+            suffix="р."
+            valueStyle={{ color: '#f59e0b', fontSize: 22 }}
+          />
+        </Card>
+      </div>
+
+      {/* Three tables side by side */}
       <div className={styles.statsLayout}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -1148,6 +1180,31 @@ export const AccountingPage: React.FC = () => {
                         <span style={{ marginLeft: 6, fontSize: 11, color: 'var(--color-text-muted)' }}>●</span>
                       </Tooltip>
                     )}
+                  </span>
+                ),
+              },
+            ]}
+          />
+        </div>
+
+        <div>
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>Средний чек по месяцам</div>
+          <Table<{ key: string; label: string; avg: number }>
+            dataSource={avgCheckRows}
+            rowKey="key"
+            size="small"
+            pagination={false}
+            locale={{ emptyText: 'Нет данных' }}
+            columns={[
+              { title: 'Период', dataIndex: 'label', key: 'period' },
+              {
+                title: 'Средний чек',
+                dataIndex: 'avg',
+                key: 'avg',
+                align: 'right' as const,
+                render: (v: number) => (
+                  <span style={{ color: '#f59e0b', fontWeight: 600 }}>
+                    {v > 0 ? formatPrice(v) : '—'}
                   </span>
                 ),
               },
