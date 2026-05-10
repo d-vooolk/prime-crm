@@ -52,7 +52,7 @@ export const Step1Client: React.FC<Props> = ({ data, onChange }) => {
   const [executorSignatoryKey, setExecutorSignatoryKey] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    servicesApi.getServicemen().then(all => setServicemen(all.filter(s => s.role === 'Сотрудник'))).catch(() => {});
+    servicesApi.getServicemen().then(setServicemen).catch(() => {});
     carsApi.getBrands().then(setBrands).catch(() => {});
     servicesApi.getSettings().then(setCompanySettings).catch(() => {});
   }, []);
@@ -248,7 +248,7 @@ export const Step1Client: React.FC<Props> = ({ data, onChange }) => {
       )
     : [];
 
-  const employees = servicemen.filter(s => !s.isReceptionist && !s.isDismissed);
+  const employees = servicemen.filter(s => !s.isReceptionist && !s.isDismissed && s.role === 'Сотрудник');
   const receptionists = servicemen.filter(s => s.isReceptionist && !s.isDismissed);
 
   const isCarSelected = (car: Car) =>
