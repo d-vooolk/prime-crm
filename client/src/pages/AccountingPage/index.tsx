@@ -1045,7 +1045,7 @@ export const AccountingPage: React.FC = () => {
   const statsTab = (
     <div className={styles.tabContent}>
       {/* Chart + avg check card */}
-      <div style={{ display: 'flex', gap: 16, marginBottom: 16, alignItems: 'stretch' }}>
+      <div className={styles.statsTopRow}>
         <Card size="small" title="Выручка и записи по месяцам" style={{ flex: 1, minWidth: 0 }}>
           {statsChartData.length > 1 ? (
             <ResponsiveContainer width="100%" height={280}>
@@ -1086,7 +1086,7 @@ export const AccountingPage: React.FC = () => {
           )}
         </Card>
 
-        <Card size="small" style={{ width: 200, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Card size="small" className={styles.statsAvgCard}>
           <Statistic
             title="Средний чек (за всё время)"
             value={overallAvgCheck}
