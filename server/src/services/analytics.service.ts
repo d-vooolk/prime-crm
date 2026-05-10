@@ -37,13 +37,51 @@ export const analyticsService = {
   async getSummary(period: Period) {
     const { from, to } = getPeriodRange(period);
 
-    const deals = await prisma.deal.findMany({
-      where: { closedAt: { gte: from, lte: to } },
-      include: { record: { include: { items: true } } },
-    });
+    // Months wholly contained within [from, to] — only these honor monthly overrides
+    const wholeMonths = new Set<string>();
+    const cursor = new Date(from.getFullYear(), from.getMonth(), 1);
+    while (cursor <= to) {
+      const monthStart = new Date(cursor.getFullYear(), cursor.getMonth(), 1, 0, 0, 0, 0);
+      const monthEnd = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0, 23, 59, 59, 999);
+      if (monthStart >= from && monthEnd <= to) {
+        wholeMonths.add(`${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`);
+      }
+      cursor.setMonth(cursor.getMonth() + 1);
+    }
 
-    const closedCount = deals.length;
-    const totalRevenue = deals.reduce((sum: number, d: { finalPrice: number }) => sum + d.finalPrice, 0);
+    const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+
+    // Revenue — sum of income cash transactions, honoring monthly overrides for whole months
+    const revenueOverrides = await prisma.monthlyRevenue.findMany();
+    const revenueOverrideMap = new Map(revenueOverrides.map(o => [`${o.year}-${String(o.month).padStart(2, '0')}`, o.amount]));
+    const txs = await prisma.cashTransaction.findMany({ where: { date: { gte: from, lte: to } } });
+    let totalRevenue = 0;
+    for (const tx of txs) {
+      if (tx.type !== 'INCOME' && tx.type !== 'MANUAL_INCOME' && tx.type !== 'INCOME_RS') continue;
+      const key = monthKey(new Date(tx.date));
+      if (wholeMonths.has(key) && revenueOverrideMap.has(key)) continue;
+      totalRevenue += tx.amount;
+    }
+    for (const key of wholeMonths) {
+      if (revenueOverrideMap.has(key)) totalRevenue += revenueOverrideMap.get(key)!;
+    }
+
+    // Closed records — count of Record(status=CLOSED, scheduledAt in range), honoring count overrides
+    const countOverrides = await prisma.monthlyRecordCount.findMany();
+    const countOverrideMap = new Map(countOverrides.map(o => [`${o.year}-${String(o.month).padStart(2, '0')}`, o.count]));
+    const closedRecords = await prisma.record.findMany({
+      where: { status: 'CLOSED', scheduledAt: { gte: from, lte: to } },
+      select: { scheduledAt: true },
+    });
+    let closedCount = 0;
+    for (const r of closedRecords) {
+      const key = monthKey(new Date(r.scheduledAt));
+      if (wholeMonths.has(key) && countOverrideMap.has(key)) continue;
+      closedCount++;
+    }
+    for (const key of wholeMonths) {
+      if (countOverrideMap.has(key)) closedCount += countOverrideMap.get(key)!;
+    }
 
     const activeRecords = await prisma.record.count({
       where: {
