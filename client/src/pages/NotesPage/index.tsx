@@ -83,7 +83,7 @@ export const NotesPage: React.FC = () => {
   const openCreate = () => {
     setEditingNote(null);
     form.resetFields();
-    form.setFieldsValue({ allDay: true, priority: 'MEDIUM', hasRepeat: false });
+    form.setFieldsValue({ allDay: true, priority: 'LOW', hasRepeat: false });
     setModalOpen(true);
   };
 
@@ -116,7 +116,7 @@ export const NotesPage: React.FC = () => {
           ? (values.time as Dayjs).format('HH:mm')
           : null,
         repeat: (hasDate && values.hasRepeat && values.repeat) ? values.repeat : null,
-        priority: values.priority ?? 'MEDIUM',
+        priority: values.priority ?? 'LOW',
         ...(isCreator && viewingId ? { servicemanId: viewingId } : {}),
       };
       if (editingNote) {
