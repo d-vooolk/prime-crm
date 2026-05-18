@@ -565,14 +565,14 @@ export function printServiceContract(record: Record, settings?: CompanySettings)
 
       <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:40px;margin-top:32px">
         <div style="flex:1;font-size:11px">
-          Исполнитель ______________________________<br>
-          <br>
-          ${execName ? `${execName}&nbsp;&nbsp;&nbsp;&nbsp;МП` : 'МП'}
-        </div>
-        <div style="flex:1;font-size:11px">
           Заказчик ______________________________<br>
           <br>
           ${customerSig ? `${customerSig}&nbsp;&nbsp;&nbsp;&nbsp;МП` : 'МП'}
+        </div>
+        <div style="flex:1;font-size:11px">
+          Исполнитель ______________________________<br>
+          <br>
+          ${execName ? `${execName}&nbsp;&nbsp;&nbsp;&nbsp;МП` : 'МП'}
         </div>
       </div>
     </div>
