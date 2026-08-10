@@ -263,6 +263,7 @@ model CashTransaction {
   recordId     String?
   isPrepayment Boolean             @default(false)
   createdAt    DateTime            @default(now())
+  debtPayment  DebtPayment?
 }
 
 enum CapitalTransactionType {
@@ -304,6 +305,38 @@ model CapitalTransaction {
   description String?
   person      String?
   createdAt   DateTime               @default(now())
+}
+
+enum DebtDirection {
+  WE_OWE
+  OWED_TO_US
+}
+
+enum DebtStatus {
+  ACTIVE
+  SETTLED
+}
+
+model Debt {
+  id              String        @id @default(cuid())
+  description     String
+  initialAmount   Int
+  remainingAmount Int
+  direction       DebtDirection
+  status          DebtStatus    @default(ACTIVE)
+  createdAt       DateTime      @default(now())
+  settledAt       DateTime?
+  payments        DebtPayment[]
+}
+
+model DebtPayment {
+  id                String           @id @default(cuid())
+  debtId            String
+  amount            Int
+  paidAt            DateTime         @default(now())
+  cashTransactionId String?          @unique
+  debt              Debt             @relation(fields: [debtId], references: [id], onDelete: Cascade)
+  cashTransaction   CashTransaction? @relation(fields: [cashTransactionId], references: [id], onDelete: SetNull)
 }
 
 enum NotePriority {

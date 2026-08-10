@@ -119,4 +119,43 @@ export const accountingController = {
     const records = await accountingService.getFounderSalaries();
     res.json({ data: records });
   },
+
+  async getDebts(req: Request, res: Response) {
+    const archived = String(req.query.archived || 'false') === 'true';
+    const data = await accountingService.getDebts(archived);
+    res.json({ data });
+  },
+
+  async createDebt(req: Request, res: Response) {
+    const { description, amount, direction } = req.body;
+    const debt = await accountingService.createDebt({
+      description: String(description || '').trim(),
+      amount: Number(amount),
+      direction: direction === 'OWED_TO_US' ? 'OWED_TO_US' : 'WE_OWE',
+    });
+    res.status(201).json({ data: debt });
+  },
+
+  async updateDebt(req: Request, res: Response) {
+    const id = String(req.params.id);
+    const { description, amount } = req.body;
+    const debt = await accountingService.updateDebt(id, {
+      ...(description !== undefined && { description: String(description) }),
+      ...(amount !== undefined && { amount: Number(amount) }),
+    });
+    res.json({ data: debt });
+  },
+
+  async deleteDebt(req: Request, res: Response) {
+    const id = String(req.params.id);
+    await accountingService.deleteDebt(id);
+    res.status(204).end();
+  },
+
+  async payDebt(req: Request, res: Response) {
+    const id = String(req.params.id);
+    const { amount } = req.body;
+    const debt = await accountingService.payDebt(id, Number(amount), req.user?.name);
+    res.status(201).json({ data: debt });
+  },
 };

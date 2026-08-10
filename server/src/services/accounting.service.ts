@@ -1,4 +1,5 @@
 import { prisma } from '../prisma/client';
+import { AppError } from '../middleware/errorHandler';
 
 export interface SalaryRecordItem {
   serviceName: string;
@@ -454,5 +455,104 @@ export const accountingService = {
 
   async deleteCashTransaction(id: string) {
     return prisma.cashTransaction.delete({ where: { id } });
+  },
+
+  async getDebts(archived: boolean) {
+    return prisma.debt.findMany({
+      where: { status: archived ? 'SETTLED' : 'ACTIVE' },
+      include: { payments: { orderBy: { paidAt: 'asc' } } },
+      orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
+    });
+  },
+
+  async createDebt(data: { description: string; amount: number; direction: 'WE_OWE' | 'OWED_TO_US' }) {
+    if (!data.description) throw new AppError('Укажите, за что долг', 400);
+    if (!Number.isFinite(data.amount) || data.amount <= 0) {
+      throw new AppError('Сумма долга должна быть больше нуля', 400);
+    }
+    const amount = Math.round(data.amount);
+    return prisma.debt.create({
+      data: {
+        description: data.description,
+        initialAmount: amount,
+        remainingAmount: amount,
+        direction: data.direction,
+      },
+      include: { payments: true },
+    });
+  },
+
+  async updateDebt(id: string, data: { description?: string; amount?: number }) {
+    const debt = await prisma.debt.findUnique({ where: { id }, include: { payments: true } });
+    if (!debt) throw new AppError('Долг не найден', 404);
+    const update: { description?: string; initialAmount?: number; remainingAmount?: number } = {};
+    if (data.description !== undefined) {
+      if (!data.description.trim()) throw new AppError('Укажите, за что долг', 400);
+      update.description = data.description.trim();
+    }
+    if (data.amount !== undefined) {
+      if (debt.payments.length > 0) {
+        throw new AppError('Нельзя менять сумму долга, по которому уже есть погашения', 400);
+      }
+      if (!Number.isFinite(data.amount) || data.amount <= 0) {
+        throw new AppError('Сумма долга должна быть больше нуля', 400);
+      }
+      const amount = Math.round(data.amount);
+      update.initialAmount = amount;
+      update.remainingAmount = amount;
+    }
+    return prisma.debt.update({ where: { id }, data: update, include: { payments: true } });
+  },
+
+  async deleteDebt(id: string) {
+    const debt = await prisma.debt.findUnique({ where: { id }, include: { payments: true } });
+    if (!debt) throw new AppError('Долг не найден', 404);
+    if (debt.payments.length > 0) {
+      throw new AppError('Нельзя удалить долг, по которому есть погашения', 400);
+    }
+    return prisma.debt.delete({ where: { id } });
+  },
+
+  async payDebt(id: string, amount: number, person?: string) {
+    const debt = await prisma.debt.findUnique({ where: { id }, include: { payments: true } });
+    if (!debt) throw new AppError('Долг не найден', 404);
+    if (debt.status === 'SETTLED') throw new AppError('Долг уже погашен', 400);
+    if (!Number.isFinite(amount)) throw new AppError('Некорректная сумма погашения', 400);
+    const pay = Math.round(amount);
+    if (pay <= 0) throw new AppError('Сумма погашения должна быть больше нуля', 400);
+    if (pay > debt.remainingAmount) throw new AppError('Сумма погашения больше остатка долга', 400);
+
+    const newRemaining = debt.remainingAmount - pay;
+    const willSettle = newRemaining === 0;
+    const prefix = willSettle ? 'Погашение' : 'Частичное погашение';
+    const description = `${prefix} долга — ${debt.description}`;
+    const cashType = debt.direction === 'OWED_TO_US' ? 'INCOME' : 'EXPENSE';
+    const now = new Date();
+
+    return prisma.$transaction(async (tx) => {
+      const cashTx = await tx.cashTransaction.create({
+        data: {
+          type: cashType,
+          date: now,
+          amount: pay,
+          description,
+          person: person ?? null,
+        },
+      });
+
+      await tx.debtPayment.create({
+        data: { debtId: id, amount: pay, paidAt: now, cashTransactionId: cashTx.id },
+      });
+
+      return tx.debt.update({
+        where: { id },
+        data: {
+          remainingAmount: newRemaining,
+          status: willSettle ? 'SETTLED' : 'ACTIVE',
+          settledAt: willSettle ? now : null,
+        },
+        include: { payments: { orderBy: { paidAt: 'asc' } } },
+      });
+    });
   },
 };

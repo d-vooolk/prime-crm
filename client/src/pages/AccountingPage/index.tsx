@@ -10,7 +10,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsToolti
 import { recordsApi } from '@/api/records.api';
 import dayjs, { Dayjs } from 'dayjs';
 import { CashTransaction, CapitalTransaction, Serviceman } from '@/types';
-import { accountingApi, SalaryData, SalaryRecord, SalaryAdjustment, FounderSalaryRecord, SalaryHistoryItem, MonthlyRevenueItem, MonthlyRecordCountItem } from '@/api/accounting.api';
+import { accountingApi, SalaryData, SalaryRecord, SalaryAdjustment, FounderSalaryRecord, SalaryHistoryItem, MonthlyRevenueItem, MonthlyRecordCountItem, Debt } from '@/api/accounting.api';
 import { servicesApi } from '@/api/services.api';
 import { formatPrice } from '@/utils/formatters';
 import { useAuthStore } from '@/store/authStore';
@@ -28,10 +28,12 @@ const incomeColumns = [
   { title: 'Дата', dataIndex: 'date', key: 'date', width: 90, render: (d: string) => formatDate(d) },
   {
     title: 'Клиент / Источник', key: 'client', width: 160, ellipsis: true,
-    render: (_: unknown, r: CashTransaction) =>
-      r.type === 'MANUAL_INCOME'
-        ? <Tag color="blue">Ввод: {r.description}</Tag>
-        : r.clientName,
+    render: (_: unknown, r: CashTransaction) => {
+      if (r.type === 'MANUAL_INCOME') return <Tag color="blue">Ввод: {r.description}</Tag>;
+      if (r.clientName) return r.clientName;
+      // приход без клиента (например, погашение долга) — показываем назначение
+      return r.description ? <Tag color="gold">{r.description}</Tag> : '—';
+    },
   },
   {
     title: 'Авто', key: 'car', width: 140, ellipsis: true,
@@ -139,6 +141,19 @@ export const AccountingPage: React.FC = () => {
   const [recordCountEditValue, setRecordCountEditValue] = useState<number>(0);
   const [recordCountSaving, setRecordCountSaving] = useState(false);
 
+  const [debts, setDebts] = useState<Debt[]>([]);
+  const [debtsArchive, setDebtsArchive] = useState<Debt[]>([]);
+  const [showDebtArchive, setShowDebtArchive] = useState(false);
+  const [debtCreateOpen, setDebtCreateOpen] = useState(false);
+  const [debtCreateForm] = Form.useForm();
+  const [debtSaving, setDebtSaving] = useState(false);
+  const [debtPayOpen, setDebtPayOpen] = useState(false);
+  const [debtPayTarget, setDebtPayTarget] = useState<Debt | null>(null);
+  const [debtPayAmount, setDebtPayAmount] = useState<number>(0);
+  const [debtEditOpen, setDebtEditOpen] = useState(false);
+  const [debtEditTarget, setDebtEditTarget] = useState<Debt | null>(null);
+  const [debtEditForm] = Form.useForm();
+
   const [expenseOpen, setExpenseOpen] = useState(false);
   const [manualIncomeOpen, setManualIncomeOpen] = useState(false);
   const [depositOpen, setDepositOpen] = useState(false);
@@ -189,6 +204,18 @@ export const AccountingPage: React.FC = () => {
     const data = await accountingApi.getMonthlyRecordCount().catch(() => []);
     setMonthlyRecordCount(data);
   }, []);
+
+  const loadDebts = useCallback(async () => {
+    if (!canSeeCashflow) return;
+    const [active, archive] = await Promise.all([
+      accountingApi.getDebts(false).catch(() => [] as Debt[]),
+      accountingApi.getDebts(true).catch(() => [] as Debt[]),
+    ]);
+    setDebts(active);
+    setDebtsArchive(archive);
+  }, [canSeeCashflow]);
+
+  useEffect(() => { loadDebts(); }, [loadDebts]);
 
   useEffect(() => { loadCash(); }, [loadCash]);
   useEffect(() => { loadCapital(); }, [loadCapital]);
@@ -506,6 +533,191 @@ export const AccountingPage: React.FC = () => {
       </div>
     </div>
   );
+
+  const handleCreateDebt = async (vals: { description: string; amount: number; companyOwes: boolean }) => {
+    try {
+      setDebtSaving(true);
+      await accountingApi.createDebt({
+        description: vals.description.trim(),
+        amount: Math.round(vals.amount),
+        direction: vals.companyOwes ? 'WE_OWE' : 'OWED_TO_US',
+      });
+      message.success('Долг добавлен');
+      setDebtCreateOpen(false);
+      debtCreateForm.resetFields();
+      await loadDebts();
+    } catch {
+      message.error('Не удалось добавить долг');
+    } finally {
+      setDebtSaving(false);
+    }
+  };
+
+  const handlePayDebt = async () => {
+    if (!debtPayTarget) return;
+    try {
+      setDebtSaving(true);
+      await accountingApi.payDebt(debtPayTarget.id, Math.round(debtPayAmount));
+      message.success('Платёж зарегистрирован');
+      setDebtPayOpen(false);
+      setDebtPayTarget(null);
+      await Promise.all([loadDebts(), loadCash()]);
+    } catch (e) {
+      const err = e as { response?: { data?: { message?: string } } };
+      message.error(err.response?.data?.message || 'Не удалось погасить долг');
+    } finally {
+      setDebtSaving(false);
+    }
+  };
+
+  const handleEditDebt = async (vals: { description: string; amount?: number }) => {
+    if (!debtEditTarget) return;
+    try {
+      setDebtSaving(true);
+      const payload: { description?: string; amount?: number } = { description: vals.description };
+      if (debtEditTarget.payments.length === 0 && vals.amount !== undefined) {
+        payload.amount = Math.round(vals.amount);
+      }
+      await accountingApi.updateDebt(debtEditTarget.id, payload);
+      message.success('Долг обновлён');
+      setDebtEditOpen(false);
+      setDebtEditTarget(null);
+      await loadDebts();
+    } catch (e) {
+      const err = e as { response?: { data?: { message?: string } } };
+      message.error(err.response?.data?.message || 'Не удалось обновить долг');
+    } finally {
+      setDebtSaving(false);
+    }
+  };
+
+  const handleDeleteDebt = async (id: string) => {
+    try {
+      await accountingApi.deleteDebt(id);
+      message.success('Долг удалён');
+      await loadDebts();
+    } catch (e) {
+      const err = e as { response?: { data?: { message?: string } } };
+      message.error(err.response?.data?.message || 'Не удалось удалить долг');
+    }
+  };
+
+  const debtsTab = canSeeCashflow ? (
+    <div className={styles.tabContent}>
+      <div className={styles.topBar}>
+        <div className={styles.actions}>
+          <Button icon={<PlusOutlined />} type="primary" onClick={() => setDebtCreateOpen(true)}>
+            Добавить запись
+          </Button>
+          <Button onClick={() => setShowDebtArchive(v => !v)}>
+            {showDebtArchive ? 'Активные' : 'Архив'}
+          </Button>
+        </div>
+      </div>
+
+      <Table<Debt>
+        dataSource={showDebtArchive ? debtsArchive : debts}
+        rowKey="id"
+        size="small"
+        pagination={false}
+        locale={{ emptyText: showDebtArchive ? 'Архив пуст' : 'Долгов нет' }}
+        scroll={{ x: 900 }}
+        columns={[
+          {
+            title: 'Тип',
+            key: 'direction',
+            width: 130,
+            render: (_: unknown, d: Debt) => d.direction === 'WE_OWE'
+              ? <Tag color="orange">Мы должны</Tag>
+              : <Tag color="green">Нам должны</Tag>,
+          },
+          {
+            title: 'За что',
+            dataIndex: 'description',
+            key: 'description',
+            ellipsis: true,
+          },
+          {
+            title: 'Сумма',
+            key: 'amount',
+            width: 140,
+            render: (_: unknown, d: Debt) => {
+              const paid = d.payments.reduce((s, p) => s + p.amount, 0);
+              if (d.status === 'SETTLED') return <strong>{formatPrice(d.initialAmount)}</strong>;
+              if (paid === 0) return <strong>{formatPrice(d.initialAmount)}</strong>;
+              const parts = d.payments.map(p => p.amount).join(' + ');
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
+                    Погашено: {parts} = {formatPrice(paid)}
+                  </span>
+                  <strong style={{ color: 'var(--color-danger)' }}>
+                    Остаток: {formatPrice(d.remainingAmount)}
+                  </strong>
+                </div>
+              );
+            },
+          },
+          {
+            title: 'Создано',
+            dataIndex: 'createdAt',
+            key: 'createdAt',
+            width: 110,
+            render: (d: string) => formatDate(d),
+          },
+          ...(showDebtArchive ? [{
+            title: 'Закрыто',
+            dataIndex: 'settledAt',
+            key: 'settledAt',
+            width: 110,
+            render: (d: string | null) => d ? formatDate(d) : '—',
+          }] : []),
+          {
+            title: 'Действия',
+            key: 'actions',
+            width: 220,
+            render: (_: unknown, d: Debt) => (
+              <Space>
+                {d.status === 'ACTIVE' && (
+                  <Button
+                    size="small"
+                    type="primary"
+                    onClick={() => {
+                      setDebtPayTarget(d);
+                      setDebtPayAmount(d.remainingAmount);
+                      setDebtPayOpen(true);
+                    }}
+                  >
+                    Исполнить
+                  </Button>
+                )}
+                {canSeeCapital && d.status === 'ACTIVE' && (
+                  <Tooltip title="Редактировать">
+                    <Button
+                      size="small"
+                      icon={<EditOutlined />}
+                      onClick={() => {
+                        setDebtEditTarget(d);
+                        debtEditForm.setFieldsValue({ description: d.description, amount: d.initialAmount });
+                        setDebtEditOpen(true);
+                      }}
+                    />
+                  </Tooltip>
+                )}
+                {canSeeCapital && d.status === 'ACTIVE' && d.payments.length === 0 && (
+                  <Popconfirm title="Удалить долг?" onConfirm={() => handleDeleteDebt(d.id)} okText="Удалить" cancelText="Отмена">
+                    <Tooltip title="Удалить">
+                      <Button size="small" danger icon={<DeleteOutlined />} />
+                    </Tooltip>
+                  </Popconfirm>
+                )}
+              </Space>
+            ),
+          },
+        ]}
+      />
+    </div>
+  ) : null;
 
   const capitalTab = canSeeCapital ? (
     <div className={styles.tabContent}>
@@ -1222,6 +1434,7 @@ export const AccountingPage: React.FC = () => {
   const tabItems = [
     ...(canSeeCashflow ? [{ key: 'cashflow', label: 'Приходно-Расходный', children: cashFlowTab }] : []),
     ...(canSeeCashflow ? [{ key: 'incomers', label: 'Приход РС', children: incomeRsTab }] : []),
+    ...(canSeeCashflow ? [{ key: 'debts', label: 'Долги', children: debtsTab }] : []),
     ...(canSeeCapital ? [{ key: 'capital', label: 'Капитал', children: capitalTab }] : []),
     { key: 'salary', label: 'Расчёт ЗП', children: salaryTab },
     ...(canSeeCapital ? [{ key: 'founderSalary', label: 'ЗП Учредителей', children: founderSalaryTab }] : []),
@@ -1588,6 +1801,118 @@ export const AccountingPage: React.FC = () => {
           format="DD.MM.YYYY"
           allowClear
         />
+      </Modal>
+
+      <Modal
+        title="Добавить долг"
+        open={debtCreateOpen}
+        onCancel={() => { setDebtCreateOpen(false); debtCreateForm.resetFields(); }}
+        onOk={() => debtCreateForm.submit()}
+        okText="Добавить"
+        okButtonProps={{ loading: debtSaving }}
+        cancelText="Отмена"
+        destroyOnHidden
+      >
+        <Form
+          form={debtCreateForm}
+          layout="vertical"
+          style={{ marginTop: 16 }}
+          initialValues={{ companyOwes: true }}
+          onFinish={handleCreateDebt}
+        >
+          <Form.Item
+            label="За что"
+            name="description"
+            rules={[{ required: true, message: 'Укажите, за что долг' }]}
+          >
+            <Input placeholder="Например: запчасти у поставщика" />
+          </Form.Item>
+          <Form.Item
+            label="Сумма (р.)"
+            name="amount"
+            rules={[{ required: true, message: 'Укажите сумму' }]}
+          >
+            <InputNumber min={1} precision={0} style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item label="Тип" name="companyOwes" valuePropName="checked">
+            <Switch checkedChildren="Мы должны" unCheckedChildren="Нам должны" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="Редактировать долг"
+        open={debtEditOpen}
+        onCancel={() => { setDebtEditOpen(false); setDebtEditTarget(null); debtEditForm.resetFields(); }}
+        onOk={() => debtEditForm.submit()}
+        okText="Сохранить"
+        okButtonProps={{ loading: debtSaving }}
+        cancelText="Отмена"
+        destroyOnHidden
+      >
+        <Form form={debtEditForm} layout="vertical" style={{ marginTop: 16 }} onFinish={handleEditDebt}>
+          <Form.Item
+            label="За что"
+            name="description"
+            rules={[{ required: true, message: 'Укажите, за что долг' }]}
+          >
+            <Input />
+          </Form.Item>
+          <Form.Item
+            label="Сумма (р.)"
+            name="amount"
+            rules={[{ required: true, message: 'Укажите сумму' }]}
+            extra={debtEditTarget && debtEditTarget.payments.length > 0
+              ? 'По долгу уже есть погашения — сумму изменить нельзя'
+              : undefined}
+          >
+            <InputNumber
+              min={1}
+              precision={0}
+              style={{ width: '100%' }}
+              disabled={!!debtEditTarget && debtEditTarget.payments.length > 0}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="Исполнить долг"
+        open={debtPayOpen}
+        onCancel={() => { setDebtPayOpen(false); setDebtPayTarget(null); }}
+        onOk={handlePayDebt}
+        okText="Провести"
+        okButtonProps={{ loading: debtSaving, disabled: debtPayAmount <= 0 }}
+        cancelText="Отмена"
+        destroyOnHidden
+        width={420}
+      >
+        {debtPayTarget && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 16 }}>
+            <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
+              {debtPayTarget.description}
+              <div style={{ marginTop: 4 }}>
+                Остаток: <strong>{formatPrice(debtPayTarget.remainingAmount)}</strong>
+              </div>
+            </div>
+            <div>
+              <div style={{ marginBottom: 6, fontWeight: 500 }}>Сумма погашения (р.)</div>
+              <InputNumber
+                value={debtPayAmount}
+                onChange={v => setDebtPayAmount(v ?? 0)}
+                min={1}
+                max={debtPayTarget.remainingAmount}
+                precision={0}
+                style={{ width: '100%' }}
+              />
+              <div style={{ marginTop: 6, fontSize: 12, color: 'var(--color-text-muted)' }}>
+                {debtPayTarget.direction === 'WE_OWE'
+                  ? 'В кассе будет создан расход на эту сумму.'
+                  : 'В кассе будет создан приход на эту сумму.'}
+              </div>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

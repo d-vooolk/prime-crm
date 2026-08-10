@@ -107,7 +107,44 @@ export const accountingApi = {
 
   createFounderSalary: (data: { year: number; month: number; person: string; amount: number }) =>
     http.post<{ data: FounderSalaryRecord }>('/accounting/founder-salaries', data).then(r => r.data.data),
+
+  getDebts: (archived: boolean) =>
+    http.get<{ data: Debt[] }>('/accounting/debts', { params: { archived } }).then(r => r.data.data),
+
+  createDebt: (data: { description: string; amount: number; direction: DebtDirection }) =>
+    http.post<{ data: Debt }>('/accounting/debts', data).then(r => r.data.data),
+
+  updateDebt: (id: string, data: { description?: string; amount?: number }) =>
+    http.patch<{ data: Debt }>(`/accounting/debts/${id}`, data).then(r => r.data.data),
+
+  deleteDebt: (id: string) =>
+    http.delete(`/accounting/debts/${id}`),
+
+  payDebt: (id: string, amount: number) =>
+    http.post<{ data: Debt }>(`/accounting/debts/${id}/payments`, { amount }).then(r => r.data.data),
 };
+
+export type DebtDirection = 'WE_OWE' | 'OWED_TO_US';
+export type DebtStatus = 'ACTIVE' | 'SETTLED';
+
+export interface DebtPayment {
+  id: string;
+  amount: number;
+  paidAt: string;
+  cashTransactionId: string | null;
+}
+
+export interface Debt {
+  id: string;
+  description: string;
+  initialAmount: number;
+  remainingAmount: number;
+  direction: DebtDirection;
+  status: DebtStatus;
+  createdAt: string;
+  settledAt: string | null;
+  payments: DebtPayment[];
+}
 
 export interface MonthlyRevenueItem {
   key: string;
