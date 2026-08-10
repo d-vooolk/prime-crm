@@ -13,3 +13,7 @@ _debug*
 server/src/**/*.js
 server/src/**/*.js.map
 server/src/**/*.d.ts
+
+# Промежуточный кэш обхода каталога авто (тысячи мелких файлов).
+# Сам снапшот prisma/data/cars-catalog.json коммитится.
+server/prisma/data/.cache/

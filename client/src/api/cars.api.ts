@@ -1,19 +1,22 @@
 import { CarBrand, CarModel, CarGeneration } from '@/types';
+import http from './http';
 
-const BASE_URL = 'https://auto-data.api-home.ru/api/public/v1';
-const TOKEN = 'j8zmlGcAdsNnRn5pzDY3ZMfzDQGqSsE8lUpmv9Tej1GKoVq0cFW2ctD82NA7bmuT';
-const HEADERS = { 'api-token': TOKEN };
-
-async function fetchJson<T>(url: string): Promise<T> {
-  const res = await fetch(url, { headers: HEADERS });
-  if (!res.ok) throw new Error('Ошибка загрузки данных об автомобиле');
-  const data = await res.json();
-  return (Array.isArray(data) ? data : data.data || []) as T;
-}
-
+/**
+ * Справочник авто отдаёт наш сервер из собственной БД.
+ * Раньше запросы шли напрямую в сторонний каталог auto-data.api-home.ru —
+ * он регулярно висел по 15+ секунд и терял до трети запросов.
+ * Данные выкачаны к себе: server/scripts/fetch-cars.ts + npm run cars:seed.
+ */
 export const carsApi = {
-  getBrands: () => fetchJson<CarBrand[]>(`${BASE_URL}/marks`),
-  getModels: (brandId: string) => fetchJson<CarModel[]>(`${BASE_URL}/marks/${brandId}/models`),
+  getBrands: () =>
+    http.get<{ data: CarBrand[] }>('/cars/marks').then(r => r.data.data),
+
+  getModels: (brandId: string) =>
+    http.get<{ data: CarModel[] }>(`/cars/marks/${encodeURIComponent(brandId)}/models`)
+      .then(r => r.data.data),
+
   getGenerations: (brandId: string, modelId: string) =>
-    fetchJson<CarGeneration[]>(`${BASE_URL}/marks/${brandId}/models/${modelId}/generations`),
+    http.get<{ data: CarGeneration[] }>(
+      `/cars/marks/${encodeURIComponent(brandId)}/models/${encodeURIComponent(modelId)}/generations`,
+    ).then(r => r.data.data),
 };

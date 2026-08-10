@@ -1,42 +1,34 @@
 import { Router, Request, Response } from 'express';
+import { carsController } from '../controllers/cars.controller';
+import { carsService } from '../services/cars.service';
 
 const router = Router();
-const BASE_URL = 'https://auto-data.api-home.ru/api/public/v1';
-const TOKEN = 'j8zmlGcAdsNnRn5pzDY3ZMfzDQGqSsE8lUpmv9Tej1GKoVq0cFW2ctD82NA7bmuT';
 
-// In-memory cache: "brandId/modelId/generationId" -> photo URL
-const photoUrlCache = new Map<string, string>();
+// Справочник авто из своей БД. Форма ответа совпадает со сторонним каталогом,
+// из которого данные выкачаны (см. scripts/fetch-cars.ts).
+router.get('/marks', carsController.getMarks);
+router.get('/marks/:markId/models', carsController.getModels);
+router.get('/marks/:markId/models/:modelId/generations', carsController.getGenerations);
 
+// Прокси фото поколения: URL берём из своей БД, саму картинку тянем с CDN Яндекса.
+// Прокси нужен, чтобы не светить внешние адреса в разметке и держать единый кэш.
 router.get('/photo/:brandId/:modelId/:generationId', async (req: Request, res: Response) => {
   const { brandId, modelId, generationId } = req.params;
-  const cacheKey = `${brandId}/${modelId}/${generationId}`;
 
   try {
-    let photoUrl = photoUrlCache.get(cacheKey);
+    const photo = await carsService.getGenerationPhoto(
+      String(brandId),
+      String(modelId),
+      String(generationId),
+    );
+    if (!photo) { res.status(404).end(); return; }
 
-    if (!photoUrl) {
-      const genRes = await fetch(
-        `${BASE_URL}/marks/${brandId}/models/${modelId}/generations`,
-        { headers: { 'api-token': TOKEN } }
-      );
-      if (!genRes.ok) { res.status(404).end(); return; }
-
-      const data = await genRes.json() as { data: Array<{ id: number; photo?: string | null }> };
-      const gen = data.data.find(g => String(g.id) === generationId);
-      if (!gen?.photo) { res.status(404).end(); return; }
-
-      photoUrl = `https://${gen.photo}`;
-      photoUrlCache.set(cacheKey, photoUrl);
-    }
-
-    const imgRes = await fetch(photoUrl);
+    const imgRes = await fetch(photo.startsWith('http') ? photo : `https://${photo}`);
     if (!imgRes.ok) { res.status(404).end(); return; }
 
-    const contentType = imgRes.headers.get('content-type') || 'image/jpeg';
-    res.setHeader('content-type', contentType);
+    res.setHeader('content-type', imgRes.headers.get('content-type') || 'image/jpeg');
     res.setHeader('cache-control', 'public, max-age=86400');
-    const buffer = await imgRes.arrayBuffer();
-    res.send(Buffer.from(buffer));
+    res.send(Buffer.from(await imgRes.arrayBuffer()));
   } catch {
     res.status(404).end();
   }

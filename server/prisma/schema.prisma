@@ -382,3 +382,47 @@ model Note {
   updatedAt    DateTime     @updatedAt
   serviceman   Serviceman   @relation(fields: [servicemanId], references: [id], onDelete: Cascade)
 }
+
+// --- Локальный справочник автомобилей ---
+// Копия стороннего каталога (auto-data.api-home.ru), который постоянно отваливался.
+// Заполняется из снапшота prisma/data/cars-catalog.json скриптом `npm run cars:seed`.
+// externalId — идентификатор донора; именно он лежит в Car.brandId/modelId/generationId,
+// поэтому наружу отдаём всегда его, а не суррогатный ключ.
+
+model CarMark {
+  id       String     @id // externalId донора, у марок он уникален глобально
+  name     String
+  yearFrom Int?
+  yearTo   Int?
+  logo     String?
+  models   CarModel[]
+
+  @@index([name])
+}
+
+model CarModel {
+  id          String          @id @default(cuid())
+  externalId  String
+  markId      String
+  name        String
+  yearFrom    Int?
+  yearTo      Int?
+  mark        CarMark         @relation(fields: [markId], references: [id], onDelete: Cascade)
+  generations CarGeneration[]
+
+  @@unique([markId, externalId])
+  @@index([name])
+}
+
+model CarGeneration {
+  id         String   @id @default(cuid())
+  externalId String
+  modelId    String
+  name       String
+  yearFrom   Int?
+  yearTo     Int?
+  photo      String?
+  model      CarModel @relation(fields: [modelId], references: [id], onDelete: Cascade)
+
+  @@unique([modelId, externalId])
+}
