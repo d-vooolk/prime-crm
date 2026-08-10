@@ -11,6 +11,7 @@ import helmet from 'helmet';
 import apiRouter from './routes/index';
 import { errorHandler } from './middleware/errorHandler';
 import { smsService } from './services/sms.service';
+import { seedCarCatalogIfNeeded } from './bootstrap/carCatalog';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -28,8 +29,11 @@ app.use('/api', apiRouter);
 
 app.use(errorHandler);
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`Server running on http://localhost:${PORT}`); // eslint-disable-line no-console
+  // Справочник авто наполняется здесь, а не в deploy.sh: в прод-образе нет
+  // ts-node, поэтому запустить скрипт из scripts/ внутри контейнера нельзя.
+  await seedCarCatalogIfNeeded();
 });
 
 // Проверка напоминаний каждые 5 минут

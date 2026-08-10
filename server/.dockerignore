@@ -2,3 +2,7 @@ node_modules
 dist
 .env*
 *.log
+
+# Промежуточный кэш обхода каталога авто — почти 10 тысяч мелких файлов.
+# В образ нужен только собранный снапшот prisma/data/cars-catalog.json.
+prisma/data/.cache
