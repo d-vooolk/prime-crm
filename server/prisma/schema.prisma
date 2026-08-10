@@ -389,15 +389,25 @@ model Note {
 // externalId — идентификатор донора; именно он лежит в Car.brandId/modelId/generationId,
 // поэтому наружу отдаём всегда его, а не суррогатный ключ.
 
+// SNAPSHOT — приехало из снапшота донора, перезаписывается при обновлении каталога.
+// MANUAL   — заведено руками (грузовые и всё, чего нет у донора). Синхронизация
+//            снапшота такие записи не трогает никогда.
+enum CatalogSource {
+  SNAPSHOT
+  MANUAL
+}
+
 model CarMark {
-  id       String     @id // externalId донора, у марок он уникален глобально
+  id       String        @id // externalId донора либо slug для ручных записей
   name     String
   yearFrom Int?
   yearTo   Int?
   logo     String?
+  source   CatalogSource @default(SNAPSHOT)
   models   CarModel[]
 
   @@index([name])
+  @@index([source])
 }
 
 model CarModel {
@@ -407,22 +417,26 @@ model CarModel {
   name        String
   yearFrom    Int?
   yearTo      Int?
+  source      CatalogSource   @default(SNAPSHOT)
   mark        CarMark         @relation(fields: [markId], references: [id], onDelete: Cascade)
   generations CarGeneration[]
 
   @@unique([markId, externalId])
   @@index([name])
+  @@index([source])
 }
 
 model CarGeneration {
-  id         String   @id @default(cuid())
+  id         String        @id @default(cuid())
   externalId String
   modelId    String
   name       String
   yearFrom   Int?
   yearTo     Int?
   photo      String?
-  model      CarModel @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  source     CatalogSource @default(SNAPSHOT)
+  model      CarModel      @relation(fields: [modelId], references: [id], onDelete: Cascade)
 
   @@unique([modelId, externalId])
+  @@index([source])
 }

@@ -263,24 +263,33 @@ export interface Note {
   serviceman?: { id: string; name: string };
 }
 
-// Cars API
+// Cars API — справочник авто из своей БД.
+// Поля в snake_case: форма унаследована от стороннего каталога, из которого
+// данные были выкачаны, чтобы переезд не задел компоненты.
+// source: SNAPSHOT — из каталога донора, MANUAL — заведено руками.
+// Годы могут отсутствовать у записей, добавленных вручную.
 export interface CarBrand {
   id: string;
   name: string;
   logo?: string | null;
+  year_from?: number | null;
+  year_to?: number | null;
+  source?: 'SNAPSHOT' | 'MANUAL';
 }
 
 export interface CarModel {
   id: string;
   name: string;
-  brandId: string;
+  year_from?: number | null;
+  year_to?: number | null;
+  source?: 'SNAPSHOT' | 'MANUAL';
 }
 
 export interface CarGeneration {
   id: string;
   name: string;
-  modelId: string;
-  year_from: number;
-  year_to: number;
+  year_from?: number | null;
+  year_to?: number | null;
   photo?: string | null;
+  source?: 'SNAPSHOT' | 'MANUAL';
 }

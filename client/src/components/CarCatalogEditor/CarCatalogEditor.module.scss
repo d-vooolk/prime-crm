@@ -1,0 +1,160 @@
+@use '@/styles/variables' as *;
+
+.wrapper { display: flex; flex-direction: column; gap: var(--spacing-md); }
+
+.hint { margin-bottom: 0; }
+
+.toolbar { display: flex; align-items: center; gap: var(--spacing-md); flex-wrap: wrap; }
+.toolbarNote { font-size: var(--font-size-sm); color: var(--color-text-muted); }
+
+// Три колонки каскада. На узких экранах складываются в столбец.
+.columns {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-md);
+  align-items: stretch;
+
+  @include tablet { grid-template-columns: repeat(2, 1fr); }
+  @include mobile { grid-template-columns: 1fr; }
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  min-width: 0;
+  padding: var(--spacing-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.columnHeader { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-sm); }
+
+.columnTitle {
+  display: flex; align-items: center; gap: var(--spacing-xs);
+  min-width: 0;
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.count {
+  flex-shrink: 0;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: var(--color-border-light);
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.search { flex-shrink: 0; }
+
+.list {
+  height: 420px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  @include mobile { height: 300px; }
+}
+
+.centered { display: flex; align-items: center; justify-content: center; height: 100%; }
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.12s;
+
+  &:hover { background: var(--color-border-light); }
+}
+
+.rowActive {
+  background: var(--color-primary-light);
+  &:hover { background: var(--color-primary-light); }
+}
+
+.rowMain { flex: 1; min-width: 0; }
+
+.rowName {
+  display: flex; align-items: center; gap: 6px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.rowYears { font-size: 11px; color: var(--color-text-muted); }
+
+.badge { margin: 0; font-size: 10px; line-height: 15px; padding: 0 4px; flex-shrink: 0; }
+
+.rowActions {
+  display: flex; align-items: center; gap: 2px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.12s;
+
+  .row:hover &, .rowActive & { opacity: 1; }
+  // На тач-устройствах ховера нет — показываем всегда
+  @include mobile { opacity: 1; }
+}
+
+.lockHint { font-size: 10px; color: var(--color-text-muted); white-space: nowrap; }
+
+.chevron { font-size: 10px; color: var(--color-text-muted); }
+
+.form { margin-top: var(--spacing-md); }
+
+.yearRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-md);
+}
+
+.formHint { font-size: var(--font-size-sm); color: var(--color-text-muted); }
+
+// Миниатюра фото в списке поколений
+.thumb {
+  flex-shrink: 0;
+  width: 40px; height: 28px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: var(--color-border-light);
+}
+
+.thumbEmpty {
+  flex-shrink: 0;
+  width: 40px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--color-border);
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+.photoField { margin-bottom: var(--spacing-sm); }
+
+.photoBox {
+  display: flex; align-items: center; justify-content: center;
+  height: 150px;
+  margin-bottom: var(--spacing-sm);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-border-light);
+  overflow: hidden;
+}
+
+.photoPreview { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+.photoEmpty {
+  padding: 0 var(--spacing-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  text-align: center;
+}

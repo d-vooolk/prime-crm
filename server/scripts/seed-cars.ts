@@ -16,7 +16,7 @@ dotenv.config({
 });
 
 import { prisma } from '../src/prisma/client';
-import { seedCarCatalog } from '../src/bootstrap/carCatalog';
+import { syncCarCatalog } from '../src/bootstrap/carCatalog';
 
 const SNAPSHOT = path.resolve(__dirname, '..', 'prisma', 'data', 'cars-catalog.json');
 
@@ -34,9 +34,10 @@ async function main() {
   log(`Снапшот от ${snapshot.fetchedAt}`);
   log(`В файле: марок ${snapshot.counts.marks}, моделей ${snapshot.counts.models}, поколений ${snapshot.counts.generations}`);
 
-  log('Заливка...');
-  const res = await seedCarCatalog(snapshot);
-  log(`Готово. Залито: марок ${res.marks}, моделей ${res.models}, поколений ${res.generations}`);
+  log('Синхронизация (записи, заведённые руками, не затрагиваются)...');
+  const res = await syncCarCatalog(snapshot);
+  log(`Добавлено: марок ${res.added.marks}, моделей ${res.added.models}, поколений ${res.added.generations}`);
+  log(`Удалено:   марок ${res.removed.marks}, моделей ${res.removed.models}, поколений ${res.removed.generations}`);
 
   await prisma.$disconnect();
 }

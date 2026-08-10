@@ -13,6 +13,7 @@ import { carsApi } from '@/api/cars.api';
 import { recordsApi, CompanySuggestion } from '@/api/records.api';
 import { Client, Car, CarBrand, CarModel, CarGeneration, Serviceman, CompanySettings } from '@/types';
 import { RecordFormData } from '../types';
+import styles from './Step1Client.module.scss';
 
 const formatPlateNumber = (value: string): string => {
   const clean = value.toUpperCase().replace(/[ \-]/g, '');
@@ -241,12 +242,16 @@ export const Step1Client: React.FC<Props> = ({ data, onChange }) => {
     : [];
 
   const selectedGeneration = generations.find(g => g.id === data.carGenerationId);
-  const yearOptions = selectedGeneration
-    ? Array.from(
-        { length: (selectedGeneration.year_to || new Date().getFullYear()) - selectedGeneration.year_from + 1 },
-        (_, i) => String((selectedGeneration.year_to || new Date().getFullYear()) - i)
-      )
-    : [];
+  // У записей, заведённых руками (грузовые), годы могут быть не указаны —
+  // тогда предлагаем разумный диапазон вместо пустого или бесконечного списка.
+  const yearOptions = (() => {
+    if (!selectedGeneration) return [];
+    const currentYear = new Date().getFullYear();
+    const to = selectedGeneration.year_to || currentYear;
+    const from = selectedGeneration.year_from || to - 30;
+    const length = Math.max(1, Math.min(to - from + 1, 100));
+    return Array.from({ length }, (_, i) => String(to - i));
+  })();
 
   const employees = servicemen.filter(s => !s.isReceptionist && !s.isDismissed && s.role === 'Сотрудник');
   const receptionists = servicemen.filter(s => s.isReceptionist && !s.isDismissed);
@@ -646,10 +651,23 @@ export const Step1Client: React.FC<Props> = ({ data, onChange }) => {
               optionFilterProp="label"
               options={generations.map(g => ({
                 value: g.id,
-                label: `${g.name} (${g.year_from}–${g.year_to || '...'})`,
+                // годы могут отсутствовать у записей, заведённых руками
+                label: g.year_from
+                  ? `${g.name} (${g.year_from}–${g.year_to || '...'})`
+                  : g.name,
               }))}
             />
           </Form.Item>
+          {selectedGeneration?.photo && (
+            <img
+              className={styles.generationPhoto}
+              src={selectedGeneration.photo.startsWith('http')
+                ? selectedGeneration.photo
+                : `https://${selectedGeneration.photo}`}
+              alt={selectedGeneration.name}
+              onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+            />
+          )}
         </Col>
       </Row>
 

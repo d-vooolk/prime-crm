@@ -9,6 +9,7 @@ import { servicesApi } from '@/api/services.api';
 import { useUiStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/authStore';
 import { CompanySettings, DocumentTemplate, Category, SmsSettings, AuthorizedPerson } from '@/types';
+import { CarCatalogEditor } from '@/components/CarCatalogEditor';
 import styles from './SettingsPage.module.scss';
 
 const { Text } = Typography;
@@ -535,6 +536,15 @@ export const SettingsPage: React.FC = () => {
             />
           </Card>
         </div>
+      ),
+    },
+    {
+      key: 'carCatalog',
+      label: 'Справочник авто',
+      children: (
+        <Card title="Марки, модели и поколения">
+          <CarCatalogEditor />
+        </Card>
       ),
     },
   ];
