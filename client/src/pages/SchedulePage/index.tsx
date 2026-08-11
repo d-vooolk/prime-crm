@@ -53,19 +53,25 @@ export const SchedulePage: React.FC = () => {
   const displayDate = dayjs(selectedDate);
   const dateLabel = displayDate.format('D MMMM YYYY');
 
-  // Сумма по записи считается так же, как в карточке: у закрытой берём
-  // итог сделки, у остальных — сумму позиций.
-  const recordTotal = (r: Record) =>
-    r.deal ? r.deal.finalPrice : r.items.reduce((s, i) => s + i.price * i.quantity, 0);
+  // Сколько по записи ещё не получено. Считаем так же, как карточка
+  // (RecordCard): у закрытой берём итог сделки, у остальных — сумму позиций
+  // за вычетом внесённой предоплаты. У закрытой предоплата уже проведена
+  // через кассу, поэтому повторно её не вычитаем.
+  const recordUnpaid = (r: Record) => {
+    if (r.deal) return r.deal.finalPrice;
+    const total = r.items.reduce((s, i) => s + i.price * i.quantity, 0);
+    const prepaid = r.items.reduce((s, i) => s + (i.prepaidAmount || 0), 0);
+    return Math.max(0, total - prepaid);
+  };
 
   // В столбце дня лежат записи всех статусов, поэтому считаем только те,
   // по которым сделка ещё не закрыта и не отменена.
   const todayOpenSum = todayRecords
     .filter(r => r.status === 'ACTIVE')
-    .reduce((s, r) => s + recordTotal(r), 0);
+    .reduce((s, r) => s + recordUnpaid(r), 0);
 
   // Незавершённые — все ACTIVE с прошлых дат, суммируем целиком
-  const incompleteSum = incompleteRecords.reduce((s, r) => s + recordTotal(r), 0);
+  const incompleteSum = incompleteRecords.reduce((s, r) => s + recordUnpaid(r), 0);
 
   return (
     <div className={styles.page}>
@@ -101,7 +107,7 @@ export const SchedulePage: React.FC = () => {
             {dateLabel}
             <span className={styles.columnMeta}>
               {todayOpenSum > 0 && (
-                <span className={styles.columnSum} title="Сумма незакрытых сделок">
+                <span className={styles.columnSum} title="Остаток к оплате по незакрытым сделкам (без учтённой предоплаты)">
                   {formatPrice(todayOpenSum)}
                 </span>
               )}
@@ -136,7 +142,7 @@ export const SchedulePage: React.FC = () => {
             Незавершённые
             <span className={styles.columnMeta}>
               {incompleteSum > 0 && (
-                <span className={styles.columnSum} title="Сумма записей столбца">
+                <span className={styles.columnSum} title="Остаток к оплате по записям столбца (без учтённой предоплаты)">
                   {formatPrice(incompleteSum)}
                 </span>
               )}
