@@ -1,5 +1,5 @@
 import http from './http';
-import { Client } from '@/types';
+import { Client, ClientWithRecords } from '@/types';
 
 export const clientsApi = {
   getAll: (search?: string) =>
@@ -9,7 +9,7 @@ export const clientsApi = {
     http.get<{ data: Client[] }>('/clients/search', { params: { phone } }).then(r => r.data.data),
 
   getById: (id: string) =>
-    http.get<{ data: Client }>(`/clients/${id}`).then(r => r.data.data),
+    http.get<{ data: ClientWithRecords }>(`/clients/${id}`).then(r => r.data.data),
 
   create: (data: { name: string; phone: string; notes?: string }) =>
     http.post<{ data: Client }>('/clients', data).then(r => r.data.data),

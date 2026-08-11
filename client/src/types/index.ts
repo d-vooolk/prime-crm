@@ -8,6 +8,11 @@ export interface Client {
   _count?: { records: number };
 }
 
+/** Что отдаёт GET /clients/:id — клиент вместе со всей историей визитов */
+export interface ClientWithRecords extends Client {
+  records: Record[];
+}
+
 export interface Car {
   id: string;
   clientId: string;

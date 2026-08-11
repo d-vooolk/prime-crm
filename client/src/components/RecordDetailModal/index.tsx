@@ -7,13 +7,14 @@ const { useBreakpoint } = Grid;
 import {
   PrinterOutlined, CheckCircleOutlined, CloseCircleOutlined,
   DeleteOutlined, ReloadOutlined, CalendarOutlined,
-  CarOutlined, StarOutlined,
+  CarOutlined, StarOutlined, HistoryOutlined,
 } from '@ant-design/icons';
 import { Record as CrmRecord, DocumentTemplate, CompanySettings } from '@/types';
 import { formatPrice, formatDate, formatTime } from '@/utils/formatters';
 import { printWorkOrder, printCompletionAct, printServiceContract, printInvoice, printBlankCompletionAct, printLegalAct } from '@/utils/print';
 import { CloseRecordModal } from '../CloseRecordModal';
 import { RecordModal } from '../RecordModal';
+import { ClientHistoryDrawer } from '../ClientHistoryDrawer';
 import { recordsApi } from '@/api/records.api';
 import { servicesApi } from '@/api/services.api';
 import { useAuthStore } from '@/store/authStore';
@@ -50,6 +51,7 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
     selectedId: string | null;
   } | null>(null);
   const [smsSending, setSmsSending] = useState<'CAR_READY' | 'REVIEW_REQUEST' | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [retainedCash, setRetainedCash] = useState(0);
   const [retainedCard, setRetainedCard] = useState(0);
@@ -496,6 +498,19 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
           </Descriptions.Item>
         </Descriptions>
 
+        {/* Сотрудникам данные клиента скрыты, историю им тоже не показываем */}
+        {!isEmployee && (
+          <Button
+            type="link"
+            size="small"
+            icon={<HistoryOutlined />}
+            onClick={() => setHistoryOpen(true)}
+            className={styles.historyButton}
+          >
+            История посещений клиента
+          </Button>
+        )}
+
         {r.isLegalEntity && !isEmployee && (
           <>
             <Divider orientation="left" style={{ fontSize: 13 }}>Юридическое лицо</Divider>
@@ -613,6 +628,15 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
         open={closeModalOpen}
         onClose={() => setCloseModalOpen(false)}
         onSuccess={() => { onRefresh(); onClose(); }}
+      />
+
+      {/* Без onSelectRecord — подробности раскрываются внутри панели,
+          чтобы не открывать вторую карточку записи поверх текущей */}
+      <ClientHistoryDrawer
+        clientId={r.clientId}
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        currentRecordId={r.id}
       />
 
       <Modal
