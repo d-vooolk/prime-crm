@@ -210,8 +210,9 @@ enum SmsType {
 model SmsSettings {
   id                    String  @id @default(cuid())
   enabled               Boolean @default(false)
-  username              String  @default("")
-  password              String  @default("")
+  token                 String  @default("")
+  alphanameId           String  @default("")
+  alphaname             String  @default("")
   onCreateTemplate      String  @default("Здравствуйте, {{clientName}}! Вы записаны на {{date}} в {{time}}. {{carBrand}} {{carModel}}{{plateNumber}}. Ждём вас! {{companyName}}")
   reminderTemplate      String  @default("Напоминаем о записи завтра {{date}} в {{time}}. {{carBrand}} {{carModel}}{{plateNumber}}. До встречи! {{companyName}}")
   carReadyTemplate      String  @default("Здравствуйте, {{clientName}}! Ваш {{carBrand}} {{carModel}}{{plateNumber}} готов к выдаче. Ждём вас! {{companyName}}")

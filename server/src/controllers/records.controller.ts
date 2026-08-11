@@ -98,8 +98,8 @@ export const recordsController = {
   async sendSms(req: Request, res: Response, next: NextFunction) {
     try {
       const { type } = req.body as { type: 'CAR_READY' | 'REVIEW_REQUEST' };
-      await smsService.sendForRecord(String(req.params.id), type);
-      res.json({ ok: true });
+      const result = await smsService.sendForRecord(String(req.params.id), type);
+      res.json({ ok: result === 'sent', result });
     } catch (e) { next(e); }
   },
 

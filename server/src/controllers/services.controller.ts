@@ -2,6 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../prisma/client';
 import { AuthPayload } from '../middleware/auth.middleware';
+import { smsService } from '../services/sms.service';
+import { AppError } from '../middleware/errorHandler';
 
 const ROLE_LEVEL: Record<string, number> = {
   'Создатель': 1, 'Директор': 2, 'Менеджер': 3, 'Сотрудник': 4,
@@ -301,13 +303,37 @@ export const smsSettingsController = {
   async update(req: Request, res: Response, next: NextFunction) {
     try {
       const existing = await prisma.smsSettings.findFirst();
-      const { enabled, username, password, onCreateTemplate, reminderTemplate, carReadyTemplate, reviewRequestTemplate } = req.body;
-      const data = { enabled, username, password, onCreateTemplate, reminderTemplate, carReadyTemplate, reviewRequestTemplate };
+      const { enabled, token, alphanameId, alphaname, onCreateTemplate, reminderTemplate, carReadyTemplate, reviewRequestTemplate } = req.body;
+      const data = { enabled, token, alphanameId, alphaname, onCreateTemplate, reminderTemplate, carReadyTemplate, reviewRequestTemplate };
       const settings = existing
         ? await prisma.smsSettings.update({ where: { id: existing.id }, data })
         : await prisma.smsSettings.create({ data });
       res.json({ data: settings });
     } catch (e) { next(e); }
+  },
+
+  /** Проверка токена: баланс и доступные альфа-имена */
+  async check(req: Request, res: Response, next: NextFunction) {
+    try {
+      const token = typeof req.query.token === 'string' ? req.query.token : undefined;
+      res.json({ data: await smsService.checkConnection(token) });
+    } catch (e) {
+      next(new AppError(e instanceof Error ? e.message : 'Ошибка подключения к sms.by', 400));
+    }
+  },
+
+  /** Тестовая отправка */
+  async test(req: Request, res: Response, next: NextFunction) {
+    const { phone, message } = req.body as { phone?: string; message?: string };
+    if (!phone) {
+      next(new AppError('Не указан номер телефона', 400));
+      return;
+    }
+    try {
+      res.json({ data: await smsService.sendTest(phone, message?.trim() || 'Тестовое сообщение от Prime CRM') });
+    } catch (e) {
+      next(new AppError(e instanceof Error ? e.message : 'Ошибка отправки', 400));
+    }
   },
 };
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import dayjs from 'dayjs';
 import cn from 'classnames';
-import { Record as CrmRecord } from '@/types';
+import { Record as CrmRecord, SmsType } from '@/types';
 import { formatPrice } from '@/utils/formatters';
 import { useAuthStore } from '@/store/authStore';
 import styles from './RecordCard.module.scss';
@@ -15,6 +15,13 @@ const STATUS_LABELS: Record<string, string> = {
   ACTIVE: 'Активна',
   CLOSED: 'Завершена',
   CANCELLED: 'Отменена',
+};
+
+const SMS_LABELS: Record<SmsType, string> = {
+  ON_CREATE: 'SMS при создании',
+  REMINDER: 'SMS напоминание',
+  CAR_READY: 'SMS «Авто готово»',
+  REVIEW_REQUEST: 'SMS запрос отзыва',
 };
 
 function toRgba(color: string, alpha: number): string {
@@ -81,7 +88,7 @@ export const RecordCard: React.FC<Props> = ({ record, onClick }) => {
             <span
               key={log.id}
               className={cn(styles.smsLabel, { [styles.smsLabelFailed]: log.status === 'failed' })}
-              title={log.type === 'ON_CREATE' ? 'SMS при создании' : 'SMS напоминание'}
+              title={SMS_LABELS[log.type]}
             />
           ))}
         </div>

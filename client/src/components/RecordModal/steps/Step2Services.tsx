@@ -415,7 +415,7 @@ export const Step2Services: React.FC<Props> = ({ data, onChange, prepaymentLocke
               onChange={v => setPrepayAmount(v || 0)}
               style={{ width: '100%' }}
               formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}
-              addonAfter="р."
+              suffix="р."
             />
           </Form.Item>
           <Form.Item label="Способ оплаты">

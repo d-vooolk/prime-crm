@@ -1,0 +1,14 @@
+{
+  // Сборка продакшн-бандла. rootDir=src сохраняет плоскую структуру dist/,
+  // на которую рассчитаны `npm start` и CMD в Dockerfile (node dist/index.js).
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true
+  },
+  "include": ["src/**/*"]
+}

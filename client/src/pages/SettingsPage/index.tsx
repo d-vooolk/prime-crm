@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { servicesApi } from '@/api/services.api';
 import { useUiStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/authStore';
-import { CompanySettings, DocumentTemplate, Category, SmsSettings, AuthorizedPerson } from '@/types';
+import { CompanySettings, DocumentTemplate, Category, SmsSettings, SmsConnectionInfo, AuthorizedPerson } from '@/types';
 import { CarCatalogEditor } from '@/components/CarCatalogEditor';
 import styles from './SettingsPage.module.scss';
 
@@ -65,6 +65,10 @@ export const SettingsPage: React.FC = () => {
 
   const [smsForm] = Form.useForm();
   const [smsSaving, setSmsSaving] = useState(false);
+  const [smsInfo, setSmsInfo] = useState<SmsConnectionInfo | null>(null);
+  const [smsChecking, setSmsChecking] = useState(false);
+  const [smsTesting, setSmsTesting] = useState(false);
+  const [testPhone, setTestPhone] = useState('');
 
   useEffect(() => {
     servicesApi.getSettings().then(s => {
@@ -77,8 +81,15 @@ export const SettingsPage: React.FC = () => {
     loadTemplates();
     servicesApi.getCategories().then(setCategories).catch(() => {});
     servicesApi.getSmsSettings().then(s => {
-      if (s) smsForm.setFieldsValue(s);
-      else smsForm.setFieldsValue({ enabled: false });
+      if (!s) {
+        smsForm.setFieldsValue({ enabled: false });
+        return;
+      }
+      smsForm.setFieldsValue(s);
+      // Чтобы селект показал сохранённое альфа-имя до проверки подключения
+      if (s.alphanameId && s.alphaname) {
+        setSmsInfo(prev => prev ?? { balance: 0, currency: '', alphanames: [{ id: s.alphanameId, name: s.alphaname }] });
+      }
     }).catch(() => {});
   }, [form, smsForm]);
 
@@ -208,12 +219,50 @@ export const SettingsPage: React.FC = () => {
     if (!values) return;
     setSmsSaving(true);
     try {
-      await servicesApi.updateSmsSettings(values as Partial<SmsSettings>);
+      const alphanameId = smsForm.getFieldValue('alphanameId');
+      const alphaname = smsInfo?.alphanames.find(a => a.id === alphanameId)?.name
+        ?? smsForm.getFieldValue('alphaname') ?? '';
+      await servicesApi.updateSmsSettings({ ...values, alphaname } as Partial<SmsSettings>);
       message.success('SMS настройки сохранены');
     } catch {
       message.error('Ошибка сохранения');
     } finally {
       setSmsSaving(false);
+    }
+  };
+
+  const handleCheckSms = async () => {
+    const token = smsForm.getFieldValue('token');
+    if (!token) {
+      message.warning('Укажите API-токен sms.by');
+      return;
+    }
+    setSmsChecking(true);
+    try {
+      const info = await servicesApi.checkSmsConnection(token);
+      setSmsInfo(info);
+      message.success(`Подключение работает. Баланс: ${info.balance} ${info.currency}`);
+    } catch (e) {
+      setSmsInfo(null);
+      message.error(e instanceof Error ? e.message : 'Не удалось подключиться к sms.by');
+    } finally {
+      setSmsChecking(false);
+    }
+  };
+
+  const handleTestSms = async () => {
+    if (!testPhone.trim()) {
+      message.warning('Укажите номер для теста');
+      return;
+    }
+    setSmsTesting(true);
+    try {
+      await servicesApi.sendTestSms(testPhone.trim());
+      message.success('Тестовое сообщение отправлено');
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : 'Не удалось отправить сообщение');
+    } finally {
+      setSmsTesting(false);
     }
   };
 
@@ -419,17 +468,51 @@ export const SettingsPage: React.FC = () => {
             </div>
 
             <Row gutter={16}>
-              <Col xs={24} sm={12}>
-                <Form.Item label="Логин RocketSMS" name="username">
-                  <Input placeholder="291388531" />
+              <Col xs={24} sm={14}>
+                <Form.Item
+                  label="API-токен sms.by"
+                  name="token"
+                  extra="Личный кабинет app.sms.by → Настройки → API"
+                >
+                  <Input.Password placeholder="0e11a2c8810eaec4c20f86b5caa394eb" autoComplete="off" />
                 </Form.Item>
               </Col>
-              <Col xs={24} sm={12}>
-                <Form.Item label="Пароль RocketSMS" name="password">
-                  <Input.Password placeholder="••••••••" />
+              <Col xs={24} sm={10}>
+                <Form.Item label="Альфа-имя (отправитель)" name="alphanameId">
+                  <Select
+                    allowClear
+                    placeholder={smsInfo ? 'Без альфа-имени' : 'Сначала проверьте подключение'}
+                    options={(smsInfo?.alphanames || []).map(a => ({ value: a.id, label: a.name }))}
+                    notFoundContent="Одобренных альфа-имён нет"
+                  />
                 </Form.Item>
               </Col>
             </Row>
+
+            <Space wrap style={{ marginBottom: 20 }}>
+              <Button onClick={handleCheckSms} loading={smsChecking}>Проверить подключение</Button>
+              <Input
+                style={{ width: 200 }}
+                placeholder="375291234567"
+                value={testPhone}
+                onChange={e => setTestPhone(e.target.value)}
+              />
+              <Button onClick={handleTestSms} loading={smsTesting}>Отправить тестовое SMS</Button>
+            </Space>
+
+            {smsInfo?.currency && (
+              <Alert
+                type={smsInfo.balance > 0 ? 'success' : 'warning'}
+                showIcon
+                style={{ marginBottom: 20 }}
+                message={`Баланс: ${smsInfo.balance} ${smsInfo.currency}`}
+                description={
+                  smsInfo.alphanames.length
+                    ? `Доступные альфа-имена: ${smsInfo.alphanames.map(a => a.name).join(', ')}`
+                    : 'Одобренных альфа-имён нет — зарегистрируйте его в личном кабинете app.sms.by, иначе отправка может быть отклонена.'
+                }
+              />
+            )}
 
             <Alert
               type="info"

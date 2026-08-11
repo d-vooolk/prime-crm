@@ -1,5 +1,5 @@
 import http from './http';
-import { Category, Equipment, Serviceman, CompanySettings, DocumentTemplate, SmsSettings } from '@/types';
+import { Category, Equipment, Serviceman, CompanySettings, DocumentTemplate, SmsSettings, SmsConnectionInfo } from '@/types';
 
 export const servicesApi = {
   getCategories: () =>
@@ -70,6 +70,13 @@ export const servicesApi = {
 
   updateSmsSettings: (data: Partial<SmsSettings>) =>
     http.patch<{ data: SmsSettings }>('/services/sms-settings', data).then(r => r.data.data),
+
+  checkSmsConnection: (token?: string) =>
+    http.get<{ data: SmsConnectionInfo }>('/services/sms-settings/check', { params: token ? { token } : undefined })
+      .then(r => r.data.data),
+
+  sendTestSms: (phone: string, message?: string) =>
+    http.post<{ data: { smsId: string } }>('/services/sms-settings/test', { phone, message }).then(r => r.data.data),
 
   getDocTemplates: () =>
     http.get<{ data: DocumentTemplate[] }>('/services/doc-templates').then(r => r.data.data),

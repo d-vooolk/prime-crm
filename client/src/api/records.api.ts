@@ -115,7 +115,9 @@ export const recordsApi = {
     http.get<{ data: CompanySuggestion[] }>('/records/companies', { params: { search } }).then(r => r.data.data),
 
   sendSms: (id: string, type: 'CAR_READY' | 'REVIEW_REQUEST') =>
-    http.post(`/records/${id}/send-sms`, { type }).then(r => r.data),
+    http.post<{ ok: boolean; result: 'sent' | 'failed' | 'skipped' | 'disabled' }>(
+      `/records/${id}/send-sms`, { type },
+    ).then(r => r.data),
 
   setSalaryDate: (id: string, salaryDate: string | null) =>
     http.patch(`/records/${id}/salary-date`, { salaryDate }),

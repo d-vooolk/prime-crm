@@ -43,12 +43,24 @@ export interface SmsLog {
 export interface SmsSettings {
   id: string;
   enabled: boolean;
-  username: string;
-  password: string;
+  token: string;
+  alphanameId: string;
+  alphaname: string;
   onCreateTemplate: string;
   reminderTemplate: string;
   carReadyTemplate: string;
   reviewRequestTemplate: string;
+}
+
+export interface SmsAlphaname {
+  id: string;
+  name: string;
+}
+
+export interface SmsConnectionInfo {
+  balance: number;
+  currency: string;
+  alphanames: SmsAlphaname[];
 }
 
 export interface ServicemanSplitEntry {

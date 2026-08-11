@@ -197,7 +197,6 @@ async function main() {
     create: {
       id: 'default',
       name: 'Prime Auto Service',
-      address: '',
       phone: '',
     },
   });

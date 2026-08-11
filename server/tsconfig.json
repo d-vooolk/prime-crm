@@ -1,19 +1,20 @@
 {
+  // Конфиг для IDE и проверки типов: покрывает ВСЕ .ts проекта, включая
+  // scripts/, prisma/ и prisma.config.ts. Иначе редактор считает эти файлы
+  // не принадлежащими проекту и применяет к ним опции по умолчанию, где
+  // esModuleInterop выключен (ошибки TS1192/TS1259 на import fs/path/dotenv).
+  // Сборка идёт через tsconfig.build.json — только src/, с emit в dist/.
   "compilerOptions": {
     "target": "ES2020",
     "module": "commonjs",
     "lib": ["ES2020"],
-    "outDir": "./dist",
-    "rootDir": "./src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true
+    "noEmit": true
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "scripts/**/*", "prisma/**/*", "prisma.config.ts"],
   "exclude": ["node_modules", "dist"]
 }

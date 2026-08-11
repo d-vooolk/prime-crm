@@ -1,40 +1,64 @@
+import { SmsType } from '@prisma/client';
 import { prisma } from '../prisma/client';
-
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const RocketSMS = require('node-rocketsms-api') as new (opts: { username: string; password: string }) => {
-  send: (phone: string, message: string, test: boolean) => Promise<{ id?: string | number }>;
-};
+import { smsBy } from './smsby.provider';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
 const formatDate = (d: Date) => `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`;
 const formatTime = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 
-const applyTemplate = (
-  template: string,
-  vars: { clientName: string; date: string; time: string; carBrand: string; carModel: string; plateNumber: string; companyName: string; services: string },
-) =>
-  template
-    .replace(/\{\{clientName\}\}/g, vars.clientName)
-    .replace(/\{\{date\}\}/g, vars.date)
-    .replace(/\{\{time\}\}/g, vars.time)
-    .replace(/\{\{carBrand\}\}/g, vars.carBrand)
-    .replace(/\{\{carModel\}\}/g, vars.carModel)
-    .replace(/\{\{plateNumber\}\}/g, vars.plateNumber ? ` (${vars.plateNumber})` : '')
-    .replace(/\{\{companyName\}\}/g, vars.companyName)
-    .replace(/\{\{services\}\}/g, vars.services);
+interface TemplateVars {
+  clientName: string;
+  date: string;
+  time: string;
+  carBrand: string;
+  carModel: string;
+  plateNumber: string;
+  companyName: string;
+  services: string;
+}
+
+// Закрывающую скобку вне квантификатора экранировать не нужно — \} избыточно.
+const PLACEHOLDER = /\{\{(\w+)}}/g;
+
+const applyTemplate = (template: string, vars: TemplateVars) => {
+  const values: Record<string, string> = {
+    ...vars,
+    // Гос. номер подставляется в скобках и только если он заполнен
+    plateNumber: vars.plateNumber ? ` (${vars.plateNumber})` : '',
+  };
+  // Неизвестный плейсхолдер остаётся в тексте как есть — как и раньше
+  return template.replace(PLACEHOLDER, (match, key: string) => values[key] ?? match);
+};
+
+/**
+ * Типы, которые отправляются не более одного раза за всю жизнь записи.
+ * Запрос отзыва уходит при закрытии сделки, а сделку можно закрывать
+ * и редактировать многократно — клиент не должен получить его дважды.
+ */
+const ONCE_PER_RECORD: SmsType[] = ['REVIEW_REQUEST'];
+
+export type SendResult = 'sent' | 'failed' | 'skipped' | 'disabled';
 
 export const smsService = {
-  async sendForRecord(recordId: string, type: 'ON_CREATE' | 'REMINDER' | 'CAR_READY' | 'REVIEW_REQUEST') {
+  async sendForRecord(recordId: string, type: SmsType): Promise<SendResult> {
     try {
       const settings = await prisma.smsSettings.findFirst();
-      if (!settings?.enabled || !settings.username || !settings.password) return;
+      if (!settings?.enabled || !settings.token) return 'disabled';
+
+      if (ONCE_PER_RECORD.includes(type)) {
+        const already = await prisma.smsLog.findFirst({
+          where: { recordId, type, status: 'sent' },
+          select: { id: true },
+        });
+        if (already) return 'skipped';
+      }
 
       const record = await prisma.record.findUnique({
         where: { id: recordId },
         include: { client: true, car: true, items: { include: { service: true } } },
       });
-      if (!record) return;
+      if (!record) return 'failed';
 
       const companyCfg = await prisma.companySettings.findFirst();
       const templateMap = {
@@ -62,9 +86,7 @@ export const smsService = {
       let error: string | null = null;
 
       try {
-        const client = new RocketSMS({ username: settings.username, password: settings.password });
-        const result = await client.send(phone, message, false);
-        externalId = result?.id != null ? String(result.id) : null;
+        externalId = await smsBy.sendQuickSMS(settings.token, phone, message, settings.alphanameId) || null;
       } catch (e) {
         status = 'failed';
         error = e instanceof Error ? e.message : String(e);
@@ -73,9 +95,31 @@ export const smsService = {
       await prisma.smsLog.create({
         data: { recordId, type, phone, message, status, externalId, error },
       });
+      return status === 'sent' ? 'sent' : 'failed';
     } catch (e) {
       console.error('[SMS] sendForRecord error:', e); // eslint-disable-line no-console
+      return 'failed';
     }
+  },
+
+  /** Проверка подключения: баланс + список одобренных альфа-имён. */
+  async checkConnection(tokenOverride?: string) {
+    const settings = await prisma.smsSettings.findFirst();
+    const token = tokenOverride || settings?.token;
+    if (!token) throw new Error('Не указан токен sms.by');
+
+    const balance = await smsBy.getBalance(token);
+    // Отсутствие альфа-имён — не ошибка подключения, поэтому глушим
+    const alphanames = await smsBy.getAlphanames(token).catch(() => []);
+    return { ...balance, alphanames };
+  },
+
+  /** Тестовая отправка на произвольный номер (в лог записей не пишется). */
+  async sendTest(phone: string, message: string) {
+    const settings = await prisma.smsSettings.findFirst();
+    if (!settings?.token) throw new Error('Не указан токен sms.by');
+    const smsId = await smsBy.sendQuickSMS(settings.token, phone, message, settings.alphanameId);
+    return { smsId };
   },
 
   async runReminderCheck() {

@@ -227,8 +227,16 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
   const handleSendSms = async (type: 'CAR_READY' | 'REVIEW_REQUEST') => {
     setSmsSending(type);
     try {
-      await recordsApi.sendSms(record.id, type);
-      message.success(type === 'CAR_READY' ? 'SMS «Авто готово» отправлено' : 'SMS запроса отзыва отправлено');
+      const { result } = await recordsApi.sendSms(record.id, type);
+      if (result === 'sent') {
+        message.success(type === 'CAR_READY' ? 'SMS «Авто готово» отправлено' : 'SMS запроса отзыва отправлено');
+      } else if (result === 'skipped') {
+        message.info('Запрос отзыва по этой записи уже отправлялся — повторно не отправляем');
+      } else if (result === 'disabled') {
+        message.warning('Отправка SMS отключена в настройках');
+      } else {
+        message.error('Не удалось отправить SMS');
+      }
       onRefresh();
     } catch {
       message.error('Не удалось отправить SMS');
@@ -662,7 +670,7 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
               value={retainedCash}
               onChange={v => setRetainedCash(v || 0)}
               style={{ width: '100%' }}
-              addonAfter="р."
+              suffix="р."
             />
           </Form.Item>
         )}
@@ -674,7 +682,7 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
               value={retainedCard}
               onChange={v => setRetainedCard(v || 0)}
               style={{ width: '100%' }}
-              addonAfter="р."
+              suffix="р."
             />
           </Form.Item>
         )}

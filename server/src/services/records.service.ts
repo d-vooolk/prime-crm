@@ -518,6 +518,10 @@ export const recordsService = {
       });
     }
 
+    // fire-and-forget: не блокируем ответ. Повторные закрытия отсекаются
+    // и веткой выше, и правилом «отзыв один раз на запись» в sms.service.
+    smsService.sendForRecord(id, 'REVIEW_REQUEST');
+
     return closed;
   },
 

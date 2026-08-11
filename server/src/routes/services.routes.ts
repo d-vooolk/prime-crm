@@ -18,6 +18,8 @@ router.patch('/settings', settingsController.update);
 // SMS настройки
 router.get('/sms-settings', smsSettingsController.get);
 router.patch('/sms-settings', smsSettingsController.update);
+router.get('/sms-settings/check', smsSettingsController.check);
+router.post('/sms-settings/test', smsSettingsController.test);
 
 // Шаблоны документов
 router.get('/doc-templates', documentTemplateController.getAll);
