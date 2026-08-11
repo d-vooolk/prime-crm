@@ -5,6 +5,7 @@ import dayjs, { Dayjs } from 'dayjs';
 import 'dayjs/locale/ru';
 import { recordsApi } from '@/api/records.api';
 import { Record } from '@/types';
+import { formatPrice } from '@/utils/formatters';
 import { RecordCard } from '@/components/RecordCard';
 import { RecordModal } from '@/components/RecordModal';
 import { RecordDetailModal } from '@/components/RecordDetailModal';
@@ -52,6 +53,20 @@ export const SchedulePage: React.FC = () => {
   const displayDate = dayjs(selectedDate);
   const dateLabel = displayDate.format('D MMMM YYYY');
 
+  // Сумма по записи считается так же, как в карточке: у закрытой берём
+  // итог сделки, у остальных — сумму позиций.
+  const recordTotal = (r: Record) =>
+    r.deal ? r.deal.finalPrice : r.items.reduce((s, i) => s + i.price * i.quantity, 0);
+
+  // В столбце дня лежат записи всех статусов, поэтому считаем только те,
+  // по которым сделка ещё не закрыта и не отменена.
+  const todayOpenSum = todayRecords
+    .filter(r => r.status === 'ACTIVE')
+    .reduce((s, r) => s + recordTotal(r), 0);
+
+  // Незавершённые — все ACTIVE с прошлых дат, суммируем целиком
+  const incompleteSum = incompleteRecords.reduce((s, r) => s + recordTotal(r), 0);
+
   return (
     <div className={styles.page}>
       <div className={styles.recordsHeader}>
@@ -84,7 +99,14 @@ export const SchedulePage: React.FC = () => {
         <div className={styles.column}>
           <div className={styles.columnHeader}>
             {dateLabel}
-            <span className={styles.columnCount}>{todayRecords.length}</span>
+            <span className={styles.columnMeta}>
+              {todayOpenSum > 0 && (
+                <span className={styles.columnSum} title="Сумма незакрытых сделок">
+                  {formatPrice(todayOpenSum)}
+                </span>
+              )}
+              <span className={styles.columnCount}>{todayRecords.length}</span>
+            </span>
           </div>
           <div className={styles.columnBody}>
             {loading ? null : todayRecords.length === 0 ? (
@@ -112,7 +134,14 @@ export const SchedulePage: React.FC = () => {
         <div className={styles.column}>
           <div className={`${styles.columnHeader} ${styles.columnOverdue}`}>
             Незавершённые
-            <span className={styles.columnCount}>{incompleteRecords.length}</span>
+            <span className={styles.columnMeta}>
+              {incompleteSum > 0 && (
+                <span className={styles.columnSum} title="Сумма записей столбца">
+                  {formatPrice(incompleteSum)}
+                </span>
+              )}
+              <span className={styles.columnCount}>{incompleteRecords.length}</span>
+            </span>
           </div>
           <div className={styles.columnBody}>
             {incompleteRecords.length === 0 ? (

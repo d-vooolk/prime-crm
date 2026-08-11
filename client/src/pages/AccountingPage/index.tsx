@@ -72,7 +72,8 @@ const incomeRsCols = [
 
 const expenseColumns = [
   { title: 'Дата', dataIndex: 'date', key: 'date', width: 90, render: (d: string) => formatDate(d) },
-  { title: 'Цель', dataIndex: 'description', key: 'desc', width: 160, ellipsis: true },
+  // без ellipsis — длинное пояснение переносится по строкам, а не обрезается
+  { title: 'Цель', dataIndex: 'description', key: 'desc', width: 200 },
   { title: 'Сумма', dataIndex: 'amount', key: 'amount', width: 100, render: (v: number) => <strong>{formatPrice(v)}</strong> },
   { title: 'Изыматель', dataIndex: 'person', key: 'person', width: 120 },
 ];
@@ -87,7 +88,8 @@ const withdrawalColumns = [
   { title: 'Дата', dataIndex: 'date', key: 'date', width: 100, render: (d: string) => formatDate(d) },
   { title: 'BYN', dataIndex: 'amountByn', key: 'byn', width: 100, render: (v?: number) => v != null ? formatPrice(v) : '—' },
   { title: 'USD', dataIndex: 'amountUsd', key: 'usd', width: 100, render: (v?: number) => v != null ? `$${v.toFixed(2)}` : '—' },
-  { title: 'Цель', dataIndex: 'description', key: 'description', ellipsis: true, render: (v?: string) => v || '—' },
+  // ширина задана явно: без неё колонка схлопывалась на узком экране
+  { title: 'Цель', dataIndex: 'description', key: 'description', width: 200, render: (v?: string) => v || '—' },
   { title: 'Изыматель', dataIndex: 'person', key: 'person', width: 130 },
 ];
 
@@ -490,7 +492,7 @@ export const AccountingPage: React.FC = () => {
               rowKey="id"
               size="small"
               pagination={false}
-              scroll={{ x: 560 }}
+              scroll={{ x: 'max-content' }}
             />
           </div>
         </div>
@@ -775,7 +777,8 @@ export const AccountingPage: React.FC = () => {
               rowKey="id"
               size="small"
               pagination={false}
-              scroll={{ x: 350 }}
+              // 350 было меньше суммы ширин колонок — «Цель» не помещалась
+              scroll={{ x: 'max-content' }}
             />
           </div>
         </div>
