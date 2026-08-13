@@ -494,7 +494,11 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
             <span className={isEmployee ? styles.blurred : undefined}>{r.client.name}</span>
           </Descriptions.Item>
           <Descriptions.Item label="Телефон">
-            <span className={isEmployee ? styles.blurred : undefined}>{r.client.phone}</span>
+            <span className={isEmployee ? styles.blurred : undefined}>
+              <a href={`tel:${r.client.phone}`} rel="noreferrer noopener">
+                {r.client.phone}
+              </a>
+            </span>
           </Descriptions.Item>
         </Descriptions>
 
