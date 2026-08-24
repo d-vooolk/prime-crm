@@ -12,6 +12,7 @@ export interface SalaryRecord {
   clientName: string;
   carInfo: string;
   scheduledAt: string;
+  closedAt: string;
   salaryDate: string | null;
   items: SalaryRecordItem[];
   totalNetProfit: number;
@@ -167,7 +168,7 @@ export const accountingService = {
       },
       include: {
         service: { include: { category: true } },
-        record: { include: { client: true, car: true, deal: { select: { salaryDate: true } } } },
+        record: { include: { client: true, car: true, deal: { select: { salaryDate: true, closedAt: true } } } },
       },
     });
 
@@ -196,6 +197,8 @@ export const accountingService = {
           clientName: record.client.name,
           carInfo: `${record.car.brand} ${record.car.model} ${record.car.year}${record.car.plateNumber ? ' ' + record.car.plateNumber : ''}`,
           scheduledAt: record.scheduledAt.toISOString(),
+          // Работа попадает в зарплату по дате завершения, её же и показываем
+          closedAt: (record.deal?.closedAt ?? record.scheduledAt).toISOString(),
           salaryDate: record.deal?.salaryDate?.toISOString() ?? null,
           items: [],
           totalNetProfit: 0,
@@ -209,7 +212,7 @@ export const accountingService = {
     }
 
     const records = Array.from(recordMap.values())
-      .sort((a, b) => new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime());
+      .sort((a, b) => new Date(b.closedAt).getTime() - new Date(a.closedAt).getTime());
     const totalNetProfit = records.reduce((s, r) => s + r.totalNetProfit, 0);
     const totalPayment = records.reduce((s, r) => s + r.totalPayment, 0);
 

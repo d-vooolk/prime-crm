@@ -323,19 +323,38 @@ export const recordsService = {
     }
 
     if (data.items) {
-      const itemsCreate = data.items.map((item) => ({
-        serviceId: item.serviceId,
-        price: item.price,
-        quantity: item.quantity,
-        netProfit: item.netProfit,
-        servicemanName: item.servicemanSplit?.length ? null : item.servicemanName,
-        servicemanSplit: item.servicemanSplit?.length
-          ? (item.servicemanSplit as Prisma.InputJsonValue)
-          : undefined,
-        equipmentId: item.equipmentId,
-        prepaidAmount: item.prepaidAmount || 0,
-        prepaidByCard: item.prepaidByCard || false,
-      }));
+      // Позиции пересоздаются целиком, а модалка редактирования записи не передаёт
+      // назначения сотрудников (они задаются только при закрытии сделки). Если их не
+      // перенести со старых позиций, закрытая работа исчезнет из зарплаты сотрудника.
+      const unmatchedOld = [...record.items];
+      const takeOldItem = (serviceId: string) => {
+        const idx = unmatchedOld.findIndex(i => i.serviceId === serviceId);
+        return idx === -1 ? undefined : unmatchedOld.splice(idx, 1)[0];
+      };
+
+      const itemsCreate = data.items.map((item) => {
+        // Назначение считается заданным, если пришло хотя бы одно из двух полей
+        const hasAssignment = item.servicemanName !== undefined || item.servicemanSplit !== undefined;
+        const old = hasAssignment ? undefined : takeOldItem(item.serviceId);
+        const servicemanName = hasAssignment ? item.servicemanName : (old?.servicemanName ?? undefined);
+        const servicemanSplit = hasAssignment
+          ? item.servicemanSplit
+          : ((old?.servicemanSplit as Array<{ name: string; amount: number }> | null) ?? undefined);
+
+        return {
+          serviceId: item.serviceId,
+          price: item.price,
+          quantity: item.quantity,
+          netProfit: item.netProfit,
+          servicemanName: servicemanSplit?.length ? null : servicemanName,
+          servicemanSplit: servicemanSplit?.length
+            ? (servicemanSplit as Prisma.InputJsonValue)
+            : undefined,
+          equipmentId: item.equipmentId,
+          prepaidAmount: item.prepaidAmount || 0,
+          prepaidByCard: item.prepaidByCard || false,
+        };
+      });
 
       await prisma.$transaction(async (tx) => {
         await tx.recordItem.deleteMany({ where: { recordId: id } });

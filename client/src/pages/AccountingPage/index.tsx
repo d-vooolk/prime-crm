@@ -828,7 +828,7 @@ export const AccountingPage: React.FC = () => {
     },
     {
       title: 'Дата',
-      dataIndex: 'scheduledAt',
+      dataIndex: 'closedAt',
       key: 'date',
       width: 110,
       render: (d: string) => dayjs(d).format('DD.MM.YYYY'),
