@@ -9,6 +9,7 @@ import { analyticsApi, Period } from '@/api/analytics.api';
 import { accountingApi, SalaryData, SalaryHistoryItem, MonthlyRevenueItem, MonthlyRecordCountItem } from '@/api/accounting.api';
 import { servicesApi } from '@/api/services.api';
 import { formatPrice } from '@/utils/formatters';
+import { averageAnnualSalary, effectiveSalaryMonth } from '@/utils/salary';
 import { Serviceman } from '@/types';
 import { useAuthStore } from '@/store/authStore';
 import styles from './DashboardPage.module.scss';
@@ -71,9 +72,10 @@ export const DashboardPage: React.FC = () => {
 
   useEffect(() => {
     setSalaryLoading(true);
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth() + 1;
+    // Тот же расчётный период, что и в бухгалтерии: с 25-го числа идёт следующий месяц
+    const period = effectiveSalaryMonth();
+    const year = period.year();
+    const month = period.month() + 1;
 
     servicesApi.getServicemen()
       .then(async (men) => {
@@ -98,9 +100,12 @@ export const DashboardPage: React.FC = () => {
   const getRecord = (history: SalaryHistoryItem[]) =>
     history.length > 0 ? history.reduce((max, h) => h.adjustedTotal > max.adjustedTotal ? h : max) : null;
 
+  const salaryPeriodLabel = effectiveSalaryMonth().format('MMMM YYYY');
+
   const selectedHistory = selectedEmployee ? (histories[selectedEmployee.name] ?? []) : [];
   const selectedSalary = selectedEmployee ? salaries[selectedEmployee.name] : null;
   const selectedRecord = getRecord(selectedHistory);
+  const selectedAvgAnnual = averageAnnualSalary(selectedHistory);
 
   // Avg check per month from monthly revenue / record count
   const avgCheckData = (() => {
@@ -324,6 +329,7 @@ export const DashboardPage: React.FC = () => {
                       const salary = salaries[m.name];
                       const history = histories[m.name] ?? [];
                       const record = getRecord(history);
+                      const avgAnnual = averageAnnualSalary(history);
                       return (
                         <Col key={m.id} xs={24} sm={12} lg={8}>
                           <Card
@@ -346,11 +352,17 @@ export const DashboardPage: React.FC = () => {
                                 <span className={styles.statValue}>{m.profitPercent ?? 0}%</span>
                               </div>
                               <div className={styles.employeeStat}>
-                                <span className={styles.statLabel}>Заработок (тек. месяц)</span>
+                                <span className={styles.statLabel}>Заработок (тек. период)</span>
                                 <span className={styles.statEarnings}>
                                   {salary ? formatPrice(salary.adjustedTotal) : '—'}
                                 </span>
                               </div>
+                              {avgAnnual.monthsCount > 0 && (
+                                <div className={styles.employeeStat}>
+                                  <span className={styles.statLabel}>Средний годичный</span>
+                                  <span className={styles.statAvg}>{formatPrice(avgAnnual.average)}</span>
+                                </div>
+                              )}
                               {record && history.length > 1 && (
                                 <div className={styles.employeeStat}>
                                   <span className={styles.statLabel}>Рекорд</span>
@@ -408,7 +420,7 @@ export const DashboardPage: React.FC = () => {
             </div>
 
             <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
-              <Col span={8}>
+              <Col xs={12} sm={12}>
                 <Card size="small">
                   <Statistic
                     title="% от прибыли"
@@ -418,18 +430,35 @@ export const DashboardPage: React.FC = () => {
                   />
                 </Card>
               </Col>
-              <Col span={8}>
+              <Col xs={12} sm={12}>
                 <Card size="small">
                   <Statistic
-                    title="Тек. месяц"
+                    title="Тек. период"
                     value={selectedSalary?.adjustedTotal ?? 0}
                     precision={2}
                     suffix="р."
                     valueStyle={{ color: '#22c55e', fontSize: 20 }}
                   />
+                  <div className={styles.statHint}>{salaryPeriodLabel}</div>
                 </Card>
               </Col>
-              <Col span={8}>
+              <Col xs={12} sm={12}>
+                <Card size="small">
+                  <Statistic
+                    title="Средний годичный"
+                    value={selectedAvgAnnual.average}
+                    precision={2}
+                    suffix="р."
+                    valueStyle={{ color: 'var(--color-primary)', fontSize: 20 }}
+                  />
+                  <div className={styles.statHint}>
+                    {selectedAvgAnnual.monthsCount > 0
+                      ? `в месяц, за последние ${selectedAvgAnnual.monthsCount} мес.`
+                      : 'нет закрытых месяцев'}
+                  </div>
+                </Card>
+              </Col>
+              <Col xs={12} sm={12}>
                 <Card size="small">
                   <Statistic
                     title="Рекорд"
@@ -439,7 +468,7 @@ export const DashboardPage: React.FC = () => {
                     valueStyle={{ color: '#f59e0b', fontSize: 20 }}
                   />
                   {selectedRecord && (
-                    <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 2 }}>
+                    <div className={styles.statHint}>
                       {selectedHistory.length === 1 ? 'Первый месяц' : selectedRecord.label}
                     </div>
                   )}

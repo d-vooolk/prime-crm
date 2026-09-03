@@ -46,6 +46,108 @@
   margin-left: auto;
 }
 
+// ─── Расчёт ЗП: плитки сверху, управление под ними ──────────────────────────
+
+.salaryStats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+
+  // На телефоне — две компактные плитки в ряд, иначе управление уезжает за экран
+  @media (max-width: 767px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+
+    :global(.ant-card-body) {
+      padding: 10px 12px;
+    }
+
+    :global(.ant-statistic-title) {
+      font-size: 11px;
+      margin-bottom: 2px;
+    }
+
+    // перебиваем valueStyle, заданный пропсом Statistic
+    :global(.ant-statistic-content) {
+      font-size: 16px !important;
+    }
+  }
+}
+
+.statCard {
+  min-width: 0;
+}
+
+.statCardHint {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+
+  @media (max-width: 767px) {
+    font-size: 10px;
+    margin-top: 2px;
+  }
+}
+
+.salaryControls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.employeeSelect {
+  width: 200px;
+}
+
+.monthPicker {
+  width: 160px;
+}
+
+.monthNav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.monthNavLabel {
+  font-size: 14px;
+  min-width: 110px;
+  text-align: center;
+}
+
+.adjustButtons {
+  display: flex;
+  gap: 8px;
+}
+
+.bonusButton {
+  border-color: var(--color-success);
+  color: var(--color-success);
+}
+
+@media (max-width: 767px) {
+  .employeeSelect,
+  .monthPicker {
+    width: 100%;
+  }
+
+  .monthNav {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .adjustButtons {
+    width: 100%;
+
+    > * {
+      flex: 1;
+    }
+  }
+}
+
 .tablesGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;

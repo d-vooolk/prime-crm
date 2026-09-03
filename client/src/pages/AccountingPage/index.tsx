@@ -13,6 +13,7 @@ import { CashTransaction, CapitalTransaction, Serviceman } from '@/types';
 import { accountingApi, SalaryData, SalaryRecord, SalaryAdjustment, FounderSalaryRecord, SalaryHistoryItem, MonthlyRevenueItem, MonthlyRecordCountItem, Debt } from '@/api/accounting.api';
 import { servicesApi } from '@/api/services.api';
 import { formatPrice } from '@/utils/formatters';
+import { averageAnnualSalary, effectiveSalaryMonth } from '@/utils/salary';
 import { useAuthStore } from '@/store/authStore';
 import styles from './AccountingPage.module.scss';
 
@@ -111,10 +112,7 @@ export const AccountingPage: React.FC = () => {
   const [capitalBalance, setCapitalBalance] = useState({ byn: 0, usd: 0 });
 
   const [employees, setEmployees] = useState<Serviceman[]>([]);
-  const [salaryMonth, setSalaryMonth] = useState<Dayjs>(() => {
-    const today = dayjs();
-    return today.date() >= 25 ? today.add(1, 'month').startOf('month') : today.startOf('month');
-  });
+  const [salaryMonth, setSalaryMonth] = useState<Dayjs>(() => effectiveSalaryMonth());
   const [salaryEmployee, setSalaryEmployee] = useState<string>('');
   const [salaryData, setSalaryData] = useState<SalaryData | null>(null);
   const [salaryLoading, setSalaryLoading] = useState(false);
@@ -788,11 +786,10 @@ export const AccountingPage: React.FC = () => {
 
   const isSotrudnik = user?.role === 'Сотрудник';
 
-  const effectiveCurrentMonth = (() => {
-    const today = dayjs();
-    return today.date() >= 25 ? today.add(1, 'month').startOf('month') : today.startOf('month');
-  })();
+  const effectiveCurrentMonth = effectiveSalaryMonth();
   const effectivePrevMonth = effectiveCurrentMonth.subtract(1, 'month');
+
+  const salaryAvgAnnual = averageAnnualSalary(salaryHistory);
 
   const canSeeClientName = user?.isMaster || MANAGER_ROLES.includes(user?.role || '');
 
@@ -898,9 +895,10 @@ export const AccountingPage: React.FC = () => {
 
   const salaryTab = (
     <div className={styles.tabContent}>
-      <div className={styles.topBar}>
+      {salaryEmployee && (
+      <div className={styles.salaryStats}>
         {salaryData && (
-          <Card size="small" className={styles.balanceCard}>
+          <Card size="small" className={styles.statCard}>
             <Statistic
               title="К выплате за период"
               value={salaryData.adjustedTotal ?? salaryData.totalPayment}
@@ -911,13 +909,13 @@ export const AccountingPage: React.FC = () => {
           </Card>
         )}
 
-        {salaryEmployee && salaryHistory.length > 0 && (() => {
+        {salaryHistory.length > 0 && (() => {
           const recordEntry = salaryHistory.reduce((max, h) => h.adjustedTotal > max.adjustedTotal ? h : max);
           const isFirstMonth = salaryHistory.length === 1;
           const amount = isFirstMonth ? (salaryData?.adjustedTotal ?? recordEntry.adjustedTotal) : recordEntry.adjustedTotal;
           const label = isFirstMonth ? 'Первый месяц' : recordEntry.label;
           return (
-            <Card size="small" className={styles.balanceCard}>
+            <Card size="small" className={styles.statCard}>
               <Statistic
                 title="Рекорд заработка"
                 value={amount}
@@ -925,69 +923,85 @@ export const AccountingPage: React.FC = () => {
                 suffix="р."
                 valueStyle={{ color: '#f59e0b', fontSize: 22 }}
               />
-              <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 4 }}>{label}</div>
+              <div className={styles.statCardHint}>{label}</div>
             </Card>
           );
         })()}
 
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          {!isSotrudnik && (
-            <Select
-              showSearch
-              style={{ width: 200 }}
-              placeholder="Выберите сотрудника"
-              value={salaryEmployee || undefined}
-              onChange={setSalaryEmployee}
-              options={employees.map(e => ({ value: e.name, label: e.name }))}
-              allowClear
-              onClear={() => setSalaryEmployee('')}
+        {salaryAvgAnnual.monthsCount > 0 && (
+          <Card size="small" className={styles.statCard}>
+            <Statistic
+              title="Средний годичный заработок"
+              value={salaryAvgAnnual.average}
+              precision={2}
+              suffix="р."
+              valueStyle={{ color: 'var(--color-primary)', fontSize: 22 }}
             />
-          )}
-          {isSotrudnik ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Button
-                size="small"
-                disabled={!salaryMonth.isAfter(effectivePrevMonth, 'month')}
-                onClick={() => setSalaryMonth(prev => prev.subtract(1, 'month'))}
-              >←</Button>
-              <span style={{ fontSize: 14, minWidth: 110, textAlign: 'center' }}>
-                {salaryMonth.format('MMMM YYYY')}
-              </span>
-              <Button
-                size="small"
-                disabled={!salaryMonth.isBefore(effectiveCurrentMonth, 'month')}
-                onClick={() => setSalaryMonth(prev => prev.add(1, 'month'))}
-              >→</Button>
+            <div className={styles.statCardHint}>
+              в месяц, за последние {salaryAvgAnnual.monthsCount} мес.
             </div>
-          ) : (
-            <DatePicker
-              picker="month"
-              value={salaryMonth}
-              onChange={v => v && setSalaryMonth(v)}
-              format="MMMM YYYY"
-              allowClear={false}
-              style={{ width: 160 }}
-            />
-          )}
-          {!isSotrudnik && salaryEmployee && (
-            <>
-              <Button
-                danger
-                icon={<MinusOutlined />}
-                onClick={() => { fineForm.resetFields(); setFineOpen(true); }}
-              >
-                Штраф
-              </Button>
-              <Button
-                style={{ borderColor: 'var(--color-success)', color: 'var(--color-success)' }}
-                icon={<PlusOutlined />}
-                onClick={() => { bonusForm.resetFields(); setBonusOpen(true); }}
-              >
-                Премия
-              </Button>
-            </>
-          )}
-        </div>
+          </Card>
+        )}
+      </div>
+      )}
+
+      <div className={styles.salaryControls}>
+        {!isSotrudnik && (
+          <Select
+            showSearch
+            className={styles.employeeSelect}
+            placeholder="Выберите сотрудника"
+            value={salaryEmployee || undefined}
+            onChange={setSalaryEmployee}
+            options={employees.map(e => ({ value: e.name, label: e.name }))}
+            allowClear
+            onClear={() => setSalaryEmployee('')}
+          />
+        )}
+        {isSotrudnik ? (
+          <div className={styles.monthNav}>
+            <Button
+              size="small"
+              disabled={!salaryMonth.isAfter(effectivePrevMonth, 'month')}
+              onClick={() => setSalaryMonth(prev => prev.subtract(1, 'month'))}
+            >←</Button>
+            <span className={styles.monthNavLabel}>
+              {salaryMonth.format('MMMM YYYY')}
+            </span>
+            <Button
+              size="small"
+              disabled={!salaryMonth.isBefore(effectiveCurrentMonth, 'month')}
+              onClick={() => setSalaryMonth(prev => prev.add(1, 'month'))}
+            >→</Button>
+          </div>
+        ) : (
+          <DatePicker
+            picker="month"
+            className={styles.monthPicker}
+            value={salaryMonth}
+            onChange={v => v && setSalaryMonth(v)}
+            format="MMMM YYYY"
+            allowClear={false}
+          />
+        )}
+        {!isSotrudnik && salaryEmployee && (
+          <div className={styles.adjustButtons}>
+            <Button
+              danger
+              icon={<MinusOutlined />}
+              onClick={() => { fineForm.resetFields(); setFineOpen(true); }}
+            >
+              Штраф
+            </Button>
+            <Button
+              className={styles.bonusButton}
+              icon={<PlusOutlined />}
+              onClick={() => { bonusForm.resetFields(); setBonusOpen(true); }}
+            >
+              Премия
+            </Button>
+          </div>
+        )}
       </div>
 
       {salaryEmployee && salaryHistory.length > 1 && (

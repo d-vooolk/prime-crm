@@ -133,10 +133,22 @@
   color: #22c55e;
 }
 
+.statAvg {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
 .statRecord {
   font-size: var(--font-size-sm);
   font-weight: 600;
   color: #f59e0b;
+}
+
+.statHint {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-top: 2px;
 }
 
 .sparkline {
