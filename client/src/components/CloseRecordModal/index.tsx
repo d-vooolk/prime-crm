@@ -50,6 +50,9 @@ const WARRANTY_OPTIONS = [
   { value: '1 год', label: '1 год' },
 ];
 
+// Подставляется в новую сделку; у уже закрытых берётся сохранённое значение
+const DEFAULT_WARRANTY = '1 месяц';
+
 export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [employees, setEmployees] = useState<Serviceman[]>([]);
@@ -514,7 +517,7 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
 
           <Divider orientation="left" style={{ fontSize: 13 }}>Гарантия</Divider>
 
-          <Form.Item label="Гарантия на работу" name="warranty">
+          <Form.Item label="Гарантия на работу" name="warranty" initialValue={DEFAULT_WARRANTY}>
             <Select
               placeholder="Выберите срок гарантии"
               allowClear
