@@ -53,6 +53,24 @@
   }
 }
 
+// Точка под днём в выпадающем календаре — признак того, что записи есть
+// (как в календаре сайдбара на десктопе)
+.pickerCell {
+  position: relative;
+}
+
+.pickerDot {
+  position: absolute;
+  bottom: -1px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-success);
+  pointer-events: none;
+}
+
 // ─── Columns layout ────────────────────────────────
 .columns {
   flex: 1;

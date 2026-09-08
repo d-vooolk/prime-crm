@@ -24,6 +24,12 @@ export const SchedulePage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<Record | null>(null);
+  // Даты с записями для точек в мобильном пикере. Грузим только после того,
+  // как пикер открыли — на десктопе он скрыт, лишний запрос там не нужен
+  // (в сайдбаре свой календарь со своей загрузкой).
+  const [pickerOpened, setPickerOpened] = useState(false);
+  const [pickerMonth, setPickerMonth] = useState<Dayjs>(dayjs(selectedDate));
+  const [datesWithRecords, setDatesWithRecords] = useState<Set<string>>(new Set());
 
   const fetchRecords = useCallback(async () => {
     setLoading(true);
@@ -49,6 +55,23 @@ export const SchedulePage: React.FC = () => {
   useEffect(() => {
     fetchRecords();
   }, [fetchRecords]);
+
+  const fetchDatesWithRecords = useCallback(() => {
+    recordsApi.getDatesWithRecords(pickerMonth.year(), pickerMonth.month() + 1)
+      .then(dates => setDatesWithRecords(new Set(dates)))
+      .catch(() => {});
+  }, [pickerMonth]);
+
+  useEffect(() => {
+    if (!pickerOpened) return;
+    fetchDatesWithRecords();
+  }, [pickerOpened, fetchDatesWithRecords]);
+
+  // Меняем стейт только при смене месяца, иначе новый объект Dayjs
+  // каждый раз дёргал бы загрузку заново.
+  const syncPickerMonth = (value: Dayjs) => {
+    setPickerMonth(prev => (prev.isSame(value, 'month') ? prev : value));
+  };
 
   const displayDate = dayjs(selectedDate);
   const dateLabel = displayDate.format('D MMMM YYYY');
@@ -88,6 +111,23 @@ export const SchedulePage: React.FC = () => {
             allowClear={false}
             inputReadOnly
             className={styles.mobilePicker}
+            onOpenChange={open => {
+              if (!open) return;
+              setPickerOpened(true);
+              syncPickerMonth(displayDate);
+            }}
+            onPanelChange={value => syncPickerMonth(value)}
+            cellRender={(current, info) => {
+              if (info.type !== 'date') return info.originNode;
+              const date = current as Dayjs;
+              if (!datesWithRecords.has(date.format('YYYY-MM-DD'))) return info.originNode;
+              return (
+                <div className={styles.pickerCell}>
+                  {info.originNode}
+                  <span className={styles.pickerDot} />
+                </div>
+              );
+            }}
           />
           {!isEmployee && (
             <Button
@@ -172,7 +212,11 @@ export const SchedulePage: React.FC = () => {
       <RecordModal
         open={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
-        onSuccess={() => { fetchRecords(); setTimeout(fetchRecords, 3000); }}
+        onSuccess={() => {
+          fetchRecords();
+          setTimeout(fetchRecords, 3000);
+          if (pickerOpened) fetchDatesWithRecords();
+        }}
         initialDate={selectedDate}
       />
 
