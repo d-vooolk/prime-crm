@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Button, Table, Modal, Form, Input, InputNumber, Select,
   Popconfirm, message, Tabs, Checkbox, Tag, Space, Collapse, DatePicker, ColorPicker,
-  Tooltip, Switch,
+  Tooltip, Switch, Grid, Empty,
 } from 'antd';
 import {
   PlusOutlined, EditOutlined, DeleteOutlined,
@@ -25,6 +25,8 @@ function getRoleLevel(role?: string | null): number {
 
 export const ServicesPage: React.FC = () => {
   const { user } = useAuthStore();
+  const screens = Grid.useBreakpoint();
+  const isMobile = !screens.md;
   const myLevel = user?.isMaster ? 0 : getRoleLevel(user?.role);
   const canEditServiceman = (row: Serviceman) => myLevel === 0 || getRoleLevel(row.role) >= myLevel;
   const allowedRoles = myLevel === 0 ? ALL_ROLES : ALL_ROLES.filter(r => ROLE_LEVEL[r] >= myLevel);
@@ -276,6 +278,86 @@ export const ServicesPage: React.FC = () => {
   const activeReceptionists = allServicemen.filter(s => s.isReceptionist && !s.isDismissed);
   const dismissedReceptionists = allServicemen.filter(s => s.isReceptionist && s.isDismissed);
 
+  const openEditServiceman = (row: Serviceman, isReceptionist: boolean) => {
+    servicemanForm.resetFields();
+    servicemanForm.setFieldsValue({ name: row.name, position: row.position, role: row.role, email: row.email, password: row.plainPassword ?? '', profitPercent: row.profitPercent ?? 0, birthday: row.birthday ? dayjs(row.birthday) : null });
+    setServicemanModal({ open: true, item: row, isReceptionist });
+  };
+
+  const servicemanActions = (row: Serviceman, isReceptionist: boolean) => {
+    if (!canEditServiceman(row)) return null;
+    return (
+      <Space size="small">
+        <Button size="small" icon={<EditOutlined />} onClick={() => openEditServiceman(row, isReceptionist)} />
+        <Popconfirm
+          title="Уволить сотрудника?"
+          description="Сотрудник будет перемещён в список уволенных"
+          onConfirm={() => handleDismiss(row.id)}
+          okText="Уволить"
+          cancelText="Отмена"
+        >
+          <Button size="small" danger icon={<StopOutlined />} title="Уволить" />
+        </Popconfirm>
+      </Space>
+    );
+  };
+
+  const birthdayInfo = (row: Serviceman) => {
+    if (!row.birthday) return null;
+    const bd = dayjs(row.birthday);
+    const isToday = bd.month() === dayjs().month() && bd.date() === dayjs().date();
+    return { text: bd.format('DD.MM.YYYY'), isToday };
+  };
+
+  // На телефоне таблица из четырёх столбцов не читается — показываем список карточек
+  const servicemanCards = (list: Serviceman[], isReceptionist: boolean, isDismissedList = false) => {
+    if (list.length === 0) {
+      return <Empty description={isReceptionist ? 'Нет мастеров приёмщиков' : 'Нет сотрудников'} />;
+    }
+    return (
+      <div className={styles.mobileList}>
+        {list.map(row => {
+          const bd = birthdayInfo(row);
+          return (
+            <div
+              key={row.id}
+              className={isDismissedList ? `${styles.mobileCard} ${styles.mobileCardDimmed}` : styles.mobileCard}
+            >
+              <div className={styles.mobileCardTop}>
+                <div className={styles.mobileCardInfo}>
+                  <div className={styles.mobileCardName}>
+                    <span>{row.name}</span>
+                    {row.role && <Tag style={{ margin: 0 }}>{row.role}</Tag>}
+                  </div>
+                  {row.position && <div className={styles.mobileCardSub}>{row.position}</div>}
+                </div>
+                {!isDismissedList && servicemanActions(row, isReceptionist)}
+              </div>
+              <div className={styles.mobileCardMeta}>
+                {!isReceptionist && row.role === 'Сотрудник' && row.profitPercent > 0 && (
+                  <Tag color="green" style={{ margin: 0 }}>{row.profitPercent}% прибыли</Tag>
+                )}
+                {bd && (
+                  <span className={bd.isToday ? styles.birthdayToday : styles.mobileCardSub}>
+                    🎂 {bd.text}{bd.isToday && ' — сегодня!'}
+                  </span>
+                )}
+                {isReceptionist && !isDismissedList && (
+                  <Checkbox
+                    checked={row.isDefault}
+                    onChange={() => { if (!row.isDefault) handleSetDefault(row.id); }}
+                  >
+                    <span className={styles.mobileCardSub}>По умолчанию</span>
+                  </Checkbox>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   const servicemanColumns = (isReceptionist: boolean, isDismissedList = false) => [
     {
       title: 'ФИО',
@@ -305,13 +387,12 @@ export const ServicesPage: React.FC = () => {
       key: 'birthday',
       width: 130,
       render: (_: unknown, row: Serviceman) => {
-        if (!row.birthday) return <span style={{ color: 'var(--color-text-secondary)' }}>—</span>;
-        const bd = dayjs(row.birthday);
-        const isToday = bd.month() === dayjs().month() && bd.date() === dayjs().date();
+        const bd = birthdayInfo(row);
+        if (!bd) return <span style={{ color: 'var(--color-text-secondary)' }}>—</span>;
         return (
-          <span style={isToday ? { color: 'var(--color-success)', fontWeight: 600 } : undefined}>
-            {bd.format('DD.MM.YYYY')}
-            {isToday && ' (сегодня!)'}
+          <span style={bd.isToday ? { color: 'var(--color-success)', fontWeight: 600 } : undefined}>
+            {bd.text}
+            {bd.isToday && ' (сегодня!)'}
           </span>
         );
       },
@@ -329,27 +410,9 @@ export const ServicesPage: React.FC = () => {
     } : { title: '', key: 'empty', width: 0, render: () => null },
     {
       title: '', key: 'actions', width: isDismissedList ? 0 : 120,
-      render: isDismissedList ? () => null : (_: unknown, row: Serviceman) => {
-        if (!canEditServiceman(row)) return null;
-        return (
-          <Space size="small">
-            <Button size="small" icon={<EditOutlined />} onClick={() => {
-              servicemanForm.resetFields();
-              servicemanForm.setFieldsValue({ name: row.name, position: row.position, role: row.role, email: row.email, password: row.plainPassword ?? '', profitPercent: row.profitPercent ?? 0, birthday: row.birthday ? dayjs(row.birthday) : null });
-              setServicemanModal({ open: true, item: row, isReceptionist });
-            }} />
-            <Popconfirm
-              title="Уволить сотрудника?"
-              description="Сотрудник будет перемещён в список уволенных"
-              onConfirm={() => handleDismiss(row.id)}
-              okText="Уволить"
-              cancelText="Отмена"
-            >
-              <Button size="small" danger icon={<StopOutlined />} title="Уволить" />
-            </Popconfirm>
-          </Space>
-        );
-      },
+      render: isDismissedList
+        ? () => null
+        : (_: unknown, row: Serviceman) => servicemanActions(row, isReceptionist),
     },
   ];
 
@@ -360,7 +423,7 @@ export const ServicesPage: React.FC = () => {
         items={[{
           key: 'dismissed',
           label: `Уволенные (${list.length})`,
-          children: (
+          children: isMobile ? servicemanCards(list, isReceptionist, true) : (
             <Table
               dataSource={list}
               rowKey="id"
@@ -528,7 +591,7 @@ export const ServicesPage: React.FC = () => {
             label: 'Сотрудники',
             children: (
               <div>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+                <div className={styles.tabActions}>
                   <Button type="primary" icon={<PlusOutlined />} onClick={() => {
                     servicemanForm.resetFields();
                     setServicemanModal({ open: true, isReceptionist: false });
@@ -536,14 +599,16 @@ export const ServicesPage: React.FC = () => {
                     Добавить сотрудника
                   </Button>
                 </div>
-                <Table
-                  dataSource={activeEmployees}
-                  rowKey="id"
-                  size="middle"
-                  pagination={false}
-                  columns={servicemanColumns(false)}
-                  locale={{ emptyText: 'Нет сотрудников' }}
-                />
+                {isMobile ? servicemanCards(activeEmployees, false) : (
+                  <Table
+                    dataSource={activeEmployees}
+                    rowKey="id"
+                    size="middle"
+                    pagination={false}
+                    columns={servicemanColumns(false)}
+                    locale={{ emptyText: 'Нет сотрудников' }}
+                  />
+                )}
                 {dismissedSection(dismissedEmployees, false)}
               </div>
             ),
@@ -569,15 +634,17 @@ export const ServicesPage: React.FC = () => {
                     Добавить мастера
                   </Button>
                 </div>
-                <Table
-                  dataSource={activeReceptionists}
-                  rowKey="id"
-                  size="middle"
-                  pagination={false}
-                  columns={servicemanColumns(true)}
-                  locale={{ emptyText: 'Нет мастеров приёмщиков' }}
-                  scroll={{ x: 'max-content' }}
-                />
+                {isMobile ? servicemanCards(activeReceptionists, true) : (
+                  <Table
+                    dataSource={activeReceptionists}
+                    rowKey="id"
+                    size="middle"
+                    pagination={false}
+                    columns={servicemanColumns(true)}
+                    locale={{ emptyText: 'Нет мастеров приёмщиков' }}
+                    scroll={{ x: 'max-content' }}
+                  />
+                )}
                 {dismissedSection(dismissedReceptionists, true)}
               </div>
             ),

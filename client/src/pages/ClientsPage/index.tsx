@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Input, Table, Tag } from 'antd';
-import { SearchOutlined, UserOutlined } from '@ant-design/icons';
+import { Input, Table, Tag, Grid, List } from 'antd';
+import { SearchOutlined, UserOutlined, PhoneOutlined } from '@ant-design/icons';
 import { clientsApi } from '@/api/clients.api';
 import { recordsApi } from '@/api/records.api';
 import { Client, Record } from '@/types';
@@ -9,6 +9,8 @@ import { ClientHistoryDrawer } from '@/components/ClientHistoryDrawer';
 import styles from './ClientsPage.module.scss';
 
 export const ClientsPage: React.FC = () => {
+  const screens = Grid.useBreakpoint();
+  const isMobile = !screens.md;
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -74,23 +76,65 @@ export const ClientsPage: React.FC = () => {
           placeholder="Поиск по имени или телефону"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          style={{ width: 280 }}
+          className={styles.search}
           allowClear
         />
       </div>
 
-      <Table
-        dataSource={clients}
-        columns={columns}
-        rowKey="id"
-        loading={loading}
-        size="middle"
-        pagination={{ pageSize: 20, showSizeChanger: false }}
-        onRow={(row) => ({
-          style: { cursor: 'pointer' },
-          onClick: () => setSelectedClientId(row.id),
-        })}
-      />
+      {isMobile ? (
+        <List
+          dataSource={clients}
+          loading={loading}
+          locale={{ emptyText: 'Клиенты не найдены' }}
+          pagination={clients.length > 20 ? { pageSize: 20, align: 'center', size: 'small' } : false}
+          renderItem={(client: Client) => (
+            <List.Item className={styles.mobileItem} onClick={() => setSelectedClientId(client.id)}>
+              <div className={styles.mobileCard}>
+                <div className={styles.mobileCardTop}>
+                  <span className={styles.mobileName}>
+                    <UserOutlined className={styles.mobileNameIcon} />
+                    {client.name}
+                  </span>
+                  <span className={styles.mobileVisits}>
+                    {client._count?.records || 0} зап.
+                  </span>
+                </div>
+                {/* Тап по номеру звонит, тап по остальной карточке открывает историю */}
+                <a
+                  href={`tel:${client.phone.replace(/[^\d+]/g, '')}`}
+                  className={styles.mobilePhone}
+                  onClick={e => e.stopPropagation()}
+                >
+                  <PhoneOutlined />
+                  {client.phone}
+                </a>
+                {client.cars.length > 0 && (
+                  <div className={styles.mobileCars}>
+                    {client.cars.map(car => (
+                      <Tag key={car.id} className={styles.mobileCarTag}>
+                        {car.brand} {car.model} {car.year}
+                      </Tag>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </List.Item>
+          )}
+        />
+      ) : (
+        <Table
+          dataSource={clients}
+          columns={columns}
+          rowKey="id"
+          loading={loading}
+          size="middle"
+          pagination={{ pageSize: 20, showSizeChanger: false }}
+          onRow={(row) => ({
+            style: { cursor: 'pointer' },
+            onClick: () => setSelectedClientId(row.id),
+          })}
+        />
+      )}
 
       <ClientHistoryDrawer
         clientId={selectedClientId}

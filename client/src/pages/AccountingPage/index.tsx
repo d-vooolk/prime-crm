@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Tabs, Table, Button, Modal, Form, Input, InputNumber, Select,
-  DatePicker, message, Statistic, Card, Tag, Empty, Popconfirm, Space, Tooltip, Switch,
+  DatePicker, message, Statistic, Card, Tag, Empty, Popconfirm, Space, Tooltip, Switch, Grid, Spin,
 } from 'antd';
 import {
   PlusOutlined, MinusOutlined, EditOutlined, DeleteOutlined, RetweetOutlined,
@@ -96,6 +96,8 @@ const withdrawalColumns = [
 
 export const AccountingPage: React.FC = () => {
   const { user } = useAuthStore();
+  const screens = Grid.useBreakpoint();
+  const isMobile = !screens.md;
   const canSeeCashflow = user?.isMaster || MANAGER_ROLES.includes(user?.role || '');
   const canSeeCapital = user?.isMaster || DIRECTOR_ROLES.includes(user?.role || '');
   const canEditTransactions = user?.isMaster || CREATOR_ROLES.includes(user?.role || '');
@@ -864,6 +866,54 @@ export const AccountingPage: React.FC = () => {
     }] : []),
   ];
 
+  // На телефоне пять столбцов с раскрытием не помещаются — список карточек,
+  // услуги по записи показываем сразу, без раскрытия
+  const salaryCards = (records: SalaryRecord[]) => (
+    <div className={styles.salaryList}>
+      {records.map(row => (
+        <div key={row.recordId} className={styles.salaryCard}>
+          <div className={styles.salaryCardTop}>
+            <div className={styles.salaryCardInfo}>
+              {canSeeClientName && <div className={styles.salaryCardName}>{row.clientName}</div>}
+              <div className={canSeeClientName ? styles.salaryCardSub : styles.salaryCardName}>
+                {row.carInfo}
+              </div>
+            </div>
+            <div className={styles.salaryCardRight}>
+              <strong className={styles.salaryCardPayment}>{formatPrice(row.totalPayment)}</strong>
+              {canSeeCashflow && (
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<RetweetOutlined style={{ color: row.salaryDate ? 'var(--color-primary)' : undefined }} />}
+                  title={row.salaryDate ? 'Период перенесён — изменить' : 'Перенести на другой период'}
+                  onClick={() => setTransferModal({
+                    recordId: row.recordId,
+                    salaryDate: row.salaryDate ? dayjs(row.salaryDate) : null,
+                  })}
+                />
+              )}
+            </div>
+          </div>
+          <div className={styles.salaryCardMeta}>
+            <span>{dayjs(row.closedAt).format('DD.MM.YYYY')}</span>
+            <span>Сумма: {formatPrice(row.totalNetProfit)}</span>
+          </div>
+          <div className={styles.salaryCardItems}>
+            {row.items.map(item => (
+              <div key={item.serviceName} className={styles.salaryCardItem}>
+                <span className={styles.salaryCardItemName}>{item.serviceName}</span>
+                <span className={styles.salaryCardItemSum}>{formatPrice(item.netProfit)}</span>
+                <strong className={styles.salaryCardItemPayment}>{formatPrice(item.payment)}</strong>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+      {records.length === 0 && <Empty description="Нет данных за период" />}
+    </div>
+  );
+
   const periodLabel = salaryData
     ? `${dayjs(salaryData.periodFrom).format('DD.MM.YYYY')} — ${dayjs(salaryData.periodTo).subtract(1, 'day').format('DD.MM.YYYY')}`
     : '';
@@ -1037,40 +1087,49 @@ export const AccountingPage: React.FC = () => {
 
       {salaryEmployee && salaryData ? (
         <>
-          <div style={{ marginBottom: 12, color: 'var(--color-text-secondary)', fontSize: 13 }}>
-            Период: <strong>{periodLabel}</strong>
+          <div className={styles.salaryPeriod}>
+            <span>Период: <strong>{periodLabel}</strong></span>
             {salaryData.profitPercent > 0 && (
-              <span style={{ marginLeft: 16 }}>Процент: <Tag color="blue">{salaryData.profitPercent}%</Tag></span>
+              <span>Процент: <Tag color="blue" style={{ margin: 0 }}>{salaryData.profitPercent}%</Tag></span>
             )}
           </div>
-          <Table<SalaryRecord>
-            dataSource={salaryData.records}
-            columns={salaryColumns}
-            rowKey="recordId"
-            size="small"
-            pagination={false}
-            loading={salaryLoading}
-            expandable={{
-              expandedRowRender: (row: SalaryRecord) => (
-                <Table
-                  dataSource={row.items}
-                  rowKey="serviceName"
-                  size="small"
-                  pagination={false}
-                  columns={[
-                    { title: 'Услуга', dataIndex: 'serviceName', key: 'name' },
-                    { title: 'Сумма', dataIndex: 'netProfit', key: 'netProfit', width: 140, render: (v: number) => formatPrice(v) },
-                    { title: 'К выплате', dataIndex: 'payment', key: 'payment', width: 120, render: (v: number) => <strong style={{ color: 'var(--color-success)' }}>{formatPrice(v)}</strong> },
-                  ]}
-                />
-              ),
-            }}
-            footer={() => (
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 32 }}>
-                <span>База: <strong>{formatPrice(salaryData.totalPayment)}</strong></span>
+          {isMobile ? (
+            <Spin spinning={salaryLoading}>
+              {salaryCards(salaryData.records)}
+              <div className={styles.salaryCardsFooter}>
+                База: <strong>{formatPrice(salaryData.totalPayment)}</strong>
               </div>
-            )}
-          />
+            </Spin>
+          ) : (
+            <Table<SalaryRecord>
+              dataSource={salaryData.records}
+              columns={salaryColumns}
+              rowKey="recordId"
+              size="small"
+              pagination={false}
+              loading={salaryLoading}
+              expandable={{
+                expandedRowRender: (row: SalaryRecord) => (
+                  <Table
+                    dataSource={row.items}
+                    rowKey="serviceName"
+                    size="small"
+                    pagination={false}
+                    columns={[
+                      { title: 'Услуга', dataIndex: 'serviceName', key: 'name' },
+                      { title: 'Сумма', dataIndex: 'netProfit', key: 'netProfit', width: 140, render: (v: number) => formatPrice(v) },
+                      { title: 'К выплате', dataIndex: 'payment', key: 'payment', width: 120, render: (v: number) => <strong style={{ color: 'var(--color-success)' }}>{formatPrice(v)}</strong> },
+                    ]}
+                  />
+                ),
+              }}
+              footer={() => (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 32 }}>
+                  <span>База: <strong>{formatPrice(salaryData.totalPayment)}</strong></span>
+                </div>
+              )}
+            />
+          )}
 
           {salaryData.adjustments.length > 0 && (
             <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -1098,15 +1157,15 @@ export const AccountingPage: React.FC = () => {
             </div>
           )}
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12, fontSize: 15, gap: 24 }}>
-            {salaryData.adjustments.length > 0 && (
-              <span style={{ color: 'var(--color-text-secondary)' }}>
+          <div className={styles.salaryTotals}>
+            {salaryData.adjustments.length > 0 && !isMobile && (
+              <span className={styles.salaryTotalsBase}>
                 База: {formatPrice(salaryData.totalPayment)}
               </span>
             )}
             <span>
               Итого к выплате:{' '}
-              <strong style={{ color: 'var(--color-success)', fontSize: 17 }}>
+              <strong className={styles.salaryTotalsValue}>
                 {formatPrice(salaryData.adjustedTotal ?? salaryData.totalPayment)}
               </strong>
             </span>
