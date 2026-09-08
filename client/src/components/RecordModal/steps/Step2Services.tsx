@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Select, InputNumber, Button, Table, Empty, Tag, Space, Grid, Modal, Form, Input, Switch, Tooltip } from 'antd';
-import { DeleteOutlined, DollarOutlined } from '@ant-design/icons';
+import { DeleteOutlined, DollarOutlined, TeamOutlined, PlusOutlined } from '@ant-design/icons';
 import { servicesApi } from '@/api/services.api';
-import { Category, Equipment } from '@/types';
+import { Category, Equipment, Serviceman, ServicemanSplitEntry } from '@/types';
 import { formatPrice } from '@/utils/formatters';
+import { useNotify } from '@/hooks/useNotify';
 import { RecordFormData, SelectedService } from '../types';
 import styles from './Step2Services.module.scss';
 const { useBreakpoint } = Grid;
@@ -17,17 +18,26 @@ interface Props {
 export const Step2Services: React.FC<Props> = ({ data, onChange, prepaymentLocked }) => {
   const screens = useBreakpoint();
   const isMobile = !screens.md;
+  const notify = useNotify();
   const [categories, setCategories] = useState<Category[]>([]);
   const [equipment, setEquipment] = useState<Equipment[]>([]);
+  const [employees, setEmployees] = useState<Serviceman[]>([]);
 
   // Prepayment modal state
   const [prepayServiceId, setPrepayServiceId] = useState<string | null>(null);
   const [prepayAmount, setPrepayAmount] = useState(0);
   const [prepayByCard, setPrepayByCard] = useState(false);
 
+  // Serviceman split modal state
+  const [splitServiceId, setSplitServiceId] = useState<string | null>(null);
+  const [splitEntries, setSplitEntries] = useState<ServicemanSplitEntry[]>([]);
+
   useEffect(() => {
     servicesApi.getCategories().then(setCategories).catch(() => {});
     servicesApi.getEquipment().then(setEquipment).catch(() => {});
+    servicesApi.getAllServicemen()
+      .then(all => setEmployees(all.filter(e => e.role === 'Сотрудник' && !e.isDismissed)))
+      .catch(() => {});
   }, []);
 
   const allServices = categories.flatMap(c =>
@@ -56,6 +66,7 @@ export const Step2Services: React.FC<Props> = ({ data, onChange, prepaymentLocke
             quantity: 1,
             estimatedTime: service.estimatedTime,
             hasEquipment: service.hasEquipment ?? false,
+            isProduct: service.isProduct ?? false,
             prepaidAmount: 0,
             prepaidByCard: false,
           },
@@ -92,6 +103,70 @@ export const Step2Services: React.FC<Props> = ({ data, onChange, prepaymentLocke
     });
   };
 
+  // Чистая прибыль по позиции — из неё делится сумма между сотрудниками
+  // (так же, как считает модалка закрытия сделки)
+  const itemNetProfit = (row: SelectedService) => {
+    if (row.isProduct) return 0;
+    const retailPrice = row.hasEquipment
+      ? (equipment.find(e => e.id === row.equipmentId)?.retailPrice ?? 0)
+      : 0;
+    return row.price * row.quantity - retailPrice;
+  };
+
+  const updateItemServiceman = (serviceId: string, servicemanName: string | null) => {
+    onChange({
+      services: data.services.map(s =>
+        s.serviceId === serviceId ? { ...s, servicemanName, servicemanSplit: null } : s
+      ),
+    });
+  };
+
+  const openSplitModal = (row: SelectedService) => {
+    setSplitServiceId(row.serviceId);
+    if (row.servicemanSplit && row.servicemanSplit.length >= 2) {
+      setSplitEntries(row.servicemanSplit);
+    } else {
+      setSplitEntries([
+        { name: row.servicemanName || data.serviceman, amount: itemNetProfit(row) },
+        { name: '', amount: 0 },
+      ]);
+    }
+  };
+
+  const saveSplit = () => {
+    const valid = splitEntries.filter(e => e.name);
+    if (valid.length < 2) {
+      notify.warning('Укажите минимум двух сотрудников');
+      return;
+    }
+    const netProfit = splitService ? itemNetProfit(splitService) : 0;
+    const totalAmount = valid.reduce((sum, e) => sum + (e.amount || 0), 0);
+    if (totalAmount > netProfit + 0.01) {
+      notify.warning(
+        'Сумма превышает чистую прибыль',
+        `Указано: ${formatPrice(totalAmount)}, чистая прибыль услуги: ${formatPrice(netProfit)}`,
+      );
+      return;
+    }
+    onChange({
+      services: data.services.map(s =>
+        s.serviceId === splitServiceId
+          ? { ...s, servicemanSplit: valid, servicemanName: null }
+          : s
+      ),
+    });
+    setSplitServiceId(null);
+  };
+
+  // Снимаем разделение — позиция снова наследует основного мастера записи
+  const cancelSplit = (serviceId: string) => {
+    onChange({
+      services: data.services.map(s =>
+        s.serviceId === serviceId ? { ...s, servicemanSplit: null, servicemanName: null } : s
+      ),
+    });
+  };
+
   const openPrepayModal = (row: SelectedService) => {
     setPrepayServiceId(row.serviceId);
     setPrepayAmount(row.prepaidAmount || 0);
@@ -115,6 +190,8 @@ export const Step2Services: React.FC<Props> = ({ data, onChange, prepaymentLocke
   const totalPrepaid = data.services.reduce((sum, s) => sum + (s.prepaidAmount || 0), 0);
   const remaining = total - totalPrepaid;
 
+  const splitService = splitServiceId ? data.services.find(s => s.serviceId === splitServiceId) : null;
+
   const prepayService = prepayServiceId ? data.services.find(s => s.serviceId === prepayServiceId) : null;
   const prepayMax = prepayService ? prepayService.price * prepayService.quantity : 0;
 
@@ -127,6 +204,66 @@ export const Step2Services: React.FC<Props> = ({ data, onChange, prepaymentLocke
   }));
 
   const equipmentOptions = equipment.map(e => ({ value: e.id, label: e.name }));
+
+  const employeeOptions = employees.map(e => ({ value: e.name, label: e.name }));
+  const hasEmployees = employees.length > 0;
+
+  // Кнопка «разделить работу между сотрудниками» — рядом с названием услуги
+  const splitButton = (row: SelectedService) => {
+    if (!hasEmployees || row.isProduct) return null;
+    return (
+      <Tooltip title="Разделить между сотрудниками">
+        <Button
+          type="text"
+          size="small"
+          icon={<TeamOutlined style={{ color: row.servicemanSplit?.length ? 'var(--color-primary)' : 'var(--color-text-secondary)' }} />}
+          onClick={() => openSplitModal(row)}
+          style={{ padding: '0 4px' }}
+        />
+      </Tooltip>
+    );
+  };
+
+  // Выбор сотрудника по услуге. Пока сотрудник не выбран явно, показываем
+  // основного мастера записи с первого шага — он и попадёт в закрытие сделки.
+  const servicemanControl = (row: SelectedService) => {
+    if (row.isProduct) {
+      return <Tag color="orange" style={{ margin: 0 }}>Товар</Tag>;
+    }
+    if (row.servicemanSplit && row.servicemanSplit.length >= 2) {
+      return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          <Tooltip title={row.servicemanSplit.map(e => `${e.name}: ${formatPrice(e.amount)}`).join(' / ')}>
+            <Tag color="blue" style={{ cursor: 'pointer', margin: 0 }} onClick={() => openSplitModal(row)}>
+              {row.servicemanSplit.map(e => e.name).join(', ')}
+            </Tag>
+          </Tooltip>
+          <Button
+            type="text"
+            size="small"
+            style={{ padding: '0 4px', fontSize: 11, color: 'var(--color-text-secondary)' }}
+            onClick={() => cancelSplit(row.serviceId)}
+          >
+            ✕
+          </Button>
+        </div>
+      );
+    }
+    return (
+      <Select
+        size="small"
+        style={{ width: '100%' }}
+        value={row.servicemanName || data.serviceman || undefined}
+        placeholder="Сотрудник"
+        onChange={(v?: string) => updateItemServiceman(row.serviceId, v ?? null)}
+        options={employeeOptions}
+        optionFilterProp="label"
+        showSearch
+        popupMatchSelectWidth={false}
+        allowClear
+      />
+    );
+  };
 
   const getPrepayTag = (row: SelectedService) => {
     const paid = row.prepaidAmount || 0;
@@ -145,7 +282,10 @@ export const Step2Services: React.FC<Props> = ({ data, onChange, prepaymentLocke
       key: 'name',
       render: (name: string, row: SelectedService) => (
         <div>
-          <div style={{ fontWeight: 500 }}>{name}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontWeight: 500 }}>{name}</span>
+            {splitButton(row)}
+          </div>
           <Tag style={{ fontSize: 11, marginTop: 2 }}>{row.categoryName}</Tag>
           {getPrepayTag(row)}
           {row.hasEquipment && (
@@ -160,6 +300,7 @@ export const Step2Services: React.FC<Props> = ({ data, onChange, prepaymentLocke
               options={equipmentOptions}
               optionFilterProp="label"
               showSearch
+              popupMatchSelectWidth={false}
             />
           )}
         </div>
@@ -206,11 +347,17 @@ export const Step2Services: React.FC<Props> = ({ data, onChange, prepaymentLocke
     {
       title: 'Итого',
       key: 'total',
-      width: 110,
+      width: 100,
       render: (_: unknown, row: SelectedService) => (
         <span style={{ fontWeight: 600 }}>{formatPrice(row.price * row.quantity)}</span>
       ),
     },
+    ...(hasEmployees ? [{
+      title: 'Сотрудник',
+      key: 'serviceman',
+      width: 150,
+      render: (_: unknown, row: SelectedService) => servicemanControl(row),
+    }] : []),
     {
       title: '',
       key: 'prepay',
@@ -302,6 +449,7 @@ export const Step2Services: React.FC<Props> = ({ data, onChange, prepaymentLocke
                     <div className={styles.mobileCardCategory}>{row.categoryName}</div>
                     {getPrepayTag(row)}
                   </div>
+                  {splitButton(row)}
                   <Space size={4}>
                     {!prepaymentLocked && (
                       <Button
@@ -333,6 +481,12 @@ export const Step2Services: React.FC<Props> = ({ data, onChange, prepaymentLocke
                     options={equipmentOptions}
                     showSearch
                   />
+                )}
+                {hasEmployees && (
+                  <div className={styles.mobileCardServiceman}>
+                    <span className={styles.mobileCardLabel}>Сотрудник:</span>
+                    <div className={styles.mobileCardServicemanValue}>{servicemanControl(row)}</div>
+                  </div>
                 )}
                 <div className={styles.mobileCardControls}>
                   <span className={styles.mobileCardLabel}>Кол-во:</span>
@@ -390,6 +544,68 @@ export const Step2Services: React.FC<Props> = ({ data, onChange, prepaymentLocke
           footer={() => footerTotals}
         />
       )}
+
+      <Modal
+        open={!!splitServiceId}
+        onCancel={() => setSplitServiceId(null)}
+        title={splitService ? `Разделить: ${splitService.serviceName}` : 'Разделить между сотрудниками'}
+        width={480}
+        footer={null}
+        destroyOnHidden
+      >
+        {splitService && (
+          <div style={{ marginBottom: 12, color: 'var(--color-text-secondary)', fontSize: 13 }}>
+            Чистая прибыль по услуге:{' '}
+            <strong style={{ color: 'var(--color-success)' }}>{formatPrice(itemNetProfit(splitService))}</strong>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {splitEntries.map((entry, idx) => (
+            <div key={idx} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <Select
+                style={{ flex: 1 }}
+                placeholder="Сотрудник"
+                value={entry.name || undefined}
+                onChange={v => setSplitEntries(prev => prev.map((e, i) => i === idx ? { ...e, name: v } : e))}
+                options={employeeOptions}
+                optionFilterProp="label"
+                showSearch
+              />
+              <InputNumber
+                style={{ width: 130 }}
+                placeholder="Сумма"
+                min={0}
+                value={entry.amount || undefined}
+                onChange={v => setSplitEntries(prev => prev.map((e, i) => i === idx ? { ...e, amount: v ?? 0 } : e))}
+                suffix="BYN"
+              />
+              {splitEntries.length > 2 && (
+                <Button
+                  type="text"
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={() => setSplitEntries(prev => prev.filter((_, i) => i !== idx))}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+
+        <Button
+          type="dashed"
+          icon={<PlusOutlined />}
+          onClick={() => setSplitEntries(prev => [...prev, { name: '', amount: 0 }])}
+          style={{ width: '100%', marginTop: 12 }}
+        >
+          Добавить сотрудника
+        </Button>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+          <Button onClick={() => setSplitServiceId(null)}>Отмена</Button>
+          <Button type="primary" onClick={saveSplit}>Сохранить</Button>
+        </div>
+      </Modal>
 
       <Modal
         title="Предоплата"

@@ -76,6 +76,9 @@ function recordToFormData(record: CrmRecord): RecordFormData {
       equipmentId: item.equipmentId ?? undefined,
       prepaidAmount: item.prepaidAmount ?? 0,
       prepaidByCard: item.prepaidByCard ?? false,
+      isProduct: item.service.isProduct ?? false,
+      servicemanName: item.servicemanName ?? undefined,
+      servicemanSplit: item.servicemanSplit?.length ? item.servicemanSplit : undefined,
     })),
   };
 }
@@ -147,6 +150,19 @@ export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initial
     if (validateStep()) setStep(s => s + 1);
   };
 
+  // Назначения сотрудников отправляем только если они заданы: если оба поля
+  // опустить, сервер сохранит то, что было у позиции раньше, а при закрытии
+  // сделки подставится основной мастер записи (шаг 1).
+  const servicemanAssignment = (s: RecordFormData['services'][number]) => {
+    if (s.servicemanSplit?.length) {
+      return { servicemanName: null, servicemanSplit: s.servicemanSplit };
+    }
+    if (s.servicemanName !== undefined || s.servicemanSplit !== undefined) {
+      return { servicemanName: s.servicemanName ?? null, servicemanSplit: null };
+    }
+    return {};
+  };
+
   const buildPayload = (clientId: string) => {
     const [hours, minutes] = data.time.split(':').map(Number);
     const scheduledAt = new Date(data.date);
@@ -199,6 +215,7 @@ export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initial
         equipmentId: s.equipmentId,
         prepaidAmount: s.prepaidAmount || 0,
         prepaidByCard: s.prepaidByCard || false,
+        ...servicemanAssignment(s),
       })),
     };
   };

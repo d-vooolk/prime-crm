@@ -60,3 +60,15 @@
   color: var(--color-text-primary);
   white-space: nowrap;
 }
+
+.mobileCardServiceman {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.mobileCardServicemanValue {
+  flex: 1;
+  min-width: 0;
+}

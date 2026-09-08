@@ -59,7 +59,7 @@ export interface CreateRecordDto {
     price: number;
     quantity: number;
     netProfit?: number;
-    servicemanName?: string;
+    servicemanName?: string | null;
     equipmentId?: string;
     servicemanSplit?: Array<{ name: string; amount: number }> | null;
     prepaidAmount?: number;

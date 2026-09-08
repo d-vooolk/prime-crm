@@ -1,3 +1,5 @@
+import { ServicemanSplitEntry } from '@/types';
+
 export interface SelectedService {
   serviceId: string;
   serviceName: string;
@@ -9,6 +11,15 @@ export interface SelectedService {
   equipmentId?: string;
   prepaidAmount?: number;
   prepaidByCard?: boolean;
+  isProduct?: boolean;
+  /**
+   * Кто выполнял услугу.
+   * undefined — не задано, подставляется основной мастер записи (шаг 1);
+   * null — назначение снято; строка — выбран конкретный сотрудник.
+   */
+  servicemanName?: string | null;
+  /** Работа разделена между сотрудниками; при этом servicemanName не используется */
+  servicemanSplit?: ServicemanSplitEntry[] | null;
 }
 
 export interface RecordFormData {

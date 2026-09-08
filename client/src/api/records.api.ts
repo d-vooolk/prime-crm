@@ -65,7 +65,7 @@ export interface CreateRecordDto {
   executorSignatoryPosition?: string;
   executorSignatoryPositionGenitive?: string;
   executorSignatoryBasis?: string;
-  items: Array<{ serviceId: string; price: number; quantity: number; netProfit?: number; servicemanName?: string; equipmentId?: string; servicemanSplit?: Array<{ name: string; amount: number }> | null; prepaidAmount?: number; prepaidByCard?: boolean }>;
+  items: Array<{ serviceId: string; price: number; quantity: number; netProfit?: number; servicemanName?: string | null; equipmentId?: string; servicemanSplit?: Array<{ name: string; amount: number }> | null; prepaidAmount?: number; prepaidByCard?: boolean }>;
 }
 
 export interface CloseDealDto {
