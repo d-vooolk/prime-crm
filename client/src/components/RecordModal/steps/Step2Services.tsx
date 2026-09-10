@@ -282,10 +282,7 @@ export const Step2Services: React.FC<Props> = ({ data, onChange, prepaymentLocke
       key: 'name',
       render: (name: string, row: SelectedService) => (
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ fontWeight: 500 }}>{name}</span>
-            {splitButton(row)}
-          </div>
+          <div style={{ fontWeight: 500 }}>{name}</div>
           <Tag style={{ fontSize: 11, marginTop: 2 }}>{row.categoryName}</Tag>
           {getPrepayTag(row)}
           {row.hasEquipment && (
@@ -347,17 +344,11 @@ export const Step2Services: React.FC<Props> = ({ data, onChange, prepaymentLocke
     {
       title: 'Итого',
       key: 'total',
-      width: 100,
+      width: 110,
       render: (_: unknown, row: SelectedService) => (
         <span style={{ fontWeight: 600 }}>{formatPrice(row.price * row.quantity)}</span>
       ),
     },
-    ...(hasEmployees ? [{
-      title: 'Сотрудник',
-      key: 'serviceman',
-      width: 150,
-      render: (_: unknown, row: SelectedService) => servicemanControl(row),
-    }] : []),
     {
       title: '',
       key: 'prepay',
@@ -536,12 +527,28 @@ export const Step2Services: React.FC<Props> = ({ data, onChange, prepaymentLocke
         </>
       ) : (
         <Table
+          className={styles.servicesTable}
           dataSource={data.services}
           columns={columns}
           rowKey="serviceId"
           pagination={false}
           size="small"
           footer={() => footerTotals}
+          expandable={{
+            // Выбор сотрудника — отдельной строкой под услугой, всегда раскрыт.
+            // У товаров назначения нет, поэтому строку им не показываем.
+            showExpandColumn: false,
+            expandedRowKeys: hasEmployees
+              ? data.services.filter(s => !s.isProduct).map(s => s.serviceId)
+              : [],
+            expandedRowRender: (row: SelectedService) => (
+              <div className={styles.servicemanRow}>
+                <span className={styles.servicemanLabel}>Сотрудник:</span>
+                <div className={styles.servicemanControl}>{servicemanControl(row)}</div>
+                {splitButton(row)}
+              </div>
+            ),
+          }}
         />
       )}
 

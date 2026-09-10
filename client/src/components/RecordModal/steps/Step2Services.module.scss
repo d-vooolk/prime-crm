@@ -72,3 +72,37 @@
   flex: 1;
   min-width: 0;
 }
+
+// ─── Десктоп: строка выбора сотрудника под услугой ──
+.servicesTable {
+  // Строка сотрудника — продолжение строки услуги: без своего фона,
+  // без разделителя между ними и с уменьшенным верхним отступом.
+  :global(.ant-table-tbody > tr.ant-table-expanded-row > td) {
+    background: transparent;
+    padding: 0 8px 8px;
+  }
+
+  :global(.ant-table-tbody > tr.ant-table-expanded-row:hover > td) {
+    background: transparent;
+  }
+
+  :global(.ant-table-tbody > tr.ant-table-row:has(+ tr.ant-table-expanded-row) > td) {
+    border-bottom: none;
+  }
+}
+
+.servicemanRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.servicemanLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.servicemanControl {
+  width: 240px;
+}
