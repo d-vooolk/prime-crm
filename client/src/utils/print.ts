@@ -586,12 +586,12 @@ export function printServiceContract(record: Record, settings?: CompanySettings)
       <div class="section-title">5. Реквизиты и подписи сторон</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:8px">
         <div class="req-block">
-          <strong>Заказчик:</strong><br>
-          ${customerBlock}
-        </div>
-        <div class="req-block">
           <strong>Исполнитель:</strong><br>
           ${executorBlock}
+        </div>
+        <div class="req-block">
+          <strong>Заказчик:</strong><br>
+          ${customerBlock}
         </div>
       </div>
 
