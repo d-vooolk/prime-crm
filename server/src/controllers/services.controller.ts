@@ -12,6 +12,21 @@ function getLevel(role?: string | null): number {
   if (!role) return 99;
   return ROLE_LEVEL[role] ?? 99;
 }
+/**
+ * ФИО сотрудника — уникальное поле в БД (по нему считается зарплата), поэтому
+ * тёзку нельзя создать, даже если существующий уволен или это мастер приёмщик.
+ */
+async function assertNameIsFree(name: string, excludeId?: string) {
+  const existing = await prisma.serviceman.findUnique({ where: { name } });
+  if (!existing || existing.id === excludeId) return;
+  const who = existing.isDismissed
+    ? 'он в списке уволенных'
+    : existing.isReceptionist
+      ? 'он добавлен как мастер приёмщик'
+      : 'он уже в списке сотрудников';
+  throw new AppError(`Сотрудник «${name}» уже существует: ${who}. Укажите другое ФИО.`, 409);
+}
+
 function requesterLevel(req: Request): number {
   const user = (req as Request & { user?: AuthPayload }).user;
   if (!user) return 0;
@@ -160,12 +175,15 @@ export const servicemanController = {
 
   async create(req: Request, res: Response, next: NextFunction) {
     try {
-      const { name, position, role, email, password, photoUrl, isReceptionist, birthday, profitPercent } = req.body;
+      const { position, role, email, password, photoUrl, isReceptionist, birthday, profitPercent } = req.body;
+      const name = String(req.body.name ?? '').trim();
+      if (!name) throw new AppError('Укажите ФИО сотрудника', 400);
       const myLevel = requesterLevel(req);
       if (myLevel !== 0 && getLevel(role) < myLevel) {
         res.status(403).json({ message: 'Нельзя назначить роль выше вашего уровня' });
         return;
       }
+      await assertNameIsFree(name);
       const hashed = password ? await bcrypt.hash(password, 10) : undefined;
       const s = await prisma.serviceman.create({
         data: {
@@ -183,7 +201,9 @@ export const servicemanController = {
 
   async update(req: Request, res: Response, next: NextFunction) {
     try {
-      const { name, position, role, email, password, photoUrl, isReceptionist, profitPercent, birthday } = req.body;
+      const { position, role, email, password, photoUrl, isReceptionist, profitPercent, birthday } = req.body;
+      const name = req.body.name !== undefined ? String(req.body.name).trim() : undefined;
+      if (name === '') throw new AppError('Укажите ФИО сотрудника', 400);
       const myLevel = requesterLevel(req);
       const existing = await prisma.serviceman.findUnique({ where: { id: String(req.params.id) } });
       if (!existing) { res.status(404).json({ message: 'Сотрудник не найден' }); return; }
@@ -195,6 +215,7 @@ export const servicemanController = {
         res.status(403).json({ message: 'Нельзя назначить роль выше вашего уровня' });
         return;
       }
+      if (name !== undefined) await assertNameIsFree(name, existing.id);
       const hashed = password ? await bcrypt.hash(password, 10) : undefined;
       const s = await prisma.serviceman.update({
         where: { id: String(req.params.id) },

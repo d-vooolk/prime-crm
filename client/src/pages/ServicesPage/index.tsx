@@ -215,8 +215,8 @@ export const ServicesPage: React.FC = () => {
       setServicemanModal({ open: false });
       servicemanForm.resetFields();
       fetchAll();
-    } catch {
-      message.error('Ошибка сохранения');
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : 'Ошибка сохранения');
     }
   };
 
