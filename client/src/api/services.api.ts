@@ -53,6 +53,9 @@ export const servicesApi = {
   dismissServiceman: (id: string) =>
     http.post<{ data: Serviceman }>(`/services/servicemen/${id}/dismiss`).then(r => r.data.data),
 
+  restoreServiceman: (id: string) =>
+    http.post<{ data: Serviceman }>(`/services/servicemen/${id}/restore`).then(r => r.data.data),
+
   setDefaultReceptionist: (id: string) =>
     http.post<{ data: Serviceman }>(`/services/servicemen/${id}/set-default`).then(r => r.data.data),
 

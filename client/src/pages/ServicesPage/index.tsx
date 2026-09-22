@@ -6,7 +6,7 @@ import {
 } from 'antd';
 import {
   PlusOutlined, EditOutlined, DeleteOutlined,
-  StopOutlined, UserOutlined, BgColorsOutlined, PercentageOutlined,
+  StopOutlined, UndoOutlined, UserOutlined, BgColorsOutlined, PercentageOutlined,
 } from '@ant-design/icons';
 import { servicesApi } from '@/api/services.api';
 import { useAuthStore } from '@/store/authStore';
@@ -230,6 +230,16 @@ export const ServicesPage: React.FC = () => {
     }
   };
 
+  const handleRestore = async (id: string) => {
+    try {
+      await servicesApi.restoreServiceman(id);
+      message.success('Сотрудник восстановлен');
+      fetchAll();
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : 'Ошибка');
+    }
+  };
+
   const handleSetDefault = async (id: string) => {
     try {
       await servicesApi.setDefaultReceptionist(id);
@@ -302,6 +312,21 @@ export const ServicesPage: React.FC = () => {
     );
   };
 
+  const servicemanRestoreAction = (row: Serviceman) => {
+    if (!canEditServiceman(row)) return null;
+    return (
+      <Popconfirm
+        title="Восстановить сотрудника?"
+        description="Вернётся в активный список со всей историей по зарплате"
+        onConfirm={() => handleRestore(row.id)}
+        okText="Восстановить"
+        cancelText="Отмена"
+      >
+        <Button size="small" icon={<UndoOutlined />}>Восстановить</Button>
+      </Popconfirm>
+    );
+  };
+
   const birthdayInfo = (row: Serviceman) => {
     if (!row.birthday) return null;
     const bd = dayjs(row.birthday);
@@ -331,7 +356,9 @@ export const ServicesPage: React.FC = () => {
                   </div>
                   {row.position && <div className={styles.mobileCardSub}>{row.position}</div>}
                 </div>
-                {!isDismissedList && servicemanActions(row, isReceptionist)}
+                {isDismissedList
+                  ? servicemanRestoreAction(row)
+                  : servicemanActions(row, isReceptionist)}
               </div>
               <div className={styles.mobileCardMeta}>
                 {!isReceptionist && row.role === 'Сотрудник' && row.profitPercent > 0 && (
@@ -409,9 +436,9 @@ export const ServicesPage: React.FC = () => {
       ),
     } : { title: '', key: 'empty', width: 0, render: () => null },
     {
-      title: '', key: 'actions', width: isDismissedList ? 0 : 120,
+      title: '', key: 'actions', width: isDismissedList ? 150 : 120,
       render: isDismissedList
-        ? () => null
+        ? (_: unknown, row: Serviceman) => servicemanRestoreAction(row)
         : (_: unknown, row: Serviceman) => servicemanActions(row, isReceptionist),
     },
   ];

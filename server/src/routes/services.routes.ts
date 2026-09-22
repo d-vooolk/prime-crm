@@ -45,6 +45,7 @@ router.get('/servicemen/all', servicemanController.getAllIncludingDismissed);
 router.post('/servicemen', servicemanController.create);
 router.patch('/servicemen/:id', servicemanController.update);
 router.post('/servicemen/:id/dismiss', servicemanController.dismiss);
+router.post('/servicemen/:id/restore', servicemanController.restore);
 router.post('/servicemen/:id/set-default', servicemanController.setDefault);
 router.delete('/servicemen/:id', servicemanController.delete);
 

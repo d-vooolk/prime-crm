@@ -19,11 +19,13 @@ function getLevel(role?: string | null): number {
 async function assertNameIsFree(name: string, excludeId?: string) {
   const existing = await prisma.serviceman.findUnique({ where: { name } });
   if (!existing || existing.id === excludeId) return;
-  const who = existing.isDismissed
-    ? 'он в списке уволенных'
-    : existing.isReceptionist
-      ? 'он добавлен как мастер приёмщик'
-      : 'он уже в списке сотрудников';
+  if (existing.isDismissed) {
+    throw new AppError(
+      `Сотрудник «${name}» уже есть в списке уволенных. Восстановите его в разделе «Уволенные» — вся история по зарплате сохранится.`,
+      409
+    );
+  }
+  const who = existing.isReceptionist ? 'он добавлен как мастер приёмщик' : 'он уже в списке сотрудников';
   throw new AppError(`Сотрудник «${name}» уже существует: ${who}. Укажите другое ФИО.`, 409);
 }
 
@@ -243,6 +245,25 @@ export const servicemanController = {
       const s = await prisma.serviceman.update({
         where: { id: String(req.params.id) },
         data: { isDismissed: true, isDefault: false },
+      });
+      res.json({ data: s });
+    } catch (e) { next(e); }
+  },
+
+  // Восстановление возвращает ту же запись, а не создаёт новую: история зарплат
+  // и корректировок привязана к ФИО, поэтому дубль сотрудника недопустим.
+  async restore(req: Request, res: Response, next: NextFunction) {
+    try {
+      const myLevel = requesterLevel(req);
+      const existing = await prisma.serviceman.findUnique({ where: { id: String(req.params.id) } });
+      if (!existing) { res.status(404).json({ message: 'Сотрудник не найден' }); return; }
+      if (myLevel !== 0 && getLevel(existing.role) < myLevel) {
+        res.status(403).json({ message: 'Недостаточно прав для восстановления этого сотрудника' });
+        return;
+      }
+      const s = await prisma.serviceman.update({
+        where: { id: String(req.params.id) },
+        data: { isDismissed: false },
       });
       res.json({ data: s });
     } catch (e) { next(e); }
