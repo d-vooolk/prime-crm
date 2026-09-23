@@ -55,7 +55,13 @@ export const accountingApi = {
   getBalance: () =>
     http.get<{ data: { balance: number } }>('/accounting/balance').then(r => r.data.data.balance),
 
-  createExpense: (data: { date: string; description: string; amount: number; person: string }) =>
+  createExpense: (data: {
+    date: string;
+    description: string;
+    amount: number;
+    person: string;
+    founderSalary?: { year: number; month: number; person: string };
+  }) =>
     http.post<{ data: CashTransaction }>('/accounting/expense', data).then(r => r.data.data),
 
   createManualIncome: (data: { date: string; description: string; amount: number; person: string }) =>
@@ -105,9 +111,6 @@ export const accountingApi = {
 
   getFounderSalaries: () =>
     http.get<{ data: FounderSalaryRecord[] }>('/accounting/founder-salaries').then(r => r.data.data),
-
-  createFounderSalary: (data: { year: number; month: number; person: string; amount: number }) =>
-    http.post<{ data: FounderSalaryRecord }>('/accounting/founder-salaries', data).then(r => r.data.data),
 
   getDebts: (archived: boolean) =>
     http.get<{ data: Debt[] }>('/accounting/debts', { params: { archived } }).then(r => r.data.data),
@@ -181,5 +184,6 @@ export interface FounderSalaryRecord {
   month: number;
   person: string;
   amount: number;
+  cashTransactionId: string | null;
   createdAt: string;
 }

@@ -13,6 +13,7 @@ import { errorHandler } from './middleware/errorHandler';
 import { smsService } from './services/sms.service';
 import { syncCarCatalogIfNeeded } from './bootstrap/carCatalog';
 import { importLegacyWikiIfPresent } from './bootstrap/wikiLegacyImport';
+import { linkFounderSalariesToCash } from './bootstrap/founderSalaryLinks';
 import { UPLOADS_DIR, ensureUploadDirs } from './utils/uploads';
 
 const app = express();
@@ -43,6 +44,7 @@ app.listen(PORT, async () => {
   await syncCarCatalogIfNeeded();
   // После справочника: импорт сверяет карточки старой вики с марками и поколениями
   await importLegacyWikiIfPresent();
+  await linkFounderSalariesToCash();
 });
 
 // Проверка напоминаний каждые 5 минут

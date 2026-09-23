@@ -15,8 +15,16 @@ export const accountingController = {
   },
 
   async createExpense(req: Request, res: Response) {
-    const { date, description, amount, person } = req.body;
-    const tx = await accountingService.createExpense({ date, description, amount, person });
+    const { date, description, amount, person, founderSalary } = req.body;
+    const tx = await accountingService.createExpense({
+      date,
+      description,
+      amount,
+      person,
+      founderSalary: founderSalary
+        ? { year: Number(founderSalary.year), month: Number(founderSalary.month), person: founderSalary.person }
+        : undefined,
+    });
     res.status(201).json({ data: tx });
   },
 
@@ -107,12 +115,6 @@ export const accountingController = {
     const id = String(req.params.id);
     await accountingService.deleteAdjustment(id);
     res.status(204).end();
-  },
-
-  async createFounderSalary(req: Request, res: Response) {
-    const { year, month, person, amount } = req.body;
-    const record = await accountingService.createFounderSalary({ year: Number(year), month: Number(month), person, amount: Number(amount) });
-    res.status(201).json({ data: record });
   },
 
   async getFounderSalaries(_req: Request, res: Response) {

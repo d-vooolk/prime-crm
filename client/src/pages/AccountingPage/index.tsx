@@ -17,6 +17,10 @@ import { averageAnnualSalary, effectiveSalaryMonth } from '@/utils/salary';
 import { useAuthStore } from '@/store/authStore';
 import styles from './AccountingPage.module.scss';
 
+const FOUNDER_SALARY_PREFIX = 'ЗП учредителя';
+const isFounderSalaryDescription = (description?: string | null) =>
+  !!description && description.trim().toLowerCase().startsWith(FOUNDER_SALARY_PREFIX.toLowerCase());
+
 const MANAGER_ROLES = ['Создатель', 'Директор', 'Менеджер'];
 const DIRECTOR_ROLES = ['Создатель', 'Директор'];
 const CREATOR_ROLES = ['Создатель'];
@@ -276,9 +280,16 @@ export const AccountingPage: React.FC = () => {
     if (withdrawalOpen) withdrawalForm.setFieldsValue({ date: dayjs(), currency: 'BYN', person: defaultPerson });
   }, [withdrawalOpen, defaultPerson]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Расход «ЗП учредителя …» можно создать только свитчем, иначе он не попадёт в таблицу учредителей
+  const founderDescriptionRule = {
+    validator: (_: unknown, value?: string) => (isFounderSalaryDescription(value)
+      ? Promise.reject(new Error('Для ЗП учредителя включите свитч «ЗП учредителей»'))
+      : Promise.resolve()),
+  };
+
   const handleFounderPersonChange = (name: string) => {
     setFounderPerson(name);
-    expenseForm.setFieldsValue({ description: `ЗП учредителя ${name}` });
+    expenseForm.setFieldsValue({ description: `${FOUNDER_SALARY_PREFIX} ${name}` });
   };
 
   const handleCreateExpense = async () => {
@@ -286,21 +297,21 @@ export const AccountingPage: React.FC = () => {
     if (!values) return;
     setSaving(true);
     try {
+      if (isFounderSalary && !founderPerson) {
+        message.error('Выберите учредителя');
+        return;
+      }
+      const founderMonth = values.founderMonth as Dayjs | undefined;
       await accountingApi.createExpense({
         date: values.date.toISOString(),
         description: values.description,
         amount: values.amount,
         person: values.person,
+        founderSalary: isFounderSalary && founderMonth
+          ? { year: founderMonth.year(), month: founderMonth.month() + 1, person: founderPerson }
+          : undefined,
       });
-      if (isFounderSalary && founderPerson && values.founderMonth) {
-        await accountingApi.createFounderSalary({
-          year: (values.founderMonth as import('dayjs').Dayjs).year(),
-          month: (values.founderMonth as import('dayjs').Dayjs).month() + 1,
-          person: founderPerson,
-          amount: values.amount,
-        });
-        loadFounderSalaries();
-      }
+      if (isFounderSalary) loadFounderSalaries();
       message.success('Расход добавлен');
       setExpenseOpen(false);
       expenseForm.resetFields();
@@ -396,6 +407,7 @@ export const AccountingPage: React.FC = () => {
       editForm.resetFields();
       setEditingTx(null);
       loadCash();
+      loadFounderSalaries();
     } catch { message.error('Ошибка'); }
     finally { setSaving(false); }
   };
@@ -405,6 +417,7 @@ export const AccountingPage: React.FC = () => {
       await accountingApi.deleteCashTransaction(id);
       message.success('Запись удалена');
       loadCash();
+      loadFounderSalaries();
     } catch { message.error('Ошибка при удалении'); }
   };
 
@@ -1629,8 +1642,12 @@ export const AccountingPage: React.FC = () => {
             <InputNumber min={0} style={{ width: '100%' }} precision={2} parser={(v) => parseFloat((v ?? '').replace(/,/g, '.')) || 0} />
           </Form.Item>
           {editingTx && (editingTx.type === 'EXPENSE' || editingTx.type === 'MANUAL_INCOME') && (
-            <Form.Item label={editingTx.type === 'EXPENSE' ? 'Цель изъятия' : 'Источник'} name="description">
-              <Input />
+            <Form.Item
+              label={editingTx.type === 'EXPENSE' ? 'Цель изъятия' : 'Источник'}
+              name="description"
+              rules={isFounderSalaryDescription(editingTx.description) ? [] : [founderDescriptionRule]}
+            >
+              <Input readOnly={isFounderSalaryDescription(editingTx.description)} />
             </Form.Item>
           )}
           {editingTx?.type === 'EXPENSE' && (
@@ -1674,7 +1691,11 @@ export const AccountingPage: React.FC = () => {
               />
             </Form.Item>
           )}
-          <Form.Item label="Цель изъятия" name="description" rules={[{ required: true, message: 'Укажите цель' }]}>
+          <Form.Item
+            label="Цель изъятия"
+            name="description"
+            rules={[{ required: true, message: 'Укажите цель' }, ...(isFounderSalary ? [] : [founderDescriptionRule])]}
+          >
             <Input
               placeholder={isFounderSalary ? '' : 'Например: закупка расходников'}
               readOnly={isFounderSalary}

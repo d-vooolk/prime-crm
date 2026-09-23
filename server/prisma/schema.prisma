@@ -265,6 +265,7 @@ model CashTransaction {
   isPrepayment Boolean             @default(false)
   createdAt    DateTime            @default(now())
   debtPayment  DebtPayment?
+  founderSalary FounderSalary?
 }
 
 enum CapitalTransactionType {
@@ -278,12 +279,16 @@ enum SalaryAdjustmentType {
 }
 
 model FounderSalary {
-  id        String   @id @default(cuid())
-  year      Int
-  month     Int
-  person    String
-  amount    Float
-  createdAt DateTime @default(now())
+  id                String           @id @default(cuid())
+  year              Int
+  month             Int
+  person            String
+  amount            Float
+  createdAt         DateTime         @default(now())
+  // Расход в кассе, которым выдана эта ЗП. Сумма синхронизируется при правке расхода,
+  // при удалении расхода запись удаляется вместе с ним
+  cashTransactionId String?          @unique
+  cashTransaction   CashTransaction? @relation(fields: [cashTransactionId], references: [id], onDelete: Cascade)
 }
 
 model SalaryAdjustment {

@@ -22,7 +22,6 @@ router.delete('/cash/:id', accountingController.deleteCashTransaction);
 router.post('/salary-adjustments', accountingController.createAdjustment);
 router.delete('/salary-adjustments/:id', accountingController.deleteAdjustment);
 router.get('/founder-salaries', accountingController.getFounderSalaries);
-router.post('/founder-salaries', accountingController.createFounderSalary);
 router.get('/debts', accountingController.getDebts);
 router.post('/debts', accountingController.createDebt);
 router.patch('/debts/:id', accountingController.updateDebt);

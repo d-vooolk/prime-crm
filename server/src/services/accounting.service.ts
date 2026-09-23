@@ -42,6 +42,16 @@ export interface SalaryData {
   adjustedTotal: number;
 }
 
+// Описание расхода-ЗП учредителя. Такие расходы создаются только через свитч
+// «ЗП учредителей», иначе сумма не попадёт в таблицу учредителей
+export const FOUNDER_SALARY_PREFIX = 'ЗП учредителя';
+
+const isFounderSalaryDescription = (description?: string | null) =>
+  !!description && description.trim().toLowerCase().startsWith(FOUNDER_SALARY_PREFIX.toLowerCase());
+
+const FOUNDER_SALARY_MANUAL_ERROR =
+  `Описание «${FOUNDER_SALARY_PREFIX} …» зарезервировано: включите свитч «ЗП учредителей»`;
+
 export const accountingService = {
   async getCashForMonth(year: number, month: number) {
     const from = new Date(year, month - 1, 1);
@@ -67,9 +77,36 @@ export const accountingService = {
     }, 0);
   },
 
-  async createExpense(data: { date: string; description: string; amount: number; person: string }) {
+  async createExpense(data: {
+    date: string;
+    description: string;
+    amount: number;
+    person: string;
+    founderSalary?: { year: number; month: number; person: string };
+  }) {
+    const { founderSalary } = data;
+    if (!founderSalary && isFounderSalaryDescription(data.description)) {
+      throw new AppError(FOUNDER_SALARY_MANUAL_ERROR, 400);
+    }
+    if (founderSalary) {
+      if (!founderSalary.person) throw new AppError('Выберите учредителя', 400);
+      if (!Number.isInteger(founderSalary.year) || !Number.isInteger(founderSalary.month)
+        || founderSalary.month < 1 || founderSalary.month > 12) {
+        throw new AppError('Некорректный месяц ЗП', 400);
+      }
+    }
+    // Расход и ЗП учредителя создаются одной записью: либо обе, либо ни одной
     return prisma.cashTransaction.create({
-      data: { type: 'EXPENSE', date: new Date(data.date), description: data.description, amount: data.amount, person: data.person },
+      data: {
+        type: 'EXPENSE',
+        date: new Date(data.date),
+        description: data.description,
+        amount: data.amount,
+        person: data.person,
+        ...(founderSalary && {
+          founderSalary: { create: { ...founderSalary, amount: data.amount } },
+        }),
+      },
     });
   },
 
@@ -423,10 +460,6 @@ export const accountingService = {
     return prisma.salaryAdjustment.delete({ where: { id } });
   },
 
-  async createFounderSalary(data: { year: number; month: number; person: string; amount: number }) {
-    return prisma.founderSalary.create({ data });
-  },
-
   async getFounderSalaries() {
     return prisma.founderSalary.findMany({ orderBy: [{ year: 'asc' }, { month: 'asc' }, { createdAt: 'asc' }] });
   },
@@ -445,17 +478,33 @@ export const accountingService = {
   },
 
   async updateCashTransaction(id: string, data: { date?: string; amount?: number; description?: string; person?: string }) {
-    return prisma.cashTransaction.update({
-      where: { id },
-      data: {
-        ...(data.date !== undefined && { date: new Date(data.date) }),
-        ...(data.amount !== undefined && { amount: data.amount }),
-        ...(data.description !== undefined && { description: data.description }),
-        ...(data.person !== undefined && { person: data.person }),
-      },
+    return prisma.$transaction(async (tx) => {
+      if (data.description !== undefined && isFounderSalaryDescription(data.description)) {
+        const current = await tx.cashTransaction.findUnique({ where: { id }, select: { description: true } });
+        if (!current) throw new AppError('Запись не найдена', 404);
+        // Уже существующее описание не мешает править сумму/дату, запрещено только вписать его заново
+        if (!isFounderSalaryDescription(current.description)) {
+          throw new AppError(FOUNDER_SALARY_MANUAL_ERROR, 400);
+        }
+      }
+      const updated = await tx.cashTransaction.update({
+        where: { id },
+        data: {
+          ...(data.date !== undefined && { date: new Date(data.date) }),
+          ...(data.amount !== undefined && { amount: data.amount }),
+          ...(data.description !== undefined && { description: data.description }),
+          ...(data.person !== undefined && { person: data.person }),
+        },
+      });
+      // ЗП учредителя должна совпадать с суммой расхода, которым она выдана
+      if (data.amount !== undefined) {
+        await tx.founderSalary.updateMany({ where: { cashTransactionId: id }, data: { amount: data.amount } });
+      }
+      return updated;
     });
   },
 
+  // Привязанная ЗП учредителя удаляется каскадом (onDelete: Cascade в схеме)
   async deleteCashTransaction(id: string) {
     return prisma.cashTransaction.delete({ where: { id } });
   },
