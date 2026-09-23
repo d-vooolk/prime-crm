@@ -17,6 +17,18 @@ interface Props {
   onChanged: () => void;
 }
 
+// Тот же предел, что на сервере (server/src/routes/wiki.routes.ts) и в nginx
+const MAX_FILE_SIZE_MB = 300;
+const MEDIA_EXT = /\.(jpe?g|png|gif|webp|bmp|heic|heif|mp4|mov|m4v|webm|avi|mkv|3gp)$/i;
+
+/** Проверяем до отправки, чтобы не гонять по сети файл, который сервер всё равно отклонит. */
+function validateFile(file: File): string | null {
+  const isMedia = file.type.startsWith('image/') || file.type.startsWith('video/') || MEDIA_EXT.test(file.name);
+  if (!isMedia) return 'можно загружать только фото и видео';
+  if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) return `файл больше ${MAX_FILE_SIZE_MB} МБ`;
+  return null;
+}
+
 interface UploadState {
   uid: string;
   name: string;
@@ -79,6 +91,11 @@ export const WikiCarCard: React.FC<Props> = ({ carKey, title, onChanged }) => {
   };
 
   const upload = async (file: File, uid: string) => {
+    const problem = validateFile(file);
+    if (problem) {
+      notify.error(`${file.name}: ${problem}`);
+      return;
+    }
     setUploads(list => [...list, { uid, name: file.name, percent: 0 }]);
     try {
       await wikiApi.uploadMedia(carKey, file, percent =>

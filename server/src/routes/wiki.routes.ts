@@ -1,10 +1,9 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import multer from 'multer';
-import path from 'path';
 import crypto from 'crypto';
 import { wikiController } from '../controllers/wiki.controller';
 import { AppError } from '../middleware/errorHandler';
-import { WIKI_MEDIA_DIR } from '../utils/uploads';
+import { WIKI_MEDIA_DIR, extOf, mediaKind, MIME_EXT } from '../utils/uploads';
 
 const MAX_FILE_SIZE_MB = 300;
 
@@ -12,14 +11,15 @@ const upload = multer({
   storage: multer.diskStorage({
     destination: WIKI_MEDIA_DIR,
     filename: (_req, file, cb) => {
-      const kind = file.mimetype.startsWith('video/') ? 'video' : 'photo';
-      const ext = path.extname(file.originalname).toLowerCase().replace(/[^.a-z0-9]/g, '');
+      const kind = mediaKind(file) ?? 'photo';
+      // Без расширения статика отдала бы файл без Content-Type, и браузер его не показал бы
+      const ext = extOf(file) || MIME_EXT[file.mimetype] || '';
       cb(null, `${kind}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}${ext}`);
     },
   }),
   limits: { fileSize: MAX_FILE_SIZE_MB * 1024 * 1024, files: 1 },
   fileFilter: (_req, file, cb) => {
-    if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) cb(null, true);
+    if (mediaKind(file)) cb(null, true);
     else cb(new AppError('Можно загружать только фото и видео', 400));
   },
 });

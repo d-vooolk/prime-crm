@@ -160,6 +160,21 @@ function currentSalaryMonth(now = new Date()) {
   return { year: date.getFullYear(), month: date.getMonth() + 1 };
 }
 
+/**
+ * Изменения вики выполняются строго по очереди. Когда выбирают сразу несколько файлов, запросы
+ * приходят параллельно: без очереди первые из них одновременно создавали бы карточку
+ * (конфликт уникального ключа) и заводили несколько правок на проверку вместо одной.
+ * Сами операции — пара коротких запросов к БД (файл к этому моменту уже на диске), так что
+ * общая очередь на один процесс сервера ничего не тормозит.
+ */
+let writeQueue: Promise<unknown> = Promise.resolve();
+
+function serialized<T>(fn: () => Promise<T>): Promise<T> {
+  const run = writeQueue.then(fn, fn);
+  writeQueue = run.catch(() => {});
+  return run;
+}
+
 export const wikiService = {
   async getEntry(key: WikiKey) {
     const entry = await prisma.wikiEntry.findUnique({
@@ -186,7 +201,11 @@ export const wikiService = {
       .map(({ content, _count, ...e }) => ({ ...e, mediaCount: _count.media, hasText: !!content.trim() }));
   },
 
-  async saveContent(key: WikiKey, content: string, user: AuthPayload) {
+  saveContent(key: WikiKey, content: string, user: AuthPayload) {
+    return serialized(() => this.saveContentUnsafe(key, content, user));
+  },
+
+  async saveContentUnsafe(key: WikiKey, content: string, user: AuthPayload) {
     const entry = await getOrCreateEntry(key);
     const normalized = content.replace(/\r\n/g, '\n');
     if (normalized !== entry.content) {
@@ -199,7 +218,11 @@ export const wikiService = {
     return this.getEntry(key);
   },
 
-  async addMedia(key: WikiKey, file: UploadedFile, user: AuthPayload) {
+  addMedia(key: WikiKey, file: UploadedFile, user: AuthPayload) {
+    return serialized(() => this.addMediaUnsafe(key, file, user));
+  },
+
+  async addMediaUnsafe(key: WikiKey, file: UploadedFile, user: AuthPayload) {
     let entry;
     try {
       entry = await getOrCreateEntry(key);
@@ -215,7 +238,11 @@ export const wikiService = {
     return { ...media, url: `${WIKI_MEDIA_URL}/${media.filename}` };
   },
 
-  async deleteMedia(mediaId: string, user: AuthPayload) {
+  deleteMedia(mediaId: string, user: AuthPayload) {
+    return serialized(() => this.deleteMediaUnsafe(mediaId, user));
+  },
+
+  async deleteMediaUnsafe(mediaId: string, user: AuthPayload) {
     const media = await prisma.wikiMedia.findUnique({ where: { id: mediaId } });
     if (!media) throw new AppError('Файл не найден', 404);
     await prisma.wikiMedia.delete({ where: { id: mediaId } });

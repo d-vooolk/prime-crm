@@ -25,7 +25,11 @@ http.interceptors.response.use(
       localStorage.removeItem('prime-crm-auth');
       window.location.href = '/login';
     }
-    const message = err.response?.data?.message || 'Ошибка сервера';
+    // 413 отдаёт nginx (HTML, без message), обрыв связи — вообще без ответа
+    const message = err.response?.data?.message
+      || (err.response?.status === 413 ? 'Файл слишком большой' : null)
+      || (!err.response ? 'Нет связи с сервером' : null)
+      || 'Ошибка сервера';
     return Promise.reject(new Error(message));
   }
 );

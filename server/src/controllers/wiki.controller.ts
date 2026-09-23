@@ -4,7 +4,7 @@ import path from 'path';
 import { z } from 'zod';
 import { AppError } from '../middleware/errorHandler';
 import { wikiService, isWikiReviewer, WikiKey } from '../services/wiki.service';
-import { decodeOriginalName } from '../utils/uploads';
+import { decodeOriginalName, mediaKind } from '../utils/uploads';
 
 const keySchema = z.object({
   markId: z.string().min(1),
@@ -53,7 +53,7 @@ export const wikiController = {
       filename: path.basename(file.filename),
       originalName: decodeOriginalName(file.originalname),
       size: file.size,
-      type: file.mimetype.startsWith('video/') ? 'VIDEO' : 'PHOTO',
+      type: mediaKind(file) === 'video' ? 'VIDEO' : 'PHOTO',
     }, req.user!);
     res.status(201).json({ data: media });
   },
