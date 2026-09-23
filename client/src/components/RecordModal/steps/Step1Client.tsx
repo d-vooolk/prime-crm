@@ -292,6 +292,7 @@ export const Step1Client: React.FC<Props> = ({ data, onChange }) => {
               <MaskedInput
                 mask="+375 (00) 000-00-00"
                 value={data.clientPhone}
+                inputMode="tel"
                 placeholder="+375 (29) 000-00-00"
               />
             </AutoComplete>
@@ -366,6 +367,7 @@ export const Step1Client: React.FC<Props> = ({ data, onChange }) => {
                   mask="+375 (00) 000-00-00"
                   value={data.legalPhone}
                   onChange={e => onChange({ legalPhone: e.target.value })}
+                  inputMode="tel"
                   placeholder="+375 (17) 000-00-00"
                 />
               </Form.Item>
