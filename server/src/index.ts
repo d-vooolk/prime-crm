@@ -12,6 +12,8 @@ import apiRouter from './routes/index';
 import { errorHandler } from './middleware/errorHandler';
 import { smsService } from './services/sms.service';
 import { syncCarCatalogIfNeeded } from './bootstrap/carCatalog';
+import { importLegacyWikiIfPresent } from './bootstrap/wikiLegacyImport';
+import { UPLOADS_DIR, ensureUploadDirs } from './utils/uploads';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -24,6 +26,11 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+ensureUploadDirs();
+// Загруженные файлы (фото и видео вики). Имена случайные, поэтому раздаются без авторизации —
+// иначе <img>/<video> не смогли бы их показать. Идёт через тот же /api/, что проксирует nginx.
+app.use('/api/uploads', express.static(UPLOADS_DIR, { maxAge: '30d', immutable: true, index: false }));
+
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 app.use('/api', apiRouter);
 
@@ -34,6 +41,8 @@ app.listen(PORT, async () => {
   // Справочник авто наполняется здесь, а не в deploy.sh: в прод-образе нет
   // ts-node, поэтому запустить скрипт из scripts/ внутри контейнера нельзя.
   await syncCarCatalogIfNeeded();
+  // После справочника: импорт сверяет карточки старой вики с марками и поколениями
+  await importLegacyWikiIfPresent();
 });
 
 // Проверка напоминаний каждые 5 минут

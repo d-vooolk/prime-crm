@@ -441,3 +441,81 @@ model CarGeneration {
   @@unique([modelId, externalId])
   @@index([source])
 }
+
+// --- Wiki по автомобилям ---
+// Карточка привязана к тем же внешним id донора, что и Car.brandId/modelId/generationId,
+// поэтому из записи на запись вики переходим без поиска по названиям.
+// Названия дублируются в карточке: справочник может обновиться, а подпись в списке правок должна остаться.
+model WikiEntry {
+  id             String         @id @default(cuid())
+  markId         String
+  modelId        String
+  generationId   String
+  markName       String
+  modelName      String
+  generationName String?
+  content        String         @default("")
+  legacyId       Int?           @unique // id карточки в старой вике (wiki.prime-auto.by)
+  updatedByName  String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  media          WikiMedia[]
+  revisions      WikiRevision[]
+
+  @@unique([markId, modelId, generationId])
+}
+
+enum WikiMediaType {
+  PHOTO
+  VIDEO
+}
+
+model WikiMedia {
+  id             String        @id @default(cuid())
+  entryId        String
+  type           WikiMediaType
+  filename       String        @unique // имя файла в UPLOADS_DIR/wiki
+  originalName   String
+  size           Int
+  uploadedByName String?
+  createdAt      DateTime      @default(now())
+  entry          WikiEntry     @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@index([entryId])
+}
+
+enum WikiRevisionStatus {
+  PENDING  // ждёт проверки
+  REVIEWED // просмотрено без премии
+  REWARDED // назначена премия
+}
+
+// Правка сотрудника. Пока правка не проверена, последующие сохранения того же автора
+// по той же карточке дописываются в неё: prevContent остаётся исходным, newContent обновляется.
+model WikiRevision {
+  id                 String             @id @default(cuid())
+  entryId            String
+  authorId           String
+  authorName         String
+  authorRole         String?
+  prevContent        String
+  newContent         String
+  addedMedia         Json?              // [{ id, type, filename, originalName }]
+  removedMedia       Json?              // [{ id, type, filename, originalName }]
+  status             WikiRevisionStatus @default(PENDING)
+  reviewedByName     String?
+  reviewedAt         DateTime?
+  bonusAmount        Float?
+  salaryAdjustmentId String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  entry              WikiEntry          @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([entryId])
+}
+
+model WikiSettings {
+  id          String @id @default(cuid())
+  bonusAmount Float  @default(0)
+}

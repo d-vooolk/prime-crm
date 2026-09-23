@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Modal, Button, Descriptions, Tag, Divider, Table, message,
   Popconfirm, InputNumber, Tooltip, Grid, Radio, Form,
@@ -7,7 +8,7 @@ const { useBreakpoint } = Grid;
 import {
   PrinterOutlined, CheckCircleOutlined, CloseCircleOutlined,
   DeleteOutlined, ReloadOutlined, CalendarOutlined,
-  CarOutlined, StarOutlined, HistoryOutlined,
+  CarOutlined, StarOutlined, HistoryOutlined, BookOutlined,
 } from '@ant-design/icons';
 import { Record as CrmRecord, DocumentTemplate, CompanySettings } from '@/types';
 import { formatPrice, formatDate, formatTime } from '@/utils/formatters';
@@ -38,6 +39,7 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
   const screens = useBreakpoint();
   const isMobile = !screens.md;
   const { user } = useAuthStore();
+  const navigate = useNavigate();
   const notify = useNotify();
   const isEmployee = user?.role === 'Сотрудник';
   const canDelete = user?.isMaster || user?.role === 'Создатель';
@@ -547,6 +549,22 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
             <Descriptions.Item label="Гос. номер">{r.car.plateNumber}</Descriptions.Item>
           )}
         </Descriptions>
+
+        {/* Wiki по автомобилю — доступна всем ролям. Без поколения открываем вики с выбранной моделью */}
+        <Button
+          type="link"
+          size="small"
+          icon={<BookOutlined />}
+          className={styles.historyButton}
+          onClick={() => {
+            const params = new URLSearchParams({ mark: r.car.brandId, model: r.car.modelId });
+            if (r.car.generationId) params.set('generation', r.car.generationId);
+            onClose();
+            navigate(`/wiki?${params}`);
+          }}
+        >
+          Wiki по автомобилю
+        </Button>
 
         <Divider orientation="left" style={{ fontSize: 13 }}>Запись</Divider>
         <Descriptions size="small" column={{ xs: 1, sm: 2 }}>

@@ -6,6 +6,7 @@ import carsRouter from './cars.routes';
 import authRouter from './auth.routes';
 import accountingRouter from './accounting.routes';
 import notesRouter from './notes.routes';
+import wikiRouter from './wiki.routes';
 import { authMiddleware } from '../middleware/auth.middleware';
 
 const router = Router();
@@ -20,5 +21,6 @@ router.use('/records', recordsRouter);
 router.use('/services', servicesRouter);
 router.use('/accounting', accountingRouter);
 router.use('/notes', notesRouter);
+router.use('/wiki', wikiRouter);
 
 export default router;

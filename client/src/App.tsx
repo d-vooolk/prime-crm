@@ -8,7 +8,7 @@ import { Layout } from '@/components/Layout';
 import { PrivateRoute } from '@/components/PrivateRoute';
 import { SchedulePage } from '@/pages/SchedulePage';
 import { DashboardPage } from '@/pages/DashboardPage';
-import { ServicesPage } from '@/pages/ServicesPage';
+import { WikiPage } from '@/pages/WikiPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { AccountingPage } from '@/pages/AccountingPage';
 import { NotesPage } from '@/pages/NotesPage';
@@ -47,8 +47,10 @@ const App: React.FC = () => {
               <Route index element={<Navigate to="/schedule" replace />} />
               <Route path="schedule" element={<SchedulePage />} />
               <Route path="dashboard" element={scheduleOnly ? <Navigate to="/schedule" replace /> : <DashboardPage />} />
-              <Route path="clients" element={<Navigate to="/services" replace />} />
-              <Route path="services" element={scheduleOnly ? <Navigate to="/schedule" replace /> : <ServicesPage />} />
+              {/* Справочник переехал во вкладку настроек */}
+              <Route path="clients" element={<Navigate to="/settings?tab=directory" replace />} />
+              <Route path="services" element={<Navigate to="/settings?tab=directory" replace />} />
+              <Route path="wiki" element={<WikiPage />} />
               <Route path="accounting" element={canSeeAccounting ? <AccountingPage /> : <Navigate to="/schedule" replace />} />
               <Route path="notes" element={canSeeNotes ? <NotesPage /> : <Navigate to="/schedule" replace />} />
               <Route path="settings" element={<SettingsPage />} />

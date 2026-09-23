@@ -4,12 +4,13 @@ import {
   Modal, Table, Tag, Select, Space, Popconfirm, Tabs, Alert, Typography, Divider,
 } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, LogoutOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { servicesApi } from '@/api/services.api';
 import { useUiStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/authStore';
 import { CompanySettings, DocumentTemplate, Category, SmsSettings, SmsConnectionInfo, AuthorizedPerson } from '@/types';
 import { CarCatalogEditor } from '@/components/CarCatalogEditor';
+import { ServicesPage } from '@/pages/ServicesPage';
 import styles from './SettingsPage.module.scss';
 
 const { Text } = Typography;
@@ -42,6 +43,7 @@ export const SettingsPage: React.FC = () => {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const isSotrudnik = user?.role === 'Сотрудник';
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const handleLogout = () => {
     logout();
@@ -624,6 +626,12 @@ export const SettingsPage: React.FC = () => {
       ),
     },
     {
+      // Бывшая страница «Справочник» со всеми её вкладками
+      key: 'directory',
+      label: 'Справочник',
+      children: <ServicesPage embedded />,
+    },
+    {
       key: 'carCatalog',
       label: 'Справочник авто',
       children: (
@@ -635,12 +643,19 @@ export const SettingsPage: React.FC = () => {
   ];
 
   const visibleTabItems = isSotrudnik ? tabItems.filter(t => t.key === 'basic') : tabItems;
+  // Вкладка — в адресе: на «Справочник» ведут старые ссылки /services и /clients
+  const requestedTab = searchParams.get('tab');
+  const activeTab = visibleTabItems.find(t => t.key === requestedTab)?.key ?? visibleTabItems[0].key;
 
   return (
     <div className={styles.page}>
       <h1 className={styles.title}>Настройки</h1>
 
-      <Tabs items={visibleTabItems} />
+      <Tabs
+        items={visibleTabItems}
+        activeKey={activeTab}
+        onChange={key => setSearchParams(key === visibleTabItems[0].key ? {} : { tab: key }, { replace: true })}
+      />
 
       <Modal
         open={personModal}

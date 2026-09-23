@@ -1,0 +1,266 @@
+@use '@/styles/variables' as *;
+
+.page { padding: var(--spacing-xl); display: flex; flex-direction: column; gap: var(--spacing-lg); @include mobile { padding: var(--spacing-md); } }
+.title { font-size: var(--font-size-xl); font-weight: 700; color: var(--color-text-primary); }
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.selectOption {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.brandLogo {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.hasWikiMark {
+  color: var(--color-success);
+  font-size: var(--font-size-xs);
+  margin-left: var(--spacing-xs);
+}
+
+// ─── Карточка автомобиля ───
+
+.cardHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+
+.cardTitle {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.cardMeta {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.content {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: var(--font-size-md);
+  line-height: 1.6;
+  color: var(--color-text-primary);
+}
+
+.editActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
+
+  @include mobile {
+    :global(.ant-btn) { flex: 1; }
+  }
+}
+
+.mediaHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.mediaTitle {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.uploadProgress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.mediaGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--spacing-md);
+
+  @include mobile {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-sm);
+  }
+}
+
+.videoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--spacing-md);
+
+  @include mobile {
+    grid-template-columns: 1fr;
+  }
+}
+
+.videoGridSpaced {
+  margin-top: var(--spacing-md);
+}
+
+.mediaItem {
+  position: relative;
+  border-radius: var(--border-radius-sm);
+  overflow: hidden;
+  background: var(--color-surface-2);
+
+  :global(.ant-image) { display: block; width: 100%; }
+  :global(.ant-image-img) {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+  }
+
+  video {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #000;
+  }
+}
+
+.mediaDelete {
+  position: absolute;
+  top: var(--spacing-xs);
+  right: var(--spacing-xs);
+  z-index: 1;
+}
+
+.emptyMedia {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+// ─── Заполненные карточки ───
+
+.entriesSearch {
+  margin-bottom: var(--spacing-md);
+}
+
+.entryRow {
+  cursor: pointer;
+}
+
+// ─── Проверка правок ───
+
+.reviewToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.revisionList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.revisionHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+
+.revisionCar {
+  font-weight: 600;
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+}
+
+.revisionMeta {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.revisionStats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  margin: var(--spacing-sm) 0;
+}
+
+.diff {
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.6;
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius-sm);
+  background: var(--color-surface-2);
+  max-height: 420px;
+  overflow: auto;
+}
+
+.diffAdded {
+  background: var(--color-diff-added-bg);
+  color: var(--color-diff-added-text);
+  border-radius: 3px;
+}
+
+.diffRemoved {
+  background: var(--color-diff-removed-bg);
+  color: var(--color-diff-removed-text);
+  text-decoration: line-through;
+  border-radius: 3px;
+}
+
+.revisionMediaLabel {
+  margin: var(--spacing-md) 0 var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.revisionMedia {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+
+  :global(.ant-image-img),
+  video {
+    width: 120px;
+    height: 90px;
+    object-fit: cover;
+    border-radius: var(--border-radius-sm);
+    background: #000;
+  }
+}
+
+.removedFile {
+  text-decoration: line-through;
+  color: var(--color-diff-removed-text);
+}
+
+.revisionActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+
+  @include mobile {
+    :global(.ant-btn) { flex: 1; }
+  }
+}
+
+.settingsForm {
+  max-width: 360px;
+}

@@ -309,3 +309,10 @@
 
   &.active { color: var(--color-accent); }
 }
+
+// Бейдж antd сбрасывает цвет — иконка в нём должна остаться цвета пункта меню
+.navIcon :global(.ant-badge),
+.icon :global(.ant-badge) {
+  color: inherit;
+  font-size: inherit;
+}

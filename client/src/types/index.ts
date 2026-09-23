@@ -310,3 +310,79 @@ export interface CarGeneration {
   photo?: string | null;
   source?: 'SNAPSHOT' | 'MANUAL';
 }
+
+// Wiki по автомобилям. Ключ карточки — те же внешние id, что в Car.brandId/modelId/generationId.
+export interface WikiKey {
+  markId: string;
+  modelId: string;
+  generationId: string;
+}
+
+export type WikiMediaType = 'PHOTO' | 'VIDEO';
+
+export interface WikiMedia {
+  id: string;
+  type: WikiMediaType;
+  filename: string;
+  originalName: string;
+  size: number;
+  uploadedByName?: string | null;
+  createdAt: string;
+  url: string;
+}
+
+export interface WikiEntry extends WikiKey {
+  id: string;
+  markName: string;
+  modelName: string;
+  generationName?: string | null;
+  content: string;
+  updatedByName?: string | null;
+  updatedAt: string;
+  media: WikiMedia[];
+}
+
+export interface WikiEntrySummary extends WikiKey {
+  id: string;
+  markName: string;
+  modelName: string;
+  generationName?: string | null;
+  updatedAt: string;
+  updatedByName?: string | null;
+  mediaCount: number;
+  hasText: boolean;
+}
+
+export interface WikiMediaRef {
+  id: string;
+  type: WikiMediaType;
+  filename: string;
+  originalName: string;
+  url: string;
+}
+
+export type WikiRevisionStatus = 'PENDING' | 'REVIEWED' | 'REWARDED';
+
+export interface WikiRevision {
+  id: string;
+  entryId: string;
+  authorId: string;
+  authorName: string;
+  authorRole?: string | null;
+  prevContent: string;
+  newContent: string;
+  addedMedia: WikiMediaRef[];
+  removedMedia: WikiMediaRef[];
+  status: WikiRevisionStatus;
+  reviewedByName?: string | null;
+  reviewedAt?: string | null;
+  bonusAmount?: number | null;
+  createdAt: string;
+  updatedAt: string;
+  entry: WikiKey & { markName: string; modelName: string; generationName?: string | null };
+}
+
+export interface WikiSettings {
+  id: string;
+  bonusAmount: number;
+}

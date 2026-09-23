@@ -3,10 +3,12 @@ import { Outlet } from 'react-router-dom';
 import { SideBar } from '@/components/SideBar';
 import { BirthdayBanner } from '@/components/BirthdayBanner';
 import { useNotesNotifications } from '@/hooks/useNotesNotifications';
+import { useWikiPendingCount } from '@/hooks/useWikiPendingCount';
 import styles from './Layout.module.scss';
 
 export const Layout: React.FC = () => {
   useNotesNotifications();
+  useWikiPendingCount();
 
   return (
     <div className={styles.root}>

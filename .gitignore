@@ -17,3 +17,7 @@ server/src/**/*.d.ts
 # Промежуточный кэш обхода каталога авто (тысячи мелких файлов).
 # Сам снапшот prisma/data/cars-catalog.json коммитится.
 server/prisma/data/.cache/
+
+# Загруженные файлы (фото/видео вики): в проде — data/uploads, в разработке — server/uploads
+data/
+server/uploads/

@@ -3,19 +3,20 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   CalendarOutlined,
   DashboardOutlined,
-  ToolOutlined,
+  BookOutlined,
   SettingOutlined,
   AccountBookOutlined,
   FileTextOutlined,
   LeftOutlined,
   RightOutlined,
 } from '@ant-design/icons';
-import { Calendar, ConfigProvider, Button } from 'antd';
+import { Calendar, ConfigProvider, Button, Badge } from 'antd';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import 'dayjs/locale/ru';
 import { useUiStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/authStore';
+import { useWikiStore } from '@/store/wikiStore';
 import { Logo } from '@/components/Logo';
 import { recordsApi } from '@/api/records.api';
 import styles from './SideBar.module.scss';
@@ -26,7 +27,7 @@ dayjs.locale('ru');
 const NAV_ITEMS = [
   { path: '/schedule', label: 'Расписание', icon: <CalendarOutlined /> },
   { path: '/dashboard', label: 'Дашборд', icon: <DashboardOutlined /> },
-  { path: '/services', label: 'Справочник', icon: <ToolOutlined /> },
+  { path: '/wiki', label: 'Wiki', icon: <BookOutlined /> },
   { path: '/accounting', label: 'Бухгалтерия', icon: <AccountBookOutlined /> },
   { path: '/notes', label: 'Заметки', icon: <FileTextOutlined /> },
   { path: '/settings', label: 'Настройки', icon: <SettingOutlined /> },
@@ -37,10 +38,15 @@ export const SideBar: React.FC = () => {
   const { user } = useAuthStore();
   const visibleNavItems = NAV_ITEMS.filter(item => {
     if (user?.role === 'Сотрудник') {
-      return item.path === '/schedule' || item.path === '/accounting' || item.path === '/settings';
+      return item.path === '/schedule' || item.path === '/wiki' || item.path === '/accounting' || item.path === '/settings';
     }
     return true;
   });
+  const wikiPendingCount = useWikiStore(s => s.pendingCount);
+  // Бейдж правок вики на проверке (счётчик ненулевой только у проверяющих)
+  const navIcon = (item: typeof NAV_ITEMS[number]) => (item.path === '/wiki'
+    ? <Badge count={wikiPendingCount} size="small">{item.icon}</Badge>
+    : item.icon);
   const navigate = useNavigate();
   const location = useLocation();
   const [calendarValue, setCalendarValue] = useState<Dayjs>(dayjs(selectedDate));
@@ -126,7 +132,7 @@ export const SideBar: React.FC = () => {
                 cn(styles.navItem, { [styles.active]: isActive })
               }
             >
-              <span className={styles.navIcon}>{item.icon}</span>
+              <span className={styles.navIcon}>{navIcon(item)}</span>
               <span className={styles.navLabel}>{item.label}</span>
             </NavLink>
           ))}
@@ -149,7 +155,7 @@ export const SideBar: React.FC = () => {
               cn(styles.bottomNavItem, { [styles.active]: isActive })
             }
           >
-            <span className={styles.icon}>{item.icon}</span>
+            <span className={styles.icon}>{navIcon(item)}</span>
             <span>{item.label}</span>
           </NavLink>
         ))}

@@ -28,6 +28,11 @@ services:
       JWT_SECRET: prime-crm-jwt-secret-change-in-production
       MASTER_EMAIL: admin@prime-auto.by
       MASTER_PASSWORD: 82ehedub
+      UPLOADS_DIR: /app/uploads
+    # Фото и видео вики лежат на хосте: пересборка контейнера их не трогает,
+    # а git reset в deploy.sh не удаляет неотслеживаемую папку data/.
+    volumes:
+      - ./data/uploads:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy

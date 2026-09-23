@@ -23,7 +23,12 @@ function getRoleLevel(role?: string | null): number {
   return ROLE_LEVEL[role] ?? 99;
 }
 
-export const ServicesPage: React.FC = () => {
+interface Props {
+  /** Справочник открыт вкладкой в настройках — без собственного заголовка и отступов страницы */
+  embedded?: boolean;
+}
+
+export const ServicesPage: React.FC<Props> = ({ embedded = false }) => {
   const { user } = useAuthStore();
   const screens = Grid.useBreakpoint();
   const isMobile = !screens.md;
@@ -465,10 +470,12 @@ export const ServicesPage: React.FC = () => {
     ) : null;
 
   return (
-    <div className={styles.page}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>Справочник</h1>
-      </div>
+    <div className={embedded ? undefined : styles.page}>
+      {!embedded && (
+        <div className={styles.header}>
+          <h1 className={styles.title}>Справочник</h1>
+        </div>
+      )}
 
       <Tabs
         items={[
