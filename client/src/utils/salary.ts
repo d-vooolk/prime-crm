@@ -52,3 +52,15 @@ export function averageAnnualSalary(
   const sum = inWindow.reduce((s, h) => s + h.adjustedTotal, 0);
   return { average: sum / inWindow.length, monthsCount: inWindow.length };
 }
+
+/** Шаг округления суммы выплаты ЗП, р. */
+export const SALARY_ROUND_STEP = 5;
+
+/** Округление суммы выплаты до шага 5 р. вверх или вниз */
+export function roundSalaryAmount(amount: number, direction: 'up' | 'down'): number {
+  // Сотые убираем до деления: 1234.9999999 из Float не должно округлиться вверх до 1235
+  const cents = Math.round(amount * 100);
+  const step = SALARY_ROUND_STEP * 100;
+  const rounded = direction === 'up' ? Math.ceil(cents / step) : Math.floor(cents / step);
+  return rounded * SALARY_ROUND_STEP;
+}

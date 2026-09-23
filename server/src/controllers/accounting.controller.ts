@@ -1,5 +1,25 @@
 import { Request, Response } from 'express';
+import { z } from 'zod';
 import { accountingService } from '../services/accounting.service';
+import { AppError } from '../middleware/errorHandler';
+
+// Выплачивать ЗП могут все роли выше «Сотрудника»
+const PAYROLL_ROLES = ['Создатель', 'Директор', 'Менеджер'];
+
+const assertCanPaySalary = (req: Request) => {
+  if (!req.user?.isMaster && !PAYROLL_ROLES.includes(req.user?.role || '')) {
+    throw new AppError('Недостаточно прав', 403);
+  }
+};
+
+const salaryPaymentSchema = z.object({
+  servicemanName: z.string().min(1, 'Выберите сотрудника'),
+  year: z.coerce.number().int(),
+  month: z.coerce.number().int().min(1).max(12),
+  amount: z.coerce.number().positive('Сумма должна быть больше нуля'),
+  date: z.string().min(1),
+  person: z.string().min(1, 'Выберите изымателя'),
+});
 
 export const accountingController = {
   async getCash(req: Request, res: Response) {
@@ -114,6 +134,20 @@ export const accountingController = {
   async deleteAdjustment(req: Request, res: Response) {
     const id = String(req.params.id);
     await accountingService.deleteAdjustment(id);
+    res.status(204).end();
+  },
+
+  async createSalaryPayment(req: Request, res: Response) {
+    assertCanPaySalary(req);
+    const result = salaryPaymentSchema.safeParse(req.body);
+    if (!result.success) throw new AppError('Ошибка валидации', 400, result.error.flatten());
+    const tx = await accountingService.createSalaryPayment(result.data);
+    res.status(201).json({ data: tx });
+  },
+
+  async deleteSalaryPayment(req: Request, res: Response) {
+    assertCanPaySalary(req);
+    await accountingService.deleteSalaryPayment(String(req.params.id));
     res.status(204).end();
   },
 

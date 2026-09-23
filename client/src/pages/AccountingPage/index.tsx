@@ -4,22 +4,30 @@ import {
   DatePicker, message, Statistic, Card, Tag, Empty, Popconfirm, Space, Tooltip, Switch, Grid, Spin,
 } from 'antd';
 import {
-  PlusOutlined, MinusOutlined, EditOutlined, DeleteOutlined, RetweetOutlined,
+  PlusOutlined, MinusOutlined, EditOutlined, DeleteOutlined, RetweetOutlined, WalletOutlined,
+  ArrowUpOutlined, ArrowDownOutlined,
 } from '@ant-design/icons';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import { recordsApi } from '@/api/records.api';
 import dayjs, { Dayjs } from 'dayjs';
 import { CashTransaction, CapitalTransaction, Serviceman } from '@/types';
-import { accountingApi, SalaryData, SalaryRecord, SalaryAdjustment, FounderSalaryRecord, SalaryHistoryItem, MonthlyRevenueItem, MonthlyRecordCountItem, Debt } from '@/api/accounting.api';
+import { accountingApi, SalaryData, SalaryRecord, SalaryAdjustment, SalaryPayment, FounderSalaryRecord, SalaryHistoryItem, MonthlyRevenueItem, MonthlyRecordCountItem, Debt } from '@/api/accounting.api';
 import { servicesApi } from '@/api/services.api';
 import { formatPrice } from '@/utils/formatters';
-import { averageAnnualSalary, effectiveSalaryMonth } from '@/utils/salary';
+import { averageAnnualSalary, effectiveSalaryMonth, roundSalaryAmount, SALARY_ROUND_STEP } from '@/utils/salary';
 import { useAuthStore } from '@/store/authStore';
 import styles from './AccountingPage.module.scss';
 
 const FOUNDER_SALARY_PREFIX = 'ЗП учредителя';
 const isFounderSalaryDescription = (description?: string | null) =>
   !!description && description.trim().toLowerCase().startsWith(FOUNDER_SALARY_PREFIX.toLowerCase());
+
+// Расход «ЗП сотрудника …» создаётся только кнопкой «Выплатить ЗП», иначе не попадёт в остаток сотрудника
+const EMPLOYEE_SALARY_PREFIX = 'ЗП сотрудника';
+const isEmployeeSalaryDescription = (description?: string | null) =>
+  !!description && description.trim().toLowerCase().startsWith(EMPLOYEE_SALARY_PREFIX.toLowerCase());
+const isLinkedSalaryDescription = (description?: string | null) =>
+  isFounderSalaryDescription(description) || isEmployeeSalaryDescription(description);
 
 const MANAGER_ROLES = ['Создатель', 'Директор', 'Менеджер'];
 const DIRECTOR_ROLES = ['Создатель', 'Директор'];
@@ -128,6 +136,10 @@ export const AccountingPage: React.FC = () => {
   const [fineOpen, setFineOpen] = useState(false);
   const [bonusOpen, setBonusOpen] = useState(false);
   const [adjSaving, setAdjSaving] = useState(false);
+  const [payOpen, setPayOpen] = useState(false);
+  const [paySaving, setPaySaving] = useState(false);
+  const [payForm] = Form.useForm();
+  const payAmount = Form.useWatch('amount', payForm) as number | undefined;
   const [fineForm] = Form.useForm();
   const [bonusForm] = Form.useForm();
 
@@ -272,8 +284,19 @@ export const AccountingPage: React.FC = () => {
     if (manualIncomeOpen) manualIncomeForm.setFieldsValue({ person: defaultPerson, date: dayjs() });
   }, [manualIncomeOpen, defaultPerson]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // По умолчанию предлагаем весь остаток за период
   useEffect(() => {
-    if (depositOpen) depositForm.setFieldsValue({ date: dayjs(), currency: 'BYN' });
+    if (payOpen) {
+      payForm.setFieldsValue({
+        amount: Math.max(0, salaryData?.remaining ?? 0),
+        date: dayjs(),
+        person: defaultPerson || undefined,
+      });
+    }
+  }, [payOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (depositOpen)depositForm.setFieldsValue({ date: dayjs(), currency: 'BYN' });
   }, [depositOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -282,9 +305,15 @@ export const AccountingPage: React.FC = () => {
 
   // Расход «ЗП учредителя …» можно создать только свитчем, иначе он не попадёт в таблицу учредителей
   const founderDescriptionRule = {
-    validator: (_: unknown, value?: string) => (isFounderSalaryDescription(value)
-      ? Promise.reject(new Error('Для ЗП учредителя включите свитч «ЗП учредителей»'))
-      : Promise.resolve()),
+    validator: (_: unknown, value?: string) => {
+      if (isFounderSalaryDescription(value)) {
+        return Promise.reject(new Error('Для ЗП учредителя включите свитч «ЗП учредителей»'));
+      }
+      if (isEmployeeSalaryDescription(value)) {
+        return Promise.reject(new Error('ЗП сотрудника выплачивается кнопкой «Выплатить ЗП» в расчёте ЗП'));
+      }
+      return Promise.resolve();
+    },
   };
 
   const handleFounderPersonChange = (name: string) => {
@@ -408,6 +437,7 @@ export const AccountingPage: React.FC = () => {
       setEditingTx(null);
       loadCash();
       loadFounderSalaries();
+      loadSalary();
     } catch { message.error('Ошибка'); }
     finally { setSaving(false); }
   };
@@ -418,6 +448,7 @@ export const AccountingPage: React.FC = () => {
       message.success('Запись удалена');
       loadCash();
       loadFounderSalaries();
+      loadSalary();
     } catch { message.error('Ошибка при удалении'); }
   };
 
@@ -956,6 +987,46 @@ export const AccountingPage: React.FC = () => {
     loadSalary();
   };
 
+  const salaryRemaining = salaryData ? salaryData.remaining : 0;
+
+  const openPayModal = () => setPayOpen(true);
+
+  const handleRoundPayAmount = (direction: 'up' | 'down') => {
+    payForm.setFieldsValue({ amount: roundSalaryAmount(payForm.getFieldValue('amount') ?? 0, direction) });
+  };
+
+  const handleCreateSalaryPayment = async () => {
+    const values = await payForm.validateFields().catch(() => null);
+    if (!values) return;
+    setPaySaving(true);
+    try {
+      await accountingApi.createSalaryPayment({
+        servicemanName: salaryEmployee,
+        year: salaryMonth.year(),
+        month: salaryMonth.month() + 1,
+        amount: values.amount,
+        date: values.date.toISOString(),
+        person: values.person,
+      });
+      message.success('Выплата записана в кассу');
+      setPayOpen(false);
+      payForm.resetFields();
+      loadSalary();
+      loadCash();
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : 'Ошибка');
+    } finally { setPaySaving(false); }
+  };
+
+  const handleDeleteSalaryPayment = async (id: string) => {
+    try {
+      await accountingApi.deleteSalaryPayment(id);
+      message.success('Выплата удалена');
+      loadSalary();
+      loadCash();
+    } catch { message.error('Ошибка при удалении'); }
+  };
+
   const salaryTab = (
     <div className={styles.tabContent}>
       {salaryEmployee && (
@@ -969,6 +1040,21 @@ export const AccountingPage: React.FC = () => {
               suffix="р."
               valueStyle={{ color: 'var(--color-success)', fontSize: 22 }}
             />
+          </Card>
+        )}
+
+        {salaryData && salaryData.payments.length > 0 && (
+          <Card size="small" className={styles.statCard}>
+            <Statistic
+              title={salaryRemaining < 0 ? 'Переплата' : 'Осталось выплатить'}
+              value={Math.abs(salaryRemaining)}
+              precision={2}
+              suffix="р."
+              valueStyle={{ color: salaryRemaining < 0 ? 'var(--color-error)' : 'var(--color-primary)', fontSize: 22 }}
+            />
+            <div className={styles.statCardHint}>
+              выплачено: {formatPrice(salaryData.paidTotal)}
+            </div>
           </Card>
         )}
 
@@ -1064,6 +1150,11 @@ export const AccountingPage: React.FC = () => {
               Премия
             </Button>
           </div>
+        )}
+        {canSeeCashflow && salaryEmployee && salaryData && (
+          <Button type="primary" icon={<WalletOutlined />} onClick={openPayModal} className={styles.payButton}>
+            Выплатить ЗП
+          </Button>
         )}
       </div>
 
@@ -1170,6 +1261,36 @@ export const AccountingPage: React.FC = () => {
             </div>
           )}
 
+          {salaryData.payments.length > 0 && (
+            <div className={styles.salaryPayments}>
+              <div className={styles.salaryPaymentsTitle}>Выплаты за период</div>
+              {salaryData.payments.map((p: SalaryPayment) => (
+                <div key={p.id} className={styles.salaryPaymentRow}>
+                  <Tag color={p.type === 'ADVANCE' ? 'gold' : 'blue'} className={styles.salaryPaymentTag}>
+                    {p.type === 'ADVANCE' ? 'Аванс' : 'Расчёт'}
+                  </Tag>
+                  <span className={styles.salaryPaymentInfo}>
+                    {formatDate(p.date)}
+                    {p.person && <span className={styles.salaryPaymentPerson}> · выдал {p.person}</span>}
+                  </span>
+                  <strong className={styles.salaryPaymentAmount}>{formatPrice(p.amount)}</strong>
+                  {canSeeCashflow && (
+                    <Popconfirm
+                      title="Удалить выплату?"
+                      description="Расход в кассе тоже будет удалён"
+                      onConfirm={() => handleDeleteSalaryPayment(p.id)}
+                      okText="Да"
+                      cancelText="Нет"
+                      okButtonProps={{ danger: true }}
+                    >
+                      <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+                    </Popconfirm>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className={styles.salaryTotals}>
             {salaryData.adjustments.length > 0 && !isMobile && (
               <span className={styles.salaryTotalsBase}>
@@ -1182,6 +1303,19 @@ export const AccountingPage: React.FC = () => {
                 {formatPrice(salaryData.adjustedTotal ?? salaryData.totalPayment)}
               </strong>
             </span>
+            {salaryData.payments.length > 0 && (
+              <>
+                <span className={styles.salaryTotalsBase}>
+                  Выплачено: {formatPrice(salaryData.paidTotal)}
+                </span>
+                <span>
+                  {salaryRemaining < 0 ? 'Переплата: ' : 'Осталось: '}
+                  <strong className={salaryRemaining < 0 ? styles.salaryTotalsOverpaid : styles.salaryTotalsRemaining}>
+                    {formatPrice(Math.abs(salaryRemaining))}
+                  </strong>
+                </span>
+              </>
+            )}
           </div>
         </>
       ) : (
@@ -1645,9 +1779,9 @@ export const AccountingPage: React.FC = () => {
             <Form.Item
               label={editingTx.type === 'EXPENSE' ? 'Цель изъятия' : 'Источник'}
               name="description"
-              rules={isFounderSalaryDescription(editingTx.description) ? [] : [founderDescriptionRule]}
+              rules={isLinkedSalaryDescription(editingTx.description) ? [] : [founderDescriptionRule]}
             >
-              <Input readOnly={isFounderSalaryDescription(editingTx.description)} />
+              <Input readOnly={isLinkedSalaryDescription(editingTx.description)} />
             </Form.Item>
           )}
           {editingTx?.type === 'EXPENSE' && (
@@ -1809,6 +1943,69 @@ export const AccountingPage: React.FC = () => {
               showSearch
               placeholder="Выберите сотрудника"
               options={directorServicemen.map(s => ({ value: s.name, label: s.name }))}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title={`Выплатить ЗП — ${salaryEmployee}`}
+        open={payOpen}
+        onCancel={() => setPayOpen(false)}
+        onOk={handleCreateSalaryPayment}
+        okText="Выплатить"
+        okButtonProps={{ loading: paySaving }}
+        cancelText="Отмена"
+        destroyOnHidden
+      >
+        {salaryData && (
+          <div className={styles.payInfo}>
+            <div>Период: <strong>{periodLabel}</strong></div>
+            <div>Начислено: <strong>{formatPrice(salaryData.adjustedTotal)}</strong></div>
+            {salaryData.paidTotal > 0 && (
+              <div>Уже выплачено: <strong>{formatPrice(salaryData.paidTotal)}</strong></div>
+            )}
+            <div>
+              {salaryRemaining < 0 ? 'Переплата: ' : 'Осталось к выплате: '}
+              <strong className={salaryRemaining < 0 ? styles.salaryTotalsOverpaid : styles.salaryTotalsRemaining}>
+                {formatPrice(Math.abs(salaryRemaining))}
+              </strong>
+            </div>
+          </div>
+        )}
+        <Form form={payForm} layout="vertical">
+          <Form.Item
+            label="Сумма к выплате (р.)"
+            name="amount"
+            rules={[
+              { required: true, message: 'Укажите сумму' },
+              { type: 'number', min: 0.01, message: 'Сумма должна быть больше нуля' },
+            ]}
+            extra={payAmount && payAmount > 0
+              ? (payAmount < salaryRemaining
+                ? `Будет записано как аванс, останется ${formatPrice(salaryRemaining - payAmount)}`
+                : 'Будет записано как расчёт за период')
+              : undefined}
+          >
+            <InputNumber min={0} className={styles.payAmountInput} precision={2} parser={(v) => parseFloat((v ?? '').replace(/,/g, '.')) || 0} />
+          </Form.Item>
+          <div className={styles.payRoundButtons}>
+            <Button icon={<ArrowUpOutlined />} onClick={() => handleRoundPayAmount('up')}>
+              Округлить вверх
+            </Button>
+            <Button icon={<ArrowDownOutlined />} onClick={() => handleRoundPayAmount('down')}>
+              Округлить вниз
+            </Button>
+          </div>
+          <div className={styles.payRoundHint}>Шаг округления — {SALARY_ROUND_STEP} р.</div>
+          <Form.Item label="Дата" name="date" rules={[{ required: true }]}>
+            <DatePicker className={styles.payAmountInput} format="DD.MM.YYYY" />
+          </Form.Item>
+          <Form.Item label="Изыматель" name="person" rules={[{ required: true, message: 'Выберите изымателя' }]}>
+            <Select
+              showSearch
+              placeholder="Кто выдаёт деньги из кассы"
+              options={managerServicemen.map(s => ({ value: s.name, label: s.name }))}
             />
           </Form.Item>
         </Form>

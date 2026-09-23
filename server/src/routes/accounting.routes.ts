@@ -21,6 +21,8 @@ router.patch('/cash/:id', accountingController.updateCashTransaction);
 router.delete('/cash/:id', accountingController.deleteCashTransaction);
 router.post('/salary-adjustments', accountingController.createAdjustment);
 router.delete('/salary-adjustments/:id', accountingController.deleteAdjustment);
+router.post('/salary-payments', accountingController.createSalaryPayment);
+router.delete('/salary-payments/:id', accountingController.deleteSalaryPayment);
 router.get('/founder-salaries', accountingController.getFounderSalaries);
 router.get('/debts', accountingController.getDebts);
 router.post('/debts', accountingController.createDebt);

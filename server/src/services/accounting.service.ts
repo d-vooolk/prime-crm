@@ -30,6 +30,15 @@ export interface SalaryAdjustmentDto {
   createdAt: string;
 }
 
+export interface SalaryPaymentDto {
+  id: string;
+  type: 'ADVANCE' | 'FINAL';
+  amount: number;
+  date: string;
+  person: string | null;
+  createdAt: string;
+}
+
 export interface SalaryData {
   servicemanName: string;
   profitPercent: number;
@@ -40,6 +49,10 @@ export interface SalaryData {
   totalPayment: number;
   adjustments: SalaryAdjustmentDto[];
   adjustedTotal: number;
+  payments: SalaryPaymentDto[];
+  paidTotal: number;
+  // Остаток к выплате; отрицательный — переплата
+  remaining: number;
 }
 
 // Описание расхода-ЗП учредителя. Такие расходы создаются только через свитч
@@ -51,6 +64,21 @@ const isFounderSalaryDescription = (description?: string | null) =>
 
 const FOUNDER_SALARY_MANUAL_ERROR =
   `Описание «${FOUNDER_SALARY_PREFIX} …» зарезервировано: включите свитч «ЗП учредителей»`;
+
+// Описание расхода-выплаты ЗП сотруднику. Такие расходы создаются только кнопкой
+// «Выплатить ЗП» в расчёте зарплаты, иначе выплата не попадёт в остаток сотрудника
+export const EMPLOYEE_SALARY_PREFIX = 'ЗП сотрудника';
+
+const isEmployeeSalaryDescription = (description?: string | null) =>
+  !!description && description.trim().toLowerCase().startsWith(EMPLOYEE_SALARY_PREFIX.toLowerCase());
+
+const EMPLOYEE_SALARY_MANUAL_ERROR =
+  `Описание «${EMPLOYEE_SALARY_PREFIX} …» зарезервировано: выплатите ЗП из расчёта зарплаты`;
+
+const SALARY_MONTH_NAMES = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
+
+// Копейки после сложения/вычитания Float — округляем, чтобы остаток 0.0000001 не считался долгом
+const roundMoney = (v: number) => Math.round(v * 100) / 100;
 
 export const accountingService = {
   async getCashForMonth(year: number, month: number) {
@@ -87,6 +115,9 @@ export const accountingService = {
     const { founderSalary } = data;
     if (!founderSalary && isFounderSalaryDescription(data.description)) {
       throw new AppError(FOUNDER_SALARY_MANUAL_ERROR, 400);
+    }
+    if (isEmployeeSalaryDescription(data.description)) {
+      throw new AppError(EMPLOYEE_SALARY_MANUAL_ERROR, 400);
     }
     if (founderSalary) {
       if (!founderSalary.person) throw new AppError('Выберите учредителя', 400);
@@ -271,6 +302,21 @@ export const accountingService = {
     const fineTotal = adjustments.filter(a => a.type === 'FINE').reduce((s, a) => s + a.amount, 0);
     const adjustedTotal = totalPayment + bonusTotal - fineTotal;
 
+    const rawPayments = await prisma.employeeSalaryPayment.findMany({
+      where: { servicemanName, year, month },
+      include: { cashTransaction: { select: { date: true, person: true } } },
+      orderBy: { createdAt: 'asc' },
+    });
+    const payments: SalaryPaymentDto[] = rawPayments.map(p => ({
+      id: p.id,
+      type: p.type,
+      amount: p.amount,
+      date: p.cashTransaction.date.toISOString(),
+      person: p.cashTransaction.person,
+      createdAt: p.createdAt.toISOString(),
+    }));
+    const paidTotal = roundMoney(payments.reduce((s, p) => s + p.amount, 0));
+
     return {
       servicemanName,
       profitPercent,
@@ -281,7 +327,56 @@ export const accountingService = {
       totalPayment,
       adjustments,
       adjustedTotal,
+      payments,
+      paidTotal,
+      remaining: roundMoney(adjustedTotal - paidTotal),
     };
+  },
+
+  async createSalaryPayment(data: {
+    servicemanName: string;
+    year: number;
+    month: number;
+    amount: number;
+    date: string;
+    person: string;
+  }) {
+    const serviceman = await prisma.serviceman.findUnique({ where: { name: data.servicemanName } });
+    if (!serviceman) throw new AppError('Сотрудник не найден', 404);
+
+    const { remaining } = await accountingService.getSalaryData(data.servicemanName, data.year, data.month);
+    // Всё, что меньше остатка, — аванс; остаток целиком (в т.ч. с округлением вверх) — расчёт
+    const type = data.amount >= remaining ? 'FINAL' : 'ADVANCE';
+    const period = `${SALARY_MONTH_NAMES[data.month - 1]} ${data.year}`;
+    const description = `${EMPLOYEE_SALARY_PREFIX} ${data.servicemanName}${type === 'ADVANCE' ? ' (аванс)' : ''} за ${period}`;
+
+    // Расход и выплата создаются одной записью: либо обе, либо ни одной
+    return prisma.cashTransaction.create({
+      data: {
+        type: 'EXPENSE',
+        date: new Date(data.date),
+        description,
+        amount: data.amount,
+        person: data.person,
+        salaryPayment: {
+          create: {
+            servicemanName: data.servicemanName,
+            year: data.year,
+            month: data.month,
+            type,
+            amount: data.amount,
+          },
+        },
+      },
+      include: { salaryPayment: true },
+    });
+  },
+
+  // Выплата удаляется вместе с расходом в кассе (каскадом)
+  async deleteSalaryPayment(id: string) {
+    const payment = await prisma.employeeSalaryPayment.findUnique({ where: { id } });
+    if (!payment) throw new AppError('Выплата не найдена', 404);
+    await prisma.cashTransaction.delete({ where: { id: payment.cashTransactionId } });
   },
 
   async getSalaryHistory(servicemanName: string) {
@@ -479,6 +574,13 @@ export const accountingService = {
 
   async updateCashTransaction(id: string, data: { date?: string; amount?: number; description?: string; person?: string }) {
     return prisma.$transaction(async (tx) => {
+      if (data.description !== undefined && isEmployeeSalaryDescription(data.description)) {
+        const current = await tx.cashTransaction.findUnique({ where: { id }, select: { description: true } });
+        if (!current) throw new AppError('Запись не найдена', 404);
+        if (!isEmployeeSalaryDescription(current.description)) {
+          throw new AppError(EMPLOYEE_SALARY_MANUAL_ERROR, 400);
+        }
+      }
       if (data.description !== undefined && isFounderSalaryDescription(data.description)) {
         const current = await tx.cashTransaction.findUnique({ where: { id }, select: { description: true } });
         if (!current) throw new AppError('Запись не найдена', 404);
@@ -499,12 +601,13 @@ export const accountingService = {
       // ЗП учредителя должна совпадать с суммой расхода, которым она выдана
       if (data.amount !== undefined) {
         await tx.founderSalary.updateMany({ where: { cashTransactionId: id }, data: { amount: data.amount } });
+        await tx.employeeSalaryPayment.updateMany({ where: { cashTransactionId: id }, data: { amount: data.amount } });
       }
       return updated;
     });
   },
 
-  // Привязанная ЗП учредителя удаляется каскадом (onDelete: Cascade в схеме)
+  // Привязанные ЗП учредителя и выплата ЗП сотруднику удаляются каскадом (onDelete: Cascade в схеме)
   async deleteCashTransaction(id: string) {
     return prisma.cashTransaction.delete({ where: { id } });
   },

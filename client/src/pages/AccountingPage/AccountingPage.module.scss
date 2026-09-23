@@ -372,3 +372,90 @@
   font-weight: 600;
   margin-bottom: 4px;
 }
+
+// ─── Выплаты ЗП сотруднику ─────────────────────────────────────────────────
+.payButton {
+  margin-left: auto;
+
+  @media (max-width: 767px) {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
+.salaryPayments {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 12px;
+}
+
+.salaryPaymentsTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.salaryPaymentRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+}
+
+.salaryPaymentTag {
+  margin: 0;
+}
+
+.salaryPaymentInfo {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+}
+
+.salaryPaymentPerson {
+  color: var(--color-text-muted);
+}
+
+.salaryPaymentAmount {
+  white-space: nowrap;
+}
+
+.salaryTotalsRemaining {
+  color: var(--color-primary);
+  font-size: 17px;
+}
+
+.salaryTotalsOverpaid {
+  color: var(--color-error);
+  font-size: 17px;
+}
+
+.payInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 16px 0;
+}
+
+.payAmountInput {
+  width: 100%;
+}
+
+.payRoundButtons {
+  display: flex;
+  gap: 8px;
+  margin-top: -8px;
+
+  > * {
+    flex: 1;
+  }
+}
+
+.payRoundHint {
+  margin: 4px 0 16px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}

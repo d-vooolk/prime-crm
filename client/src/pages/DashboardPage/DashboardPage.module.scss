@@ -133,6 +133,24 @@
   color: #22c55e;
 }
 
+.statPaid {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.statRemaining {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.statOverpaid {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-error);
+}
+
 .statAvg {
   font-size: var(--font-size-sm);
   font-weight: 600;

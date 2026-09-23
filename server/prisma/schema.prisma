@@ -266,6 +266,7 @@ model CashTransaction {
   createdAt    DateTime            @default(now())
   debtPayment  DebtPayment?
   founderSalary FounderSalary?
+  salaryPayment EmployeeSalaryPayment?
 }
 
 enum CapitalTransactionType {
@@ -289,6 +290,28 @@ model FounderSalary {
   // при удалении расхода запись удаляется вместе с ним
   cashTransactionId String?          @unique
   cashTransaction   CashTransaction? @relation(fields: [cashTransactionId], references: [id], onDelete: Cascade)
+}
+
+enum SalaryPaymentType {
+  ADVANCE // Аванс — выплачено меньше остатка за период
+  FINAL   // Расчёт — выплачен весь остаток
+}
+
+// Выплата ЗП сотруднику за расчётный период (year/month — как у SalaryAdjustment)
+model EmployeeSalaryPayment {
+  id                String            @id @default(cuid())
+  servicemanName    String
+  year              Int
+  month             Int
+  type              SalaryPaymentType
+  amount            Float
+  createdAt         DateTime          @default(now())
+  // Расход в кассе, которым выдана выплата. Сумма синхронизируется при правке расхода,
+  // при удалении расхода выплата удаляется вместе с ним
+  cashTransactionId String            @unique
+  cashTransaction   CashTransaction   @relation(fields: [cashTransactionId], references: [id], onDelete: Cascade)
+
+  @@index([servicemanName, year, month])
 }
 
 model SalaryAdjustment {

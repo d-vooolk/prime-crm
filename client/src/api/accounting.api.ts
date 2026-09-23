@@ -36,6 +36,15 @@ export interface SalaryAdjustment {
   createdAt: string;
 }
 
+export interface SalaryPayment {
+  id: string;
+  type: 'ADVANCE' | 'FINAL';
+  amount: number;
+  date: string;
+  person: string | null;
+  createdAt: string;
+}
+
 export interface SalaryData {
   servicemanName: string;
   profitPercent: number;
@@ -46,6 +55,10 @@ export interface SalaryData {
   totalPayment: number;
   adjustments: SalaryAdjustment[];
   adjustedTotal: number;
+  payments: SalaryPayment[];
+  paidTotal: number;
+  // Остаток к выплате; отрицательный — переплата
+  remaining: number;
 }
 
 export const accountingApi = {
@@ -108,6 +121,12 @@ export const accountingApi = {
 
   deleteAdjustment: (id: string) =>
     http.delete(`/accounting/salary-adjustments/${id}`),
+
+  createSalaryPayment: (data: { servicemanName: string; year: number; month: number; amount: number; date: string; person: string }) =>
+    http.post<{ data: CashTransaction }>('/accounting/salary-payments', data).then(r => r.data.data),
+
+  deleteSalaryPayment: (id: string) =>
+    http.delete(`/accounting/salary-payments/${id}`),
 
   getFounderSalaries: () =>
     http.get<{ data: FounderSalaryRecord[] }>('/accounting/founder-salaries').then(r => r.data.data),

@@ -357,6 +357,20 @@ export const DashboardPage: React.FC = () => {
                                   {salary ? formatPrice(salary.adjustedTotal) : '—'}
                                 </span>
                               </div>
+                              {salary && salary.paidTotal > 0 && (
+                                <>
+                                  <div className={styles.employeeStat}>
+                                    <span className={styles.statLabel}>Выплачено</span>
+                                    <span className={styles.statPaid}>{formatPrice(salary.paidTotal)}</span>
+                                  </div>
+                                  <div className={styles.employeeStat}>
+                                    <span className={styles.statLabel}>{salary.remaining < 0 ? 'Переплата' : 'Осталось'}</span>
+                                    <span className={salary.remaining < 0 ? styles.statOverpaid : styles.statRemaining}>
+                                      {formatPrice(Math.abs(salary.remaining))}
+                                    </span>
+                                  </div>
+                                </>
+                              )}
                               {avgAnnual.monthsCount > 0 && (
                                 <div className={styles.employeeStat}>
                                   <span className={styles.statLabel}>Средний годичный</span>
@@ -440,6 +454,12 @@ export const DashboardPage: React.FC = () => {
                     valueStyle={{ color: '#22c55e', fontSize: 20 }}
                   />
                   <div className={styles.statHint}>{salaryPeriodLabel}</div>
+                  {selectedSalary && selectedSalary.paidTotal > 0 && (
+                    <div className={styles.statHint}>
+                      выплачено {formatPrice(selectedSalary.paidTotal)},{' '}
+                      {selectedSalary.remaining < 0 ? 'переплата' : 'осталось'} {formatPrice(Math.abs(selectedSalary.remaining))}
+                    </div>
+                  )}
                 </Card>
               </Col>
               <Col xs={12} sm={12}>
