@@ -53,14 +53,19 @@ export function averageAnnualSalary(
   return { average: sum / inWindow.length, monthsCount: inWindow.length };
 }
 
-/** Шаг округления суммы выплаты ЗП, р. */
-export const SALARY_ROUND_STEP = 5;
+/** Шаг изменения суммы выплаты ЗП кнопками округления, р. */
+export const SALARY_ROUND_STEP = 1;
 
-/** Округление суммы выплаты до шага 5 р. вверх или вниз */
+/**
+ * Кнопки округления суммы выплаты: дробная сумма округляется до целых рублей
+ * в нужную сторону, целая — меняется на шаг (1 р.) за нажатие. Ниже нуля не уходит.
+ */
 export function roundSalaryAmount(amount: number, direction: 'up' | 'down'): number {
-  // Сотые убираем до деления: 1234.9999999 из Float не должно округлиться вверх до 1235
+  // Сотые убираем до сравнения: 1234.9999999 из Float — это уже целые 1235
   const cents = Math.round(amount * 100);
-  const step = SALARY_ROUND_STEP * 100;
-  const rounded = direction === 'up' ? Math.ceil(cents / step) : Math.floor(cents / step);
-  return rounded * SALARY_ROUND_STEP;
+  if (cents % 100 !== 0) {
+    return direction === 'up' ? Math.ceil(cents / 100) : Math.floor(cents / 100);
+  }
+  const rubles = cents / 100;
+  return direction === 'up' ? rubles + SALARY_ROUND_STEP : Math.max(0, rubles - SALARY_ROUND_STEP);
 }

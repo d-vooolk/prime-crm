@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Tabs, Table, Button, Modal, Form, Input, InputNumber, Select,
   DatePicker, message, Statistic, Card, Tag, Empty, Popconfirm, Space, Tooltip, Switch, Grid, Spin,
@@ -142,6 +142,8 @@ export const AccountingPage: React.FC = () => {
   const payAmount = Form.useWatch('amount', payForm) as number | undefined;
   const payCardAmount = Form.useWatch('cardAmount', payForm) as number | undefined;
   const [payToCard, setPayToCard] = useState(false);
+  // Предыдущая сумма на карту: изменение карты переносится из наличных, общая сумма сохраняется
+  const payPrevCardRef = useRef(0);
   const [fineForm] = Form.useForm();
   const [bonusForm] = Form.useForm();
 
@@ -290,6 +292,7 @@ export const AccountingPage: React.FC = () => {
   useEffect(() => {
     if (payOpen) {
       setPayToCard(false);
+      payPrevCardRef.current = 0;
       payForm.setFieldsValue({
         amount: Math.max(0, salaryData?.remaining ?? 0),
         date: dayjs(),
@@ -994,8 +997,28 @@ export const AccountingPage: React.FC = () => {
 
   const openPayModal = () => setPayOpen(true);
 
-  // В кассу уходят только наличные: вся сумма минус переведённое на карту
-  const payCashAmount = Math.max(0, (payAmount ?? 0) - (payToCard ? payCardAmount ?? 0 : 0));
+  // При включённой карте поле amount — это наличные (в кассу), выплата целиком = наличные + карта
+  const payCashAmount = payAmount ?? 0;
+  const payCard = payToCard ? payCardAmount ?? 0 : 0;
+  const payTotal = payCashAmount + payCard;
+
+  const handlePayToCardChange = (checked: boolean) => {
+    if (!checked) {
+      // Карту выключили — её сумма возвращается в наличные
+      payForm.setFieldsValue({ amount: payCashAmount + (payForm.getFieldValue('cardAmount') ?? 0), cardAmount: undefined });
+    }
+    payPrevCardRef.current = 0;
+    setPayToCard(checked);
+  };
+
+  const handlePayValuesChange = (changed: { cardAmount?: number | null }) => {
+    if (!('cardAmount' in changed)) return;
+    const card = changed.cardAmount ?? 0;
+    const total = (payForm.getFieldValue('amount') ?? 0) + payPrevCardRef.current;
+    payPrevCardRef.current = card;
+    // На карту больше всей суммы — наличных просто не остаётся
+    payForm.setFieldsValue({ amount: Math.max(0, Math.round((total - card) * 100) / 100) });
+  };
 
   const handleRoundPayAmount = (direction: 'up' | 'down') => {
     payForm.setFieldsValue({ amount: roundSalaryAmount(payForm.getFieldValue('amount') ?? 0, direction) });
@@ -1004,14 +1027,15 @@ export const AccountingPage: React.FC = () => {
   const handleCreateSalaryPayment = async () => {
     const values = await payForm.validateFields().catch(() => null);
     if (!values) return;
+    if (payTotal <= 0) { message.error('Сумма должна быть больше нуля'); return; }
     setPaySaving(true);
     try {
       await accountingApi.createSalaryPayment({
         servicemanName: salaryEmployee,
         year: salaryMonth.year(),
         month: salaryMonth.month() + 1,
-        amount: values.amount,
-        cardAmount: payToCard ? values.cardAmount ?? 0 : 0,
+        amount: payTotal,
+        cardAmount: payCard,
         date: values.date.toISOString(),
         person: payCashAmount > 0 ? values.person : undefined,
       });
@@ -1987,17 +2011,19 @@ export const AccountingPage: React.FC = () => {
             </div>
           </div>
         )}
-        <Form form={payForm} layout="vertical">
+        <Form form={payForm} layout="vertical" onValuesChange={handlePayValuesChange}>
           <Form.Item
-            label="Сумма к выплате (р.)"
+            label={payToCard ? 'Наличными из кассы (р.)' : 'Сумма к выплате (р.)'}
             name="amount"
-            rules={[
-              { required: true, message: 'Укажите сумму' },
-              { type: 'number', min: 0.01, message: 'Сумма должна быть больше нуля' },
-            ]}
-            extra={payAmount && payAmount > 0
-              ? (payAmount < salaryRemaining
-                ? `Будет записано как аванс, останется ${formatPrice(salaryRemaining - payAmount)}`
+            rules={payToCard
+              ? [{ required: true, message: 'Укажите сумму' }]
+              : [
+                { required: true, message: 'Укажите сумму' },
+                { type: 'number', min: 0.01, message: 'Сумма должна быть больше нуля' },
+              ]}
+            extra={payTotal > 0
+              ? (payTotal < salaryRemaining
+                ? `Будет записано как аванс, останется ${formatPrice(salaryRemaining - payTotal)}`
                 : 'Будет записано как расчёт за период')
               : undefined}
           >
@@ -2011,25 +2037,17 @@ export const AccountingPage: React.FC = () => {
               Округлить вниз
             </Button>
           </div>
-          <div className={styles.payRoundHint}>Шаг округления — {SALARY_ROUND_STEP} р.</div>
+          <div className={styles.payRoundHint}>Копейки округляются до целого, дальше каждое нажатие — ±{SALARY_ROUND_STEP} р.</div>
           <div className={styles.payCardSwitch}>
-            <Switch checked={payToCard} onChange={setPayToCard} />
+            <Switch checked={payToCard} onChange={handlePayToCardChange} />
             <span>Часть на карту</span>
           </div>
           {payToCard && (
             <Form.Item
               label="Сумма на карту (р.)"
               name="cardAmount"
-              dependencies={['amount']}
-              rules={[
-                { required: true, message: 'Укажите сумму на карту' },
-                ({ getFieldValue }) => ({
-                  validator: (_: unknown, value?: number) => (value != null && value > (getFieldValue('amount') ?? 0)
-                    ? Promise.reject(new Error('Больше суммы выплаты'))
-                    : Promise.resolve()),
-                }),
-              ]}
-              extra={`Наличными из кассы: ${formatPrice(payCashAmount)}`}
+              rules={[{ required: true, message: 'Укажите сумму на карту' }]}
+              extra={`Всего выплата: ${formatPrice(payTotal)}`}
             >
               <InputNumber min={0} className={styles.payAmountInput} precision={2} parser={(v) => parseFloat((v ?? '').replace(/,/g, '.')) || 0} />
             </Form.Item>
