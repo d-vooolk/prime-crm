@@ -39,7 +39,10 @@ export interface SalaryAdjustment {
 export interface SalaryPayment {
   id: string;
   type: 'ADVANCE' | 'FINAL';
+  // Вся выплата = наличные (расход в кассе) + карта
   amount: number;
+  cashAmount: number;
+  cardAmount: number;
   date: string;
   person: string | null;
   createdAt: string;
@@ -122,8 +125,10 @@ export const accountingApi = {
   deleteAdjustment: (id: string) =>
     http.delete(`/accounting/salary-adjustments/${id}`),
 
-  createSalaryPayment: (data: { servicemanName: string; year: number; month: number; amount: number; date: string; person: string }) =>
-    http.post<{ data: CashTransaction }>('/accounting/salary-payments', data).then(r => r.data.data),
+  createSalaryPayment: (data: {
+    servicemanName: string; year: number; month: number; amount: number; cardAmount: number; date: string; person?: string;
+  }) =>
+    http.post<{ data: SalaryPayment }>('/accounting/salary-payments', data).then(r => r.data.data),
 
   deleteSalaryPayment: (id: string) =>
     http.delete(`/accounting/salary-payments/${id}`),

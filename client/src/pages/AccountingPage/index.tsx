@@ -140,6 +140,8 @@ export const AccountingPage: React.FC = () => {
   const [paySaving, setPaySaving] = useState(false);
   const [payForm] = Form.useForm();
   const payAmount = Form.useWatch('amount', payForm) as number | undefined;
+  const payCardAmount = Form.useWatch('cardAmount', payForm) as number | undefined;
+  const [payToCard, setPayToCard] = useState(false);
   const [fineForm] = Form.useForm();
   const [bonusForm] = Form.useForm();
 
@@ -287,6 +289,7 @@ export const AccountingPage: React.FC = () => {
   // По умолчанию предлагаем весь остаток за период
   useEffect(() => {
     if (payOpen) {
+      setPayToCard(false);
       payForm.setFieldsValue({
         amount: Math.max(0, salaryData?.remaining ?? 0),
         date: dayjs(),
@@ -991,6 +994,9 @@ export const AccountingPage: React.FC = () => {
 
   const openPayModal = () => setPayOpen(true);
 
+  // В кассу уходят только наличные: вся сумма минус переведённое на карту
+  const payCashAmount = Math.max(0, (payAmount ?? 0) - (payToCard ? payCardAmount ?? 0 : 0));
+
   const handleRoundPayAmount = (direction: 'up' | 'down') => {
     payForm.setFieldsValue({ amount: roundSalaryAmount(payForm.getFieldValue('amount') ?? 0, direction) });
   };
@@ -1005,10 +1011,11 @@ export const AccountingPage: React.FC = () => {
         year: salaryMonth.year(),
         month: salaryMonth.month() + 1,
         amount: values.amount,
+        cardAmount: payToCard ? values.cardAmount ?? 0 : 0,
         date: values.date.toISOString(),
-        person: values.person,
+        person: payCashAmount > 0 ? values.person : undefined,
       });
-      message.success('Выплата записана в кассу');
+      message.success(payCashAmount > 0 ? 'Выплата записана, наличные — в кассу' : 'Выплата на карту записана');
       setPayOpen(false);
       payForm.resetFields();
       loadSalary();
@@ -1273,11 +1280,18 @@ export const AccountingPage: React.FC = () => {
                     {formatDate(p.date)}
                     {p.person && <span className={styles.salaryPaymentPerson}> · выдал {p.person}</span>}
                   </span>
-                  <strong className={styles.salaryPaymentAmount}>{formatPrice(p.amount)}</strong>
+                  <span className={styles.salaryPaymentAmount}>
+                    <strong>{formatPrice(p.amount)}</strong>
+                    {p.cardAmount > 0 && (
+                      <span className={styles.salaryPaymentSplit}>
+                        {p.cashAmount > 0 ? `нал ${formatPrice(p.cashAmount)} · ` : ''}карта {formatPrice(p.cardAmount)}
+                      </span>
+                    )}
+                  </span>
                   {canSeeCashflow && (
                     <Popconfirm
                       title="Удалить выплату?"
-                      description="Расход в кассе тоже будет удалён"
+                      description={p.cashAmount > 0 ? 'Расход в кассе тоже будет удалён' : undefined}
                       onConfirm={() => handleDeleteSalaryPayment(p.id)}
                       okText="Да"
                       cancelText="Нет"
@@ -1998,16 +2012,40 @@ export const AccountingPage: React.FC = () => {
             </Button>
           </div>
           <div className={styles.payRoundHint}>Шаг округления — {SALARY_ROUND_STEP} р.</div>
+          <div className={styles.payCardSwitch}>
+            <Switch checked={payToCard} onChange={setPayToCard} />
+            <span>Часть на карту</span>
+          </div>
+          {payToCard && (
+            <Form.Item
+              label="Сумма на карту (р.)"
+              name="cardAmount"
+              dependencies={['amount']}
+              rules={[
+                { required: true, message: 'Укажите сумму на карту' },
+                ({ getFieldValue }) => ({
+                  validator: (_: unknown, value?: number) => (value != null && value > (getFieldValue('amount') ?? 0)
+                    ? Promise.reject(new Error('Больше суммы выплаты'))
+                    : Promise.resolve()),
+                }),
+              ]}
+              extra={`Наличными из кассы: ${formatPrice(payCashAmount)}`}
+            >
+              <InputNumber min={0} className={styles.payAmountInput} precision={2} parser={(v) => parseFloat((v ?? '').replace(/,/g, '.')) || 0} />
+            </Form.Item>
+          )}
           <Form.Item label="Дата" name="date" rules={[{ required: true }]}>
             <DatePicker className={styles.payAmountInput} format="DD.MM.YYYY" />
           </Form.Item>
-          <Form.Item label="Изыматель" name="person" rules={[{ required: true, message: 'Выберите изымателя' }]}>
-            <Select
-              showSearch
-              placeholder="Кто выдаёт деньги из кассы"
-              options={managerServicemen.map(s => ({ value: s.name, label: s.name }))}
-            />
-          </Form.Item>
+          {payCashAmount > 0 && (
+            <Form.Item label="Изыматель" name="person" rules={[{ required: true, message: 'Выберите изымателя' }]}>
+              <Select
+                showSearch
+                placeholder="Кто выдаёт деньги из кассы"
+                options={managerServicemen.map(s => ({ value: s.name, label: s.name }))}
+              />
+            </Form.Item>
+          )}
         </Form>
       </Modal>
 

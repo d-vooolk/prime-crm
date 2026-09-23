@@ -34,6 +34,8 @@ export interface SalaryPaymentDto {
   id: string;
   type: 'ADVANCE' | 'FINAL';
   amount: number;
+  cashAmount: number;
+  cardAmount: number;
   date: string;
   person: string | null;
   createdAt: string;
@@ -311,8 +313,10 @@ export const accountingService = {
       id: p.id,
       type: p.type,
       amount: p.amount,
-      date: p.cashTransaction.date.toISOString(),
-      person: p.cashTransaction.person,
+      cashAmount: roundMoney(p.amount - p.cardAmount),
+      cardAmount: p.cardAmount,
+      date: (p.cashTransaction?.date ?? p.date).toISOString(),
+      person: p.cashTransaction?.person ?? null,
       createdAt: p.createdAt.toISOString(),
     }));
     const paidTotal = roundMoney(payments.reduce((s, p) => s + p.amount, 0));
@@ -338,9 +342,14 @@ export const accountingService = {
     year: number;
     month: number;
     amount: number;
+    cardAmount: number;
     date: string;
-    person: string;
+    person?: string;
   }) {
+    const cashAmount = roundMoney(data.amount - data.cardAmount);
+    if (cashAmount < 0) throw new AppError('Сумма на карту больше суммы выплаты', 400);
+    if (cashAmount > 0 && !data.person) throw new AppError('Выберите изымателя', 400);
+
     const serviceman = await prisma.serviceman.findUnique({ where: { name: data.servicemanName } });
     if (!serviceman) throw new AppError('Сотрудник не найден', 404);
 
@@ -348,27 +357,27 @@ export const accountingService = {
     // Всё, что меньше остатка, — аванс; остаток целиком (в т.ч. с округлением вверх) — расчёт
     const type = data.amount >= remaining ? 'FINAL' : 'ADVANCE';
     const period = `${SALARY_MONTH_NAMES[data.month - 1]} ${data.year}`;
-    const description = `${EMPLOYEE_SALARY_PREFIX} ${data.servicemanName}${type === 'ADVANCE' ? ' (аванс)' : ''} за ${period}`;
+    const card = data.cardAmount > 0 ? `, ещё ${data.cardAmount} р. на карту` : '';
+    const description = `${EMPLOYEE_SALARY_PREFIX} ${data.servicemanName}${type === 'ADVANCE' ? ' (аванс)' : ''} за ${period}${card}`;
+    const date = new Date(data.date);
 
-    // Расход и выплата создаются одной записью: либо обе, либо ни одной
-    return prisma.cashTransaction.create({
+    // В кассу идут только наличные: расход создаётся на наличную часть вместе с выплатой
+    // одной записью (либо обе, либо ни одной). Если всё на карту — только выплата
+    return prisma.employeeSalaryPayment.create({
       data: {
-        type: 'EXPENSE',
-        date: new Date(data.date),
-        description,
+        servicemanName: data.servicemanName,
+        year: data.year,
+        month: data.month,
+        type,
         amount: data.amount,
-        person: data.person,
-        salaryPayment: {
-          create: {
-            servicemanName: data.servicemanName,
-            year: data.year,
-            month: data.month,
-            type,
-            amount: data.amount,
+        cardAmount: data.cardAmount,
+        date,
+        ...(cashAmount > 0 && {
+          cashTransaction: {
+            create: { type: 'EXPENSE', date, description, amount: cashAmount, person: data.person },
           },
-        },
+        }),
       },
-      include: { salaryPayment: true },
     });
   },
 
@@ -376,7 +385,11 @@ export const accountingService = {
   async deleteSalaryPayment(id: string) {
     const payment = await prisma.employeeSalaryPayment.findUnique({ where: { id } });
     if (!payment) throw new AppError('Выплата не найдена', 404);
-    await prisma.cashTransaction.delete({ where: { id: payment.cashTransactionId } });
+    if (payment.cashTransactionId) {
+      await prisma.cashTransaction.delete({ where: { id: payment.cashTransactionId } });
+    } else {
+      await prisma.employeeSalaryPayment.delete({ where: { id } });
+    }
   },
 
   async getSalaryHistory(servicemanName: string) {
@@ -601,7 +614,14 @@ export const accountingService = {
       // ЗП учредителя должна совпадать с суммой расхода, которым она выдана
       if (data.amount !== undefined) {
         await tx.founderSalary.updateMany({ where: { cashTransactionId: id }, data: { amount: data.amount } });
-        await tx.employeeSalaryPayment.updateMany({ where: { cashTransactionId: id }, data: { amount: data.amount } });
+        // Расход — это наличная часть выплаты, карта остаётся прежней
+        const payment = await tx.employeeSalaryPayment.findUnique({ where: { cashTransactionId: id } });
+        if (payment) {
+          await tx.employeeSalaryPayment.update({
+            where: { id: payment.id },
+            data: { amount: roundMoney(data.amount + payment.cardAmount) },
+          });
+        }
       }
       return updated;
     });

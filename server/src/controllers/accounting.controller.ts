@@ -17,9 +17,10 @@ const salaryPaymentSchema = z.object({
   year: z.coerce.number().int(),
   month: z.coerce.number().int().min(1).max(12),
   amount: z.coerce.number().positive('Сумма должна быть больше нуля'),
+  cardAmount: z.coerce.number().min(0).default(0),
   date: z.string().min(1),
-  person: z.string().min(1, 'Выберите изымателя'),
-});
+  person: z.string().optional(),
+}).refine(d => d.cardAmount <= d.amount, { message: 'Сумма на карту больше суммы выплаты', path: ['cardAmount'] });
 
 export const accountingController = {
   async getCash(req: Request, res: Response) {

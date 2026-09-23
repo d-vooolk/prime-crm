@@ -304,12 +304,16 @@ model EmployeeSalaryPayment {
   year              Int
   month             Int
   type              SalaryPaymentType
+  // Вся выплата: наличные + карта. Остаток сотрудника уменьшается на неё целиком
   amount            Float
+  // Часть, переведённая на карту. В кассу (только наличные) не попадает
+  cardAmount        Float             @default(0)
+  date              DateTime          @default(now())
   createdAt         DateTime          @default(now())
-  // Расход в кассе, которым выдана выплата. Сумма синхронизируется при правке расхода,
-  // при удалении расхода выплата удаляется вместе с ним
-  cashTransactionId String            @unique
-  cashTransaction   CashTransaction   @relation(fields: [cashTransactionId], references: [id], onDelete: Cascade)
+  // Расход в кассе на наличную часть (amount - cardAmount). Нет, если всё выплачено на карту.
+  // При правке суммы расхода меняется наличная часть, при удалении расхода выплата удаляется
+  cashTransactionId String?           @unique
+  cashTransaction   CashTransaction?  @relation(fields: [cashTransactionId], references: [id], onDelete: Cascade)
 
   @@index([servicemanName, year, month])
 }
