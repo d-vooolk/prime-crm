@@ -11,6 +11,13 @@ html {
   scroll-behavior: smooth;
 }
 
+// Страница целиком не прокручивается (скроллятся только #root и модалки), поэтому
+// «оттягивание» документа на телефоне только сдвигает открытые модалки
+html,
+body {
+  overscroll-behavior: none;
+}
+
 body {
   font-family: var(--font-family);
   font-size: var(--font-size-md);
@@ -27,6 +34,15 @@ body {
 }
 
 // ─── Ant Design overrides ────────────────────────────
+
+// Выпадающие списки прокручиваются сами и, дойдя до края, не передают прокрутку модалке
+.ant-select-dropdown .rc-virtual-list-holder,
+.ant-select-dropdown .ant-select-tree-list-holder {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+
 .ant-modal-content {
   border-radius: var(--border-radius-lg) !important;
 }

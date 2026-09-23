@@ -130,6 +130,7 @@
   @include mobile {
     padding: var(--spacing-sm) var(--spacing-md);
     max-height: none;
+    overscroll-behavior: contain;
   }
 }
 
