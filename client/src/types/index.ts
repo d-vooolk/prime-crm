@@ -215,7 +215,11 @@ export interface Serviceman {
   isDismissed: boolean;
   isReceptionist: boolean;
   isDefault: boolean;
+  /** Показывается в списке исполнителей работ */
+  isPerformer?: boolean | null;
   profitPercent: number;
+  /** Оклад текущего расчётного периода */
+  baseSalary?: number;
   birthday?: string | null;
 }
 

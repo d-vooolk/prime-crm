@@ -18,6 +18,19 @@ import styles from './ServicesPage.module.scss';
 
 const ROLE_LEVEL: Record<string, number> = { 'Создатель': 1, 'Директор': 2, 'Менеджер': 3, 'Сотрудник': 4 };
 const ALL_ROLES = ['Создатель', 'Директор', 'Менеджер', 'Сотрудник'];
+// Создателя нельзя уволить (сервер тоже не даст)
+const UNDISMISSABLE_ROLE = 'Создатель';
+
+/** Отметки в списке сотрудников: исполнитель работ и мастер приёмщик */
+function servicemanFlags(row: Serviceman) {
+  return (
+    <>
+      {row.isPerformer && <Tag color="purple" style={{ margin: 0 }}>Исполнитель</Tag>}
+      {row.isReceptionist && <Tag color="cyan" style={{ margin: 0 }}>Приёмщик</Tag>}
+    </>
+  );
+}
+
 function getRoleLevel(role?: string | null): number {
   if (!role) return 99;
   return ROLE_LEVEL[role] ?? 99;
@@ -49,7 +62,7 @@ export const ServicesPage: React.FC<Props> = ({ embedded = false }) => {
   const [categoryModal, setCategoryModal] = useState<{ open: boolean; category?: Category }>({ open: false });
   const [categoryColor, setCategoryColor] = useState<string | null>(null);
   const [equipmentModal, setEquipmentModal] = useState<{ open: boolean; item?: Equipment }>({ open: false });
-  const [servicemanModal, setServicemanModal] = useState<{ open: boolean; item?: Serviceman; isReceptionist?: boolean }>({ open: false });
+  const [servicemanModal, setServicemanModal] = useState<{ open: boolean; item?: Serviceman }>({ open: false });
 
   const [percentModal, setPercentModal] = useState<{
     type: 'service' | 'category';
@@ -193,28 +206,22 @@ export const ServicesPage: React.FC<Props> = ({ embedded = false }) => {
     const values = await servicemanForm.validateFields();
     try {
       const birthdayIso = values.birthday ? (values.birthday as import('dayjs').Dayjs).toISOString() : null;
+      const payload = {
+        name: values.name,
+        position: values.position,
+        role: values.role || undefined,
+        email: values.email,
+        password: values.password || undefined,
+        isReceptionist: !!values.isReceptionist,
+        isPerformer: !!values.isPerformer,
+        birthday: birthdayIso,
+        profitPercent: values.profitPercent ?? 0,
+        baseSalary: values.baseSalary ?? 0,
+      };
       if (servicemanModal.item) {
-        await servicesApi.updateServiceman(servicemanModal.item.id, {
-          name: values.name,
-          position: values.position,
-          role: values.role || undefined,
-          email: values.email,
-          password: values.password || undefined,
-          isReceptionist: servicemanModal.isReceptionist,
-          birthday: birthdayIso,
-          ...(values.role === 'Сотрудник' && { profitPercent: values.profitPercent ?? 0 }),
-        });
+        await servicesApi.updateServiceman(servicemanModal.item.id, payload);
       } else {
-        await servicesApi.createServiceman({
-          name: values.name,
-          position: values.position,
-          role: values.role || undefined,
-          email: values.email,
-          password: values.password || undefined,
-          isReceptionist: servicemanModal.isReceptionist,
-          birthday: birthdayIso,
-          ...(values.role === 'Сотрудник' && { profitPercent: values.profitPercent ?? 0 }),
-        });
+        await servicesApi.createServiceman(payload);
       }
       message.success('Сохранено');
       setServicemanModal({ open: false });
@@ -288,23 +295,29 @@ export const ServicesPage: React.FC<Props> = ({ embedded = false }) => {
     },
   ];
 
-  const activeEmployees = allServicemen.filter(s => !s.isReceptionist && !s.isDismissed);
-  const dismissedEmployees = allServicemen.filter(s => !s.isReceptionist && s.isDismissed);
+  // Все профили живут во вкладке «Сотрудники»; мастера приёмщики — те, у кого включён свитч в карточке
+  const activeEmployees = allServicemen.filter(s => !s.isDismissed);
+  const dismissedEmployees = allServicemen.filter(s => s.isDismissed);
   const activeReceptionists = allServicemen.filter(s => s.isReceptionist && !s.isDismissed);
-  const dismissedReceptionists = allServicemen.filter(s => s.isReceptionist && s.isDismissed);
 
-  const openEditServiceman = (row: Serviceman, isReceptionist: boolean) => {
+  const openEditServiceman = (row: Serviceman) => {
     servicemanForm.resetFields();
-    servicemanForm.setFieldsValue({ name: row.name, position: row.position, role: row.role, email: row.email, password: row.plainPassword ?? '', profitPercent: row.profitPercent ?? 0, birthday: row.birthday ? dayjs(row.birthday) : null });
-    setServicemanModal({ open: true, item: row, isReceptionist });
+    servicemanForm.setFieldsValue({
+      name: row.name, position: row.position, role: row.role, email: row.email,
+      password: row.plainPassword ?? '', profitPercent: row.profitPercent ?? 0,
+      baseSalary: row.baseSalary ?? 0,
+      isReceptionist: row.isReceptionist, isPerformer: !!row.isPerformer,
+      birthday: row.birthday ? dayjs(row.birthday) : null,
+    });
+    setServicemanModal({ open: true, item: row });
   };
 
-  const servicemanActions = (row: Serviceman, isReceptionist: boolean) => {
+  const servicemanActions = (row: Serviceman) => {
     if (!canEditServiceman(row)) return null;
     return (
       <Space size="small">
-        <Button size="small" icon={<EditOutlined />} onClick={() => openEditServiceman(row, isReceptionist)} />
-        <Popconfirm
+        <Button size="small" icon={<EditOutlined />} onClick={() => openEditServiceman(row)} />
+        {row.role !== UNDISMISSABLE_ROLE && <Popconfirm
           title="Уволить сотрудника?"
           description="Сотрудник будет перемещён в список уволенных"
           onConfirm={() => handleDismiss(row.id)}
@@ -312,7 +325,7 @@ export const ServicesPage: React.FC<Props> = ({ embedded = false }) => {
           cancelText="Отмена"
         >
           <Button size="small" danger icon={<StopOutlined />} title="Уволить" />
-        </Popconfirm>
+        </Popconfirm>}
       </Space>
     );
   };
@@ -361,12 +374,16 @@ export const ServicesPage: React.FC<Props> = ({ embedded = false }) => {
                   </div>
                   {row.position && <div className={styles.mobileCardSub}>{row.position}</div>}
                 </div>
-                {isDismissedList
+                {isReceptionist ? null : isDismissedList
                   ? servicemanRestoreAction(row)
-                  : servicemanActions(row, isReceptionist)}
+                  : servicemanActions(row)}
               </div>
               <div className={styles.mobileCardMeta}>
-                {!isReceptionist && row.role === 'Сотрудник' && row.profitPercent > 0 && (
+                {!isReceptionist && servicemanFlags(row)}
+                {!isReceptionist && (row.baseSalary ?? 0) > 0 && (
+                  <Tag color="blue" style={{ margin: 0 }}>оклад {formatPrice(row.baseSalary!)}</Tag>
+                )}
+                {!isReceptionist && row.profitPercent > 0 && (
                   <Tag color="green" style={{ margin: 0 }}>{row.profitPercent}% прибыли</Tag>
                 )}
                 {bd && (
@@ -402,15 +419,25 @@ export const ServicesPage: React.FC<Props> = ({ embedded = false }) => {
             {row.role && <Tag style={{ margin: 0 }}>{row.role}</Tag>}
           </div>
           {row.position && <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{row.position}</div>}
+          {!isReceptionist && <div className={styles.servicemanFlags}>{servicemanFlags(row)}</div>}
         </div>
       ),
     },
+    !isReceptionist ? {
+      title: 'Оклад',
+      key: 'baseSalary',
+      width: 110,
+      render: (_: unknown, row: Serviceman) =>
+        (row.baseSalary ?? 0) > 0
+          ? formatPrice(row.baseSalary!)
+          : <span style={{ color: 'var(--color-text-secondary)' }}>—</span>,
+    } : { title: '', key: 'emptySalary', width: 0, render: () => null },
     !isReceptionist ? {
       title: '% прибыли',
       key: 'profitPercent',
       width: 110,
       render: (_: unknown, row: Serviceman) =>
-        row.role === 'Сотрудник' && row.profitPercent > 0
+        row.profitPercent > 0
           ? <Tag color="green">{row.profitPercent}%</Tag>
           : <span style={{ color: 'var(--color-text-secondary)' }}>—</span>,
     } : { title: '', key: 'emptyProfit', width: 0, render: () => null },
@@ -440,28 +467,28 @@ export const ServicesPage: React.FC<Props> = ({ embedded = false }) => {
         />
       ),
     } : { title: '', key: 'empty', width: 0, render: () => null },
-    {
+    isReceptionist ? { title: '', key: 'emptyActions', width: 0, render: () => null } : {
       title: '', key: 'actions', width: isDismissedList ? 150 : 120,
       render: isDismissedList
         ? (_: unknown, row: Serviceman) => servicemanRestoreAction(row)
-        : (_: unknown, row: Serviceman) => servicemanActions(row, isReceptionist),
+        : (_: unknown, row: Serviceman) => servicemanActions(row),
     },
   ];
 
-  const dismissedSection = (list: Serviceman[], isReceptionist: boolean) =>
+  const dismissedSection = (list: Serviceman[]) =>
     list.length > 0 ? (
       <Collapse
         style={{ marginTop: 16 }}
         items={[{
           key: 'dismissed',
           label: `Уволенные (${list.length})`,
-          children: isMobile ? servicemanCards(list, isReceptionist, true) : (
+          children: isMobile ? servicemanCards(list, false, true) : (
             <Table
               dataSource={list}
               rowKey="id"
               size="middle"
               pagination={false}
-              columns={servicemanColumns(isReceptionist, true)}
+              columns={servicemanColumns(false, true)}
               rowClassName={() => 'ant-table-row-dimmed'}
             />
           ),
@@ -628,7 +655,7 @@ export const ServicesPage: React.FC<Props> = ({ embedded = false }) => {
                 <div className={styles.tabActions}>
                   <Button type="primary" icon={<PlusOutlined />} onClick={() => {
                     servicemanForm.resetFields();
-                    setServicemanModal({ open: true, isReceptionist: false });
+                    setServicemanModal({ open: true });
                   }}>
                     Добавить сотрудника
                   </Button>
@@ -643,7 +670,7 @@ export const ServicesPage: React.FC<Props> = ({ embedded = false }) => {
                     locale={{ emptyText: 'Нет сотрудников' }}
                   />
                 )}
-                {dismissedSection(dismissedEmployees, false)}
+                {dismissedSection(dismissedEmployees)}
               </div>
             ),
           },
@@ -658,15 +685,10 @@ export const ServicesPage: React.FC<Props> = ({ embedded = false }) => {
             children: (
               <div>
                 <div className={styles.receptionistsHeader}>
-                  <Tag color="blue" style={{ lineHeight: '30px', padding: '0 10px' }}>
-                    Отмеченный по умолчанию будет автоматически подставляться в новые записи
+                  <Tag color="blue" className={styles.receptionistsHint}>
+                    Мастером приёмщиком назначают свитчем в карточке сотрудника (вкладка «Сотрудники»).
+                    Отмеченный по умолчанию подставляется в новые записи
                   </Tag>
-                  <Button type="primary" icon={<PlusOutlined />} onClick={() => {
-                    servicemanForm.resetFields();
-                    setServicemanModal({ open: true, isReceptionist: true });
-                  }}>
-                    Добавить мастера
-                  </Button>
                 </div>
                 {isMobile ? servicemanCards(activeReceptionists, true) : (
                   <Table
@@ -679,7 +701,6 @@ export const ServicesPage: React.FC<Props> = ({ embedded = false }) => {
                     scroll={{ x: 'max-content' }}
                   />
                 )}
-                {dismissedSection(dismissedReceptionists, true)}
               </div>
             ),
           },
@@ -825,9 +846,7 @@ export const ServicesPage: React.FC<Props> = ({ embedded = false }) => {
         open={servicemanModal.open}
         onCancel={() => { setServicemanModal({ open: false }); servicemanForm.resetFields(); }}
         onOk={handleSaveServiceman}
-        title={servicemanModal.item
-          ? 'Редактировать сотрудника'
-          : servicemanModal.isReceptionist ? 'Добавить мастера приёмщика' : 'Добавить сотрудника'}
+        title={servicemanModal.item ? 'Редактировать сотрудника' : 'Добавить сотрудника'}
         destroyOnHidden
       >
         <Form form={servicemanForm} layout="vertical">
@@ -861,17 +880,32 @@ export const ServicesPage: React.FC<Props> = ({ embedded = false }) => {
           <Form.Item label="Дата рождения" name="birthday">
             <DatePicker style={{ width: '100%' }} format="DD.MM.YYYY" placeholder="Выберите дату" />
           </Form.Item>
-          <Form.Item noStyle shouldUpdate={(prev, cur) => prev.role !== cur.role}>
-            {({ getFieldValue }) => getFieldValue('role') === 'Сотрудник' ? (
-              <Form.Item
-                label="Процент от чистой прибыли (%)"
-                name="profitPercent"
-                tooltip="Процент, который сотрудник получает от чистой прибыли по каждой услуге"
-              >
-                <InputNumber min={0} max={100} step={0.5} style={{ width: '100%' }} placeholder="0" />
-              </Form.Item>
-            ) : null}
+          <Form.Item
+            label="Оклад за месяц (р.)"
+            name="baseSalary"
+            tooltip="Начисляется каждый расчётный период (с 25-го по 24-е). Новый оклад действует с текущего периода, прошлые месяцы не пересчитываются"
+          >
+            <InputNumber min={0} step={50} precision={2} style={{ width: '100%' }} placeholder="0" />
           </Form.Item>
+          <Form.Item
+            label="Процент от чистой прибыли (%)"
+            name="profitPercent"
+            tooltip="Процент, который сотрудник получает от чистой прибыли по каждой услуге"
+          >
+            <InputNumber min={0} max={100} step={0.5} style={{ width: '100%' }} placeholder="0" />
+          </Form.Item>
+          <div className={styles.servicemanSwitches}>
+            <Form.Item name="isPerformer" valuePropName="checked" noStyle>
+              <Switch />
+            </Form.Item>
+            <span>Выполняет работы — показывать в списке исполнителей</span>
+          </div>
+          <div className={styles.servicemanSwitches}>
+            <Form.Item name="isReceptionist" valuePropName="checked" noStyle>
+              <Switch />
+            </Form.Item>
+            <span>Мастер приёмщик</span>
+          </div>
         </Form>
       </Modal>
     </div>

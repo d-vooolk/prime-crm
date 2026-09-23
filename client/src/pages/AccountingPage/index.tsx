@@ -14,7 +14,7 @@ import { CashTransaction, CapitalTransaction, Serviceman } from '@/types';
 import { accountingApi, SalaryData, SalaryRecord, SalaryAdjustment, SalaryPayment, FounderSalaryRecord, SalaryHistoryItem, MonthlyRevenueItem, MonthlyRecordCountItem, Debt } from '@/api/accounting.api';
 import { servicesApi } from '@/api/services.api';
 import { formatPrice } from '@/utils/formatters';
-import { averageAnnualSalary, effectiveSalaryMonth, roundSalaryAmount, SALARY_ROUND_STEP } from '@/utils/salary';
+import { averageAnnualSalary, effectiveSalaryMonth, hasSalary, roundSalaryAmount, SALARY_ROUND_STEP } from '@/utils/salary';
 import { useAuthStore } from '@/store/authStore';
 import styles from './AccountingPage.module.scss';
 
@@ -246,7 +246,7 @@ export const AccountingPage: React.FC = () => {
   useEffect(() => { loadMonthlyRecordCount(); }, [loadMonthlyRecordCount]);
   useEffect(() => {
     servicesApi.getServicemen().then(setServicemen).catch(() => {});
-    servicesApi.getAllServicemen().then(all => setEmployees(all.filter(s => s.role === 'Сотрудник' && !s.isDismissed))).catch(() => {});
+    servicesApi.getAllServicemen().then(all => setEmployees(all.filter(s => hasSalary(s) && !s.isDismissed))).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -1227,6 +1227,9 @@ export const AccountingPage: React.FC = () => {
             {salaryData.profitPercent > 0 && (
               <span>Процент: <Tag color="blue" style={{ margin: 0 }}>{salaryData.profitPercent}%</Tag></span>
             )}
+            {salaryData.baseSalary > 0 && (
+              <span>Оклад: <strong>{formatPrice(salaryData.baseSalary)}</strong></span>
+            )}
           </div>
           {isMobile ? (
             <Spin spinning={salaryLoading}>
@@ -1330,9 +1333,14 @@ export const AccountingPage: React.FC = () => {
           )}
 
           <div className={styles.salaryTotals}>
-            {salaryData.adjustments.length > 0 && !isMobile && (
+            {(salaryData.adjustments.length > 0 || salaryData.baseSalary > 0) && !isMobile && (
               <span className={styles.salaryTotalsBase}>
                 База: {formatPrice(salaryData.totalPayment)}
+              </span>
+            )}
+            {salaryData.baseSalary > 0 && (
+              <span className={styles.salaryTotalsBase}>
+                Оклад: {formatPrice(salaryData.baseSalary)}
               </span>
             )}
             <span>

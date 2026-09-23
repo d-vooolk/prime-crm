@@ -98,3 +98,27 @@
     }
   }
 }
+
+.servicemanFlags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+
+  &:empty {
+    display: none;
+  }
+}
+
+.servicemanSwitches {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.receptionistsHint {
+  white-space: normal;
+  line-height: 1.5;
+  padding: 4px 10px;
+}

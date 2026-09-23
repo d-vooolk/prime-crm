@@ -1,4 +1,5 @@
 import dayjs, { Dayjs } from 'dayjs';
+import { Serviceman } from '@/types';
 
 /** Новый расчётный период зарплаты начинается 25-го числа */
 export const SALARY_PERIOD_START_DAY = 25;
@@ -68,4 +69,12 @@ export function roundSalaryAmount(amount: number, direction: 'up' | 'down'): num
   }
   const rubles = cents / 100;
   return direction === 'up' ? rubles + SALARY_ROUND_STEP : Math.max(0, rubles - SALARY_ROUND_STEP);
+}
+
+/**
+ * Кому считается зарплата (расчёт ЗП, дашборд): роль «Сотрудник» — всегда,
+ * остальным — если в карточке задан оклад или процент от работ.
+ */
+export function hasSalary(s: Serviceman): boolean {
+  return s.role === 'Сотрудник' || s.profitPercent > 0 || (s.baseSalary ?? 0) > 0;
 }

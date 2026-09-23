@@ -56,6 +56,8 @@ export interface SalaryData {
   records: SalaryRecord[];
   totalNetProfit: number;
   totalPayment: number;
+  // Оклад за период
+  baseSalary: number;
   adjustments: SalaryAdjustment[];
   adjustedTotal: number;
   payments: SalaryPayment[];

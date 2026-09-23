@@ -253,7 +253,7 @@ export const Step1Client: React.FC<Props> = ({ data, onChange }) => {
     return Array.from({ length }, (_, i) => String(to - i));
   })();
 
-  const employees = servicemen.filter(s => !s.isReceptionist && !s.isDismissed && s.role === 'Сотрудник');
+  const employees = servicemen.filter(s => s.isPerformer && !s.isDismissed);
   const receptionists = servicemen.filter(s => s.isReceptionist && !s.isDismissed);
 
   const isCarSelected = (car: Car) =>

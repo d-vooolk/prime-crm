@@ -9,7 +9,7 @@ import { analyticsApi, Period } from '@/api/analytics.api';
 import { accountingApi, SalaryData, SalaryHistoryItem, MonthlyRevenueItem, MonthlyRecordCountItem } from '@/api/accounting.api';
 import { servicesApi } from '@/api/services.api';
 import { formatPrice } from '@/utils/formatters';
-import { averageAnnualSalary, effectiveSalaryMonth } from '@/utils/salary';
+import { averageAnnualSalary, effectiveSalaryMonth, hasSalary } from '@/utils/salary';
 import { Serviceman } from '@/types';
 import { useAuthStore } from '@/store/authStore';
 import styles from './DashboardPage.module.scss';
@@ -79,7 +79,7 @@ export const DashboardPage: React.FC = () => {
 
     servicesApi.getServicemen()
       .then(async (men) => {
-        const filtered = men.filter(m => m.role === 'Сотрудник');
+        const filtered = men.filter(hasSalary);
         setServicemen(filtered);
         const [salaryResults, historyResults] = await Promise.all([
           Promise.all(filtered.map(m => accountingApi.getSalary(m.name, year, month).catch(() => null))),

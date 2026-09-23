@@ -1,5 +1,6 @@
 import { prisma } from '../prisma/client';
 import { AppError } from '../middleware/errorHandler';
+import { baseSalaryFor, monthsWithBaseSalary } from './salaryRates';
 
 export interface SalaryRecordItem {
   serviceName: string;
@@ -49,6 +50,8 @@ export interface SalaryData {
   records: SalaryRecord[];
   totalNetProfit: number;
   totalPayment: number;
+  // Оклад за период (по истории окладов)
+  baseSalary: number;
   adjustments: SalaryAdjustmentDto[];
   adjustedTotal: number;
   payments: SalaryPaymentDto[];
@@ -219,8 +222,12 @@ export const accountingService = {
     const periodFrom = new Date(year, month - 2, 25); // 25th of prev month
     const periodTo = new Date(year, month - 1, 25);   // 25th of current month (exclusive)
 
-    const serviceman = await prisma.serviceman.findUnique({ where: { name: servicemanName } });
+    const serviceman = await prisma.serviceman.findUnique({
+      where: { name: servicemanName },
+      include: { salaryRates: true },
+    });
     const profitPercent = serviceman?.profitPercent ?? 0;
+    const baseSalary = baseSalaryFor(serviceman?.salaryRates ?? [], { year, month });
 
     type SplitEntry = { name: string; amount: number };
 
@@ -302,7 +309,7 @@ export const accountingService = {
     }));
     const bonusTotal = adjustments.filter(a => a.type === 'BONUS').reduce((s, a) => s + a.amount, 0);
     const fineTotal = adjustments.filter(a => a.type === 'FINE').reduce((s, a) => s + a.amount, 0);
-    const adjustedTotal = totalPayment + bonusTotal - fineTotal;
+    const adjustedTotal = totalPayment + baseSalary + bonusTotal - fineTotal;
 
     const rawPayments = await prisma.employeeSalaryPayment.findMany({
       where: { servicemanName, year, month },
@@ -329,6 +336,7 @@ export const accountingService = {
       records,
       totalNetProfit,
       totalPayment,
+      baseSalary,
       adjustments,
       adjustedTotal,
       payments,
@@ -393,8 +401,12 @@ export const accountingService = {
   },
 
   async getSalaryHistory(servicemanName: string) {
-    const serviceman = await prisma.serviceman.findUnique({ where: { name: servicemanName } });
+    const serviceman = await prisma.serviceman.findUnique({
+      where: { name: servicemanName },
+      include: { salaryRates: true },
+    });
     const profitPercent = serviceman?.profitPercent ?? 0;
+    const rates = serviceman?.salaryRates ?? [];
 
     type SplitEntry = { name: string; amount: number };
 
@@ -443,9 +455,10 @@ export const accountingService = {
     }
 
     const adjustments = await prisma.salaryAdjustment.findMany({ where: { servicemanName } });
-    for (const adj of adjustments) {
-      const key = `${adj.year}-${String(adj.month).padStart(2, '0')}`;
-      if (!monthMap.has(key)) monthMap.set(key, { year: adj.year, month: adj.month, totalPayment: 0, recordIds: new Set() });
+    // Месяцы только с окладом (без работ и корректировок) тоже попадают в историю
+    for (const m of [...adjustments, ...monthsWithBaseSalary(rates)]) {
+      const key = `${m.year}-${String(m.month).padStart(2, '0')}`;
+      if (!monthMap.has(key)) monthMap.set(key, { year: m.year, month: m.month, totalPayment: 0, recordIds: new Set() });
     }
 
     const MONTH_NAMES = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
@@ -456,7 +469,7 @@ export const accountingService = {
         const monthAdj = adjustments.filter(a => a.year === m.year && a.month === m.month);
         const bonus = monthAdj.filter(a => a.type === 'BONUS').reduce((s, a) => s + a.amount, 0);
         const fine = monthAdj.filter(a => a.type === 'FINE').reduce((s, a) => s + a.amount, 0);
-        const adjustedTotal = Math.max(0, m.totalPayment + bonus - fine);
+        const adjustedTotal = Math.max(0, m.totalPayment + baseSalaryFor(rates, m) + bonus - fine);
         return {
           year: m.year,
           month: m.month,

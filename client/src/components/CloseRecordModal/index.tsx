@@ -81,7 +81,7 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
   useEffect(() => {
     if (open) {
       servicesApi.getAllServicemen().then(all =>
-        setEmployees(all.filter(s => s.role === 'Сотрудник' && !s.isDismissed))
+        setEmployees(all.filter(s => s.isPerformer && !s.isDismissed))
       ).catch(() => {});
 
       setItems(record.items.map(i => {

@@ -1,6 +1,20 @@
 import http from './http';
 import { Category, Equipment, Serviceman, CompanySettings, DocumentTemplate, SmsSettings, SmsConnectionInfo } from '@/types';
 
+export interface ServicemanPayload {
+  name?: string;
+  position?: string;
+  role?: string;
+  email?: string;
+  password?: string;
+  isReceptionist?: boolean;
+  isPerformer?: boolean;
+  birthday?: string | null;
+  profitPercent?: number;
+  /** Оклад: меняется с текущего расчётного периода, прошлые месяцы не пересчитываются */
+  baseSalary?: number;
+}
+
 export const servicesApi = {
   getCategories: () =>
     http.get<{ data: Category[] }>('/services/categories').then(r => r.data.data),
@@ -41,10 +55,10 @@ export const servicesApi = {
   getAllServicemen: () =>
     http.get<{ data: Serviceman[] }>('/services/servicemen/all').then(r => r.data.data),
 
-  createServiceman: (data: { name: string; position?: string; role?: string; email?: string; password?: string; isReceptionist?: boolean; birthday?: string | null; profitPercent?: number }) =>
+  createServiceman: (data: ServicemanPayload & { name: string }) =>
     http.post<{ data: Serviceman }>('/services/servicemen', data).then(r => r.data.data),
 
-  updateServiceman: (id: string, data: { name?: string; position?: string; role?: string; email?: string; password?: string; isReceptionist?: boolean; profitPercent?: number; birthday?: string | null }) =>
+  updateServiceman: (id: string, data: ServicemanPayload) =>
     http.patch<{ data: Serviceman }>(`/services/servicemen/${id}`, data).then(r => r.data.data),
 
   getTodayBirthdays: () =>

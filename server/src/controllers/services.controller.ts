@@ -4,6 +4,7 @@ import { prisma } from '../prisma/client';
 import { AuthPayload } from '../middleware/auth.middleware';
 import { smsService } from '../services/sms.service';
 import { AppError } from '../middleware/errorHandler';
+import { baseSalaryFor, effectiveSalaryMonth, setBaseSalary } from '../services/salaryRates';
 
 const ROLE_LEVEL: Record<string, number> = {
   'Создатель': 1, 'Директор': 2, 'Менеджер': 3, 'Сотрудник': 4,
@@ -25,8 +26,23 @@ async function assertNameIsFree(name: string, excludeId?: string) {
       409
     );
   }
-  const who = existing.isReceptionist ? 'он добавлен как мастер приёмщик' : 'он уже в списке сотрудников';
-  throw new AppError(`Сотрудник «${name}» уже существует: ${who}. Укажите другое ФИО.`, 409);
+  throw new AppError(`Сотрудник «${name}» уже есть в списке сотрудников. Укажите другое ФИО.`, 409);
+}
+
+// Создателя нельзя уволить или удалить: без него некому управлять системой
+const UNDISMISSABLE_ROLE = 'Создатель';
+
+/** Сотрудник для клиента: вместо истории окладов — оклад текущего расчётного периода */
+type ServicemanWithRates = Awaited<ReturnType<typeof prisma.serviceman.findMany<{ include: { salaryRates: true } }>>>[number];
+function withBaseSalary({ salaryRates, ...s }: ServicemanWithRates) {
+  return { ...s, baseSalary: baseSalaryFor(salaryRates, effectiveSalaryMonth()) };
+}
+
+function parseBaseSalary(value: unknown): number | undefined {
+  if (value === undefined || value === null || value === '') return undefined;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0) throw new AppError('Некорректный оклад', 400);
+  return Math.round(n * 100) / 100;
 }
 
 function requesterLevel(req: Request): number {
@@ -163,21 +179,23 @@ export const servicemanController = {
       const servicemen = await prisma.serviceman.findMany({
         where: { isDismissed: false },
         orderBy: { name: 'asc' },
+        include: { salaryRates: true },
       });
-      res.json({ data: servicemen });
+      res.json({ data: servicemen.map(withBaseSalary) });
     } catch (e) { next(e); }
   },
 
   async getAllIncludingDismissed(_req: Request, res: Response, next: NextFunction) {
     try {
-      const servicemen = await prisma.serviceman.findMany({ orderBy: { name: 'asc' } });
-      res.json({ data: servicemen });
+      const servicemen = await prisma.serviceman.findMany({ orderBy: { name: 'asc' }, include: { salaryRates: true } });
+      res.json({ data: servicemen.map(withBaseSalary) });
     } catch (e) { next(e); }
   },
 
   async create(req: Request, res: Response, next: NextFunction) {
     try {
-      const { position, role, email, password, photoUrl, isReceptionist, birthday, profitPercent } = req.body;
+      const { position, role, email, password, photoUrl, isReceptionist, isPerformer, birthday, profitPercent } = req.body;
+      const baseSalary = parseBaseSalary(req.body.baseSalary);
       const name = String(req.body.name ?? '').trim();
       if (!name) throw new AppError('Укажите ФИО сотрудника', 400);
       const myLevel = requesterLevel(req);
@@ -192,18 +210,20 @@ export const servicemanController = {
           name, position, role, email,
           password: hashed,
           plainPassword: password || undefined,
-          photoUrl, isReceptionist: !!isReceptionist,
+          photoUrl, isReceptionist: !!isReceptionist, isPerformer: !!isPerformer,
           birthday: birthday ? new Date(birthday) : undefined,
           ...(profitPercent !== undefined && { profitPercent: Number(profitPercent) }),
         },
       });
+      if (baseSalary !== undefined) await setBaseSalary(s.id, baseSalary);
       res.status(201).json({ data: s });
     } catch (e) { next(e); }
   },
 
   async update(req: Request, res: Response, next: NextFunction) {
     try {
-      const { position, role, email, password, photoUrl, isReceptionist, profitPercent, birthday } = req.body;
+      const { position, role, email, password, photoUrl, isReceptionist, isPerformer, profitPercent, birthday } = req.body;
+      const baseSalary = parseBaseSalary(req.body.baseSalary);
       const name = req.body.name !== undefined ? String(req.body.name).trim() : undefined;
       if (name === '') throw new AppError('Укажите ФИО сотрудника', 400);
       const myLevel = requesterLevel(req);
@@ -224,11 +244,14 @@ export const servicemanController = {
         data: {
           name, position, role, email,
           ...(hashed !== undefined && { password: hashed, plainPassword: password }),
-          photoUrl, isReceptionist,
+          photoUrl, isReceptionist, isPerformer,
           ...(profitPercent !== undefined && { profitPercent: Number(profitPercent) }),
           ...(birthday !== undefined && { birthday: birthday ? new Date(birthday) : null }),
+          // Снятый с приёмщиков не может оставаться приёмщиком по умолчанию
+          ...(isReceptionist === false && { isDefault: false }),
         },
       });
+      if (baseSalary !== undefined) await setBaseSalary(s.id, baseSalary);
       res.json({ data: s });
     } catch (e) { next(e); }
   },
@@ -240,6 +263,10 @@ export const servicemanController = {
       if (!existing) { res.status(404).json({ message: 'Сотрудник не найден' }); return; }
       if (myLevel !== 0 && getLevel(existing.role) < myLevel) {
         res.status(403).json({ message: 'Недостаточно прав для увольнения этого сотрудника' });
+        return;
+      }
+      if (existing.role === UNDISMISSABLE_ROLE) {
+        res.status(403).json({ message: 'Создателя нельзя уволить' });
         return;
       }
       const s = await prisma.serviceman.update({
@@ -289,6 +316,8 @@ export const servicemanController = {
   async setDefault(req: Request, res: Response, next: NextFunction) {
     try {
       const id = String(req.params.id);
+      const target = await prisma.serviceman.findUnique({ where: { id } });
+      if (!target?.isReceptionist) throw new AppError('Сотрудник не отмечен как мастер приёмщик', 400);
       await prisma.serviceman.updateMany({
         where: { isReceptionist: true },
         data: { isDefault: false },
@@ -303,6 +332,8 @@ export const servicemanController = {
 
   async delete(req: Request, res: Response, next: NextFunction) {
     try {
+      const existing = await prisma.serviceman.findUnique({ where: { id: String(req.params.id) } });
+      if (existing?.role === UNDISMISSABLE_ROLE) throw new AppError('Создателя нельзя удалить', 403);
       await prisma.serviceman.delete({ where: { id: String(req.params.id) } });
       res.json({ success: true });
     } catch (e) { next(e); }

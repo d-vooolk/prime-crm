@@ -170,11 +170,28 @@ model Serviceman {
   isDismissed    Boolean   @default(false)
   isReceptionist Boolean   @default(false)
   isDefault      Boolean   @default(false)
+  // Показывать в списке исполнителей работ. null — старая запись, заполняется
+  // при старте сервера (bootstrap/servicemanPerformers.ts)
+  isPerformer    Boolean?
   profitPercent  Float     @default(0)
   plainPassword  String?
   birthday       DateTime?
   createdAt      DateTime  @default(now())
   notes          Note[]
+  salaryRates    SalaryRate[]
+}
+
+// История оклада: сумма действует с расчётного месяца year/month до следующей записи
+model SalaryRate {
+  id           String     @id @default(cuid())
+  servicemanId String
+  year         Int
+  month        Int
+  amount       Float
+  createdAt    DateTime   @default(now())
+  serviceman   Serviceman @relation(fields: [servicemanId], references: [id], onDelete: Cascade)
+
+  @@unique([servicemanId, year, month])
 }
 
 model CompanySettings {

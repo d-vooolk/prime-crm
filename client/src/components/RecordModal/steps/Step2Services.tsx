@@ -36,7 +36,7 @@ export const Step2Services: React.FC<Props> = ({ data, onChange, prepaymentLocke
     servicesApi.getCategories().then(setCategories).catch(() => {});
     servicesApi.getEquipment().then(setEquipment).catch(() => {});
     servicesApi.getAllServicemen()
-      .then(all => setEmployees(all.filter(e => e.role === 'Сотрудник' && !e.isDismissed)))
+      .then(all => setEmployees(all.filter(e => e.isPerformer && !e.isDismissed)))
       .catch(() => {});
   }, []);
 
