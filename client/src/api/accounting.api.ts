@@ -1,5 +1,5 @@
 import http from './http';
-import { CashTransaction, CapitalTransaction } from '@/types';
+import { CashTransaction, CapitalTransaction, Currency, CurrencyRates } from '@/types';
 
 export interface CashMonthData {
   income: CashTransaction[];
@@ -79,6 +79,8 @@ export const accountingApi = {
     amount: number;
     person: string;
     founderSalary?: { year: number; month: number; person: string };
+    // Название категории затрат; новая создаётся на сервере
+    expenseCategory?: string | null;
   }) =>
     http.post<{ data: CashTransaction }>('/accounting/expense', data).then(r => r.data.data),
 
@@ -89,13 +91,22 @@ export const accountingApi = {
     http.get<{ data: { deposits: CapitalTransaction[]; withdrawals: CapitalTransaction[] } }>('/accounting/capital').then(r => r.data.data),
 
   getCapitalBalance: () =>
-    http.get<{ data: { byn: number; usd: number } }>('/accounting/capital/balance').then(r => r.data.data),
+    http.get<{ data: { byn: number; usd: number; eur: number } }>('/accounting/capital/balance').then(r => r.data.data),
 
-  createDeposit: (data: { date: string; amount: number; currency: 'BYN' | 'USD' }) =>
+  createDeposit: (data: { date: string; amount: number; currency: Currency }) =>
     http.post<{ data: CapitalTransaction }>('/accounting/capital/deposit', data).then(r => r.data.data),
 
-  createWithdrawal: (data: { date: string; amount: number; currency: 'BYN' | 'USD'; description?: string; person: string }) =>
+  createWithdrawal: (data: { date: string; amount: number; currency: Currency; description?: string; person: string }) =>
     http.post<{ data: CapitalTransaction }>('/accounting/capital/withdrawal', data).then(r => r.data.data),
+
+  /** Расход из кассы, который пополняет капитал в BYN или в купленной на него валюте */
+  createCapitalTransfer: (data: {
+    date: string; amountByn: number; currency: Currency; currencyAmount?: number; person: string; description?: string;
+  }) =>
+    http.post<{ data: CashTransaction }>('/accounting/capital/transfer', data).then(r => r.data.data),
+
+  getRates: (refresh = false) =>
+    http.get<{ data: CurrencyRates }>('/accounting/rates', { params: refresh ? { refresh: true } : {} }).then(r => r.data.data),
 
   getSalary: (servicemanName: string, year: number, month: number) =>
     http.get<{ data: SalaryData }>('/accounting/salary', { params: { servicemanName, year, month } }).then(r => r.data.data),
@@ -115,7 +126,7 @@ export const accountingApi = {
   setMonthlyRecordCount: (year: number, month: number, count: number) =>
     http.post<{ data: MonthlyRecordCountItem }>('/accounting/monthly-record-count', { year, month, count }).then(r => r.data.data),
 
-  updateCashTransaction: (id: string, data: { date?: string; amount?: number; description?: string; person?: string }) =>
+  updateCashTransaction: (id: string, data: { date?: string; amount?: number; description?: string; person?: string; expenseCategory?: string | null }) =>
     http.patch<{ data: CashTransaction }>(`/accounting/cash/${id}`, data).then(r => r.data.data),
 
   deleteCashTransaction: (id: string) =>
@@ -141,7 +152,7 @@ export const accountingApi = {
   getDebts: (archived: boolean) =>
     http.get<{ data: Debt[] }>('/accounting/debts', { params: { archived } }).then(r => r.data.data),
 
-  createDebt: (data: { description: string; amount: number; direction: DebtDirection }) =>
+  createDebt: (data: { description: string; amount: number; currency: Currency; direction: DebtDirection }) =>
     http.post<{ data: Debt }>('/accounting/debts', data).then(r => r.data.data),
 
   updateDebt: (id: string, data: { description?: string; amount?: number }) =>
@@ -150,8 +161,9 @@ export const accountingApi = {
   deleteDebt: (id: string) =>
     http.delete(`/accounting/debts/${id}`),
 
-  payDebt: (id: string, amount: number) =>
-    http.post<{ data: Debt }>(`/accounting/debts/${id}/payments`, { amount }).then(r => r.data.data),
+  /** amount — в валюте currency; rate — BYN за единицу валюты, если нужна конвертация */
+  payDebt: (id: string, data: { amount: number; currency: Currency; rate?: number }) =>
+    http.post<{ data: Debt }>(`/accounting/debts/${id}/payments`, data).then(r => r.data.data),
 };
 
 export type DebtDirection = 'WE_OWE' | 'OWED_TO_US';
@@ -159,14 +171,20 @@ export type DebtStatus = 'ACTIVE' | 'SETTLED';
 
 export interface DebtPayment {
   id: string;
+  /** На сколько уменьшился долг — в валюте долга */
   amount: number;
+  paidCurrency: Currency;
+  paidAmount: number | null;
+  rate: number | null;
   paidAt: string;
   cashTransactionId: string | null;
+  capitalTransactionId: string | null;
 }
 
 export interface Debt {
   id: string;
   description: string;
+  currency: Currency;
   initialAmount: number;
   remainingAmount: number;
   direction: DebtDirection;

@@ -107,8 +107,13 @@ export const RecordCard: React.FC<Props> = ({ record, onClick }) => {
           </div>
           <div className={styles.statusBadge}>{STATUS_LABELS[status]}</div>
         </div>
-        <div className={cn(styles.phone, { [styles.blurred]: isEmployee })}>{client.phone}</div>
-        <div className={cn(styles.clientName, { [styles.blurred]: isEmployee })}>{client.name}</div>
+        {/* Сотрудникам контакты клиента не показываем */}
+        {!isEmployee && (
+          <>
+            <div className={styles.phone}>{client.phone}</div>
+            <div className={styles.clientName}>{client.name}</div>
+          </>
+        )}
 
         {items.length > 0 && (
           <div className={styles.services}>

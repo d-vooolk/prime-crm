@@ -119,13 +119,9 @@
   border-radius: var(--border-radius-sm);
   overflow: hidden;
   background: var(--color-surface-2);
-
-  :global(.ant-image) { display: block; width: 100%; }
-  :global(.ant-image-img) {
-    width: 100%;
-    aspect-ratio: 4 / 3;
-    object-fit: cover;
-  }
+  // Видео за пределами экрана не отрисовываются — прокрутка длинной карточки не тормозит
+  content-visibility: auto;
+  contain-intrinsic-size: auto 160px;
 
   video {
     display: block;
@@ -133,6 +129,98 @@
     aspect-ratio: 16 / 9;
     background: #000;
   }
+}
+
+// ─── Галерея фото (WikiPhotoGallery) ───
+
+// Размер плитки задан заранее (aspect-ratio), поэтому догружающиеся картинки не двигают сетку
+.photoTile {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--border-radius-sm);
+  overflow: hidden;
+  background: var(--color-surface-2);
+  // Плитки вне экрана браузер не рендерит — сотни фото не тормозят прокрутку
+  content-visibility: auto;
+  contain-intrinsic-size: auto 135px;
+}
+
+.photoTileCompact {
+  width: 120px;
+  height: 90px;
+  aspect-ratio: auto;
+  contain-intrinsic-size: 120px 90px;
+}
+
+.photoButton {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: zoom-in;
+}
+
+.photoPlaceholder,
+.photoImg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photoPlaceholder {
+  // Микропревью 32px растягивается браузером — выглядит как размытая версия фото
+  image-rendering: auto;
+}
+
+.photoImg {
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.photoImgLoaded {
+  opacity: 1;
+}
+
+.photoFallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  width: 100%;
+  height: 100%;
+  padding: var(--spacing-sm);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  text-align: center;
+}
+
+.photoFallbackIcon {
+  font-size: var(--font-size-xl);
+}
+
+.photoFallbackName {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.photoStrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.previewToolbar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
 }
 
 .mediaDelete {
@@ -234,7 +322,6 @@
   flex-wrap: wrap;
   gap: var(--spacing-sm);
 
-  :global(.ant-image-img),
   video {
     width: 120px;
     height: 90px;
@@ -259,6 +346,27 @@
   @include mobile {
     :global(.ant-btn) { flex: 1; }
   }
+}
+
+.rewardForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-xs);
+}
+
+.rewardInput {
+  width: 180px;
+}
+
+.rewardHint {
+  font-size: var(--font-size-sm);
+  color: var(--color-warning);
+}
+
+.rewardHintMuted {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
 }
 
 .settingsForm {

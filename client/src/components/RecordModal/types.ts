@@ -1,4 +1,4 @@
-import { ServicemanSplitEntry } from '@/types';
+import { ForeignCurrency, ServicemanSplitEntry } from '@/types';
 
 export interface SelectedService {
   serviceId: string;
@@ -11,6 +11,10 @@ export interface SelectedService {
   equipmentId?: string;
   prepaidAmount?: number;
   prepaidByCard?: boolean;
+  /** Предоплата в валюте: prepaidAmount — её эквивалент в BYN */
+  prepaidCurrency?: ForeignCurrency | null;
+  prepaidCurrencyAmount?: number | null;
+  prepaidRate?: number | null;
   isProduct?: boolean;
   /**
    * Кто выполнял услугу.
@@ -84,7 +88,7 @@ export const emptyFormData: RecordFormData = {
   carGenerationName: '',
   carYear: '',
   date: '',
-  time: '',
+  time: '09:00',
   serviceman: '',
   receptionist: '',
   isLegalEntity: false,

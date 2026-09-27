@@ -1,6 +1,9 @@
 import { prisma } from '../prisma/client';
 import { AppError } from '../middleware/errorHandler';
 import { baseSalaryFor, monthsWithBaseSalary } from './salaryRates';
+import { CASH_TRANSACTION_INCLUDE, expensesService } from './expenses.service';
+import { Currency, isForeignCurrency, assertRate, toByn } from './currency.service';
+import { capitalAmountFields, currencyAccountingService, formatCurrencyAmount } from './currencyAccounting.service';
 
 export interface SalaryRecordItem {
   serviceName: string;
@@ -92,6 +95,7 @@ export const accountingService = {
     const rows = await prisma.cashTransaction.findMany({
       where: { date: { gte: from, lt: to } },
       orderBy: { date: 'asc' },
+      include: CASH_TRANSACTION_INCLUDE,
     });
     return {
       income: rows.filter(r => r.type === 'INCOME' || r.type === 'MANUAL_INCOME'),
@@ -116,8 +120,12 @@ export const accountingService = {
     amount: number;
     person: string;
     founderSalary?: { year: number; month: number; person: string };
+    // Название категории затрат; новой категории ещё нет — создаётся
+    expenseCategory?: string | null;
   }) {
     const { founderSalary } = data;
+    // ЗП учредителя — системный расход, категория ему не нужна
+    const expenseCategoryId = founderSalary ? null : await expensesService.resolveCategoryId(data.expenseCategory);
     if (!founderSalary && isFounderSalaryDescription(data.description)) {
       throw new AppError(FOUNDER_SALARY_MANUAL_ERROR, 400);
     }
@@ -139,6 +147,7 @@ export const accountingService = {
         description: data.description,
         amount: data.amount,
         person: data.person,
+        expenseCategoryId: expenseCategoryId ?? null,
         ...(founderSalary && {
           founderSalary: { create: { ...founderSalary, amount: data.amount } },
         }),
@@ -198,21 +207,22 @@ export const accountingService = {
     const rows = await prisma.capitalTransaction.findMany();
     let byn = 0;
     let usd = 0;
+    let eur = 0;
     for (const r of rows) {
       const sign = r.type === 'DEPOSIT' ? 1 : -1;
       if (r.amountByn != null) byn += sign * r.amountByn;
       if (r.amountUsd != null) usd += sign * r.amountUsd;
+      if (r.amountEur != null) eur += sign * r.amountEur;
     }
-    return { byn, usd };
+    return { byn: roundMoney(byn), usd: roundMoney(usd), eur: roundMoney(eur) };
   },
 
-  async createDeposit(data: { date: string; amount: number; currency: 'BYN' | 'USD' }) {
+  async createDeposit(data: { date: string; amount: number; currency: Currency }) {
     return prisma.capitalTransaction.create({
       data: {
         type: 'DEPOSIT',
         date: new Date(data.date),
-        amountByn: data.currency === 'BYN' ? data.amount : undefined,
-        amountUsd: data.currency === 'USD' ? data.amount : undefined,
+        ...capitalAmountFields(data.currency, data.amount),
       },
     });
   },
@@ -585,21 +595,34 @@ export const accountingService = {
     return prisma.founderSalary.findMany({ orderBy: [{ year: 'asc' }, { month: 'asc' }, { createdAt: 'asc' }] });
   },
 
-  async createWithdrawal(data: { date: string; amount: number; currency: 'BYN' | 'USD'; description?: string; person: string }) {
+  async createWithdrawal(data: { date: string; amount: number; currency: Currency; description?: string; person: string }) {
     return prisma.capitalTransaction.create({
       data: {
         type: 'WITHDRAWAL',
         date: new Date(data.date),
-        amountByn: data.currency === 'BYN' ? data.amount : undefined,
-        amountUsd: data.currency === 'USD' ? data.amount : undefined,
+        ...capitalAmountFields(data.currency, data.amount),
         description: data.description,
         person: data.person,
       },
     });
   },
 
-  async updateCashTransaction(id: string, data: { date?: string; amount?: number; description?: string; person?: string }) {
+  async updateCashTransaction(id: string, data: { date?: string; amount?: number; description?: string; person?: string; expenseCategory?: string | null }) {
+    // Категорию ставим только обычным расходам; у системных (ЗП, капитал, долги) поле игнорируется
+    const expenseCategoryId = data.expenseCategory !== undefined && await expensesService.canHaveCategory(id)
+      ? await expensesService.resolveCategoryId(data.expenseCategory)
+      : undefined;
     return prisma.$transaction(async (tx) => {
+      if (data.amount !== undefined) {
+        // Валютный приход и отчисление в капитал связаны с суммой в капитале — правка суммы их рассинхронизирует
+        const linked = await tx.cashTransaction.findUnique({
+          where: { id },
+          select: { amount: true, currency: true, capitalTransfer: { select: { id: true } } },
+        });
+        if (linked && linked.amount !== data.amount && (linked.currency || linked.capitalTransfer)) {
+          throw new AppError('Сумму валютной операции или отчисления в капитал не меняют: удалите запись и создайте заново', 400);
+        }
+      }
       if (data.description !== undefined && isEmployeeSalaryDescription(data.description)) {
         const current = await tx.cashTransaction.findUnique({ where: { id }, select: { description: true } });
         if (!current) throw new AppError('Запись не найдена', 404);
@@ -622,6 +645,7 @@ export const accountingService = {
           ...(data.amount !== undefined && { amount: data.amount }),
           ...(data.description !== undefined && { description: data.description }),
           ...(data.person !== undefined && { person: data.person }),
+          ...(expenseCategoryId !== undefined && { expenseCategoryId }),
         },
       });
       // ЗП учредителя должна совпадать с суммой расхода, которым она выдана
@@ -653,15 +677,16 @@ export const accountingService = {
     });
   },
 
-  async createDebt(data: { description: string; amount: number; direction: 'WE_OWE' | 'OWED_TO_US' }) {
+  async createDebt(data: { description: string; amount: number; currency: Currency; direction: 'WE_OWE' | 'OWED_TO_US' }) {
     if (!data.description) throw new AppError('Укажите, за что долг', 400);
     if (!Number.isFinite(data.amount) || data.amount <= 0) {
       throw new AppError('Сумма долга должна быть больше нуля', 400);
     }
-    const amount = Math.round(data.amount);
+    const amount = roundMoney(data.amount);
     return prisma.debt.create({
       data: {
         description: data.description,
+        currency: data.currency,
         initialAmount: amount,
         remainingAmount: amount,
         direction: data.direction,
@@ -685,7 +710,7 @@ export const accountingService = {
       if (!Number.isFinite(data.amount) || data.amount <= 0) {
         throw new AppError('Сумма долга должна быть больше нуля', 400);
       }
-      const amount = Math.round(data.amount);
+      const amount = roundMoney(data.amount);
       update.initialAmount = amount;
       update.remainingAmount = amount;
     }
@@ -701,41 +726,88 @@ export const accountingService = {
     return prisma.debt.delete({ where: { id } });
   },
 
-  async payDebt(id: string, amount: number, person?: string) {
+  /**
+   * Погашение долга. Платить можно в валюте долга или в BYN/валюте по курсу (rate — BYN за 1 единицу валюты).
+   * Нам вернули валюту — она через приход в кассе сразу уходит в капитал; мы отдали валюту — она
+   * списывается из капитала. Рубли, как и раньше, — приход или расход в кассе.
+   */
+  async payDebt(id: string, data: { amount: number; currency?: Currency; rate?: number }, person?: string) {
     const debt = await prisma.debt.findUnique({ where: { id }, include: { payments: true } });
     if (!debt) throw new AppError('Долг не найден', 404);
     if (debt.status === 'SETTLED') throw new AppError('Долг уже погашен', 400);
-    if (!Number.isFinite(amount)) throw new AppError('Некорректная сумма погашения', 400);
-    const pay = Math.round(amount);
-    if (pay <= 0) throw new AppError('Сумма погашения должна быть больше нуля', 400);
-    if (pay > debt.remainingAmount) throw new AppError('Сумма погашения больше остатка долга', 400);
+    if (!Number.isFinite(data.amount)) throw new AppError('Некорректная сумма погашения', 400);
+    const paid = roundMoney(data.amount);
+    if (paid <= 0) throw new AppError('Сумма погашения должна быть больше нуля', 400);
 
-    const newRemaining = debt.remainingAmount - pay;
-    const willSettle = newRemaining === 0;
+    const debtCurrency = debt.currency as Currency;
+    const paidCurrency: Currency = data.currency ?? debtCurrency;
+    if (paidCurrency !== 'BYN' && !isForeignCurrency(paidCurrency)) throw new AppError('Неизвестная валюта', 400);
+    if (paidCurrency !== debtCurrency && paidCurrency !== 'BYN' && debtCurrency !== 'BYN') {
+      throw new AppError('Погашайте в валюте долга или в BYN', 400);
+    }
+    // Курс нужен, если меняется валюта или валюта приходит к нам (приход в кассе — в BYN)
+    const needsRate = paidCurrency !== debtCurrency || (paidCurrency !== 'BYN' && debt.direction === 'OWED_TO_US');
+    const rate = needsRate ? data.rate : undefined;
+    if (needsRate) assertRate(rate);
+
+    let reduce = paid;
+    if (paidCurrency !== debtCurrency) {
+      reduce = paidCurrency === 'BYN' ? roundMoney(paid / rate!) : toByn(paid, rate!);
+    }
+    // Копейки от пересчёта по курсу не должны оставлять «хвост» долга
+    if (reduce > debt.remainingAmount + 0.01) throw new AppError('Сумма погашения больше остатка долга', 400);
+    const newRemaining = Math.max(0, roundMoney(debt.remainingAmount - reduce));
+    const willSettle = newRemaining < 0.01;
     const prefix = willSettle ? 'Погашение' : 'Частичное погашение';
     const description = `${prefix} долга — ${debt.description}`;
-    const cashType = debt.direction === 'OWED_TO_US' ? 'INCOME' : 'EXPENSE';
     const now = new Date();
+    const payment = {
+      debtId: id,
+      amount: willSettle ? debt.remainingAmount : reduce,
+      paidCurrency,
+      paidAmount: paid,
+      rate: rate ?? null,
+      paidAt: now,
+    };
 
     return prisma.$transaction(async (tx) => {
-      const cashTx = await tx.cashTransaction.create({
-        data: {
-          type: cashType,
+      if (paidCurrency === 'BYN') {
+        const cashTx = await tx.cashTransaction.create({
+          data: {
+            type: debt.direction === 'OWED_TO_US' ? 'INCOME' : 'EXPENSE',
+            date: now,
+            amount: paid,
+            description,
+            person: person ?? null,
+          },
+        });
+        await tx.debtPayment.create({ data: { ...payment, cashTransactionId: cashTx.id } });
+      } else if (debt.direction === 'OWED_TO_US') {
+        const income = await currencyAccountingService.createCurrencyIncome(tx, {
+          part: { currency: paidCurrency, amount: paid, rate: rate! },
           date: now,
-          amount: pay,
           description,
-          person: person ?? null,
-        },
-      });
-
-      await tx.debtPayment.create({
-        data: { debtId: id, amount: pay, paidAt: now, cashTransactionId: cashTx.id },
-      });
+          person,
+        });
+        await tx.debtPayment.create({ data: { ...payment, cashTransactionId: income.id } });
+      } else {
+        const withdrawal = await tx.capitalTransaction.create({
+          data: {
+            type: 'WITHDRAWAL',
+            date: now,
+            ...capitalAmountFields(paidCurrency, paid),
+            rate: rate ?? null,
+            description: `${description} (${formatCurrencyAmount(paid, paidCurrency)})`,
+            person: person ?? null,
+          },
+        });
+        await tx.debtPayment.create({ data: { ...payment, capitalTransactionId: withdrawal.id } });
+      }
 
       return tx.debt.update({
         where: { id },
         data: {
-          remainingAmount: newRemaining,
+          remainingAmount: willSettle ? 0 : newRemaining,
           status: willSettle ? 'SETTLED' : 'ACTIVE',
           settledAt: willSettle ? now : null,
         },

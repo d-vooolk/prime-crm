@@ -1,9 +1,13 @@
-import { Prisma } from '@prisma/client';
+import { Prisma, CashTransactionType } from '@prisma/client';
 import { prisma } from '../prisma/client';
 import { AppError } from '../middleware/errorHandler';
 import { startOfDay, endOfDay } from '../utils/date';
 import { smsService } from './sms.service';
 import { accountingService } from './accounting.service';
+import { toByn, roundMoney } from './currency.service';
+import {
+  CurrencyPart, currencyAccountingService, currencyPartsByn, parseCurrencyParts,
+} from './currencyAccounting.service';
 
 const RECORD_INCLUDE = {
   client: true,
@@ -64,16 +68,59 @@ export interface CreateRecordDto {
     servicemanSplit?: Array<{ name: string; amount: number }> | null;
     prepaidAmount?: number;
     prepaidByCard?: boolean;
+    prepaidCurrency?: string | null;
+    prepaidCurrencyAmount?: number | null;
+    prepaidRate?: number | null;
   }>;
 }
+
+type PrepaidInput = {
+  prepaidAmount?: number;
+  prepaidByCard?: boolean;
+  prepaidCurrency?: string | null;
+  prepaidCurrencyAmount?: number | null;
+  prepaidRate?: number | null;
+};
+
+/**
+ * Поля предоплаты позиции. Предоплата в валюте хранится исходной суммой и курсом,
+ * а prepaidAmount — её эквивалент в BYN, пересчитанный здесь, чтобы не зависеть от округления на клиенте
+ */
+function prepaidFields(item: PrepaidInput) {
+  if (item.prepaidCurrency && item.prepaidCurrencyAmount) {
+    const [part] = parseCurrencyParts([
+      { currency: item.prepaidCurrency, amount: item.prepaidCurrencyAmount, rate: item.prepaidRate },
+    ]);
+    return {
+      prepaidAmount: toByn(part.amount, part.rate),
+      prepaidByCard: false,
+      prepaidCurrency: part.currency,
+      prepaidCurrencyAmount: part.amount,
+      prepaidRate: part.rate,
+    };
+  }
+  return {
+    prepaidAmount: item.prepaidAmount || 0,
+    prepaidByCard: item.prepaidByCard || false,
+    prepaidCurrency: null,
+    prepaidCurrencyAmount: null,
+    prepaidRate: null,
+  };
+}
+
+// Приходы по записи — без расходов «Отчисление в капитал», которые создаются вместе с валютными приходами
+const INCOME_TYPES: CashTransactionType[] = ['INCOME', 'INCOME_RS'];
 
 export interface CloseDealDto {
   finalPrice: number;
   defects?: string;
+  recommendations?: string;
   warranty?: string;
   isPaidByBankTransfer?: boolean;
   splitCashAmount?: number;
   splitCardAmount?: number;
+  /** Часть остатка, оплаченная валютой: [{ currency, amount, rate }] */
+  currencyPayments?: unknown;
 }
 
 export const recordsService = {
@@ -232,8 +279,7 @@ export const recordsService = {
                 ? (item.servicemanSplit as Prisma.InputJsonValue)
                 : undefined,
               equipmentId: item.equipmentId,
-              prepaidAmount: item.prepaidAmount || 0,
-              prepaidByCard: item.prepaidByCard || false,
+              ...prepaidFields(item),
             })),
           },
         },
@@ -351,8 +397,7 @@ export const recordsService = {
             ? (servicemanSplit as Prisma.InputJsonValue)
             : undefined,
           equipmentId: item.equipmentId,
-          prepaidAmount: item.prepaidAmount || 0,
-          prepaidByCard: item.prepaidByCard || false,
+          ...prepaidFields(item),
         };
       });
 
@@ -401,28 +446,15 @@ export const recordsService = {
 
       await prisma.deal.update({ where: { recordId: id }, data: { finalPrice: newFinalPrice } });
 
-      // Пересчитываем только закрывающие транзакции (не предоплату)
-      const prepaidAgg = await prisma.cashTransaction.aggregate({
-        where: { recordId: id, isPrepayment: true },
-        _sum: { amount: true },
+      // Пересчитываем только закрывающие транзакции (не предоплату). Валюта остаётся как была
+      // принята, остаток после неё — одним приходом (разбивка нал/карта при правке цены не сохраняется)
+      const deal = record.deal as unknown as { closedAt: Date; isPaidByBankTransfer: boolean; currencyPayments: unknown } | null;
+      await recordsService.syncClosingTransactions(record, {
+        finalPrice: newFinalPrice,
+        isPaidByBankTransfer: deal?.isPaidByBankTransfer ?? false,
+        currencyParts: parseCurrencyParts(deal?.currencyPayments),
+        date: deal?.closedAt ?? new Date(),
       });
-      const prepaidSum = prepaidAgg._sum.amount || 0;
-      const remainingAmount = Math.max(0, newFinalPrice - prepaidSum);
-
-      await prisma.cashTransaction.deleteMany({
-        where: { recordId: id, isPrepayment: false, type: { in: ['INCOME', 'INCOME_RS'] } },
-      });
-      if (remainingAmount > 0) {
-        const baseClosing = {
-          recordId: id,
-          clientName: record.client.name,
-          clientPhone: record.client.phone,
-          carInfo: `${record.car.brand} ${record.car.model} ${record.car.year}`,
-          date: record.deal ? (record.deal as unknown as { closedAt: Date }).closedAt : new Date(),
-          isPrepayment: false,
-        };
-        await prisma.cashTransaction.create({ data: { ...baseClosing, type: 'INCOME', amount: remainingAmount } });
-      }
 
       return recordsService.findById(id);
     }
@@ -433,37 +465,26 @@ export const recordsService = {
   async close(id: string, data: CloseDealDto) {
     const record = await recordsService.findById(id);
 
-    const { finalPrice, defects, warranty, isPaidByBankTransfer = false, splitCashAmount, splitCardAmount } = data;
+    const { finalPrice, defects, recommendations, warranty, isPaidByBankTransfer = false, splitCashAmount, splitCardAmount } = data;
     const isSplit = splitCashAmount != null && splitCardAmount != null;
+    const currencyParts = parseCurrencyParts(data.currencyPayments);
+    const currencyPayments = currencyParts.length ? (currencyParts as unknown as Prisma.InputJsonValue) : Prisma.DbNull;
 
     if (record.status === 'CLOSED') {
       await prisma.deal.update({
         where: { recordId: id },
-        data: { finalPrice, defects, warranty, isPaidByBankTransfer, splitCashAmount: isSplit ? splitCashAmount : null, splitCardAmount: isSplit ? splitCardAmount : null },
+        // Форма закрытия присылает всё состояние: пустые поля очищаем, а не оставляем прежними
+        data: { finalPrice, defects: defects || null, recommendations: recommendations || null, warranty, isPaidByBankTransfer, splitCashAmount: isSplit ? splitCashAmount : null, splitCardAmount: isSplit ? splitCardAmount : null, currencyPayments },
       });
-      // Удаляем только закрывающие транзакции, предоплату не трогаем
-      await prisma.cashTransaction.deleteMany({
-        where: { recordId: id, isPrepayment: false, type: { in: ['INCOME', 'INCOME_RS'] } },
+      // Пересоздаём только закрывающие транзакции, предоплату не трогаем
+      await recordsService.syncClosingTransactions(record, {
+        finalPrice,
+        isPaidByBankTransfer,
+        splitCashAmount: isSplit ? splitCashAmount : undefined,
+        splitCardAmount: isSplit ? splitCardAmount : undefined,
+        currencyParts,
+        date: new Date(),
       });
-      const prepaidAggReclose = await prisma.cashTransaction.aggregate({
-        where: { recordId: id, isPrepayment: true },
-        _sum: { amount: true },
-      });
-      const prepaidSumReclose = prepaidAggReclose._sum.amount || 0;
-      const remainingReclose = Math.max(0, finalPrice - prepaidSumReclose);
-      if (remainingReclose > 0) {
-        await accountingService.createIncomeFromDeal({
-          recordId: id,
-          clientName: record.client.name,
-          clientPhone: record.client.phone,
-          carInfo: `${record.car.brand} ${record.car.model} ${record.car.year}${record.car.plateNumber ? ' ' + record.car.plateNumber : ''}`,
-          amount: remainingReclose,
-          isPaidByBankTransfer,
-          splitCashAmount: isSplit ? splitCashAmount : undefined,
-          splitCardAmount: isSplit ? splitCardAmount : undefined,
-          closedAt: new Date(),
-        });
-      }
       return recordsService.findById(id);
     }
 
@@ -499,10 +520,12 @@ export const recordsService = {
           recordId: id,
           finalPrice,
           defects,
+          recommendations,
           warranty,
           isPaidByBankTransfer,
           splitCashAmount: isSplit ? splitCashAmount : null,
           splitCardAmount: isSplit ? splitCardAmount : null,
+          currencyPayments,
           equipment: equipmentIds.length
             ? { create: equipmentIds.map((equipmentId) => ({ equipmentId })) }
             : undefined,
@@ -511,31 +534,15 @@ export const recordsService = {
       await tx.record.update({ where: { id }, data: { status: 'CLOSED' } });
     });
 
-    const closed = await recordsService.findById(id);
-
-    // Вычитаем предоплату — в кассу попадает только остаток
-    const prepaidAggClose = await prisma.cashTransaction.aggregate({
-      where: { recordId: id, isPrepayment: true },
-      _sum: { amount: true },
+    await recordsService.syncClosingTransactions(record, {
+      finalPrice,
+      isPaidByBankTransfer,
+      splitCashAmount: isSplit ? splitCashAmount : undefined,
+      splitCardAmount: isSplit ? splitCardAmount : undefined,
+      currencyParts,
+      date: new Date(),
     });
-    const prepaidSumClose = prepaidAggClose._sum.amount || 0;
-    const remainingClose = Math.max(0, finalPrice - prepaidSumClose);
-
-    if (remainingClose > 0) {
-      const splitCash = isSplit ? splitCashAmount : undefined;
-      const splitCard = isSplit ? splitCardAmount : undefined;
-      await accountingService.createIncomeFromDeal({
-        recordId: id,
-        clientName: record.client.name,
-        clientPhone: record.client.phone,
-        carInfo: `${record.car.brand} ${record.car.model} ${record.car.year}${record.car.plateNumber ? ' ' + record.car.plateNumber : ''}`,
-        amount: remainingClose,
-        isPaidByBankTransfer,
-        splitCashAmount: splitCash,
-        splitCardAmount: splitCard,
-        closedAt: new Date(),
-      });
-    }
+    const closed = await recordsService.findById(id);
 
     // fire-and-forget: не блокируем ответ. Повторные закрытия отсекаются
     // и веткой выше, и правилом «отзыв один раз на запись» в sms.service.
@@ -557,10 +564,10 @@ export const recordsService = {
   async cancel(id: string, data?: { retainedCashAmount?: number; retainedCardAmount?: number }) {
     const record = await recordsService.findById(id);
 
-    // Получаем текущие prepayment-транзакции
-    const prepayTxs = await prisma.cashTransaction.findMany({
-      where: { recordId: id, isPrepayment: true },
-    });
+    // Получаем текущие рублёвые prepayment-транзакции. Валютная предоплата уже в капитале —
+    // при отмене она остаётся как есть (вернуть её можно выдачей из капитала)
+    const rublePrepayment = { recordId: id, isPrepayment: true, type: { in: INCOME_TYPES }, currency: null };
+    const prepayTxs = await prisma.cashTransaction.findMany({ where: rublePrepayment });
     const totalPrepaidCash = prepayTxs.filter(t => t.type === 'INCOME').reduce((s, t) => s + t.amount, 0);
     const totalPrepaidCard = prepayTxs.filter(t => t.type === 'INCOME_RS').reduce((s, t) => s + t.amount, 0);
 
@@ -570,7 +577,7 @@ export const recordsService = {
     const cashChanged = retainedCash !== totalPrepaidCash || retainedCard !== totalPrepaidCard;
 
     if (cashChanged) {
-      await prisma.cashTransaction.deleteMany({ where: { recordId: id, isPrepayment: true } });
+      await prisma.cashTransaction.deleteMany({ where: rublePrepayment });
       const baseData = {
         clientName: record.client.name,
         clientPhone: record.client.phone,
@@ -652,16 +659,80 @@ export const recordsService = {
     }).slice(0, 10);
   },
 
+  /**
+   * Закрывающие транзакции сделки: всё, что осталось после предоплаты. Сначала валюта
+   * (приход по курсу + отчисление в капитал), остаток — рублями нал/карта/РС. Если валюты дали
+   * больше остатка, разница — расход «Сдача клиенту». Прежние закрывающие транзакции удаляются
+   * (отчисления в капитал — каскадом вместе с валютными приходами).
+   */
+  async syncClosingTransactions(
+    record: { id: string; client: { name: string; phone: string }; car: { brand: string; model: string; year: string; plateNumber?: string | null } },
+    data: {
+      finalPrice: number;
+      isPaidByBankTransfer: boolean;
+      splitCashAmount?: number;
+      splitCardAmount?: number;
+      currencyParts: CurrencyPart[];
+      date: Date;
+    },
+  ) {
+    const { id } = record;
+    await prisma.cashTransaction.deleteMany({ where: { recordId: id, isPrepayment: false } });
+
+    const prepaidAgg = await prisma.cashTransaction.aggregate({
+      where: { recordId: id, isPrepayment: true, type: { in: INCOME_TYPES } },
+      _sum: { amount: true },
+    });
+    const remaining = Math.max(0, roundMoney(data.finalPrice - (prepaidAgg._sum.amount || 0)));
+    const base = {
+      recordId: id,
+      clientName: record.client.name,
+      clientPhone: record.client.phone,
+      carInfo: `${record.car.brand} ${record.car.model} ${record.car.year}${record.car.plateNumber ? ' ' + record.car.plateNumber : ''}`,
+    };
+
+    for (const part of data.currencyParts) {
+      await currencyAccountingService.createCurrencyIncome(prisma, {
+        ...base,
+        part,
+        date: data.date,
+        description: 'Оплата в валюте',
+      });
+    }
+
+    const rest = roundMoney(remaining - currencyPartsByn(data.currencyParts));
+    if (rest > 0) {
+      // Разбивка нал/карта считается на клиенте от остатка после валюты — если не сходится, не используем
+      const hasSplit = data.splitCashAmount != null && data.splitCardAmount != null
+        && Math.abs(data.splitCashAmount + data.splitCardAmount - rest) < 0.01;
+      await accountingService.createIncomeFromDeal({
+        ...base,
+        amount: rest,
+        isPaidByBankTransfer: data.isPaidByBankTransfer,
+        splitCashAmount: hasSplit ? data.splitCashAmount : undefined,
+        splitCardAmount: hasSplit ? data.splitCardAmount : undefined,
+        closedAt: data.date,
+      });
+    } else if (rest < 0) {
+      await prisma.cashTransaction.create({
+        data: { ...base, type: 'EXPENSE', date: data.date, amount: -rest, description: 'Сдача клиенту в BYN после оплаты валютой' },
+      });
+    }
+  },
+
   async syncPrepaymentTransactions(
     recordId: string,
     clientName: string,
     clientPhone: string,
     carInfo: string,
-    items: Array<{ serviceId: string; prepaidAmount?: number; prepaidByCard?: boolean }>,
+    items: Array<{ serviceId: string } & PrepaidInput>,
   ) {
+    // Отчисления в капитал за валютную предоплату удаляются каскадом вместе с приходами
     await prisma.cashTransaction.deleteMany({ where: { recordId, isPrepayment: true } });
 
-    const prepaidItems = items.filter(i => (i.prepaidAmount || 0) > 0);
+    const prepaidItems = items
+      .map(i => ({ serviceId: i.serviceId, ...prepaidFields(i) }))
+      .filter(i => i.prepaidAmount > 0);
     if (prepaidItems.length === 0) return;
 
     const serviceIds = prepaidItems.map(i => i.serviceId);
@@ -672,11 +743,21 @@ export const recordsService = {
       .join(', ');
     const description = `Предоплата: ${serviceNames}`;
 
-    const cashTotal = prepaidItems.filter(i => !i.prepaidByCard).reduce((s, i) => s + (i.prepaidAmount || 0), 0);
-    const cardTotal = prepaidItems.filter(i => i.prepaidByCard).reduce((s, i) => s + (i.prepaidAmount || 0), 0);
+    const rubleItems = prepaidItems.filter(i => !i.prepaidCurrency);
+    const cashTotal = rubleItems.filter(i => !i.prepaidByCard).reduce((s, i) => s + i.prepaidAmount, 0);
+    const cardTotal = rubleItems.filter(i => i.prepaidByCard).reduce((s, i) => s + i.prepaidAmount, 0);
 
     const base = { recordId, clientName, clientPhone, carInfo, date: new Date(), isPrepayment: true, description };
     if (cashTotal > 0) await prisma.cashTransaction.create({ data: { ...base, type: 'INCOME', amount: cashTotal } });
     if (cardTotal > 0) await prisma.cashTransaction.create({ data: { ...base, type: 'INCOME_RS', amount: cardTotal } });
+
+    // Каждая валютная предоплата — свой приход по своему курсу
+    for (const i of prepaidItems) {
+      if (!i.prepaidCurrency || !i.prepaidCurrencyAmount || !i.prepaidRate) continue;
+      await currencyAccountingService.createCurrencyIncome(prisma, {
+        ...base,
+        part: { currency: i.prepaidCurrency, amount: i.prepaidCurrencyAmount, rate: i.prepaidRate },
+      });
+    }
   },
 };

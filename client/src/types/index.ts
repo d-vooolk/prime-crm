@@ -85,6 +85,9 @@ export interface RecordItem {
   equipment?: Equipment | null;
   prepaidAmount?: number;
   prepaidByCard?: boolean;
+  prepaidCurrency?: ForeignCurrency | null;
+  prepaidCurrencyAmount?: number | null;
+  prepaidRate?: number | null;
   service: Service & { category: Category };
 }
 
@@ -93,11 +96,13 @@ export interface Deal {
   recordId: string;
   finalPrice: number;
   defects?: string;
+  recommendations?: string;
   warranty?: string;
   priceIncreaseReason?: string;
   isPaidByBankTransfer: boolean;
   splitCashAmount?: number | null;
   splitCardAmount?: number | null;
+  currencyPayments?: CurrencyPart[] | null;
   closedAt: string;
   salaryDate?: string | null;
   equipment: Array<{ equipment: Equipment }>;
@@ -118,7 +123,19 @@ export interface CashTransaction {
   person?: string;
   recordId?: string;
   isPrepayment?: boolean;
+  /** Приход в валюте: amount — сумма в BYN по курсу currencyRate */
+  currency?: ForeignCurrency | null;
+  currencyAmount?: number | null;
+  currencyRate?: number | null;
   createdAt: string;
+  // Категория затрат расхода (у системных расходов — пусто)
+  expenseCategoryId?: string | null;
+  expenseCategory?: { id: string; name: string } | null;
+  // Признаки системного расхода: ЗП учредителя, выплата ЗП, отчисление в капитал, погашение долга
+  founderSalary?: { id: string } | null;
+  salaryPayment?: { id: string } | null;
+  capitalTransfer?: { id: string } | null;
+  debtPayment?: { id: string } | null;
 }
 
 export interface CapitalTransaction {
@@ -127,9 +144,39 @@ export interface CapitalTransaction {
   date: string;
   amountByn?: number;
   amountUsd?: number;
+  amountEur?: number;
+  /** Курс BYN за единицу валюты, если пополнение пришло через конвертацию */
+  rate?: number | null;
   description?: string;
   person?: string;
   createdAt: string;
+  /** Пополнение из кассы — расход «Отчисление в капитал» */
+  cashTransactionId?: string | null;
+}
+
+export type ForeignCurrency = 'USD' | 'EUR';
+export type Currency = 'BYN' | ForeignCurrency;
+
+/** Часть оплаты в валюте: в BYN = amount × rate */
+export interface CurrencyPart {
+  currency: ForeignCurrency;
+  amount: number;
+  rate: number;
+}
+
+/** Курсы BYN за единицу валюты с myfin.by */
+export interface CurrencyRate {
+  /** Лучший курс покупки банками («сдать») */
+  buy: number | null;
+  /** Лучший курс продажи банками («купить») */
+  sell: number | null;
+  nbrb: number | null;
+}
+
+export interface CurrencyRates {
+  rates: { [C in ForeignCurrency]: CurrencyRate };
+  source: 'myfin' | 'nbrb';
+  fetchedAt: string;
 }
 
 export interface Record {
@@ -191,6 +238,8 @@ export interface Service {
   hasEquipment?: boolean;
   isProduct?: boolean;
   customPercent?: number | null;
+  /** Сколько раз услугу добавляли в записи — для сортировки по популярности */
+  usageCount?: number;
   category?: Category;
 }
 
@@ -251,6 +300,8 @@ export interface CompanySettings {
   bankDetails?: string;
   documentPrefix?: string;
   nextDocumentNumber?: number;
+  /** Памятка клиенту в акте. null — текст по умолчанию, пустая строка — не печатать */
+  actMemo?: string | null;
 }
 
 export interface DocumentTemplate {
@@ -333,6 +384,13 @@ export interface WikiMedia {
   uploadedByName?: string | null;
   createdAt: string;
   url: string;
+  /** Сжатые варианты фото. null — вариантов нет (видео, HEIC, ещё не сжато), показываем оригинал. */
+  thumbUrl?: string | null;
+  mediumUrl?: string | null;
+  /** Крошечное размытое превью (data URL), показывается, пока грузится thumb */
+  placeholder?: string | null;
+  width?: number | null;
+  height?: number | null;
 }
 
 export interface WikiEntry extends WikiKey {
@@ -363,6 +421,12 @@ export interface WikiMediaRef {
   filename: string;
   originalName: string;
   url: string;
+  // Варианты есть только у добавленных файлов, которые ещё лежат в вики
+  thumbUrl?: string | null;
+  mediumUrl?: string | null;
+  placeholder?: string | null;
+  width?: number | null;
+  height?: number | null;
 }
 
 export type WikiRevisionStatus = 'PENDING' | 'REVIEWED' | 'REWARDED';
@@ -381,6 +445,8 @@ export interface WikiRevision {
   reviewedByName?: string | null;
   reviewedAt?: string | null;
   bonusAmount?: number | null;
+  /** Размер премии из настроек на момент назначения — если больше bonusAmount, оплата частичная */
+  bonusBaseAmount?: number | null;
   createdAt: string;
   updatedAt: string;
   entry: WikiKey & { markName: string; modelName: string; generationName?: string | null };

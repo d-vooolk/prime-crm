@@ -5,6 +5,7 @@ import { prisma } from '../prisma/client';
 import { AppError } from '../middleware/errorHandler';
 import type { AuthPayload } from '../middleware/auth.middleware';
 import { WIKI_MEDIA_DIR, WIKI_MEDIA_URL } from '../utils/uploads';
+import { ImageVariants, removeVariants, variantUrl } from '../utils/wikiImages';
 
 /** Кто проверяет правки вики и назначает за них премию. Их собственные правки на проверку не попадают. */
 const REVIEWER_ROLES = ['Создатель', 'Директор', 'Менеджер'];
@@ -34,21 +35,35 @@ export interface UploadedFile {
   originalName: string;
   size: number;
   type: WikiMediaType;
+  variants?: ImageVariants;
 }
 
 const entryInclude = { media: { orderBy: { createdAt: 'asc' } } } satisfies Prisma.WikiEntryInclude;
 
 type EntryWithMedia = Prisma.WikiEntryGetPayload<{ include: typeof entryInclude }>;
 
-function withUrls(entry: EntryWithMedia) {
+type MediaRow = Prisma.WikiMediaGetPayload<object>;
+
+/** Ссылки на оригинал и сжатые варианты. Нет варианта — null, фронт возьмёт оригинал. */
+function mediaWithUrls(m: MediaRow) {
+  const { thumbFilename, mediumFilename, displayFilename, ...rest } = m;
   return {
-    ...entry,
-    media: entry.media.map(m => ({ ...m, url: `${WIKI_MEDIA_URL}/${m.filename}` })),
+    ...rest,
+    // HEIC браузер не покажет — вместо него полноразмерный JPEG
+    url: variantUrl(displayFilename) ?? `${WIKI_MEDIA_URL}/${m.filename}`,
+    thumbUrl: variantUrl(thumbFilename),
+    mediumUrl: variantUrl(mediumFilename),
   };
 }
 
+function withUrls(entry: EntryWithMedia) {
+  return { ...entry, media: entry.media.map(mediaWithUrls) };
+}
+
+/** Удаляет оригинал вместе со сжатыми вариантами. */
 function removeFile(filename: string) {
   fs.promises.unlink(path.join(WIKI_MEDIA_DIR, filename)).catch(() => {});
+  void removeVariants(filename);
 }
 
 function generationLabel(g: { name: string; yearFrom: number | null; yearTo: number | null }) {
@@ -230,12 +245,13 @@ export const wikiService = {
       removeFile(file.filename);
       throw e;
     }
+    const { variants, ...fileData } = file;
     const media = await prisma.wikiMedia.create({
-      data: { entryId: entry.id, ...file, uploadedByName: user.name },
+      data: { entryId: entry.id, ...fileData, ...variants, uploadedByName: user.name },
     });
     await prisma.wikiEntry.update({ where: { id: entry.id }, data: { updatedByName: user.name } });
     await trackRevision(entry.id, user, { added: toRef(media) });
-    return { ...media, url: `${WIKI_MEDIA_URL}/${media.filename}` };
+    return mediaWithUrls(media);
   },
 
   deleteMedia(mediaId: string, user: AuthPayload) {
@@ -275,9 +291,29 @@ export const wikiService = {
         },
       },
     });
+
+    // Добавленные файлы ещё лежат в вики — берём из БД их сжатые варианты для превью
+    const addedIds = revisions.flatMap(r => asMediaRefs(r.addedMedia).map(m => m.id));
+    const current = addedIds.length
+      ? await prisma.wikiMedia.findMany({ where: { id: { in: addedIds } } })
+      : [];
+    const currentById = new Map(current.map(m => [m.id, mediaWithUrls(m)]));
+    const refWithUrls = (m: MediaRef) => {
+      const media = currentById.get(m.id);
+      return {
+        ...m,
+        url: media?.url ?? `${WIKI_MEDIA_URL}/${m.filename}`,
+        thumbUrl: media?.thumbUrl ?? null,
+        mediumUrl: media?.mediumUrl ?? null,
+        placeholder: media?.placeholder ?? null,
+        width: media?.width ?? null,
+        height: media?.height ?? null,
+      };
+    };
+
     return revisions.map(r => ({
       ...r,
-      addedMedia: asMediaRefs(r.addedMedia).map(m => ({ ...m, url: `${WIKI_MEDIA_URL}/${m.filename}` })),
+      addedMedia: asMediaRefs(r.addedMedia).map(refWithUrls),
       removedMedia: asMediaRefs(r.removedMedia).map(m => ({ ...m, url: `${WIKI_MEDIA_URL}/${m.filename}` })),
     }));
   },
@@ -293,15 +329,21 @@ export const wikiService = {
     await this.cleanupRemovedFiles(revision.id);
   },
 
-  async reward(id: string, reviewer: AuthPayload) {
+  /**
+   * Назначает премию за правку. amount не передан — полная премия из настроек;
+   * передан — проверяющий решил оплатить иначе (обычно частично, если правка неполная).
+   */
+  async reward(id: string, reviewer: AuthPayload, amount?: number) {
     const revision = await prisma.wikiRevision.findUnique({ where: { id }, include: { entry: true } });
     if (!revision) throw new AppError('Правка не найдена', 404);
     if (revision.status === 'REWARDED') throw new AppError('Премия за эту правку уже назначена', 400);
 
     const settings = await this.getSettings();
-    if (!(settings.bonusAmount > 0)) {
+    const bonus = amount ?? settings.bonusAmount;
+    if (!(bonus > 0)) {
       throw new AppError('Укажите размер премии в настройках вики', 400);
     }
+    const isPartial = settings.bonusAmount > 0 && bonus < settings.bonusAmount;
     const author = await prisma.serviceman.findUnique({ where: { id: revision.authorId } });
     if (!author) throw new AppError('Сотрудник, внёсший правку, не найден', 400);
 
@@ -314,22 +356,25 @@ export const wikiService = {
         data: {
           servicemanName: author.name,
           type: 'BONUS',
-          amount: settings.bonusAmount,
-          reason: `Wiki: ${car}`,
+          amount: bonus,
+          reason: `Wiki: ${car}${isPartial ? ' (частичная оплата)' : ''}`,
           year,
           month,
         },
       });
-      await tx.wikiRevision.update({
-        where: { id },
+      // Условие по статусу — защита от двойного нажатия: вторая премия за ту же правку не пройдёт
+      const updated = await tx.wikiRevision.updateMany({
+        where: { id, status: { not: 'REWARDED' } },
         data: {
           status: 'REWARDED',
           reviewedByName: reviewer.name,
           reviewedAt: new Date(),
-          bonusAmount: settings.bonusAmount,
+          bonusAmount: bonus,
+          bonusBaseAmount: settings.bonusAmount,
           salaryAdjustmentId: adjustment.id,
         },
       });
+      if (updated.count === 0) throw new AppError('Премия за эту правку уже назначена', 400);
     });
     await this.cleanupRemovedFiles(revision.id);
   },

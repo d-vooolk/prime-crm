@@ -55,11 +55,25 @@ function requesterLevel(req: Request): number {
 export const servicesController = {
   async getAll(_req: Request, res: Response, next: NextFunction) {
     try {
-      const categories = await prisma.category.findMany({
-        include: { services: { where: { isActive: true }, orderBy: { name: 'asc' } } },
-        orderBy: { name: 'asc' },
+      const [categories, usage] = await Promise.all([
+        prisma.category.findMany({
+          include: { services: { where: { isActive: true }, orderBy: { name: 'asc' } } },
+          orderBy: { name: 'asc' },
+        }),
+        // Популярность услуги — сколько раз её добавляли в неотменённые записи
+        prisma.recordItem.groupBy({
+          by: ['serviceId'],
+          where: { record: { status: { not: 'CANCELLED' } } },
+          _count: { _all: true },
+        }),
+      ]);
+      const usageById = new Map(usage.map(u => [u.serviceId, u._count._all]));
+      res.json({
+        data: categories.map(c => ({
+          ...c,
+          services: c.services.map(s => ({ ...s, usageCount: usageById.get(s.id) ?? 0 })),
+        })),
       });
-      res.json({ data: categories });
     } catch (e) { next(e); }
   },
 

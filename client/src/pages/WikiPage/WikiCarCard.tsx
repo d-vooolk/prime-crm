@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Card, Button, Input, Upload, Image, Popconfirm, Progress, Empty, Spin, Divider,
+  Card, Button, Input, Upload, Popconfirm, Progress, Empty, Spin, Divider,
 } from 'antd';
 import { EditOutlined, UploadOutlined, DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -8,6 +8,7 @@ import cn from 'classnames';
 import { wikiApi } from '@/api/wiki.api';
 import { WikiEntry, WikiKey, WikiMedia } from '@/types';
 import { useNotify } from '@/hooks/useNotify';
+import { WikiPhotoGallery, GalleryPhoto } from './WikiPhotoGallery';
 import styles from './WikiPage.module.scss';
 
 interface Props {
@@ -35,6 +36,24 @@ interface UploadState {
   percent: number;
 }
 
+const keyString = (k: WikiKey) => `${k.markId}/${k.modelId}/${k.generationId}`;
+
+/**
+ * Новый список медиа, но уже показанные файлы остаются теми же объектами —
+ * плитки галереи (memo) не перерисовываются и не перезагружают картинки.
+ */
+function mergeMedia(prev: WikiEntry | null, next: WikiEntry | null): WikiEntry | null {
+  if (!prev || !next || prev.id !== next.id) return next;
+  const byId = new Map(prev.media.map(m => [m.id, m]));
+  return {
+    ...next,
+    media: next.media.map(m => {
+      const old = byId.get(m.id);
+      return old && old.thumbUrl === m.thumbUrl && old.mediumUrl === m.mediumUrl ? old : m;
+    }),
+  };
+}
+
 export const WikiCarCard: React.FC<Props> = ({ carKey, title, onChanged }) => {
   const notify = useNotify();
   const [entry, setEntry] = useState<WikiEntry | null>(null);
@@ -45,6 +64,18 @@ export const WikiCarCard: React.FC<Props> = ({ carKey, title, onChanged }) => {
   const [uploads, setUploads] = useState<UploadState[]>([]);
 
   const { markId, modelId, generationId } = carKey;
+
+  // Загрузки идут пачкой и параллельно: считаем активные, чтобы в конце пачки один раз
+  // сверить карточку с сервером и один раз обновить список у родителя
+  const activeUploads = useRef(0);
+  const batchChanged = useRef(false);
+  const entryRef = useRef(entry);
+  entryRef.current = entry;
+  // Пользователь мог переключить автомобиль, пока файлы грузились, — ответы старой карточки игнорируем
+  const currentKey = useRef(keyString(carKey));
+  currentKey.current = keyString(carKey);
+  const onChangedRef = useRef(onChanged);
+  onChangedRef.current = onChanged;
 
   useEffect(() => {
     let cancelled = false;
@@ -90,51 +121,80 @@ export const WikiCarCard: React.FC<Props> = ({ carKey, title, onChanged }) => {
     }
   };
 
+  const reloadEntry = async (key: WikiKey) => {
+    const fresh = await wikiApi.getEntry(key);
+    if (currentKey.current === keyString(key)) setEntry(prev => mergeMedia(prev, fresh));
+  };
+
+  const finishUpload = (key: WikiKey) => {
+    activeUploads.current -= 1;
+    if (activeUploads.current > 0 || !batchChanged.current) return;
+    batchChanged.current = false;
+    // Сверка в конце пачки: подтягивает всё, что не удалось дописать локально
+    reloadEntry(key).catch(() => {});
+    onChangedRef.current();
+  };
+
   const upload = async (file: File, uid: string) => {
     const problem = validateFile(file);
     if (problem) {
       notify.error(`${file.name}: ${problem}`);
       return;
     }
+    const key = carKey;
+    activeUploads.current += 1;
     setUploads(list => [...list, { uid, name: file.name, percent: 0 }]);
     try {
-      await wikiApi.uploadMedia(carKey, file, percent =>
-        setUploads(list => list.map(u => (u.uid === uid ? { ...u, percent } : u))),
+      const media = await wikiApi.uploadMedia(key, file, percent =>
+        // Прогресс приходит часто — без изменения процента не перерисовываем
+        setUploads(list => (list.some(u => u.uid === uid && u.percent !== percent)
+          ? list.map(u => (u.uid === uid ? { ...u, percent } : u))
+          : list)),
       );
-      // Перечитываем целиком: если карточки ещё не было, сервер создал её при загрузке
-      setEntry(await wikiApi.getEntry(carKey));
-      onChanged();
+      batchChanged.current = true;
+      if (currentKey.current !== keyString(key)) return;
+      if (entryRef.current) {
+        // Дописываем файл локально, а не перечитываем карточку после каждого из десятков файлов
+        setEntry(prev => (prev && !prev.media.some(m => m.id === media.id)
+          ? { ...prev, media: [...prev.media, media] }
+          : prev));
+      } else {
+        // Карточки ещё не было — сервер создал её при первой загрузке
+        await reloadEntry(key);
+      }
     } catch (e) {
       notify.error(`${file.name}: ${(e as Error).message}`);
     } finally {
       setUploads(list => list.filter(u => u.uid !== uid));
+      finishUpload(key);
     }
   };
 
-  const removeMedia = async (media: WikiMedia) => {
+  const removeMedia = useCallback(async (mediaId: string) => {
     try {
-      await wikiApi.deleteMedia(media.id);
-      setEntry(prev => (prev ? { ...prev, media: prev.media.filter(m => m.id !== media.id) } : prev));
-      onChanged();
+      await wikiApi.deleteMedia(mediaId);
+      setEntry(prev => (prev ? { ...prev, media: prev.media.filter(m => m.id !== mediaId) } : prev));
+      onChangedRef.current();
     } catch (e) {
       notify.error((e as Error).message);
     }
-  };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const photos = entry?.media.filter(m => m.type === 'PHOTO') ?? [];
-  const videos = entry?.media.filter(m => m.type === 'VIDEO') ?? [];
+  const media = entry?.media;
+  const photos = useMemo(() => media?.filter(m => m.type === 'PHOTO') ?? [], [media]);
+  const videos = useMemo(() => media?.filter(m => m.type === 'VIDEO') ?? [], [media]);
 
-  const deleteButton = (media: WikiMedia) => (
+  const deleteButton = useCallback((item: WikiMedia | GalleryPhoto) => (
     <Popconfirm
       title="Удалить файл?"
       okText="Удалить"
       cancelText="Отмена"
       okButtonProps={{ danger: true }}
-      onConfirm={() => removeMedia(media)}
+      onConfirm={() => removeMedia(item.id)}
     >
       <Button className={styles.mediaDelete} size="small" danger icon={<DeleteOutlined />} />
     </Popconfirm>
-  );
+  ), [removeMedia]);
 
   return (
     <Card>
@@ -208,18 +268,7 @@ export const WikiCarCard: React.FC<Props> = ({ carKey, title, onChanged }) => {
           <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Файлов пока нет" />
         )}
 
-        {photos.length > 0 && (
-          <Image.PreviewGroup>
-            <div className={styles.mediaGrid}>
-              {photos.map(p => (
-                <div key={p.id} className={styles.mediaItem}>
-                  {deleteButton(p)}
-                  <Image src={p.url} alt={p.originalName} />
-                </div>
-              ))}
-            </div>
-          </Image.PreviewGroup>
-        )}
+        {photos.length > 0 && <WikiPhotoGallery photos={photos} renderActions={deleteButton} />}
 
         {videos.length > 0 && (
           <div className={cn(styles.videoGrid, { [styles.videoGridSpaced]: photos.length > 0 })}>

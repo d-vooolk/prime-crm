@@ -10,7 +10,9 @@ import { useUiStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/authStore';
 import { CompanySettings, DocumentTemplate, Category, SmsSettings, SmsConnectionInfo, AuthorizedPerson } from '@/types';
 import { CarCatalogEditor } from '@/components/CarCatalogEditor';
+import { ExpenseCategoriesEditor } from '@/components/ExpenseCategoriesEditor';
 import { ServicesPage } from '@/pages/ServicesPage';
+import { DEFAULT_ACT_MEMO } from '@/utils/print';
 import styles from './SettingsPage.module.scss';
 
 const { Text } = Typography;
@@ -74,12 +76,16 @@ export const SettingsPage: React.FC = () => {
   const [smsTesting, setSmsTesting] = useState(false);
   const [testPhone, setTestPhone] = useState('');
 
+  const [actMemo, setActMemo] = useState(DEFAULT_ACT_MEMO);
+  const [memoSaving, setMemoSaving] = useState(false);
+
   useEffect(() => {
     servicesApi.getSettings().then(s => {
       if (s) {
-        const { authorizedPersons: ap, ...rest } = s;
+        const { authorizedPersons: ap, actMemo: memo, ...rest } = s;
         form.setFieldsValue(rest);
         setAuthorizedPersons(ap || []);
+        setActMemo(memo ?? DEFAULT_ACT_MEMO);
       }
     }).catch(() => {});
     loadTemplates();
@@ -119,6 +125,18 @@ export const SettingsPage: React.FC = () => {
       message.error('Ошибка сохранения');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveMemo = async () => {
+    setMemoSaving(true);
+    try {
+      await servicesApi.updateSettings({ actMemo });
+      message.success(actMemo.trim() ? 'Памятка сохранена' : 'Памятка отключена');
+    } catch {
+      message.error('Ошибка сохранения');
+    } finally {
+      setMemoSaving(false);
     }
   };
 
@@ -622,6 +640,28 @@ export const SettingsPage: React.FC = () => {
               locale={{ emptyText: 'Нет шаблонов. При печати будет использован текст по умолчанию.' }}
             />
           </Card>
+
+          <Card
+            title="Памятка клиенту в акте"
+            extra={
+              <Space>
+                <Button size="small" onClick={() => setActMemo(DEFAULT_ACT_MEMO)}>Текст по умолчанию</Button>
+                <Button type="primary" size="small" loading={memoSaving} onClick={handleSaveMemo}>Сохранить</Button>
+              </Space>
+            }
+          >
+            <p className={styles.hint}>
+              Печатается в акте выполненных работ под гарантийными обязательствами, до подписей.
+              Если с памяткой акт не помещается на один лист, она переносится на отдельную страницу —
+              её печатают на обороте. Строка с двоеточием в конце — заголовок, строка с «- » — пункт списка.
+              Чтобы не печатать памятку, очистите поле и сохраните.
+            </p>
+            <Input.TextArea
+              value={actMemo}
+              onChange={e => setActMemo(e.target.value)}
+              autoSize={{ minRows: 8, maxRows: 24 }}
+            />
+          </Card>
         </div>
       ),
     },
@@ -630,6 +670,15 @@ export const SettingsPage: React.FC = () => {
       key: 'directory',
       label: 'Справочник',
       children: <ServicesPage embedded />,
+    },
+    {
+      key: 'expenseCategories',
+      label: 'Категории расходов',
+      children: (
+        <Card title="Категории расходов">
+          <ExpenseCategoriesEditor readOnly={isSotrudnik} />
+        </Card>
+      ),
     },
     {
       key: 'carCatalog',

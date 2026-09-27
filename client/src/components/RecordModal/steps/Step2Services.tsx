@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Select, InputNumber, Button, Table, Empty, Tag, Space, Grid, Modal, Form, Input, Switch, Tooltip } from 'antd';
+import { Select, InputNumber, Button, Table, Empty, Tag, Space, Grid, Modal, Form, Input, Switch, Tooltip, Segmented, Alert } from 'antd';
 import { DeleteOutlined, DollarOutlined, TeamOutlined, PlusOutlined } from '@ant-design/icons';
 import { servicesApi } from '@/api/services.api';
-import { Category, Equipment, Serviceman, ServicemanSplitEntry } from '@/types';
-import { formatPrice } from '@/utils/formatters';
+import { Category, Currency, Equipment, ForeignCurrency, Service, Serviceman, ServicemanSplitEntry } from '@/types';
+import { formatMoney, formatPrice, toByn } from '@/utils/formatters';
+import { RateField, useCurrencyRates } from '@/components/CurrencyConverter';
 import { useNotify } from '@/hooks/useNotify';
 import { RecordFormData, SelectedService } from '../types';
 import styles from './Step2Services.module.scss';
@@ -14,6 +15,53 @@ interface Props {
   onChange: (data: Partial<RecordFormData>) => void;
   prepaymentLocked?: boolean;
 }
+
+interface PrepayCurrencyProps {
+  currency: ForeignCurrency;
+  amount: number;
+  rate: number | null;
+  onAmountChange: (amount: number) => void;
+  onRateChange: (rate: number | null) => void;
+  maxByn: number;
+}
+
+/** Предоплата в валюте: сумма в валюте и курс. Отдельный компонент — курсы грузятся, только когда он открыт */
+const PrepayCurrencyFields: React.FC<PrepayCurrencyProps> = ({ currency, amount, rate, onAmountChange, onRateChange, maxByn }) => {
+  const ratesState = useCurrencyRates();
+  const { rates, rateFor } = ratesState;
+
+  // Курс подставляем, как только курсы загрузились или сменили валюту
+  useEffect(() => {
+    if (rate == null && rates) onRateChange(rateFor(currency));
+  }, [rates, currency, rate, rateFor, onRateChange]);
+
+  const byn = rate ? toByn(amount, rate) : 0;
+  return (
+    <>
+      <Form.Item label={`Сумма в ${currency}`}>
+        <InputNumber
+          min={0}
+          precision={2}
+          value={amount || null}
+          onChange={v => onAmountChange(v || 0)}
+          style={{ width: '100%' }}
+          suffix={currency}
+        />
+      </Form.Item>
+      <Form.Item label="Курс">
+        <RateField currency={currency} value={rate} onChange={onRateChange} ratesState={ratesState} />
+      </Form.Item>
+      {byn > 0 && (
+        <Alert
+          type={byn > maxByn ? 'warning' : 'info'}
+          showIcon
+          message={`В рублях: ${formatMoney(byn)}${byn > maxByn ? ` — больше стоимости услуги (${formatPrice(maxByn)})` : ''}`}
+          description="Валюта сразу уйдёт в капитал: в кассе будет приход по курсу и расход «Отчисление в капитал»"
+        />
+      )}
+    </>
+  );
+};
 
 export const Step2Services: React.FC<Props> = ({ data, onChange, prepaymentLocked }) => {
   const screens = useBreakpoint();
@@ -27,6 +75,9 @@ export const Step2Services: React.FC<Props> = ({ data, onChange, prepaymentLocke
   const [prepayServiceId, setPrepayServiceId] = useState<string | null>(null);
   const [prepayAmount, setPrepayAmount] = useState(0);
   const [prepayByCard, setPrepayByCard] = useState(false);
+  const [prepayCurrency, setPrepayCurrency] = useState<Currency>('BYN');
+  const [prepayCurrencyAmount, setPrepayCurrencyAmount] = useState(0);
+  const [prepayRate, setPrepayRate] = useState<number | null>(null);
 
   // Serviceman split modal state
   const [splitServiceId, setSplitServiceId] = useState<string | null>(null);
@@ -169,18 +220,44 @@ export const Step2Services: React.FC<Props> = ({ data, onChange, prepaymentLocke
 
   const openPrepayModal = (row: SelectedService) => {
     setPrepayServiceId(row.serviceId);
-    setPrepayAmount(row.prepaidAmount || 0);
+    setPrepayAmount(row.prepaidCurrency ? 0 : row.prepaidAmount || 0);
     setPrepayByCard(row.prepaidByCard || false);
+    setPrepayCurrency(row.prepaidCurrency || 'BYN');
+    setPrepayCurrencyAmount(row.prepaidCurrencyAmount || 0);
+    setPrepayRate(row.prepaidRate ?? null);
+  };
+
+  const changePrepayCurrency = (currency: Currency) => {
+    setPrepayCurrency(currency);
+    // Курс другой валюты подставит PrepayCurrencyFields
+    setPrepayRate(null);
   };
 
   const savePrepayment = () => {
     if (!prepayServiceId) return;
+    const isForeign = prepayCurrency !== 'BYN';
+    const hasCurrency = isForeign && prepayCurrencyAmount > 0;
+    if (hasCurrency && !prepayRate) {
+      notify.warning('Укажите курс валюты');
+      return;
+    }
+    const prepaid = isForeign
+      ? {
+        prepaidAmount: hasCurrency && prepayRate ? toByn(prepayCurrencyAmount, prepayRate) : 0,
+        prepaidByCard: false,
+        prepaidCurrency: hasCurrency ? prepayCurrency : null,
+        prepaidCurrencyAmount: hasCurrency ? prepayCurrencyAmount : null,
+        prepaidRate: hasCurrency ? prepayRate : null,
+      }
+      : {
+        prepaidAmount: prepayAmount,
+        prepaidByCard: prepayByCard,
+        prepaidCurrency: null,
+        prepaidCurrencyAmount: null,
+        prepaidRate: null,
+      };
     onChange({
-      services: data.services.map(s =>
-        s.serviceId === prepayServiceId
-          ? { ...s, prepaidAmount: prepayAmount, prepaidByCard: prepayByCard }
-          : s
-      ),
+      services: data.services.map(s => (s.serviceId === prepayServiceId ? { ...s, ...prepaid } : s)),
     });
     setPrepayServiceId(null);
   };
@@ -195,9 +272,12 @@ export const Step2Services: React.FC<Props> = ({ data, onChange, prepaymentLocke
   const prepayService = prepayServiceId ? data.services.find(s => s.serviceId === prepayServiceId) : null;
   const prepayMax = prepayService ? prepayService.price * prepayService.quantity : 0;
 
-  const serviceOptions = categories.map(cat => ({
+  // Популярные категории и услуги — выше, при равенстве остаётся алфавитный порядок с сервера
+  const byUsage = (a: Service, b: Service) => (b.usageCount ?? 0) - (a.usageCount ?? 0);
+  const categoryUsage = (cat: Category) => cat.services.reduce((sum, s) => sum + (s.usageCount ?? 0), 0);
+  const serviceOptions = [...categories].sort((a, b) => categoryUsage(b) - categoryUsage(a)).map(cat => ({
     label: cat.name,
-    options: cat.services.map(s => ({
+    options: [...cat.services].sort(byUsage).map(s => ({
       value: s.id,
       label: `${s.name} — ${formatPrice(s.standardPrice)}`,
     })),
@@ -272,7 +352,12 @@ export const Step2Services: React.FC<Props> = ({ data, onChange, prepaymentLocke
     if (paid >= rowTotal) {
       return <Tag color="success" style={{ fontSize: 10, marginTop: 2 }}>Оплачено полностью</Tag>;
     }
-    return <Tag color="processing" style={{ fontSize: 10, marginTop: 2 }}>Предоплата {formatPrice(paid)}</Tag>;
+    return (
+      <Tag color="processing" style={{ fontSize: 10, marginTop: 2 }}>
+        Предоплата {formatPrice(paid)}
+        {row.prepaidCurrency && row.prepaidCurrencyAmount ? ` (${formatMoney(row.prepaidCurrencyAmount, row.prepaidCurrency)})` : ''}
+      </Tag>
+    );
   };
 
   const columns = [
@@ -630,25 +715,45 @@ export const Step2Services: React.FC<Props> = ({ data, onChange, prepaymentLocke
           <Form.Item label="Полная сумма">
             <Input value={prepayService ? formatPrice(prepayService.price * prepayService.quantity) : ''} disabled />
           </Form.Item>
-          <Form.Item label="Сумма предоплаты">
-            <InputNumber
-              min={0}
-              max={prepayMax}
-              value={prepayAmount}
-              onChange={v => setPrepayAmount(v || 0)}
-              style={{ width: '100%' }}
-              formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}
-              suffix="р."
+          <Form.Item label="Валюта">
+            <Segmented
+              value={prepayCurrency}
+              onChange={v => changePrepayCurrency(v as Currency)}
+              options={['BYN', 'USD', 'EUR']}
             />
           </Form.Item>
-          <Form.Item label="Способ оплаты">
-            <Switch
-              checked={prepayByCard}
-              onChange={setPrepayByCard}
-              checkedChildren="Безнал (РС)"
-              unCheckedChildren="Наличные"
+          {prepayCurrency === 'BYN' ? (
+            <>
+              <Form.Item label="Сумма предоплаты">
+                <InputNumber
+                  min={0}
+                  max={prepayMax}
+                  value={prepayAmount}
+                  onChange={v => setPrepayAmount(v || 0)}
+                  style={{ width: '100%' }}
+                  formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}
+                  suffix="р."
+                />
+              </Form.Item>
+              <Form.Item label="Способ оплаты">
+                <Switch
+                  checked={prepayByCard}
+                  onChange={setPrepayByCard}
+                  checkedChildren="Безнал (РС)"
+                  unCheckedChildren="Наличные"
+                />
+              </Form.Item>
+            </>
+          ) : (
+            <PrepayCurrencyFields
+              currency={prepayCurrency}
+              amount={prepayCurrencyAmount}
+              rate={prepayRate}
+              onAmountChange={setPrepayCurrencyAmount}
+              onRateChange={setPrepayRate}
+              maxByn={prepayMax}
             />
-          </Form.Item>
+          )}
         </Form>
       </Modal>
     </div>

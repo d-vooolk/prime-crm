@@ -5,17 +5,22 @@ import {
 } from 'antd';
 import {
   PlusOutlined, MinusOutlined, EditOutlined, DeleteOutlined, RetweetOutlined, WalletOutlined,
-  ArrowUpOutlined, ArrowDownOutlined,
+  ArrowUpOutlined, ArrowDownOutlined, BankOutlined,
 } from '@ant-design/icons';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import { recordsApi } from '@/api/records.api';
 import dayjs, { Dayjs } from 'dayjs';
-import { CashTransaction, CapitalTransaction, Serviceman } from '@/types';
+import { CashTransaction, CapitalTransaction, Currency, Serviceman } from '@/types';
+import { formatMoney } from '@/utils/formatters';
+import { DebtPayModal } from './DebtPayModal';
+import { CapitalTransferModal } from './CapitalTransferModal';
 import { accountingApi, SalaryData, SalaryRecord, SalaryAdjustment, SalaryPayment, FounderSalaryRecord, SalaryHistoryItem, MonthlyRevenueItem, MonthlyRecordCountItem, Debt } from '@/api/accounting.api';
 import { servicesApi } from '@/api/services.api';
 import { formatPrice } from '@/utils/formatters';
 import { averageAnnualSalary, effectiveSalaryMonth, hasSalary, roundSalaryAmount, SALARY_ROUND_STEP } from '@/utils/salary';
 import { useAuthStore } from '@/store/authStore';
+import { ExpenseCategoryInput } from '@/components/ExpenseCategoryInput';
+import { canHaveExpenseCategory } from '@/utils/expenses';
 import styles from './AccountingPage.module.scss';
 
 const FOUNDER_SALARY_PREFIX = 'ЗП учредителя';
@@ -87,20 +92,35 @@ const expenseColumns = [
   { title: 'Дата', dataIndex: 'date', key: 'date', width: 90, render: (d: string) => formatDate(d) },
   // без ellipsis — длинное пояснение переносится по строкам, а не обрезается
   { title: 'Цель', dataIndex: 'description', key: 'desc', width: 200 },
+  {
+    title: 'Категория', key: 'category', width: 130,
+    render: (_: unknown, r: CashTransaction) => r.expenseCategory ? <Tag>{r.expenseCategory.name}</Tag> : '—',
+  },
   { title: 'Сумма', dataIndex: 'amount', key: 'amount', width: 100, render: (v: number) => <strong>{formatPrice(v)}</strong> },
   { title: 'Изыматель', dataIndex: 'person', key: 'person', width: 120 },
 ];
 
+const CAPITAL_CURRENCY_OPTIONS = [
+  { value: 'BYN', label: 'BYN (рубли)' },
+  { value: 'USD', label: 'USD (доллары)' },
+  { value: 'EUR', label: 'EUR (евро)' },
+];
+
 const depositColumns = [
   { title: 'Дата', dataIndex: 'date', key: 'date', width: 100, render: (d: string) => formatDate(d) },
+  { title: 'Откуда', dataIndex: 'description', key: 'description', width: 200, render: (v?: string) => v || '—' },
   { title: 'BYN', dataIndex: 'amountByn', key: 'byn', width: 100, render: (v?: number) => v != null ? formatPrice(v) : '—' },
   { title: 'USD', dataIndex: 'amountUsd', key: 'usd', width: 100, render: (v?: number) => v != null ? `$${v.toFixed(2)}` : '—' },
+  { title: 'EUR', dataIndex: 'amountEur', key: 'eur', width: 100, render: (v?: number) => v != null ? `€${v.toFixed(2)}` : '—' },
+  { title: 'Курс', dataIndex: 'rate', key: 'rate', width: 80, render: (v?: number | null) => v ?? '—' },
 ];
 
 const withdrawalColumns = [
   { title: 'Дата', dataIndex: 'date', key: 'date', width: 100, render: (d: string) => formatDate(d) },
   { title: 'BYN', dataIndex: 'amountByn', key: 'byn', width: 100, render: (v?: number) => v != null ? formatPrice(v) : '—' },
   { title: 'USD', dataIndex: 'amountUsd', key: 'usd', width: 100, render: (v?: number) => v != null ? `$${v.toFixed(2)}` : '—' },
+  { title: 'EUR', dataIndex: 'amountEur', key: 'eur', width: 100, render: (v?: number) => v != null ? `€${v.toFixed(2)}` : '—' },
+  { title: 'Курс', dataIndex: 'rate', key: 'rate', width: 80, render: (v?: number | null) => v ?? '—' },
   // ширина задана явно: без неё колонка схлопывалась на узком экране
   { title: 'Цель', dataIndex: 'description', key: 'description', width: 200, render: (v?: string) => v || '—' },
   { title: 'Изыматель', dataIndex: 'person', key: 'person', width: 130 },
@@ -123,7 +143,8 @@ export const AccountingPage: React.FC = () => {
 
   const [deposits, setDeposits] = useState<CapitalTransaction[]>([]);
   const [withdrawals, setWithdrawals] = useState<CapitalTransaction[]>([]);
-  const [capitalBalance, setCapitalBalance] = useState({ byn: 0, usd: 0 });
+  const [capitalBalance, setCapitalBalance] = useState({ byn: 0, usd: 0, eur: 0 });
+  const [capitalTransferOpen, setCapitalTransferOpen] = useState(false);
 
   const [employees, setEmployees] = useState<Serviceman[]>([]);
   const [salaryMonth, setSalaryMonth] = useState<Dayjs>(() => effectiveSalaryMonth());
@@ -169,9 +190,7 @@ export const AccountingPage: React.FC = () => {
   const [debtCreateOpen, setDebtCreateOpen] = useState(false);
   const [debtCreateForm] = Form.useForm();
   const [debtSaving, setDebtSaving] = useState(false);
-  const [debtPayOpen, setDebtPayOpen] = useState(false);
   const [debtPayTarget, setDebtPayTarget] = useState<Debt | null>(null);
-  const [debtPayAmount, setDebtPayAmount] = useState<number>(0);
   const [debtEditOpen, setDebtEditOpen] = useState(false);
   const [debtEditTarget, setDebtEditTarget] = useState<Debt | null>(null);
   const [debtEditForm] = Form.useForm();
@@ -208,7 +227,7 @@ export const AccountingPage: React.FC = () => {
     if (!canSeeCapital) return;
     const data = await accountingApi.getCapital().catch(() => null);
     if (data) { setDeposits(data.deposits); setWithdrawals(data.withdrawals); }
-    const bal = await accountingApi.getCapitalBalance().catch(() => ({ byn: 0, usd: 0 }));
+    const bal = await accountingApi.getCapitalBalance().catch(() => ({ byn: 0, usd: 0, eur: 0 }));
     setCapitalBalance(bal);
   }, [canSeeCapital]);
 
@@ -345,6 +364,8 @@ export const AccountingPage: React.FC = () => {
         founderSalary: isFounderSalary && founderMonth
           ? { year: founderMonth.year(), month: founderMonth.month() + 1, person: founderPerson }
           : undefined,
+        // ЗП учредителя — системный расход, без категории
+        expenseCategory: isFounderSalary ? undefined : values.expenseCategory?.trim() || undefined,
       });
       if (isFounderSalary) loadFounderSalaries();
       message.success('Расход добавлен');
@@ -421,6 +442,7 @@ export const AccountingPage: React.FC = () => {
       amount: tx.amount,
       description: tx.description || '',
       person: tx.person || '',
+      expenseCategory: tx.expenseCategory?.name || '',
     });
     setEditOpen(true);
   };
@@ -436,6 +458,8 @@ export const AccountingPage: React.FC = () => {
         amount: values.amount,
         description: values.description || undefined,
         person: values.person || undefined,
+        // Пустое поле — убрать категорию; у системных расходов поля нет
+        ...(canHaveExpenseCategory(editingTx) && { expenseCategory: values.expenseCategory?.trim() || null }),
       });
       message.success('Запись обновлена');
       setEditOpen(false);
@@ -586,12 +610,13 @@ export const AccountingPage: React.FC = () => {
     </div>
   );
 
-  const handleCreateDebt = async (vals: { description: string; amount: number; companyOwes: boolean }) => {
+  const handleCreateDebt = async (vals: { description: string; amount: number; currency: Currency; companyOwes: boolean }) => {
     try {
       setDebtSaving(true);
       await accountingApi.createDebt({
         description: vals.description.trim(),
-        amount: Math.round(vals.amount),
+        amount: vals.amount,
+        currency: vals.currency,
         direction: vals.companyOwes ? 'WE_OWE' : 'OWED_TO_US',
       });
       message.success('Долг добавлен');
@@ -600,23 +625,6 @@ export const AccountingPage: React.FC = () => {
       await loadDebts();
     } catch {
       message.error('Не удалось добавить долг');
-    } finally {
-      setDebtSaving(false);
-    }
-  };
-
-  const handlePayDebt = async () => {
-    if (!debtPayTarget) return;
-    try {
-      setDebtSaving(true);
-      await accountingApi.payDebt(debtPayTarget.id, Math.round(debtPayAmount));
-      message.success('Платёж зарегистрирован');
-      setDebtPayOpen(false);
-      setDebtPayTarget(null);
-      await Promise.all([loadDebts(), loadCash()]);
-    } catch (e) {
-      const err = e as { response?: { data?: { message?: string } } };
-      message.error(err.response?.data?.message || 'Не удалось погасить долг');
     } finally {
       setDebtSaving(false);
     }
@@ -694,17 +702,30 @@ export const AccountingPage: React.FC = () => {
             key: 'amount',
             width: 140,
             render: (_: unknown, d: Debt) => {
+              const cur = d.currency ?? 'BYN';
               const paid = d.payments.reduce((s, p) => s + p.amount, 0);
-              if (d.status === 'SETTLED') return <strong>{formatPrice(d.initialAmount)}</strong>;
-              if (paid === 0) return <strong>{formatPrice(d.initialAmount)}</strong>;
-              const parts = d.payments.map(p => p.amount).join(' + ');
+              // Платёж в другой валюте показываем как платили: «300 р. по 3.02»
+              const paymentText = (p: Debt['payments'][number]) =>
+                p.paidCurrency && p.paidCurrency !== cur && p.paidAmount != null
+                  ? `${formatMoney(p.paidAmount, p.paidCurrency)} по ${p.rate}`
+                  : formatMoney(p.amount, cur);
+              if (d.status === 'SETTLED' || paid === 0) {
+                return (
+                  <div className={styles.debtAmount}>
+                    <strong>{formatMoney(d.initialAmount, cur)}</strong>
+                    {d.payments.length > 0 && (
+                      <span className={styles.debtPayments}>{d.payments.map(paymentText).join(' + ')}</span>
+                    )}
+                  </div>
+                );
+              }
               return (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
-                    Погашено: {parts} = {formatPrice(paid)}
+                <div className={styles.debtAmount}>
+                  <span className={styles.debtPayments}>
+                    Погашено: {d.payments.map(paymentText).join(' + ')} = {formatMoney(paid, cur)}
                   </span>
-                  <strong style={{ color: 'var(--color-danger)' }}>
-                    Остаток: {formatPrice(d.remainingAmount)}
+                  <strong className={styles.debtRemaining}>
+                    Остаток: {formatMoney(d.remainingAmount, cur)}
                   </strong>
                 </div>
               );
@@ -734,11 +755,7 @@ export const AccountingPage: React.FC = () => {
                   <Button
                     size="small"
                     type="primary"
-                    onClick={() => {
-                      setDebtPayTarget(d);
-                      setDebtPayAmount(d.remainingAmount);
-                      setDebtPayOpen(true);
-                    }}
+                    onClick={() => setDebtPayTarget(d)}
                   >
                     Исполнить
                   </Button>
@@ -791,6 +808,15 @@ export const AccountingPage: React.FC = () => {
               precision={2}
               prefix="$"
               valueStyle={{ color: capitalBalance.usd >= 0 ? 'var(--color-success)' : 'var(--color-danger)', fontSize: 22 }}
+            />
+          </Card>
+          <Card size="small" className={styles.balanceCard}>
+            <Statistic
+              title="Баланс EUR"
+              value={capitalBalance.eur}
+              precision={2}
+              prefix="€"
+              valueStyle={{ color: capitalBalance.eur >= 0 ? 'var(--color-success)' : 'var(--color-danger)', fontSize: 22 }}
             />
           </Card>
         </div>
@@ -1830,6 +1856,11 @@ export const AccountingPage: React.FC = () => {
               <Input readOnly={isLinkedSalaryDescription(editingTx.description)} />
             </Form.Item>
           )}
+          {editingTx && canHaveExpenseCategory(editingTx) && (
+            <Form.Item label="Категория" name="expenseCategory">
+              <ExpenseCategoryInput />
+            </Form.Item>
+          )}
           {editingTx?.type === 'EXPENSE' && (
             <Form.Item label="Изыматель" name="person">
               <Select
@@ -1852,6 +1883,18 @@ export const AccountingPage: React.FC = () => {
         cancelText="Отмена"
         destroyOnHidden
       >
+        <div className={styles.capitalTransferEntry}>
+          <Button
+            icon={<BankOutlined />}
+            onClick={() => {
+              setExpenseOpen(false);
+              setCapitalTransferOpen(true);
+            }}
+          >
+            Отчисление в капитал
+          </Button>
+          <span>Перевести наличные из кассы в капитал — в BYN или с обменом на валюту</span>
+        </div>
         <Form form={expenseForm} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item label="Дата" name="date" rules={[{ required: true }]}>
             <DatePicker style={{ width: '100%' }} format="DD.MM.YYYY" />
@@ -1881,6 +1924,11 @@ export const AccountingPage: React.FC = () => {
               readOnly={isFounderSalary}
             />
           </Form.Item>
+          {!isFounderSalary && (
+            <Form.Item label="Категория" name="expenseCategory">
+              <ExpenseCategoryInput />
+            </Form.Item>
+          )}
           <Form.Item label="Сумма (р.)" name="amount" rules={[{ required: true, message: 'Укажите сумму' }]}>
             <InputNumber min={0} style={{ width: '100%' }} precision={2} parser={(v) => parseFloat((v ?? '').replace(/,/g, '.')) || 0} />
           </Form.Item>
@@ -1956,7 +2004,7 @@ export const AccountingPage: React.FC = () => {
             <InputNumber min={0} style={{ width: '100%' }} precision={2} parser={(v) => parseFloat((v ?? '').replace(/,/g, '.')) || 0} />
           </Form.Item>
           <Form.Item label="Валюта" name="currency" rules={[{ required: true }]}>
-            <Select options={[{ value: 'BYN', label: 'BYN (рубли)' }, { value: 'USD', label: 'USD (доллары)' }]} />
+            <Select options={CAPITAL_CURRENCY_OPTIONS} />
           </Form.Item>
         </Form>
       </Modal>
@@ -1979,7 +2027,7 @@ export const AccountingPage: React.FC = () => {
             <InputNumber min={0} style={{ width: '100%' }} precision={2} parser={(v) => parseFloat((v ?? '').replace(/,/g, '.')) || 0} />
           </Form.Item>
           <Form.Item label="Валюта" name="currency" rules={[{ required: true }]}>
-            <Select options={[{ value: 'BYN', label: 'BYN (рубли)' }, { value: 'USD', label: 'USD (доллары)' }]} />
+            <Select options={CAPITAL_CURRENCY_OPTIONS} />
           </Form.Item>
           <Form.Item label="Цель списания" name="description">
             <Input placeholder="Например: дивиденды, личные нужды" />
@@ -2175,7 +2223,7 @@ export const AccountingPage: React.FC = () => {
           form={debtCreateForm}
           layout="vertical"
           style={{ marginTop: 16 }}
-          initialValues={{ companyOwes: true }}
+          initialValues={{ companyOwes: true, currency: 'BYN' }}
           onFinish={handleCreateDebt}
         >
           <Form.Item
@@ -2186,11 +2234,14 @@ export const AccountingPage: React.FC = () => {
             <Input placeholder="Например: запчасти у поставщика" />
           </Form.Item>
           <Form.Item
-            label="Сумма (р.)"
+            label="Сумма"
             name="amount"
             rules={[{ required: true, message: 'Укажите сумму' }]}
           >
-            <InputNumber min={1} precision={0} style={{ width: '100%' }} />
+            <InputNumber min={0.01} precision={2} style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item label="Валюта долга" name="currency">
+            <Select options={CAPITAL_CURRENCY_OPTIONS} />
           </Form.Item>
           <Form.Item label="Тип" name="companyOwes" valuePropName="checked">
             <Switch checkedChildren="Мы должны" unCheckedChildren="Нам должны" />
@@ -2217,7 +2268,7 @@ export const AccountingPage: React.FC = () => {
             <Input />
           </Form.Item>
           <Form.Item
-            label="Сумма (р.)"
+            label={`Сумма (${debtEditTarget?.currency ?? 'BYN'})`}
             name="amount"
             rules={[{ required: true, message: 'Укажите сумму' }]}
             extra={debtEditTarget && debtEditTarget.payments.length > 0
@@ -2225,8 +2276,8 @@ export const AccountingPage: React.FC = () => {
               : undefined}
           >
             <InputNumber
-              min={1}
-              precision={0}
+              min={0.01}
+              precision={2}
               style={{ width: '100%' }}
               disabled={!!debtEditTarget && debtEditTarget.payments.length > 0}
             />
@@ -2234,44 +2285,32 @@ export const AccountingPage: React.FC = () => {
         </Form>
       </Modal>
 
-      <Modal
-        title="Исполнить долг"
-        open={debtPayOpen}
-        onCancel={() => { setDebtPayOpen(false); setDebtPayTarget(null); }}
-        onOk={handlePayDebt}
-        okText="Провести"
-        okButtonProps={{ loading: debtSaving, disabled: debtPayAmount <= 0 }}
-        cancelText="Отмена"
-        destroyOnHidden
-        width={420}
-      >
-        {debtPayTarget && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 16 }}>
-            <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
-              {debtPayTarget.description}
-              <div style={{ marginTop: 4 }}>
-                Остаток: <strong>{formatPrice(debtPayTarget.remainingAmount)}</strong>
-              </div>
-            </div>
-            <div>
-              <div style={{ marginBottom: 6, fontWeight: 500 }}>Сумма погашения (р.)</div>
-              <InputNumber
-                value={debtPayAmount}
-                onChange={v => setDebtPayAmount(v ?? 0)}
-                min={1}
-                max={debtPayTarget.remainingAmount}
-                precision={0}
-                style={{ width: '100%' }}
-              />
-              <div style={{ marginTop: 6, fontSize: 12, color: 'var(--color-text-muted)' }}>
-                {debtPayTarget.direction === 'WE_OWE'
-                  ? 'В кассе будет создан расход на эту сумму.'
-                  : 'В кассе будет создан приход на эту сумму.'}
-              </div>
-            </div>
-          </div>
-        )}
-      </Modal>
+      {debtPayTarget && (
+        <DebtPayModal
+          debt={debtPayTarget}
+          onClose={() => setDebtPayTarget(null)}
+          onPaid={() => {
+            setDebtPayTarget(null);
+            loadDebts();
+            loadCash();
+            loadCapital();
+          }}
+        />
+      )}
+
+      {capitalTransferOpen && (
+        <CapitalTransferModal
+          open
+          onClose={() => setCapitalTransferOpen(false)}
+          onDone={() => {
+            setCapitalTransferOpen(false);
+            loadCash();
+            loadCapital();
+          }}
+          persons={managerServicemen.map(m => m.name)}
+          defaultPerson={defaultPerson}
+        />
+      )}
     </div>
   );
 };

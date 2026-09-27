@@ -1,0 +1,73 @@
+@use '@/styles/variables' as *;
+
+.rateField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.rateInput {
+  width: 100%;
+}
+
+.rateSources {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.rateHint {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.rateReset {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  cursor: pointer;
+}
+
+.rateError {
+  font-size: 12px;
+  color: var(--color-warning);
+}
+
+.parts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.part {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.partRow {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.currencySelect {
+  width: 90px;
+  flex-shrink: 0;
+}
+
+.amountInput {
+  flex: 1;
+  min-width: 0;
+}
+
+.partTotal {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}

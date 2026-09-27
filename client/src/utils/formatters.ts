@@ -34,3 +34,18 @@ export function formatDuration(minutes: number): string {
   if (m === 0) return `${h} ч`;
   return `${h} ч ${m} мин`;
 }
+
+/** Точная сумма до копеек/центов — для валюты и конвертации */
+export function formatMoney(value: number, currency: 'BYN' | 'USD' | 'EUR' = 'BYN'): string {
+  const text = new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(value);
+  return currency === 'BYN' ? `${text} р.` : `${text} ${currency === 'USD' ? '$' : '€'}`;
+}
+
+/** Сумма в BYN по курсу — до копеек, как считает сервер */
+export function toByn(amount: number, rate: number): number {
+  return Math.round(amount * rate * 100) / 100;
+}
+
+export function roundMoney(value: number): number {
+  return Math.round(value * 100) / 100;
+}

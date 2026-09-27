@@ -41,8 +41,9 @@ export const wikiApi = {
   markReviewed: (id: string) =>
     http.post(`/wiki/revisions/${id}/review`),
 
-  reward: (id: string) =>
-    http.post(`/wiki/revisions/${id}/reward`),
+  /** amount — сумма премии, если отличается от настроек (частичная оплата) */
+  reward: (id: string, amount?: number) =>
+    http.post(`/wiki/revisions/${id}/reward`, amount === undefined ? {} : { amount }),
 
   getSettings: () =>
     http.get<{ data: WikiSettings }>('/wiki/settings').then(r => r.data.data),

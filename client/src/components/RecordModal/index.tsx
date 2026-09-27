@@ -76,6 +76,9 @@ function recordToFormData(record: CrmRecord): RecordFormData {
       equipmentId: item.equipmentId ?? undefined,
       prepaidAmount: item.prepaidAmount ?? 0,
       prepaidByCard: item.prepaidByCard ?? false,
+      prepaidCurrency: item.prepaidCurrency ?? null,
+      prepaidCurrencyAmount: item.prepaidCurrencyAmount ?? null,
+      prepaidRate: item.prepaidRate ?? null,
       isProduct: item.service.isProduct ?? false,
       servicemanName: item.servicemanName ?? undefined,
       servicemanSplit: item.servicemanSplit?.length ? item.servicemanSplit : undefined,
@@ -215,6 +218,9 @@ export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initial
         equipmentId: s.equipmentId,
         prepaidAmount: s.prepaidAmount || 0,
         prepaidByCard: s.prepaidByCard || false,
+        prepaidCurrency: s.prepaidCurrency ?? null,
+        prepaidCurrencyAmount: s.prepaidCurrencyAmount ?? null,
+        prepaidRate: s.prepaidRate ?? null,
         ...servicemanAssignment(s),
       })),
     };
@@ -272,6 +278,8 @@ export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initial
       title={editRecord ? 'Редактировать запись' : 'Новая запись'}
       width={800}
       footer={null}
+      transitionName={isMobile ? '' : undefined}
+      maskTransitionName={isMobile ? '' : undefined}
       className={styles.modal}
       classNames={{
         wrapper: styles.modalWrap,

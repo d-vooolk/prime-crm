@@ -96,6 +96,10 @@ model RecordItem {
   equipmentId     String?
   prepaidAmount   Float   @default(0)
   prepaidByCard   Boolean @default(false)
+  // Предоплата в валюте: prepaidAmount — эквивалент в BYN, здесь исходная сумма и курс
+  prepaidCurrency       String?
+  prepaidCurrencyAmount Float?
+  prepaidRate           Float?
   record          Record     @relation(fields: [recordId], references: [id], onDelete: Cascade)
   service         Service    @relation(fields: [serviceId], references: [id])
   equipment       Equipment? @relation(fields: [equipmentId], references: [id])
@@ -130,10 +134,14 @@ model Deal {
   finalPrice          Float
   priceIncreaseReason String?
   defects             String?
+  // Рекомендации клиенту — печатаются в акте под обнаруженными недостатками
+  recommendations     String?
   warranty            String?
   isPaidByBankTransfer Boolean        @default(false)
   splitCashAmount     Float?
   splitCardAmount     Float?
+  // Часть оплаты в валюте: [{ currency, amount, rate }], сумма в BYN = amount × rate
+  currencyPayments    Json?
   closedAt            DateTime        @default(now())
   salaryDate          DateTime?
   record              Record          @relation(fields: [recordId], references: [id])
@@ -215,6 +223,8 @@ model CompanySettings {
   logoUrl            String?
   documentPrefix     String  @default("ПА")
   nextDocumentNumber Int     @default(1)
+  // Памятка клиенту в акте выполненных работ. null — текст по умолчанию, "" — не печатать
+  actMemo            String?
 }
 
 enum SmsType {
@@ -280,10 +290,33 @@ model CashTransaction {
   person      String?
   recordId     String?
   isPrepayment Boolean             @default(false)
+  // Приход в валюте: amount — сумма в BYN по курсу, здесь — исходная валюта и курс.
+  // Такую валюту сразу отчисляем в капитал (см. capitalTransferExpense)
+  currency       String?           // USD | EUR
+  currencyAmount Float?
+  currencyRate   Float?
+  // Расход «Отчисление в капитал» за этот валютный приход. Удаляется вместе с приходом
+  linkedIncomeId         String?          @unique
+  linkedIncome           CashTransaction? @relation("CurrencyIncomeTransfer", fields: [linkedIncomeId], references: [id], onDelete: Cascade)
+  capitalTransferExpense CashTransaction? @relation("CurrencyIncomeTransfer")
   createdAt    DateTime            @default(now())
   debtPayment  DebtPayment?
   founderSalary FounderSalary?
   salaryPayment EmployeeSalaryPayment?
+  // Пополнение капитала, которым стал этот расход (отчисление в капитал)
+  capitalTransfer CapitalTransaction?
+  // Категория затрат (только для обычных расходов, у системных — пусто)
+  expenseCategoryId String?
+  expenseCategory   ExpenseCategory? @relation(fields: [expenseCategoryId], references: [id], onDelete: SetNull)
+}
+
+// Справочник категорий затрат для расходов кассы (расходники, поставщики, еда в офис …)
+model ExpenseCategory {
+  id           String            @id @default(cuid())
+  name         String            @unique
+  sortOrder    Int?
+  createdAt    DateTime          @default(now())
+  transactions CashTransaction[]
 }
 
 enum CapitalTransactionType {
@@ -352,9 +385,16 @@ model CapitalTransaction {
   date        DateTime
   amountByn   Float?
   amountUsd   Float?
+  amountEur   Float?
+  // Курс BYN за единицу валюты, если деньги пришли через конвертацию
+  rate        Float?
   description String?
   person      String?
   createdAt   DateTime               @default(now())
+  // Расход в кассе «Отчисление в капитал», из которого пришло пополнение. Удаляется вместе с ним
+  cashTransactionId String?          @unique
+  cashTransaction   CashTransaction? @relation(fields: [cashTransactionId], references: [id], onDelete: Cascade)
+  debtPayment       DebtPayment?
 }
 
 enum DebtDirection {
@@ -370,8 +410,10 @@ enum DebtStatus {
 model Debt {
   id              String        @id @default(cuid())
   description     String
-  initialAmount   Int
-  remainingAmount Int
+  // Суммы — в валюте долга
+  currency        String        @default("BYN") // BYN | USD | EUR
+  initialAmount   Float
+  remainingAmount Float
   direction       DebtDirection
   status          DebtStatus    @default(ACTIVE)
   createdAt       DateTime      @default(now())
@@ -382,11 +424,19 @@ model Debt {
 model DebtPayment {
   id                String           @id @default(cuid())
   debtId            String
-  amount            Int
+  // На сколько уменьшился долг — в валюте долга
+  amount            Float
+  // Чем фактически платили: валюта, сумма и курс BYN за единицу (если была конвертация)
+  paidCurrency      String           @default("BYN")
+  paidAmount        Float?
+  rate              Float?
   paidAt            DateTime         @default(now())
   cashTransactionId String?          @unique
+  // Мы отдали валюту — она списана из капитала
+  capitalTransactionId String?             @unique
   debt              Debt             @relation(fields: [debtId], references: [id], onDelete: Cascade)
   cashTransaction   CashTransaction? @relation(fields: [cashTransactionId], references: [id], onDelete: SetNull)
+  capitalTransaction CapitalTransaction? @relation(fields: [capitalTransactionId], references: [id], onDelete: SetNull)
 }
 
 enum NotePriority {
@@ -526,9 +576,18 @@ model WikiMedia {
   filename       String        @unique // имя файла в UPLOADS_DIR/wiki
   originalName   String
   size           Int
-  uploadedByName String?
-  createdAt      DateTime      @default(now())
-  entry          WikiEntry     @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  uploadedByName  String?
+  createdAt       DateTime      @default(now())
+  // Сжатые варианты фото (UPLOADS_DIR/wiki/variants/<имя файла без расширения>/).
+  // Нет вариантов (видео, HEIC, битый файл) — показываем оригинал.
+  width           Int?
+  height          Int?
+  placeholder     String? // крошечное размытое превью, data:image/webp;base64
+  thumbFilename   String? // путь относительно UPLOADS_DIR/wiki
+  displayFilename String? // JPEG-копия HEIC: её показывает браузер вместо оригинала
+  mediumFilename  String?
+  variantsVersion Int           @default(0) // версия параметров сжатия, 0 — ещё не обрабатывали
+  entry           WikiEntry     @relation(fields: [entryId], references: [id], onDelete: Cascade)
 
   @@index([entryId])
 }
@@ -555,6 +614,7 @@ model WikiRevision {
   reviewedByName     String?
   reviewedAt         DateTime?
   bonusAmount        Float?
+  bonusBaseAmount    Float? // размер премии из настроек на момент назначения — видно, что оплачено частично
   salaryAdjustmentId String?
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt

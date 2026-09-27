@@ -1,7 +1,35 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import { accountingService } from '../services/accounting.service';
+import { parseExpenseCategoryField } from './expenses.controller';
 import { AppError } from '../middleware/errorHandler';
+import { currencyService } from '../services/currency.service';
+import { currencyAccountingService } from '../services/currencyAccounting.service';
+
+const currencySchema = z.enum(['BYN', 'USD', 'EUR']);
+
+const capitalTransferSchema = z.object({
+  date: z.string().min(1),
+  amountByn: z.coerce.number().positive('Сумма должна быть больше нуля'),
+  currency: currencySchema,
+  currencyAmount: z.coerce.number().positive().optional(),
+  person: z.string().min(1, 'Выберите, кто отчисляет'),
+  description: z.string().optional(),
+}).refine(d => d.currency === 'BYN' || d.currencyAmount != null, {
+  message: 'Укажите сумму в валюте', path: ['currencyAmount'],
+});
+
+const debtPaymentSchema = z.object({
+  amount: z.coerce.number().positive('Сумма погашения должна быть больше нуля'),
+  currency: currencySchema.optional(),
+  rate: z.coerce.number().positive().optional(),
+});
+
+const parseBody = <T>(schema: z.ZodType<T>, body: unknown): T => {
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) throw new AppError(parsed.error.issues[0]?.message || 'Некорректные данные', 400);
+  return parsed.data;
+};
 
 // Выплачивать ЗП могут все роли выше «Сотрудника»
 const PAYROLL_ROLES = ['Создатель', 'Директор', 'Менеджер'];
@@ -45,6 +73,7 @@ export const accountingController = {
       founderSalary: founderSalary
         ? { year: Number(founderSalary.year), month: Number(founderSalary.month), person: founderSalary.person }
         : undefined,
+      expenseCategory: parseExpenseCategoryField(req.body.expenseCategory),
     });
     res.status(201).json({ data: tx });
   },
@@ -66,14 +95,27 @@ export const accountingController = {
   },
 
   async createDeposit(req: Request, res: Response) {
-    const { date, amount, currency } = req.body;
+    const { date, amount } = req.body;
+    const currency = parseBody(currencySchema, req.body.currency);
     const tx = await accountingService.createDeposit({ date, amount, currency });
     res.status(201).json({ data: tx });
   },
 
   async createWithdrawal(req: Request, res: Response) {
-    const { date, amount, currency, description, person } = req.body;
+    const { date, amount, description, person } = req.body;
+    const currency = parseBody(currencySchema, req.body.currency);
     const tx = await accountingService.createWithdrawal({ date, amount, currency, description, person });
+    res.status(201).json({ data: tx });
+  },
+
+  async getRates(req: Request, res: Response) {
+    const data = await currencyService.getRates(req.query.refresh === 'true');
+    res.json({ data });
+  },
+
+  async createCapitalTransfer(req: Request, res: Response) {
+    const data = parseBody(capitalTransferSchema, req.body);
+    const tx = await currencyAccountingService.createCapitalTransfer(data);
     res.status(201).json({ data: tx });
   },
 
@@ -88,7 +130,10 @@ export const accountingController = {
   async updateCashTransaction(req: Request, res: Response) {
     const id = String(req.params.id);
     const { date, amount, description, person } = req.body;
-    const tx = await accountingService.updateCashTransaction(id, { date, amount, description, person });
+    const tx = await accountingService.updateCashTransaction(id, {
+      date, amount, description, person,
+      expenseCategory: parseExpenseCategoryField(req.body.expenseCategory),
+    });
     res.json({ data: tx });
   },
 
@@ -168,6 +213,7 @@ export const accountingController = {
     const debt = await accountingService.createDebt({
       description: String(description || '').trim(),
       amount: Number(amount),
+      currency: parseBody(currencySchema, req.body.currency ?? 'BYN'),
       direction: direction === 'OWED_TO_US' ? 'OWED_TO_US' : 'WE_OWE',
     });
     res.status(201).json({ data: debt });
@@ -191,8 +237,8 @@ export const accountingController = {
 
   async payDebt(req: Request, res: Response) {
     const id = String(req.params.id);
-    const { amount } = req.body;
-    const debt = await accountingService.payDebt(id, Number(amount), req.user?.name);
+    const data = parseBody(debtPaymentSchema, req.body);
+    const debt = await accountingService.payDebt(id, data, req.user?.name);
     res.status(201).json({ data: debt });
   },
 };

@@ -312,6 +312,11 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
         open={open}
         onCancel={onClose}
         width={700}
+        // iOS Safari (особенно ярлык на главном экране): пока модалка «вырастает» zoom-анимацией
+        // через transform, прокручиваемое тело иногда не получает касаний — живым остаётся только
+        // футер, пока что-нибудь не перерисует окно. На полноэкранной мобильной модалке анимация не нужна
+        transitionName={isMobile ? '' : undefined}
+        maskTransitionName={isMobile ? '' : undefined}
         className={styles.modal}
         classNames={{
           wrapper: styles.modalWrap,
@@ -490,19 +495,22 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
           </div>
         )}
       >
-        <Divider orientation="left" style={{ fontSize: 13 }}>Клиент</Divider>
-        <Descriptions size="small" column={1}>
-          <Descriptions.Item label={r.isLegalEntity ? 'ФИО представителя' : 'ФИО'}>
-            <span className={isEmployee ? styles.blurred : undefined}>{r.client.name}</span>
-          </Descriptions.Item>
-          <Descriptions.Item label="Телефон">
-            <span className={isEmployee ? styles.blurred : undefined}>
-              <a href={`tel:${r.client.phone}`} rel="noreferrer noopener">
-                {r.client.phone}
-              </a>
-            </span>
-          </Descriptions.Item>
-        </Descriptions>
+        {/* Сотрудникам данные клиента не показываем */}
+        {!isEmployee && (
+          <>
+            <Divider orientation="left" style={{ fontSize: 13 }}>Клиент</Divider>
+            <Descriptions size="small" column={1}>
+              <Descriptions.Item label={r.isLegalEntity ? 'ФИО представителя' : 'ФИО'}>
+                {r.client.name}
+              </Descriptions.Item>
+              <Descriptions.Item label="Телефон">
+                <a href={`tel:${r.client.phone}`} rel="noreferrer noopener">
+                  {r.client.phone}
+                </a>
+              </Descriptions.Item>
+            </Descriptions>
+          </>
+        )}
 
         {/* Сотрудникам данные клиента скрыты, историю им тоже не показываем */}
         {!isEmployee && (
@@ -621,6 +629,16 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
               </Descriptions.Item>
               {r.deal.warranty && (
                 <Descriptions.Item label="Гарантия">{r.deal.warranty}</Descriptions.Item>
+              )}
+              {r.deal.defects && (
+                <Descriptions.Item label="Обнаруженные недостатки" span={2}>
+                  <span className={styles.multiline}>{r.deal.defects}</span>
+                </Descriptions.Item>
+              )}
+              {r.deal.recommendations && (
+                <Descriptions.Item label="Рекомендации" span={2}>
+                  <span className={styles.multiline}>{r.deal.recommendations}</span>
+                </Descriptions.Item>
               )}
               {r.deal.priceIncreaseReason && (
                 <Descriptions.Item label="Обоснование цены" span={2}>

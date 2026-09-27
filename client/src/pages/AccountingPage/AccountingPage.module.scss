@@ -474,3 +474,74 @@
   gap: 8px;
   margin-bottom: 16px;
 }
+
+// ─── Валюта: отчисление в капитал и погашение долгов ─
+
+.capitalTransferEntry {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-surface-2);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.capitalTransfer,
+.debtPay {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-md);
+}
+
+.debtPayInfo {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+
+  div {
+    margin-top: var(--spacing-xs);
+  }
+}
+
+.debtPayLabel {
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.debtPayAmount {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.debtPayInput {
+  flex: 1;
+}
+
+.debtPayNote {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.fullWidth {
+  width: 100%;
+}
+
+.debtAmount {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.debtPayments {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.debtRemaining {
+  color: var(--color-danger);
+}

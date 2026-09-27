@@ -1,0 +1,29 @@
+@use '@/styles/variables' as *;
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  max-width: 640px;
+}
+
+.hint {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.addRow {
+  display: flex;
+  gap: var(--spacing-sm);
+
+  @include mobile {
+    flex-direction: column;
+  }
+}
+
+.actions {
+  display: flex;
+  gap: 2px;
+  justify-content: flex-end;
+}

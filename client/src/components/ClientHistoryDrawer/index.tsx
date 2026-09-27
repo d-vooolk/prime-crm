@@ -36,6 +36,26 @@ const itemsPrepaid = (items: RecordItem[]) =>
 const recordTotal = (r: CrmRecord) =>
   r.deal ? r.deal.finalPrice : itemsTotal(r.items);
 
+/** О чём клиента предупредили в акте — видно сразу, без раскрытия визита */
+const DealWarnings: React.FC<{ record: CrmRecord }> = ({ record }) => {
+  const { defects, recommendations } = record.deal ?? {};
+  if (!defects && !recommendations) return null;
+  return (
+    <div className={styles.warnings}>
+      {defects && (
+        <div>
+          <span className={styles.warningLabel}>Обнаруженные недостатки:</span> {defects}
+        </div>
+      )}
+      {recommendations && (
+        <div>
+          <span className={styles.warningLabel}>Рекомендации:</span> {recommendations}
+        </div>
+      )}
+    </div>
+  );
+};
+
 /** Шапка визита — одинаковая и для кликабельного, и для разворачиваемого режима */
 const VisitSummary: React.FC<{ record: CrmRecord; isCurrent: boolean }> = ({ record, isCurrent }) => {
   const status = STATUS_MAP[record.status];
@@ -52,6 +72,7 @@ const VisitSummary: React.FC<{ record: CrmRecord; isCurrent: boolean }> = ({ rec
           {record.car.plateNumber ? ` · ${record.car.plateNumber}` : ''}
           {' · '}{record.items.length} услуг
         </div>
+        <DealWarnings record={record} />
       </div>
       <div className={styles.visitSide}>
         <div className={styles.visitSum}>{formatPrice(recordTotal(record))}</div>

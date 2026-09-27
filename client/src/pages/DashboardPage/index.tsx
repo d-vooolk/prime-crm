@@ -12,6 +12,7 @@ import { formatPrice } from '@/utils/formatters';
 import { averageAnnualSalary, effectiveSalaryMonth, hasSalary } from '@/utils/salary';
 import { Serviceman } from '@/types';
 import { useAuthStore } from '@/store/authStore';
+import { ExpensesTab } from './ExpensesTab';
 import styles from './DashboardPage.module.scss';
 
 const PERIOD_OPTIONS = [
@@ -37,6 +38,7 @@ const SalaryTooltip = ({ active, payload, label }: { active?: boolean; payload?:
 export const DashboardPage: React.FC = () => {
   const { user } = useAuthStore();
   const canSeeRevenue = user?.isMaster || ['Создатель', 'Директор'].includes(user?.role || '');
+  const canSeeExpenses = user?.isMaster || user?.role === 'Создатель';
   const canSeeAvgCard = user?.isMaster || ['Создатель', 'Директор', 'Менеджер'].includes(user?.role || '');
   const [period, setPeriod] = useState<Period>('month');
   const [summary, setSummary] = useState<{ closedCount: number; totalRevenue: number; activeRecords: number } | null>(null);
@@ -408,6 +410,12 @@ export const DashboardPage: React.FC = () => {
               </div>
             ),
           },
+          // Аналитика расходов — только создателю
+          ...(canSeeExpenses ? [{
+            key: 'expenses',
+            label: 'Расходы',
+            children: <ExpensesTab />,
+          }] : []),
         ]}
       />
 

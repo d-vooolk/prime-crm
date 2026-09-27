@@ -1,0 +1,188 @@
+@use '@/styles/variables' as *;
+
+// Категориальная палитра графика расходов. Порядок слотов важен: соседние цвета
+// проверены на различимость (в т.ч. при дальтонизме) на фоне --color-surface
+// светлой (#ffffff) и тёмной (#1e293b) темы. Первый слот — синий, как на остальных графиках.
+.root {
+  --expenses-series-1: #2a78d6;
+  --expenses-series-2: #eb6834;
+  --expenses-series-3: #1baf7a;
+  --expenses-series-4: #eda100;
+  --expenses-series-5: #e87ba4;
+  --expenses-series-6: #008300;
+  --expenses-series-7: #4a3aa7;
+  --expenses-series-8: #e34948;
+  --expenses-series-other: #a3a9b4;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+:global([data-theme='dark']) .root {
+  --expenses-series-1: #3987e5;
+  --expenses-series-2: #d95926;
+  --expenses-series-3: #199e70;
+  --expenses-series-4: #c98500;
+  --expenses-series-5: #d55181;
+  --expenses-series-6: #008300;
+  --expenses-series-7: #9085e9;
+  --expenses-series-8: #e66767;
+  --expenses-series-other: #64748b;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.rangePicker {
+  @include mobile {
+    width: 100%;
+  }
+}
+
+.groupFilter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.groupFilterActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.groupTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs) 0;
+}
+
+.groupTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--color-border);
+  padding: 2px 8px;
+  font-size: var(--font-size-sm);
+
+  // Выбранный тег — не заливкой акцента, а спокойной подложкой: цвет несёт образец
+  &:global(.ant-tag-checkable-checked) {
+    background: var(--color-surface-2);
+    color: var(--color-text-primary);
+  }
+}
+
+.groupTagOff {
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+
+  .swatch {
+    opacity: 0.35;
+  }
+}
+
+.swatch {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.series1 { background: var(--expenses-series-1); }
+.series2 { background: var(--expenses-series-2); }
+.series3 { background: var(--expenses-series-3); }
+.series4 { background: var(--expenses-series-4); }
+.series5 { background: var(--expenses-series-5); }
+.series6 { background: var(--expenses-series-6); }
+.series7 { background: var(--expenses-series-7); }
+.series8 { background: var(--expenses-series-8); }
+.seriesOther { background: var(--expenses-series-other); }
+
+// Перезагрузка данных — держим прежнюю картинку приглушённой, без скачка вёрстки
+.refreshing {
+  opacity: 0.55;
+  transition: var(--transition);
+}
+
+.card {
+  margin-top: var(--spacing-md);
+}
+
+.statHint {
+  margin-top: 2px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.biggestStat {
+  :global(.ant-statistic-content-value) {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.groupName {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.systemTag {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.tooltip {
+  min-width: 180px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-sm);
+  box-shadow: var(--shadow-md);
+  padding: var(--spacing-sm) 12px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+
+.tooltipTitle {
+  font-weight: 600;
+  margin-bottom: var(--spacing-xs);
+  text-transform: capitalize;
+}
+
+.tooltipRow {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  line-height: 1.6;
+}
+
+.lineKey {
+  width: 12px;
+  height: 2px;
+  flex-shrink: 0;
+}
+
+.tooltipValue {
+  font-variant-numeric: tabular-nums;
+}
+
+.tooltipName {
+  color: var(--color-text-secondary);
+}
+
+.tooltipTotal {
+  margin-top: var(--spacing-xs);
+  padding-top: var(--spacing-xs);
+  border-top: 1px solid var(--color-border);
+}

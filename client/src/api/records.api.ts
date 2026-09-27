@@ -1,5 +1,5 @@
 import http from './http';
-import { Record } from '@/types';
+import { Record, ForeignCurrency, CurrencyPart } from '@/types';
 
 export interface CompanySuggestion {
   legalCompanyName: string;
@@ -65,16 +65,18 @@ export interface CreateRecordDto {
   executorSignatoryPosition?: string;
   executorSignatoryPositionGenitive?: string;
   executorSignatoryBasis?: string;
-  items: Array<{ serviceId: string; price: number; quantity: number; netProfit?: number; servicemanName?: string | null; equipmentId?: string; servicemanSplit?: Array<{ name: string; amount: number }> | null; prepaidAmount?: number; prepaidByCard?: boolean }>;
+  items: Array<{ serviceId: string; price: number; quantity: number; netProfit?: number; servicemanName?: string | null; equipmentId?: string; servicemanSplit?: Array<{ name: string; amount: number }> | null; prepaidAmount?: number; prepaidByCard?: boolean; prepaidCurrency?: ForeignCurrency | null; prepaidCurrencyAmount?: number | null; prepaidRate?: number | null }>;
 }
 
 export interface CloseDealDto {
   finalPrice: number;
   defects?: string;
+  recommendations?: string;
   warranty?: string;
   isPaidByBankTransfer?: boolean;
   splitCashAmount?: number;
   splitCardAmount?: number;
+  currencyPayments?: CurrencyPart[];
 }
 
 export const recordsApi = {

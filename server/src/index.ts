@@ -13,8 +13,10 @@ import { errorHandler } from './middleware/errorHandler';
 import { smsService } from './services/sms.service';
 import { syncCarCatalogIfNeeded } from './bootstrap/carCatalog';
 import { importLegacyWikiIfPresent } from './bootstrap/wikiLegacyImport';
+import { generateMissingWikiVariants } from './bootstrap/wikiImageVariants';
 import { linkFounderSalariesToCash } from './bootstrap/founderSalaryLinks';
 import { backfillServicemanPerformers } from './bootstrap/servicemanPerformers';
+import { seedExpenseCategoriesIfEmpty } from './bootstrap/expenseCategories';
 import { UPLOADS_DIR, ensureUploadDirs } from './utils/uploads';
 
 const app = express();
@@ -31,7 +33,9 @@ app.use(express.urlencoded({ extended: true }));
 ensureUploadDirs();
 // Загруженные файлы (фото и видео вики). Имена случайные, поэтому раздаются без авторизации —
 // иначе <img>/<video> не смогли бы их показать. Идёт через тот же /api/, что проксирует nginx.
-app.use('/api/uploads', express.static(UPLOADS_DIR, { maxAge: '30d', immutable: true, index: false }));
+// Файлы никогда не перезаписываются (случайные имена, у сжатых вариантов в имени версия),
+// поэтому браузер может держать их в кеше год и не перепроверять.
+app.use('/api/uploads', express.static(UPLOADS_DIR, { maxAge: '365d', immutable: true, index: false }));
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 app.use('/api', apiRouter);
@@ -45,8 +49,11 @@ app.listen(PORT, async () => {
   await syncCarCatalogIfNeeded();
   // После справочника: импорт сверяет карточки старой вики с марками и поколениями
   await importLegacyWikiIfPresent();
+  // Сжатие старых фото вики — в фоне и по одному, старт не ждёт
+  void generateMissingWikiVariants();
   await linkFounderSalariesToCash();
   await backfillServicemanPerformers();
+  await seedExpenseCategoriesIfEmpty();
 });
 
 // Проверка напоминаний каждые 5 минут

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Card, Button, Segmented, Tag, Image, Popconfirm, Empty, Spin, Tooltip, Alert,
+  Card, Button, Segmented, Tag, Popconfirm, Empty, Spin, Tooltip, Alert, InputNumber,
 } from 'antd';
 import { GiftOutlined, CheckOutlined, BookOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -10,6 +10,7 @@ import { WikiKey, WikiRevision } from '@/types';
 import { useWikiStore } from '@/store/wikiStore';
 import { useNotify } from '@/hooks/useNotify';
 import { formatPrice } from '@/utils/formatters';
+import { WikiPhotoGallery } from './WikiPhotoGallery';
 import styles from './WikiPage.module.scss';
 
 interface Props {
@@ -21,6 +22,19 @@ const carTitle = (r: WikiRevision) =>
   [r.entry.markName, r.entry.modelName, r.entry.generationName].filter(Boolean).join(' ');
 
 const countChars = (s: string) => s.replace(/\s/g, '').length;
+
+/** Сравнение сумм премии без копеечных погрешностей float */
+const sameAmount = (a: number, b: number) => Math.abs(a - b) < 0.005;
+
+/** Подпись к назначенной премии: видно, если оплачено не полностью или сверх стандартной. */
+function rewardLabel(r: WikiRevision) {
+  const paid = r.bonusAmount ?? 0;
+  const base = r.bonusBaseAmount;
+  if (!base || sameAmount(paid, base)) return `Премия ${formatPrice(paid)}`;
+  return paid < base
+    ? `Частичная оплата ${formatPrice(paid)} из ${formatPrice(base)}`
+    : `Премия ${formatPrice(paid)} (стандартная ${formatPrice(base)})`;
+}
 
 /** Итоговая разница текста: добавленное подсвечено зелёным, удалённое — красным и зачёркнуто. */
 const DiffView: React.FC<{ prev: string; next: string }> = ({ prev, next }) => {
@@ -44,6 +58,10 @@ const RevisionCard: React.FC<{
 }> = ({ revision: r, bonusAmount, onOpenCar, onDone }) => {
   const notify = useNotify();
   const [busy, setBusy] = useState(false);
+  // Сумма премии редактируется перед подтверждением: по умолчанию — из настроек
+  const [amount, setAmount] = useState<number | null>(bonusAmount > 0 ? bonusAmount : null);
+  const isAmountValid = amount !== null && amount > 0;
+  const isChanged = isAmountValid && bonusAmount > 0 && !sameAmount(amount, bonusAmount);
 
   const stats = useMemo(() => {
     const parts = diffWordsWithSpace(r.prevContent, r.newContent);
@@ -95,7 +113,7 @@ const RevisionCard: React.FC<{
         {addedVideos.length > 0 && <Tag color="green">+{addedVideos.length} видео</Tag>}
         {r.removedMedia.length > 0 && <Tag color="red">−{r.removedMedia.length} файл(ов)</Tag>}
         {r.status === 'REWARDED' && (
-          <Tag color="gold">Премия {formatPrice(r.bonusAmount ?? 0)} · {r.reviewedByName}</Tag>
+          <Tag color="gold">{rewardLabel(r)} · {r.reviewedByName}</Tag>
         )}
         {r.status === 'REVIEWED' && <Tag>Просмотрено · {r.reviewedByName}</Tag>}
       </div>
@@ -105,12 +123,12 @@ const RevisionCard: React.FC<{
       {r.addedMedia.length > 0 && (
         <>
           <div className={styles.revisionMediaLabel}>Добавленные файлы</div>
-          <Image.PreviewGroup>
+          {addedPhotos.length > 0 && <WikiPhotoGallery photos={addedPhotos} compact />}
+          {addedVideos.length > 0 && (
             <div className={styles.revisionMedia}>
-              {addedPhotos.map(m => <Image key={m.id} src={m.url} alt={m.originalName} />)}
               {addedVideos.map(m => <video key={m.id} src={m.url} controls preload="metadata" playsInline />)}
             </div>
-          </Image.PreviewGroup>
+          )}
         </>
       )}
 
@@ -134,16 +152,55 @@ const RevisionCard: React.FC<{
               Просмотрено
             </Button>
           )}
-          <Tooltip title={bonusAmount > 0 ? undefined : 'Размер премии не задан — укажите его во вкладке «Настройки»'}>
+          <Tooltip title={bonusAmount > 0 ? undefined : 'Размер премии не задан в настройках — укажите сумму вручную'}>
             <Popconfirm
-              title={`Назначить премию ${formatPrice(bonusAmount)}?`}
-              description={`Сотрудник: ${r.authorName}. Премия попадёт в расчёт ЗП за текущий месяц.`}
-              okText="Назначить"
+              title="Назначить премию?"
+              description={(
+                <div className={styles.rewardForm}>
+                  <div>Сотрудник: {r.authorName}. Премия попадёт в расчёт ЗП за текущий месяц.</div>
+                  <InputNumber
+                    className={styles.rewardInput}
+                    value={amount}
+                    onChange={v => setAmount(v)}
+                    min={0.01}
+                    step={5}
+                    precision={2}
+                    addonAfter="р."
+                    placeholder="Сумма"
+                    autoFocus
+                  />
+                  {isChanged && amount < bonusAmount && (
+                    <div className={styles.rewardHint}>
+                      Частичная оплата: {formatPrice(amount)} из {formatPrice(bonusAmount)}
+                    </div>
+                  )}
+                  {isChanged && amount > bonusAmount && (
+                    <div className={styles.rewardHint}>
+                      Больше стандартной премии ({formatPrice(bonusAmount)})
+                    </div>
+                  )}
+                  {!isChanged && bonusAmount > 0 && (
+                    <div className={styles.rewardHintMuted}>Полная премия по настройкам. Для частичной оплаты уменьшите сумму.</div>
+                  )}
+                </div>
+              )}
+              okText={isChanged && amount < bonusAmount ? 'Оплатить частично' : 'Назначить'}
               cancelText="Отмена"
-              disabled={!(bonusAmount > 0)}
-              onConfirm={() => act(() => wikiApi.reward(r.id), `Премия назначена: ${r.authorName}`)}
+              okButtonProps={{ disabled: !isAmountValid }}
+              onOpenChange={open => { if (open) setAmount(bonusAmount > 0 ? bonusAmount : null); }}
+              onConfirm={() => {
+                if (!isAmountValid) return;
+                // Сумма совпадает с настройками — не передаём её, сервер возьмёт стандартную
+                const custom = isChanged || !(bonusAmount > 0) ? amount : undefined;
+                return act(
+                  () => wikiApi.reward(r.id, custom),
+                  isChanged && amount < bonusAmount
+                    ? `Частичная премия ${formatPrice(amount)} назначена: ${r.authorName}`
+                    : `Премия назначена: ${r.authorName}`,
+                );
+              }}
             >
-              <Button type="primary" icon={<GiftOutlined />} loading={busy} disabled={!(bonusAmount > 0)}>
+              <Button type="primary" icon={<GiftOutlined />} loading={busy}>
                 Назначить премию {bonusAmount > 0 ? formatPrice(bonusAmount) : ''}
               </Button>
             </Popconfirm>

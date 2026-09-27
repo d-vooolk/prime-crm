@@ -1,13 +1,30 @@
 import { Record, CompanySettings } from '@/types';
 import { formatDate, formatPrice } from './formatters';
 
-function openPrintWindow(html: string): void {
+function openPrintWindow(html: string, beforePrint?: (doc: Document) => void): void {
   const win = window.open('', '_blank');
   if (!win) return;
   win.document.write(html);
   win.document.close();
   win.focus();
-  setTimeout(() => { win.print(); win.close(); }, 500);
+  setTimeout(() => {
+    beforePrint?.(win.document);
+    win.print();
+    win.close();
+  }, 500);
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/** Многострочный текст из формы — с сохранением переносов строк */
+function multiline(text: string): string {
+  return escapeHtml(text.trim()).replace(/\n/g, '<br>');
 }
 
 const printStyles = `
@@ -233,6 +250,101 @@ const COMPLETION_ACT_ACCEPTANCE = `С объёмом работ согласен
 
 const NO_WARRANTY = 'Без гарантии';
 
+/**
+ * Памятка клиенту по умолчанию — пока в настройках её не меняли (actMemo === null).
+ * Пустая строка в настройках — памятку не печатать.
+ * Строка, оканчивающаяся на «:», печатается заголовком, строка с «- » — пунктом списка.
+ */
+export const DEFAULT_ACT_MEMO = `Фары (разбор, замена линз, установка модулей, восстановление герметичности):
+- После разбора и сборки фары допускается появление конденсата (запотевания) на внутренней стороне стекла после мойки, в дождливую или туманную погоду, при резком перепаде температур. Это нормальное явление: фара вентилируется через клапаны, и конденсат уходит сам после включения света или во время поездки.
+- Обратитесь к нам, если внутри фары скапливаются капли или вода, которые не уходят в течение 1–2 дней.
+- В первые 24 часа не мойте автомобиль и не направляйте струю воды на фары — герметик набирает прочность.
+- Мойку высокого давления держите не ближе 30 см от фары и не направляйте струю на стык стекла и корпуса.
+- Не очищайте стекло фары абразивными средствами и растворителями, не счищайте лёд скребком.
+- После ДТП или удара по фаре приезжайте на диагностику, даже если повреждений не видно.
+
+Оклейка плёнкой (антигравийная, виниловая, бронирование оптики):
+- Не мойте автомобиль 3 дня после оклейки.
+- Мойку высокого давления держите не ближе 30 см от плёнки и не направляйте струю на её края.
+- Первые 2 недели возможны мелкие пузырьки и лёгкая мутность — плёнка «садится», это проходит само. Не прокалывайте и не поддевайте их.
+- Первые 2 недели не посещайте автоматические мойки со щётками.
+- Не используйте абразивные полироли и растворители, не счищайте лёд и снег скребком с оклеенных поверхностей.
+
+Тонировка:
+- 3–5 дней не опускайте тонированные стёкла.
+- 7 дней не мойте стёкла изнутри, затем — только мягкой салфеткой без абразивов и средств с нашатырём.
+- Мелкие пузырьки и разводы в первые дни — остатки монтажного раствора, они исчезают сами.
+- Не клейте на плёнку присоски и наклейки.
+
+Полировка и защитные покрытия:
+- 7 дней не мойте автомобиль с автохимией и не посещайте автоматические мойки со щётками.
+- Для ухода используйте pH-нейтральный шампунь и чистые микрофибровые салфетки.
+- Сразу удаляйте птичий помёт, смолу и следы насекомых — они повреждают лак.`;
+
+function buildMemoHtml(memo: string): string {
+  let html = '';
+  let inList = false;
+  for (const line of memo.split('\n')) {
+    const text = line.trim();
+    const isItem = text.startsWith('- ');
+    // Соседние пункты собираем в один список
+    if (isItem && !inList) html += '<ul>';
+    if (!isItem && inList) html += '</ul>';
+    inList = isItem;
+
+    if (isItem) html += `<li>${escapeHtml(text.slice(2))}</li>`;
+    else if (!text) html += '<div class="memo-gap"></div>';
+    else if (text.endsWith(':')) html += `<div class="memo-title">${escapeHtml(text)}</div>`;
+    else html += `<p>${escapeHtml(text)}</p>`;
+  }
+  if (inList) html += '</ul>';
+  return html;
+}
+
+// Поля страницы задаём явно: по ним считаем, влезает ли памятка на первый лист
+const memoStyles = `
+  <style>
+    @page { size: A4; margin: 10mm; }
+    .memo { font-size: 10px; line-height: 1.45; margin: 4px 0 12px; }
+    .memo-heading { font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+    .memo-title { font-weight: 700; margin-top: 4px; }
+    .memo ul { padding-left: 16px; }
+    .memo-gap { height: 4px; }
+    .memo-back { page-break-before: always; break-before: page; margin-top: 0; }
+    .memo-back .memo-heading { font-size: 14px; text-align: center; text-transform: uppercase; margin-bottom: 10px; }
+    .memo-back { font-size: 11px; }
+  </style>
+`;
+
+/**
+ * Памятка стоит под гарантиями, до подписей. Если с ней акт не помещается на один лист A4,
+ * переносим её после подписей на новую страницу — печатается на обороте акта.
+ * Меряем в той же вёрстке, что при печати: ширина и отступы листа из @page и @media print.
+ */
+function placeActMemo(doc: Document): void {
+  const memo = doc.getElementById('act-memo');
+  if (!memo) return;
+  const body = doc.body;
+  const prev = { width: body.style.width, padding: body.style.padding };
+  body.style.width = '190mm'; // 210mm минус поля @page
+  body.style.padding = '10mm 15mm'; // как в @media print
+
+  const probe = doc.createElement('div');
+  probe.style.height = '277mm'; // 297mm минус поля @page
+  body.appendChild(probe);
+  const pageHeight = probe.offsetHeight;
+  probe.remove();
+
+  // Небольшой запас: браузеры по-разному округляют шрифты при печати
+  const fits = body.scrollHeight <= pageHeight * 0.97;
+  body.style.width = prev.width;
+  body.style.padding = prev.padding;
+  if (fits) return;
+
+  memo.classList.add('memo-back');
+  body.appendChild(memo);
+}
+
 // Варианты из CloseRecordModal в родительном падеже — «в течение 1 месяца»
 const WARRANTY_GENITIVE: { [term: string]: string } = {
   '1 месяц': '1 месяца',
@@ -266,6 +378,7 @@ function buildCompletionActHtml(
   settings: CompanySettings | undefined,
   date: string,
   defects: string | null,
+  recommendations: string | null,
   templateContent?: string,
 ): string {
   const docNum = record.documentNumber || record.id.slice(-8).toUpperCase();
@@ -312,13 +425,15 @@ function buildCompletionActHtml(
       `).join('')
     : '';
 
+  const memo = (settings?.actMemo ?? DEFAULT_ACT_MEMO).trim();
+
   const defaultLegal = COMPLETION_ACT_WARRANTY + '\n\n' + COMPLETION_ACT_ACCEPTANCE;
   const legalHtml = fillWarrantyTerm(templateContent ?? defaultLegal, record.deal?.warranty)
     .split('\n')
     .map(line => line.trim() ? `<p style="margin-bottom:3px">${line}</p>` : '<br>')
     .join('');
 
-  return `<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8">${printStyles}</head><body>
+  return `<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8">${printStyles}${memoStyles}</head><body>
 
     <h1>Акт выполненных работ</h1>
     <p class="subtitle">№ ${docNum} от ${date}</p>
@@ -382,11 +497,19 @@ function buildCompletionActHtml(
     </table>
     <div class="total">Итоговая стоимость: ${formatPrice(total).replace(' р.', '')} бел. руб.</div>
 
-    ${defects ? field('Обнаруженные недостатки:', defects) : ''}
+    ${defects ? field('Обнаруженные недостатки:', multiline(defects)) : ''}
+    ${recommendations ? field('Рекомендации:', multiline(recommendations)) : ''}
     ${equipmentBlock}
 
     <div style="margin-top:10px;font-size:12px;font-weight:700">Гарантийные обязательства:</div>
     <div class="legal-text" style="margin:4px 0 12px">${legalHtml}</div>
+
+    ${memo ? `
+      <div id="act-memo" class="memo">
+        <div class="memo-heading">Памятка по эксплуатации</div>
+        ${buildMemoHtml(memo)}
+      </div>
+    ` : ''}
 
     <div style="font-size:11px;font-weight:700;margin-top:12px">
       Контроль полноты, качества работ, комплектность и проверку технического состояния автомобиля произвёл:
@@ -411,16 +534,17 @@ function buildCompletionActHtml(
 export function printCompletionAct(record: Record, settings?: CompanySettings, templateContent?: string): void {
   if (!record.deal) return;
   const html = buildCompletionActHtml(
-    record, settings, formatDate(record.deal.closedAt), record.deal.defects || null, templateContent,
+    record, settings, formatDate(record.deal.closedAt),
+    record.deal.defects || null, record.deal.recommendations || null, templateContent,
   );
-  openPrintWindow(html);
+  openPrintWindow(html, placeActMemo);
 }
 
 export function printBlankCompletionAct(record: Record, settings?: CompanySettings, templateContent?: string): void {
   const html = buildCompletionActHtml(
-    record, settings, formatDate(record.scheduledAt), null, templateContent,
+    record, settings, formatDate(record.scheduledAt), null, null, templateContent,
   );
-  openPrintWindow(html);
+  openPrintWindow(html, placeActMemo);
 }
 
 // ─── Helpers for legal entity docs ───────────────────────────────────────────

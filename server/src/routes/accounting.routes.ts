@@ -11,6 +11,8 @@ router.get('/capital', accountingController.getCapital);
 router.get('/capital/balance', accountingController.getCapitalBalance);
 router.post('/capital/deposit', accountingController.createDeposit);
 router.post('/capital/withdrawal', accountingController.createWithdrawal);
+router.post('/capital/transfer', accountingController.createCapitalTransfer);
+router.get('/rates', accountingController.getRates);
 router.get('/monthly-revenue', accountingController.getMonthlyRevenue);
 router.post('/monthly-revenue', accountingController.setMonthlyRevenue);
 router.get('/monthly-record-count', accountingController.getMonthlyRecordCount);

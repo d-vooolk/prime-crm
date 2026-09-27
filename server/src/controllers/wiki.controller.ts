@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { AppError } from '../middleware/errorHandler';
 import { wikiService, isWikiReviewer, WikiKey } from '../services/wiki.service';
 import { decodeOriginalName, mediaKind } from '../utils/uploads';
+import { createImageVariants } from '../utils/wikiImages';
 
 const keySchema = z.object({
   markId: z.string().min(1),
@@ -17,6 +18,11 @@ function parseKey(source: unknown): WikiKey {
   if (!result.success) throw new AppError('Не выбран автомобиль', 400, result.error.flatten());
   return result.data;
 }
+
+// Сумму премии проверяющий может уменьшить (частичная оплата) или изменить; без суммы — из настроек
+const rewardSchema = z.object({
+  amount: z.number().positive('Сумма премии должна быть больше нуля').finite().optional(),
+});
 
 function requireReviewer(req: Request) {
   if (!isWikiReviewer(req.user!)) throw new AppError('Недостаточно прав', 403);
@@ -49,11 +55,16 @@ export const wikiController = {
       fs.promises.unlink(file.path).catch(() => {});
       throw e;
     }
+    const filename = path.basename(file.filename);
+    const type = mediaKind(file) === 'video' ? 'VIDEO' : 'PHOTO';
+    // Сжимаем до записи в БД: в ответе и при следующем открытии карточки уже есть лёгкие варианты
+    const variants = type === 'PHOTO' ? await createImageVariants(filename) : undefined;
     const media = await wikiService.addMedia(key, {
-      filename: path.basename(file.filename),
+      filename,
       originalName: decodeOriginalName(file.originalname),
       size: file.size,
-      type: mediaKind(file) === 'video' ? 'VIDEO' : 'PHOTO',
+      type,
+      variants,
     }, req.user!);
     res.status(201).json({ data: media });
   },
@@ -82,7 +93,11 @@ export const wikiController = {
 
   async reward(req: Request, res: Response) {
     requireReviewer(req);
-    await wikiService.reward(String(req.params.id), req.user!);
+    const result = rewardSchema.safeParse(req.body ?? {});
+    if (!result.success) {
+      throw new AppError(result.error.errors[0]?.message ?? 'Некорректная сумма премии', 400);
+    }
+    await wikiService.reward(String(req.params.id), req.user!, result.data.amount);
     res.json({ data: { ok: true } });
   },
 

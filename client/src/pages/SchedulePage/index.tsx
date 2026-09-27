@@ -146,7 +146,7 @@ export const SchedulePage: React.FC = () => {
           <div className={styles.columnHeader}>
             {dateLabel}
             <span className={styles.columnMeta}>
-              {todayOpenSum > 0 && (
+              {!isEmployee && todayOpenSum > 0 && (
                 <span className={styles.columnSum} title="Остаток к оплате по незакрытым сделкам (без учтённой предоплаты)">
                   {formatPrice(todayOpenSum)}
                 </span>
@@ -181,7 +181,7 @@ export const SchedulePage: React.FC = () => {
           <div className={`${styles.columnHeader} ${styles.columnOverdue}`}>
             Незавершённые
             <span className={styles.columnMeta}>
-              {incompleteSum > 0 && (
+              {!isEmployee && incompleteSum > 0 && (
                 <span className={styles.columnSum} title="Остаток к оплате по записям столбца (без учтённой предоплаты)">
                   {formatPrice(incompleteSum)}
                 </span>

@@ -1,17 +1,48 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Modal, Form, Input, Select, Button, Divider, message,
-  Table, Empty, Tag, Tooltip, InputNumber, Switch,
+  Table, Empty, Tag, Tooltip, InputNumber, Switch, Grid,
 } from 'antd';
 import { useNotify } from '@/hooks/useNotify';
 import { TeamOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
-import { Record, Serviceman, CompanySettings, DocumentTemplate } from '@/types';
+import { Record, Serviceman, CompanySettings, DocumentTemplate, CurrencyPart } from '@/types';
 import { servicesApi } from '@/api/services.api';
 import { recordsApi } from '@/api/records.api';
-import { formatPrice } from '@/utils/formatters';
+import { formatMoney, formatPrice, roundMoney } from '@/utils/formatters';
+import {
+  CurrencyPartsEditor, currencyPartsByn, currencyPartsValid, useCurrencyRates,
+} from '@/components/CurrencyConverter';
 import { printCompletionAct } from '@/utils/print';
 import { DealCelebration } from '../DealCelebration';
 import styles from './CloseRecordModal.module.scss';
+
+const { useBreakpoint } = Grid;
+
+interface CurrencySectionProps {
+  value: CurrencyPart[];
+  onChange: (parts: CurrencyPart[]) => void;
+  remainingByn: number;
+}
+
+/** Часть оплаты валютой. Монтируется только по кнопке — курсы грузятся, когда они нужны */
+const CurrencySection: React.FC<CurrencySectionProps> = ({ value, onChange, remainingByn }) => {
+  const ratesState = useCurrencyRates();
+  const { rates, rateFor } = ratesState;
+
+  // Сразу первая строка — чтобы не нажимать «добавить» второй раз
+  useEffect(() => {
+    if (value.length === 0 && rates) onChange([{ currency: 'USD', amount: 0, rate: rateFor('USD') ?? 0 }]);
+  }, [value.length, rates, rateFor, onChange]);
+
+  return (
+    <div className={styles.currencySection}>
+      <div className={styles.currencyHint}>
+        Валюта сразу уходит в капитал: в кассе будет приход по курсу и расход «Отчисление в капитал».
+      </div>
+      <CurrencyPartsEditor value={value} onChange={onChange} ratesState={ratesState} remainingByn={remainingByn} />
+    </div>
+  );
+};
 
 interface ServicemanSplitEntry {
   name: string;
@@ -54,6 +85,8 @@ const WARRANTY_OPTIONS = [
 const DEFAULT_WARRANTY = '1 месяц';
 
 export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuccess }) => {
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
   const [loading, setLoading] = useState(false);
   const [employees, setEmployees] = useState<Serviceman[]>([]);
   const [celebrating, setCelebrating] = useState(false);
@@ -73,6 +106,9 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
   // Payment split state
   const [paymentSplitOpen, setPaymentSplitOpen] = useState(false);
   const [paymentSplitCard, setPaymentSplitCard] = useState<number | null>(null);
+  // Часть остатка, оплаченная валютой, и открыт ли блок валюты
+  const [currencyParts, setCurrencyParts] = useState<CurrencyPart[]>([]);
+  const [currencyOpen, setCurrencyOpen] = useState(false);
   const [paymentSplitDraft, setPaymentSplitDraft] = useState<number | null>(null);
 
   const notify = useNotify();
@@ -112,13 +148,18 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
       if (record.deal) {
         form.setFieldsValue({
           defects: record.deal.defects || '',
+          recommendations: record.deal.recommendations || '',
           warranty: record.deal.warranty || '',
           isPaidByBankTransfer: record.deal.isPaidByBankTransfer || false,
         });
         setPaymentSplitCard(record.deal.splitCardAmount ?? null);
+        setCurrencyParts(record.deal.currencyPayments ?? []);
+        setCurrencyOpen(!!record.deal.currencyPayments?.length);
       } else {
         form.resetFields();
         setPaymentSplitCard(null);
+        setCurrencyParts([]);
+        setCurrencyOpen(false);
       }
     }
   }, [open, record, form]);
@@ -264,6 +305,10 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
   const handleClose = async () => {
     const values = await form.validateFields().catch(() => null);
     if (!values) return;
+    if (!currencyPartsValid(currencyParts)) {
+      message.error('Укажите сумму и курс для каждой валюты');
+      return;
+    }
 
     if (missingServiceman.length > 0) {
       notify.warning(
@@ -292,15 +337,19 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
       const prepaidCash = items.reduce((s, i) => s + (!i.prepaidByCard ? i.prepaidAmount : 0), 0);
       const prepaidCard = items.reduce((s, i) => s + (i.prepaidByCard ? i.prepaidAmount : 0), 0);
       const remainingAmount = Math.max(0, finalPrice - prepaidCash - prepaidCard);
+      // Разбивка нал/карта — от рублёвого остатка после валюты
+      const rubleAmount = roundMoney(remainingAmount - currencyPartsByn(currencyParts));
       await recordsApi.close(record.id, {
         finalPrice,
         defects: values.defects || undefined,
+        recommendations: values.recommendations || undefined,
         warranty: values.warranty || undefined,
         isPaidByBankTransfer: values.isPaidByBankTransfer || false,
-        ...(paymentSplitCard != null && remainingAmount > 0 ? {
-          splitCashAmount: remainingAmount - paymentSplitCard,
+        ...(paymentSplitCard != null && rubleAmount > 0 ? {
+          splitCashAmount: roundMoney(rubleAmount - paymentSplitCard),
           splitCardAmount: paymentSplitCard,
         } : {}),
+        currencyPayments: currencyParts,
       });
 
       const [freshRecord, settings, allTemplates] = await Promise.all([
@@ -342,7 +391,17 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
   const totalPrepaidCard = items.reduce((s, i) => s + (i.prepaidByCard ? i.prepaidAmount : 0), 0);
   const totalPrepaid = totalPrepaidCash + totalPrepaidCard;
   const remaining = Math.max(0, total - totalPrepaid);
-  const splitCashDisplay = paymentSplitCard != null ? remaining - paymentSplitCard : null;
+  const currencyByn = currencyPartsByn(currencyParts);
+  // Остаток в рублях после валюты; отрицательный — клиенту сдача
+  const rubleRemaining = roundMoney(remaining - currencyByn);
+  const splitCashDisplay = paymentSplitCard != null ? roundMoney(rubleRemaining - paymentSplitCard) : null;
+
+  const changeCurrencyParts = useCallback((parts: CurrencyPart[]) => {
+    setCurrencyParts(parts);
+    // Разбивка нал/карта считалась от прежнего остатка
+    setPaymentSplitCard(null);
+    if (parts.length === 0) setCurrencyOpen(false);
+  }, []);
 
   const splitItem = items.find(i => i.itemId === splitItemId);
 
@@ -429,7 +488,7 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
             <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 4 }}>Наличные</div>
             <InputNumber
               style={{ width: '100%' }}
-              value={paymentSplitDraft != null ? remaining - paymentSplitDraft : remaining}
+              value={paymentSplitDraft != null ? roundMoney(rubleRemaining - paymentSplitDraft) : rubleRemaining}
               disabled
               suffix="BYN"
               precision={2}
@@ -440,7 +499,7 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
             <InputNumber
               style={{ width: '100%' }}
               min={0}
-              max={remaining}
+              max={rubleRemaining}
               precision={2}
               suffix="BYN"
               placeholder="0.00"
@@ -459,6 +518,8 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
         width={hasEmployees ? 820 : 620}
         footer={null}
         destroyOnHidden
+        transitionName={isMobile ? '' : undefined}
+        maskTransitionName={isMobile ? '' : undefined}
         className={styles.modal}
         classNames={{
           wrapper: styles.modalWrap,
@@ -509,10 +570,14 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
             />
           )}
 
-          <Divider orientation="left" style={{ fontSize: 13 }}>Дефекты</Divider>
+          <Divider orientation="left" style={{ fontSize: 13 }}>Дефекты и рекомендации</Divider>
 
           <Form.Item label="Обнаруженные недостатки в процессе работы" name="defects">
             <Input.TextArea rows={3} placeholder="Описание дефектов, обнаруженных в ходе выполнения работ" />
+          </Form.Item>
+
+          <Form.Item label="Рекомендации" name="recommendations">
+            <Input.TextArea rows={3} placeholder="Что рекомендовано клиенту: замена, повторный осмотр и т.п." />
           </Form.Item>
 
           <Divider orientation="left" style={{ fontSize: 13 }}>Гарантия</Divider>
@@ -526,6 +591,29 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
           </Form.Item>
 
           {remaining > 0 && (
+            <>
+              <Divider orientation="left" style={{ fontSize: 13 }}>Оплата</Divider>
+              {currencyOpen ? (
+                <CurrencySection value={currencyParts} onChange={changeCurrencyParts} remainingByn={remaining} />
+              ) : (
+                <Button type="dashed" size="small" className={styles.currencyButton} onClick={() => setCurrencyOpen(true)}>
+                  Оплата в валюте (USD, EUR)
+                </Button>
+              )}
+              {currencyByn > 0 && (
+                <div className={styles.currencySummary}>
+                  <span>Валютой: <strong>{formatMoney(currencyByn)}</strong></span>
+                  {rubleRemaining >= 0 ? (
+                    <span>Рублями: <strong>{formatMoney(rubleRemaining)}</strong></span>
+                  ) : (
+                    <span className={styles.currencyChange}>Сдача клиенту: <strong>{formatMoney(-rubleRemaining)}</strong></span>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+
+          {rubleRemaining > 0 && (
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                 <Form.Item name="isPaidByBankTransfer" valuePropName="checked" noStyle>
