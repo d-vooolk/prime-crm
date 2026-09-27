@@ -124,7 +124,8 @@ export const accountingService = {
     expenseCategory?: string | null;
   }) {
     const { founderSalary } = data;
-    // ЗП учредителя — системный расход, категория ему не нужна
+    // Категория обязательна — иначе расход не разложится в аналитике. ЗП учредителя — системный расход, ей не нужна
+    if (!founderSalary && !data.expenseCategory?.trim()) throw new AppError('Укажите категорию расхода', 400);
     const expenseCategoryId = founderSalary ? null : await expensesService.resolveCategoryId(data.expenseCategory);
     if (!founderSalary && isFounderSalaryDescription(data.description)) {
       throw new AppError(FOUNDER_SALARY_MANUAL_ERROR, 400);
@@ -608,8 +609,11 @@ export const accountingService = {
   },
 
   async updateCashTransaction(id: string, data: { date?: string; amount?: number; description?: string; person?: string; expenseCategory?: string | null }) {
-    // Категорию ставим только обычным расходам; у системных (ЗП, капитал, долги) поле игнорируется
-    const expenseCategoryId = data.expenseCategory !== undefined && await expensesService.canHaveCategory(id)
+    // Категорию ставим только обычным расходам; у системных (ЗП, капитал, долги) поле игнорируется.
+    // Снять категорию с обычного расхода нельзя — она обязательна
+    const canHaveCategory = data.expenseCategory !== undefined && await expensesService.canHaveCategory(id);
+    if (canHaveCategory && !data.expenseCategory?.trim()) throw new AppError('Укажите категорию расхода', 400);
+    const expenseCategoryId = canHaveCategory
       ? await expensesService.resolveCategoryId(data.expenseCategory)
       : undefined;
     return prisma.$transaction(async (tx) => {

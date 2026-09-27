@@ -1857,7 +1857,7 @@ export const AccountingPage: React.FC = () => {
             </Form.Item>
           )}
           {editingTx && canHaveExpenseCategory(editingTx) && (
-            <Form.Item label="Категория" name="expenseCategory">
+            <Form.Item label="Категория" name="expenseCategory" rules={[{ required: true, whitespace: true, message: 'Укажите категорию' }]}>
               <ExpenseCategoryInput />
             </Form.Item>
           )}
@@ -1925,7 +1925,7 @@ export const AccountingPage: React.FC = () => {
             />
           </Form.Item>
           {!isFounderSalary && (
-            <Form.Item label="Категория" name="expenseCategory">
+            <Form.Item label="Категория" name="expenseCategory" rules={[{ required: true, whitespace: true, message: 'Укажите категорию' }]}>
               <ExpenseCategoryInput />
             </Form.Item>
           )}
