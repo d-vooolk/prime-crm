@@ -225,6 +225,9 @@ model CompanySettings {
   nextDocumentNumber Int     @default(1)
   // Памятка клиенту в акте выполненных работ. null — текст по умолчанию, "" — не печатать
   actMemo            String?
+  // Памятка блоками: [{ id, title, text, targets: ['svc:<id>' | 'cat:<id>'] }]. Блок печатается,
+  // если в записи есть одна из услуг targets (пусто — всегда). null — берётся actMemo
+  actMemoBlocks      Json?
 }
 
 enum SmsType {

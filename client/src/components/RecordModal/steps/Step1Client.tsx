@@ -13,7 +13,6 @@ import { carsApi } from '@/api/cars.api';
 import { recordsApi, CompanySuggestion } from '@/api/records.api';
 import { Client, Car, CarBrand, CarModel, CarGeneration, Serviceman, CompanySettings } from '@/types';
 import { RecordFormData } from '../types';
-import styles from './Step1Client.module.scss';
 
 const formatPlateNumber = (value: string): string => {
   const clean = value.toUpperCase().replace(/[ \-]/g, '');
@@ -660,16 +659,6 @@ export const Step1Client: React.FC<Props> = ({ data, onChange }) => {
               }))}
             />
           </Form.Item>
-          {selectedGeneration?.photo && (
-            <img
-              className={styles.generationPhoto}
-              src={selectedGeneration.photo.startsWith('http')
-                ? selectedGeneration.photo
-                : `https://${selectedGeneration.photo}`}
-              alt={selectedGeneration.name}
-              onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-            />
-          )}
         </Col>
       </Row>
 

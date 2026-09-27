@@ -94,3 +94,9 @@
 .multiline {
   white-space: pre-line;
 }
+
+.carLinks {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--spacing-md);
+}

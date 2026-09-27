@@ -1,5 +1,6 @@
 import { Record, CompanySettings } from '@/types';
 import { formatDate, formatPrice } from './formatters';
+import { actMemoForRecord } from './actMemo';
 
 function openPrintWindow(html: string, beforePrint?: (doc: Document) => void): void {
   const win = window.open('', '_blank');
@@ -250,37 +251,6 @@ const COMPLETION_ACT_ACCEPTANCE = `С объёмом работ согласен
 
 const NO_WARRANTY = 'Без гарантии';
 
-/**
- * Памятка клиенту по умолчанию — пока в настройках её не меняли (actMemo === null).
- * Пустая строка в настройках — памятку не печатать.
- * Строка, оканчивающаяся на «:», печатается заголовком, строка с «- » — пунктом списка.
- */
-export const DEFAULT_ACT_MEMO = `Фары (разбор, замена линз, установка модулей, восстановление герметичности):
-- После разбора и сборки фары допускается появление конденсата (запотевания) на внутренней стороне стекла после мойки, в дождливую или туманную погоду, при резком перепаде температур. Это нормальное явление: фара вентилируется через клапаны, и конденсат уходит сам после включения света или во время поездки.
-- Обратитесь к нам, если внутри фары скапливаются капли или вода, которые не уходят в течение 1–2 дней.
-- В первые 24 часа не мойте автомобиль и не направляйте струю воды на фары — герметик набирает прочность.
-- Мойку высокого давления держите не ближе 30 см от фары и не направляйте струю на стык стекла и корпуса.
-- Не очищайте стекло фары абразивными средствами и растворителями, не счищайте лёд скребком.
-- После ДТП или удара по фаре приезжайте на диагностику, даже если повреждений не видно.
-
-Оклейка плёнкой (антигравийная, виниловая, бронирование оптики):
-- Не мойте автомобиль 3 дня после оклейки.
-- Мойку высокого давления держите не ближе 30 см от плёнки и не направляйте струю на её края.
-- Первые 2 недели возможны мелкие пузырьки и лёгкая мутность — плёнка «садится», это проходит само. Не прокалывайте и не поддевайте их.
-- Первые 2 недели не посещайте автоматические мойки со щётками.
-- Не используйте абразивные полироли и растворители, не счищайте лёд и снег скребком с оклеенных поверхностей.
-
-Тонировка:
-- 3–5 дней не опускайте тонированные стёкла.
-- 7 дней не мойте стёкла изнутри, затем — только мягкой салфеткой без абразивов и средств с нашатырём.
-- Мелкие пузырьки и разводы в первые дни — остатки монтажного раствора, они исчезают сами.
-- Не клейте на плёнку присоски и наклейки.
-
-Полировка и защитные покрытия:
-- 7 дней не мойте автомобиль с автохимией и не посещайте автоматические мойки со щётками.
-- Для ухода используйте pH-нейтральный шампунь и чистые микрофибровые салфетки.
-- Сразу удаляйте птичий помёт, смолу и следы насекомых — они повреждают лак.`;
-
 function buildMemoHtml(memo: string): string {
   let html = '';
   let inList = false;
@@ -301,24 +271,70 @@ function buildMemoHtml(memo: string): string {
   return html;
 }
 
-// Поля страницы задаём явно: по ним считаем, влезает ли памятка на первый лист
+// Поля страницы задаём явно: по ним считаем, влезает ли памятка на первый лист.
+// Размеры шрифтов — через CSS-переменные: placeActMemo подбирает их, чтобы акт уместился на лист
 const memoStyles = `
   <style>
     @page { size: A4; margin: 10mm; }
-    .memo { font-size: 10px; line-height: 1.45; margin: 4px 0 12px; }
-    .memo-heading { font-size: 12px; font-weight: 700; margin-bottom: 4px; }
-    .memo-title { font-weight: 700; margin-top: 4px; }
-    .memo ul { padding-left: 16px; }
-    .memo-gap { height: 4px; }
-    .memo-back { page-break-before: always; break-before: page; margin-top: 0; }
-    .memo-back .memo-heading { font-size: 14px; text-align: center; text-transform: uppercase; margin-bottom: 10px; }
-    .memo-back { font-size: 11px; }
+    .legal-text { font-size: var(--legal-fs, 10px); }
+    .memo {
+      font-size: var(--memo-fs, 9px); line-height: 1.3; margin: 4px 0 10px;
+      padding: 5px 8px; border: 1px solid #999; border-radius: 3px;
+    }
+    .memo-heading { font-size: 1.15em; font-weight: 700; margin-bottom: 3px; }
+    /* Две колонки: памятка вдвое ниже и помещается под гарантиями */
+    .memo-body { column-count: 2; column-gap: 6mm; }
+    .memo-title { font-weight: 700; margin-top: 3px; break-after: avoid; page-break-after: avoid; }
+    .memo-title:first-child { margin-top: 0; }
+    .memo ul { padding-left: 11px; }
+    .memo li { break-inside: avoid; page-break-inside: avoid; }
+    .memo-gap { height: 2px; }
+    /* Не влезло даже мелко — отдельная страница. Отступ body есть только у первого листа, задаём свой */
+    .memo-back {
+      page-break-before: always; break-before: page; margin-top: 0; padding: 14mm 0 0; border: none;
+      font-size: 11px; line-height: 1.55;
+    }
+    .memo-back .memo-body { column-count: 1; }
+    .memo-back .memo-heading {
+      font-size: 14px; text-align: center; text-transform: uppercase; letter-spacing: 0.5px;
+      margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid #000;
+    }
+    .memo-back .memo-title { margin-top: 10px; margin-bottom: 2px; }
+
+    /* Компактный акт: включается, когда с памяткой лист не помещается. !important — против инлайновых стилей шаблона */
+    body.act-compact { font-size: 11px; padding: 6mm 12mm; }
+    @media print { body.act-compact { padding: 6mm 12mm; } }
+    .act-compact h1 { font-size: 14px; margin-bottom: 2px; }
+    .act-compact .subtitle { margin-bottom: 6px; }
+    .act-compact h2 { font-size: 11.5px; margin: 6px 0 3px; }
+    .act-compact .two-col { margin: 4px 0 !important; gap: 8px; }
+    .act-compact .two-col div { line-height: 1.35 !important; }
+    .act-compact table { margin: 3px 0; }
+    .act-compact th, .act-compact td { padding: 2px 6px; font-size: 10px; }
+    .act-compact .total { font-size: 12px; margin-top: 3px; padding-top: 2px; }
+    .act-compact .legal-text { line-height: 1.3; margin: 2px 0 6px !important; }
+    .act-compact .legal-text p { margin-bottom: 1px !important; }
+    .act-compact .memo { line-height: 1.25; margin: 2px 0 6px; padding: 4px 6px; }
+    .act-compact .sig-section { margin-top: 8px !important; }
+    .act-compact .sig-line { margin-top: 16px; }
   </style>
 `;
 
+// Ступени ужатия: обычный акт → компактный (поля, таблицы, реквизиты) → мельче памятка и гарантии.
+// Меньше 7px на бумаге уже не читается — дальше только отдельная страница
+const FIT_STEPS: Array<{ compact: boolean; memo: number; legal: number }> = [
+  { compact: false, memo: 9, legal: 10 },
+  { compact: true, memo: 9, legal: 9.5 },
+  { compact: true, memo: 8.5, legal: 9 },
+  { compact: true, memo: 8, legal: 8.5 },
+  { compact: true, memo: 7.5, legal: 8 },
+  { compact: true, memo: 7, legal: 8 },
+];
+
 /**
- * Памятка стоит под гарантиями, до подписей. Если с ней акт не помещается на один лист A4,
- * переносим её после подписей на новую страницу — печатается на обороте акта.
+ * Памятка стоит под гарантиями, до подписей. Акт печатают сразу в двух экземплярах, поэтому
+ * всё должно уместиться на один лист: подбираем шрифт памятки и гарантий по ступеням FIT_STEPS.
+ * Только если не влезает и на самой мелкой — переносим памятку на отдельную страницу после подписей.
  * Меряем в той же вёрстке, что при печати: ширина и отступы листа из @page и @media print.
  */
 function placeActMemo(doc: Document): void {
@@ -327,7 +343,6 @@ function placeActMemo(doc: Document): void {
   const body = doc.body;
   const prev = { width: body.style.width, padding: body.style.padding };
   body.style.width = '190mm'; // 210mm минус поля @page
-  body.style.padding = '10mm 15mm'; // как в @media print
 
   const probe = doc.createElement('div');
   probe.style.height = '277mm'; // 297mm минус поля @page
@@ -336,11 +351,22 @@ function placeActMemo(doc: Document): void {
   probe.remove();
 
   // Небольшой запас: браузеры по-разному округляют шрифты при печати
-  const fits = body.scrollHeight <= pageHeight * 0.97;
+  const fitsPage = () => body.scrollHeight <= pageHeight * 0.97;
+  const fitted = FIT_STEPS.some(step => {
+    body.classList.toggle('act-compact', step.compact);
+    body.style.padding = step.compact ? '6mm 12mm' : '10mm 15mm'; // как в @media print
+    body.style.setProperty('--memo-fs', `${step.memo}px`);
+    body.style.setProperty('--legal-fs', `${step.legal}px`);
+    return fitsPage();
+  });
+
   body.style.width = prev.width;
   body.style.padding = prev.padding;
-  if (fits) return;
+  if (fitted) return;
 
+  body.classList.remove('act-compact');
+  body.style.removeProperty('--memo-fs');
+  body.style.removeProperty('--legal-fs');
   memo.classList.add('memo-back');
   body.appendChild(memo);
 }
@@ -425,7 +451,8 @@ function buildCompletionActHtml(
       `).join('')
     : '';
 
-  const memo = (settings?.actMemo ?? DEFAULT_ACT_MEMO).trim();
+  // Только блоки памятки, относящиеся к услугам этой записи
+  const memo = actMemoForRecord(record, settings);
 
   const defaultLegal = COMPLETION_ACT_WARRANTY + '\n\n' + COMPLETION_ACT_ACCEPTANCE;
   const legalHtml = fillWarrantyTerm(templateContent ?? defaultLegal, record.deal?.warranty)
@@ -507,7 +534,7 @@ function buildCompletionActHtml(
     ${memo ? `
       <div id="act-memo" class="memo">
         <div class="memo-heading">Памятка по эксплуатации</div>
-        ${buildMemoHtml(memo)}
+        <div class="memo-body">${buildMemoHtml(memo)}</div>
       </div>
     ` : ''}
 

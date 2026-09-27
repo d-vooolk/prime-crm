@@ -302,6 +302,18 @@ export interface CompanySettings {
   nextDocumentNumber?: number;
   /** Памятка клиенту в акте. null — текст по умолчанию, пустая строка — не печатать */
   actMemo?: string | null;
+  /** Памятка блоками с условиями по услугам. null — ещё не настраивали, берётся actMemo */
+  actMemoBlocks?: ActMemoBlock[] | null;
+}
+
+/** Блок памятки: печатается, если в записи есть услуга из targets ('svc:<id>' или вся категория 'cat:<id>') */
+export interface ActMemoBlock {
+  id: string;
+  title: string;
+  /** Строки; строка с «- » — пункт списка */
+  text: string;
+  /** Пусто — печатать всегда */
+  targets: string[];
 }
 
 export interface DocumentTemplate {

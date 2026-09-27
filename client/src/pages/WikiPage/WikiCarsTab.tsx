@@ -174,7 +174,8 @@ export const WikiCarsTab: React.FC<Props> = ({ markId, modelId, generationId, on
           onRow={row => ({
             onClick: () => {
               onSelect({ markId: row.markId, modelId: row.modelId, generationId: row.generationId });
-              window.scrollTo({ top: 0, behavior: 'smooth' });
+              // Прокручивается контейнер страницы, а не документ (он зафиксирован, см. global.scss)
+              document.querySelector('[data-page-scroll]')?.scrollTo({ top: 0, behavior: 'smooth' });
             },
           })}
           locale={{ emptyText: 'Ничего не найдено' }}

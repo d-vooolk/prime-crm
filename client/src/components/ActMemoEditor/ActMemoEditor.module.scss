@@ -1,0 +1,42 @@
+@use '@/styles/variables' as *;
+
+.hint {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-md);
+}
+
+.blocks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.blockHead {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.targets {
+  flex: 1;
+  min-width: 0;
+}
+
+.targetsHint {
+  margin-top: -4px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.add {
+  margin-top: var(--spacing-md);
+}
