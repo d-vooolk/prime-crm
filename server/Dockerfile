@@ -7,6 +7,8 @@ RUN node_modules/.bin/prisma generate
 RUN npm run build
 
 FROM node:22-alpine
+# pg_dump той же версии, что и база (postgres:16) — для тревожной кнопки (services/panic.service.ts)
+RUN apk add --no-cache postgresql16-client
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev

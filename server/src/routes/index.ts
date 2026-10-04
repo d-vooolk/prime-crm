@@ -10,6 +10,7 @@ import wikiRouter from './wiki.routes';
 import expensesRouter from './expenses.routes';
 import stockRouter from './stock.routes';
 import pushRouter from './push.routes';
+import securityRouter from './security.routes';
 import { authMiddleware } from '../middleware/auth.middleware';
 
 const router = Router();
@@ -28,5 +29,6 @@ router.use('/wiki', wikiRouter);
 router.use('/expenses', expensesRouter);
 router.use('/stock', stockRouter);
 router.use('/push', pushRouter);
+router.use('/security', securityRouter);
 
 export default router;

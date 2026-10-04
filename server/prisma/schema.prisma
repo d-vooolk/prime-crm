@@ -795,3 +795,11 @@ model PushSubscription {
 
   @@index([userId])
 }
+
+// --- Состояние безопасности (одна строка, id = 'singleton') ---
+// sessionsRevokedAt — токены, выданные раньше этого момента, недействительны:
+// так тревожная кнопка разлогинивает все устройства (src/utils/sessionRevocation.ts)
+model SecurityState {
+  id                String    @id
+  sessionsRevokedAt DateTime?
+}

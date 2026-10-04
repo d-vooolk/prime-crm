@@ -16,6 +16,13 @@ export const env = {
   get clientUrl() { return process.env.CLIENT_URL || 'http://localhost:3000'; },
   get port() { return Number(process.env.PORT) || 3001; },
   get isProd() { return process.env.NODE_ENV === 'production'; },
+  // Тревожная кнопка (services/panic.service.ts). Не заданы — кнопка ничего не делает
+  get panicPublicKey() { return process.env.PANIC_PUBLIC_KEY || ''; },
+  get panicPinHash() { return process.env.PANIC_PIN_HASH || ''; },
+  /** Куда класть зашифрованный архив (в проде — data/panic на хосте) */
+  get panicDir() { return process.env.PANIC_DIR || ''; },
+  /** Папка бэкапов хоста, смонтированная в контейнер; пусто — бэкапы не трогаем */
+  get backupsDir() { return process.env.BACKUPS_DIR || ''; },
 };
 
 /** Проверка при старте — падаем сразу, а не на первом входе пользователя. */

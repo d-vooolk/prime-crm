@@ -381,11 +381,17 @@ GET    /api/analytics/revenue?from=&to=
 - Хранится 7 ежедневных, 5 еженедельных и 12 ежемесячных копий базы, файлы — 7 снимков на жёстких ссылках
 - Внешнее хранилище подключается переменной `BACKUP_RCLONE_REMOTE` в `.env`
 
+### Тревожная кнопка
+- Настройки → «Протокол AID» (Менеджер и выше): 3 подтверждения + PIN → `server/src/services/panic.service.ts`. Подробно и восстановление — `.deploy/README-panic.md`
+- Сначала `pg_dump` и `data/uploads` шифруются открытым ключом владельца (`utils/panicCrypto.ts`, X25519 + AES-256-GCM) в `data/panic`, затем `TRUNCATE` таблиц из `PANIC_WIPE_TABLES`, отзыв всех сессий (`SecurityState`, `utils/sessionRevocation.ts`) и удаление бэкапов. Не удалось зашифровать — ничего не удаляется
+- **Новая таблица с клиентскими или денежными данными добавляется в `PANIC_WIPE_TABLES`.** TRUNCATE идёт без CASCADE: забытая таблица со ссылкой на очищаемую уронит очистку, а не удалит лишнее
+- Приватного ключа на сервере нет. Ключ и хеш PIN создаются у владельца: `npm run panic:keygen`, `npm run panic:pin`; расшифровка — `npm run panic:decrypt`
+
 ---
 
 ## Переменные окружения
 
-- **Продакшен:** `.env` рядом с `docker-compose.yml`, не в git, образец — `/.env.example`. В нём `POSTGRES_PASSWORD`, `JWT_SECRET`, `MASTER_EMAIL`, `MASTER_PASSWORD`, `CLIENT_URL`, `BACKUP_RCLONE_REMOTE`. Compose подставляет их в контейнеры; без обязательных переменных сервер не стартует.
+- **Продакшен:** `.env` рядом с `docker-compose.yml`, не в git, образец — `/.env.example`. В нём `POSTGRES_PASSWORD`, `JWT_SECRET`, `MASTER_EMAIL`, `MASTER_PASSWORD`, `CLIENT_URL`, `BACKUP_RCLONE_REMOTE`, `PANIC_PUBLIC_KEY`, `PANIC_PIN_HASH`. Compose подставляет их в контейнеры; без обязательных переменных сервер не стартует.
 - **Разработка:** `server/.env.development`, образец — `server/.env.example`.
 
 ---

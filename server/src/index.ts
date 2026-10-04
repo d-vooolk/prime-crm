@@ -91,6 +91,9 @@ async function runSafely(name: string, task: () => Promise<unknown>) {
 
 app.listen(env.port, async () => {
   logger.info(`Server running on http://localhost:${env.port}`);
+  if (!env.panicPublicKey || !env.panicPinHash) {
+    logger.warn('Тревожная кнопка не настроена: задайте PANIC_PUBLIC_KEY и PANIC_PIN_HASH (.deploy/README-panic.md)');
+  }
   // Справочник авто наполняется здесь, а не в deploy.sh: в прод-образе нет
   // ts-node, поэтому запустить скрипт из scripts/ внутри контейнера нельзя.
   await runSafely('справочник авто', syncCarCatalogIfNeeded);

@@ -1,0 +1,47 @@
+@use '@/styles/variables' as *;
+
+// Кнопки подтверждения в каждом шаге стоят по-разному, чтобы не нажать все три по привычке
+.footerEnd {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+}
+
+.footerStart {
+  display: flex;
+  justify-content: flex-start;
+  gap: var(--spacing-sm);
+}
+
+.footerStacked {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--spacing-sm);
+}
+
+// Тёмно-красная пульсирующая кнопка запуска
+.aidButton:global(.ant-btn) {
+  background: var(--color-danger-dark);
+  border-color: var(--color-danger-dark);
+  color: #fff;
+  font-weight: 600;
+  animation: aidPulse 1.6s ease-out infinite;
+
+  &:not(:disabled):hover,
+  &:not(:disabled):focus-visible {
+    background: var(--color-danger-dark-hover);
+    border-color: var(--color-danger-dark-hover);
+    color: #fff;
+  }
+}
+
+@keyframes aidPulse {
+  0% { box-shadow: 0 0 0 0 var(--color-danger-dark-glow); }
+  70% { box-shadow: 0 0 0 14px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aidButton:global(.ant-btn) { animation: none; }
+}

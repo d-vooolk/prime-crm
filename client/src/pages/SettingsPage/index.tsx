@@ -2,12 +2,13 @@ import React from 'react';
 import { Card, Tabs } from 'antd';
 import { useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
-import { isEmployee } from '@/utils/roles';
+import { isEmployee, isManagerOrAbove } from '@/utils/roles';
 import { CarCatalogEditor } from '@/components/CarCatalogEditor';
 import { ExpenseCategoriesEditor } from '@/components/ExpenseCategoriesEditor';
 import { ServicesPage } from '@/pages/ServicesPage';
 import { BasicTab } from './BasicTab';
 import { CompanyTab } from './CompanyTab';
+import { AidProtocolTab } from './AidProtocolTab';
 import { SmsTab } from './SmsTab';
 import { TemplatesTab } from './TemplatesTab';
 import styles from './SettingsPage.module.scss';
@@ -42,6 +43,10 @@ export const SettingsPage: React.FC = () => {
         </Card>
       ),
     },
+    // Тревожная кнопка — только руководителям (сервер проверяет роль сам)
+    ...(isManagerOrAbove(user)
+      ? [{ key: 'aid', label: 'Протокол AID', children: <AidProtocolTab /> }]
+      : []),
   ];
 
   const visibleTabItems = isSotrudnik ? tabItems.filter(t => t.key === 'basic') : tabItems;

@@ -15,6 +15,9 @@
     "cars:fetch": "ts-node scripts/fetch-cars.ts",
     "cars:snapshot": "ts-node scripts/fetch-cars.ts --from-cache",
     "cars:seed": "ts-node scripts/seed-cars.ts",
+    "panic:keygen": "ts-node scripts/panic-keygen.ts",
+    "panic:pin": "ts-node scripts/panic-pin.ts",
+    "panic:decrypt": "ts-node scripts/panic-decrypt.ts",
     "lint": "eslint \"src/**/*.ts\"",
     "format": "prettier --write \"src/**/*.ts\"",
     "test": "vitest run"

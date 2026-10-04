@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { prisma } from '../prisma/client';
 import { env } from '../config/env';
 import { currentContext } from '../utils/requestContext';
+import { isTokenRevoked } from '../utils/sessionRevocation';
 
 export interface AuthPayload {
   id: string;
@@ -39,6 +40,11 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
     return;
   }
   try {
+    // «Выйти на всех устройствах» (тревожная кнопка) — токены, выданные до этого, недействительны
+    if (await isTokenRevoked((payload as AuthPayload & { iat?: number }).iat)) {
+      res.status(401).json({ message: 'Сессия недействительна, войдите заново' });
+      return;
+    }
     if (payload.isMaster) {
       req.user = payload;
     } else {
