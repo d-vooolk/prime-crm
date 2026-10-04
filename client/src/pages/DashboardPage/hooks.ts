@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { analyticsApi, Period } from '@/api/analytics.api';
 import { accountingApi, MonthlyRecordCountItem, MonthlyRevenueItem, SalaryData, SalaryHistoryItem } from '@/api/accounting.api';
 import { useServicemen } from '@/hooks/useReferenceData';
+import { useOnAppResume } from '@/hooks/useAppResume';
 import { effectiveSalaryMonth, hasSalary } from '@/utils/salary';
 import { getErrorMessage } from '@/utils/errors';
 
@@ -26,12 +27,18 @@ export function useDashboardData(period: Period) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  // Фоновое обновление при возврате в приложение: без скелетонов на месте уже показанных цифр
+  const silentRef = useRef(false);
 
   useEffect(() => {
     // Быстро переключили период — ответ за прошлый не должен затереть текущий
     let cancelled = false;
-    setLoading(true);
-    setError(null);
+    const silent = silentRef.current;
+    silentRef.current = false;
+    if (!silent) {
+      setLoading(true);
+      setError(null);
+    }
 
     Promise.allSettled([
       analyticsApi.getSummary(period) as Promise<DashboardSummary>,
@@ -47,6 +54,7 @@ export function useDashboardData(period: Period) {
       if (mrc.status === 'fulfilled') setMonthlyRecordCount([...mrc.value].reverse());
       const failed = [s, t, mr, mrc].find((r): r is PromiseRejectedResult => r.status === 'rejected');
       if (failed) setError(getErrorMessage(failed.reason));
+      else setError(null);
       setLoading(false);
     });
 
@@ -54,6 +62,10 @@ export function useDashboardData(period: Period) {
   }, [period, reloadKey]);
 
   const reload = useCallback(() => setReloadKey(k => k + 1), []);
+  useOnAppResume(() => {
+    silentRef.current = true;
+    reload();
+  });
 
   return { summary, topServices, monthlyRevenue, monthlyRecordCount, loading, error, reload };
 }

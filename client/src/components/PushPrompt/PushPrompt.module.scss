@@ -1,0 +1,8 @@
+.banner {
+  flex-shrink: 0;
+}
+
+.actions {
+  display: flex;
+  gap: var(--spacing-sm);
+}

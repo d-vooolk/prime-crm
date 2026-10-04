@@ -1,5 +1,6 @@
 import { usePwaStore, InstallPromptEvent } from '@/store/pwaStore';
 import { pushApi } from '@/api/push.api';
+import { shouldAutoEnablePush, PushDeviceState } from '@/utils/pushPrompt';
 
 /**
  * PWA: регистрация service worker, обновление версии, установка на устройство и пуш-подписка.
@@ -21,6 +22,16 @@ export const isPushSupported = () =>
 // а не дублируются уведомлением из открытой вкладки (useNotesNotifications)
 const PUSH_FLAG = 'prime-crm-push-enabled';
 export const isPushEnabledHere = () => localStorage.getItem(PUSH_FLAG) === '1';
+
+// Флаг «пользователь сам выключил уведомления на этом устройстве»: тогда не подписываем
+// автоматически и не предлагаем плашкой. Переживает выход из аккаунта — это выбор для устройства
+const PUSH_OPT_OUT = 'prime-crm-push-off';
+
+export const getPushDeviceState = (): PushDeviceState => ({
+  supported: isPushSupported(),
+  permission: 'Notification' in window ? Notification.permission : 'denied',
+  optedOut: localStorage.getItem(PUSH_OPT_OUT) === '1',
+});
 
 let waitingWorker: ServiceWorker | null = null;
 
@@ -115,11 +126,28 @@ export async function enablePush(): Promise<void> {
     ?? await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: base64UrlToUint8Array(publicKey) });
   await pushApi.subscribe(subscription.toJSON());
   localStorage.setItem(PUSH_FLAG, '1');
+  localStorage.removeItem(PUSH_OPT_OUT);
+}
+
+/**
+ * При запуске: разрешение на уведомления уже выдано (например, раньше для напоминаний заметок) —
+ * подписываем устройство без вопросов. Заодно переносит подписку на вошедшего пользователя.
+ */
+export async function autoEnablePush(): Promise<void> {
+  if (process.env.NODE_ENV !== 'production' || !shouldAutoEnablePush(getPushDeviceState())) return;
+  try {
+    // Service worker регистрируется по window.load — дожидаемся его
+    await navigator.serviceWorker.ready;
+    await enablePush();
+  } catch {
+    // Намеренно молча: фоновая попытка, включить вручную можно в настройках
+  }
 }
 
 export async function disablePush(): Promise<void> {
   const subscription = await getPushSubscription();
   localStorage.removeItem(PUSH_FLAG);
+  localStorage.setItem(PUSH_OPT_OUT, '1');
   if (!subscription) return;
   await pushApi.unsubscribe(subscription.endpoint).catch(() => undefined);
   await subscription.unsubscribe();

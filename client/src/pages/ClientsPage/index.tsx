@@ -6,6 +6,7 @@ import type { Client, Record } from '@/types';
 import { RecordDetailModal } from '@/components/RecordDetailModal';
 import { ClientHistoryDrawer } from '@/components/ClientHistoryDrawer';
 import { useNotify } from '@/hooks/useNotify';
+import { useOnAppResume } from '@/hooks/useAppResume';
 import { getErrorMessage, isAbortError } from '@/utils/errors';
 import { useClientsFilter } from './useClientsFilter';
 import { ClientsFilters } from './ClientsFilters';
@@ -30,6 +31,12 @@ export const ClientsPage: React.FC = () => {
   const [historyRefresh, setHistoryRefresh] = useState(0);
 
   const { filter } = f;
+
+  // Вернулись в приложение — перечитываем список и открытую историю клиента
+  useOnAppResume(() => {
+    setReloadKey(k => k + 1);
+    setHistoryRefresh(k => k + 1);
+  });
 
   // Список клиентов: предыдущий запрос отменяем, чтобы поздний ответ не перетёр свежий
   useEffect(() => {

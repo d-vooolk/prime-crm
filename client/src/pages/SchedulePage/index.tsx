@@ -15,6 +15,7 @@ import { RecordModal } from '@/components/RecordModal';
 import { RecordDetailModal } from '@/components/RecordDetailModal';
 import { useUiStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/authStore';
+import { useOnAppResume } from '@/hooks/useAppResume';
 import styles from './SchedulePage.module.scss';
 
 dayjs.locale('ru');
@@ -39,11 +40,12 @@ export const SchedulePage: React.FC = () => {
   const [pickerMonth, setPickerMonth] = useState<Dayjs>(dayjs(selectedDate));
   const [datesWithRecords, setDatesWithRecords] = useState<Set<string>>(new Set());
 
-  const fetchRecords = useCallback(async () => {
+  // silent — фоновое обновление: список не прячется на время загрузки, ошибка не затирает данные
+  const fetchRecords = useCallback(async ({ silent = false } = {}) => {
     fetchControllerRef.current?.abort();
     const controller = new AbortController();
     fetchControllerRef.current = controller;
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const [today, incomplete] = await Promise.all([
         recordsApi.getByDate(selectedDate, controller.signal),
@@ -58,7 +60,7 @@ export const SchedulePage: React.FC = () => {
         return [...today, ...incomplete].find(r => r.id === prev.id) || prev;
       });
     } catch (e) {
-      if (isAbortError(e)) return;
+      if (isAbortError(e) || silent) return;
       setLoadError(getErrorMessage(e));
     } finally {
       // Отменённый запрос уже заменён новым — его индикатор загрузки не трогаем
@@ -90,6 +92,12 @@ export const SchedulePage: React.FC = () => {
     fetchDatesWithRecords();
     return () => datesControllerRef.current?.abort();
   }, [pickerOpened, fetchDatesWithRecords]);
+
+  // Вернулись в приложение — тихо перечитываем расписание
+  useOnAppResume(() => {
+    fetchRecords({ silent: true });
+    if (pickerOpened) fetchDatesWithRecords();
+  });
 
   // Меняем стейт только при смене месяца, иначе новый объект Dayjs
   // каждый раз дёргал бы загрузку заново.
@@ -163,7 +171,7 @@ export const SchedulePage: React.FC = () => {
           showIcon
           message="Не удалось загрузить записи"
           description={loadError}
-          action={<Button size="small" onClick={fetchRecords}>Повторить</Button>}
+          action={<Button size="small" onClick={() => fetchRecords()}>Повторить</Button>}
         />
       )}
 
@@ -240,7 +248,7 @@ export const SchedulePage: React.FC = () => {
         onClose={() => setCreateModalOpen(false)}
         onSuccess={() => {
           fetchRecords();
-          setTimeout(fetchRecords, 3000);
+          setTimeout(() => fetchRecords(), 3000);
           if (pickerOpened) fetchDatesWithRecords();
         }}
         initialDate={selectedDate}
@@ -250,7 +258,7 @@ export const SchedulePage: React.FC = () => {
         record={selectedRecord}
         open={!!selectedRecord}
         onClose={() => setSelectedRecord(null)}
-        onRefresh={fetchRecords}
+        onRefresh={() => fetchRecords()}
       />
     </div>
   );

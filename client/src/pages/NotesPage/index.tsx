@@ -6,6 +6,7 @@ import { notesApi } from '@/api/notes.api';
 import { useAuthStore } from '@/store/authStore';
 import { useAllServicemen } from '@/hooks/useReferenceData';
 import { useNotify } from '@/hooks/useNotify';
+import { useOnAppResume } from '@/hooks/useAppResume';
 import { getErrorMessage } from '@/utils/errors';
 import { canEditNote, isNotesCreator } from '@/utils/roles';
 import { buildNotePayload, NoteFormValues } from './notesHelpers';
@@ -51,6 +52,7 @@ export const NotesPage: React.FC = () => {
   }, [isCreator, viewingId, showArchive]);
 
   useEffect(() => { loadNotes(); }, [loadNotes]);
+  useOnAppResume(loadNotes);
 
   const handleToggleDone = async (note: Note) => {
     try {

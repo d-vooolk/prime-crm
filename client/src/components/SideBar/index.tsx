@@ -21,6 +21,7 @@ import { Logo } from '@/components/Logo';
 import { recordsApi } from '@/api/records.api';
 import { canSeePath, isManagerOrAbove } from '@/utils/roles';
 import { useStockLowCount } from '@/hooks/useStock';
+import { useOnAppResume } from '@/hooks/useAppResume';
 import styles from './SideBar.module.scss';
 import cn from 'classnames';
 
@@ -60,6 +61,10 @@ export const SideBar: React.FC = () => {
   const calendarYear = calendarValue.year();
   const calendarMonth = calendarValue.month() + 1;
 
+  // Инкремент перечитывает точки календаря при возврате в приложение
+  const [datesReloadKey, setDatesReloadKey] = useState(0);
+  useOnAppResume(() => setDatesReloadKey(k => k + 1));
+
   useEffect(() => {
     // Быстро листают месяцы — ответ за прошлый месяц не должен затереть текущий
     const controller = new AbortController();
@@ -69,7 +74,7 @@ export const SideBar: React.FC = () => {
         // Намеренно молча: точки в календаре — украшение, без них расписание работает
       });
     return () => controller.abort();
-  }, [calendarYear, calendarMonth]);
+  }, [calendarYear, calendarMonth, datesReloadKey]);
 
   const prevMonth = () => setCalendarValue(v => v.subtract(1, 'month'));
   const nextMonth = () => setCalendarValue(v => v.add(1, 'month'));
