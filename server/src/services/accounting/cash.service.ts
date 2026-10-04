@@ -23,14 +23,18 @@ export const cashService = {
     };
   },
 
+  /** Наличные в кассе: приходы минус расходы. Сумма считается в базе по DECIMAL — без копеечных хвостов */
   async getBalance() {
-    const rows = await prisma.cashTransaction.findMany({
+    const sums = await prisma.cashTransaction.groupBy({
+      by: ['type'],
       where: { type: { in: ['INCOME', 'MANUAL_INCOME', 'EXPENSE'] } },
+      _sum: { amount: true },
     });
-    return rows.reduce((s, r) => {
-      if (r.type === 'EXPENSE') return s - r.amount;
-      return s + r.amount;
+    const total = sums.reduce((s, r) => {
+      const amount = Number(r._sum.amount ?? 0);
+      return r.type === 'EXPENSE' ? s - amount : s + amount;
     }, 0);
+    return roundMoney(total);
   },
 
   async createExpense(data: {
