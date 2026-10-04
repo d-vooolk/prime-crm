@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  salaryPeriod, servicemanShare, effectivePercent, paymentFor, adjustedTotal, paymentType,
+  salaryPeriod, servicemanShare, effectivePercent, paymentFor, adjustedTotal, paymentType, dealPayments,
 } from '../services/accounting/salaryCalc';
 import { effectiveSalaryMonth, baseSalaryFor, monthsWithBaseSalary } from '../services/salaryRates';
 
@@ -93,5 +93,43 @@ describe('оклад по истории', () => {
 
   it('месяцы с окладом — от первой записи до указанного', () => {
     expect(monthsWithBaseSalary(rates, { year: 2026, month: 5 })).toHaveLength(5);
+  });
+});
+
+describe('dealPayments', () => {
+  const service = (customPercent: number | null = null, categoryPercent: number | null = null) =>
+    ({ customPercent, category: { customPercent: categoryPercent } });
+
+  it('считает каждому его процент со своих позиций', () => {
+    const items = [
+      { servicemanName: 'Иван', servicemanSplit: null, netProfit: 1000, service: service() },
+      { servicemanName: 'Пётр', servicemanSplit: null, netProfit: 500, service: service(20) },
+      { servicemanName: 'Иван', servicemanSplit: null, netProfit: 200, service: service(null, 50) },
+    ];
+    const result = dealPayments(items, new Map([['Иван', 30], ['Пётр', 10]]));
+    expect(result.get('Иван')).toBe(400); // 1000 × 30% + 200 × 50%
+    expect(result.get('Пётр')).toBe(100); // свой процент услуги 20%
+  });
+
+  it('при дележе — процент с части каждого', () => {
+    const items = [{
+      servicemanName: null,
+      servicemanSplit: [{ name: 'Иван', amount: 600 }, { name: 'Пётр', amount: 400 }],
+      netProfit: 1000,
+      service: service(),
+    }];
+    const result = dealPayments(items, new Map([['Иван', 10], ['Пётр', 25]]));
+    expect(result.get('Иван')).toBe(60);
+    expect(result.get('Пётр')).toBe(100);
+  });
+
+  it('позиции без исполнителя никому не идут', () => {
+    const items = [{ servicemanName: null, servicemanSplit: null, netProfit: 1000, service: service() }];
+    expect(dealPayments(items, new Map()).size).toBe(0);
+  });
+
+  it('сотрудник без процента получает 0', () => {
+    const items = [{ servicemanName: 'Иван', servicemanSplit: null, netProfit: 1000, service: service() }];
+    expect(dealPayments(items, new Map()).get('Иван')).toBe(0);
   });
 });

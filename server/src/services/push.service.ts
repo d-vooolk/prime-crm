@@ -2,6 +2,7 @@ import webpush from 'web-push';
 import { prisma } from '../prisma/client';
 import { logger } from '../utils/logger';
 import { ROLE_LEVEL, ROLES } from '../utils/roles';
+import { dealPayments, dealServicemen } from './accounting/salaryCalc';
 
 /**
  * Пуш-уведомления на телефоны и компьютеры сотрудников (PWA).
@@ -95,6 +96,30 @@ export const pushService = {
     }
     // Тому, кто создал запись, уведомление о ней не нужно
     await pushService.sendToUsers(ids.filter(id => id !== authorId), payload);
+  },
+
+  /**
+   * Сделка закрыта: каждому сотруднику, делавшему работы, — его заработок с неё
+   * (процент с его позиций, как в зарплате). Кроме того, кто закрыл, и тех, кому вышло 0.
+   */
+  async sendDealPayments(
+    items: Parameters<typeof dealPayments>[0],
+    authorId: string | undefined,
+    payload: (amount: number) => PushPayload,
+  ) {
+    if (!ensureConfigured()) return;
+    const names = dealServicemen(items);
+    if (!names.length) return;
+    const staff = await prisma.serviceman.findMany({
+      where: { name: { in: names }, isDismissed: false },
+      select: { id: true, name: true, profitPercent: true },
+    });
+    const payments = dealPayments(items, new Map(staff.map(s => [s.name, s.profitPercent])));
+    await Promise.all(staff.map(async (s) => {
+      const amount = payments.get(s.name) ?? 0;
+      if (amount <= 0 || s.id === authorId) return;
+      await pushService.sendToUsers([s.id], payload(amount));
+    }));
   },
 };
 

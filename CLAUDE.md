@@ -373,7 +373,7 @@ GET    /api/analytics/revenue?from=&to=
 - Манифест и иконки — `client/public/` (копируются в сборку), service worker — `client/src/sw.ts` (workbox InjectManifest, только в продакшен-сборке; типы проверяет `tsconfig.sw.json`)
 - Регистрация, обновление версии, установка и пуш-подписка — `client/src/pwa/index.ts`; настройки устройства — `components/AppDeviceSettings`
 - Кеш: оболочка приложения — precache; `/api/uploads` — CacheFirst; GET `/api/*` — NetworkFirst (кеш только как запасной вариант без сети). При выходе из аккаунта кеш данных и пуш-подписка удаляются
-- Пуши — `server/src/services/push.service.ts` (web-push, ключи VAPID в `.env`). Триггеры: новая запись → менеджерам, директорам, создателю и мастеру записи (кроме автора), товар дошёл до порога → менеджерам, напоминания заметок (`noteReminders.ts`, раз в минуту)
+- Пуши — `server/src/services/push.service.ts` (web-push, ключи VAPID в `.env`). Триггеры: новая запись → менеджерам, директорам, создателю и мастеру записи (кроме автора), сделка закрыта → каждому сотруднику его заработок с неё (`dealPayments` в `salaryCalc.ts`, кроме закрывшего), товар дошёл до порога → менеджерам, напоминания заметок (`noteReminders.ts`, раз в минуту)
 - `client/nginx.conf`: `sw.js`, `index.html` и манифест отдаются с `no-cache`, иначе телефоны застрянут на старой версии
 
 ### Бэкапы

@@ -535,7 +535,16 @@ export const recordsService = {
 
     // Повторные закрытия отсекаются и веткой выше, и правилом «отзыв один раз на запись» в sms.service
     sendSmsInBackground(id, 'REVIEW_REQUEST');
-    return recordsService.findById(id);
+    const closed = await recordsService.findById(id);
+    // Сотрудникам — сколько они заработали на сделке (только при первом закрытии)
+    const authorId = currentContext()?.userId;
+    pushInBackground(() => pushService.sendDealPayments(closed.items, authorId, amount => ({
+      title: 'Сделка закрыта',
+      body: `${carInfoOf(closed.car)} · ваш заработок ${amount.toLocaleString('ru-RU', { maximumFractionDigits: 2 })} р.`,
+      url: '/accounting?tab=salary',
+      tag: `deal-${id}`,
+    })));
+    return closed;
   },
 
   async setSalaryDate(id: string, salaryDate: string | null) {

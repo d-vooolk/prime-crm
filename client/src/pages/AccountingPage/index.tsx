@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Grid, Tabs } from 'antd';
+import { useSearchParams } from 'react-router-dom';
 import dayjs, { Dayjs } from 'dayjs';
 import { useAuthStore } from '@/store/authStore';
 import {
@@ -24,6 +25,8 @@ import styles from './AccountingPage.module.scss';
 export const AccountingPage: React.FC = () => {
   const { user } = useAuthStore();
   const isMobile = !Grid.useBreakpoint().md;
+  // Вкладку можно открыть ссылкой (?tab=salary — из пуша о закрытой сделке)
+  const [params] = useSearchParams();
   const canSeeCashflow = canSeeCashflowFor(user);
   const canSeeCapital = canSeeCapitalFor(user);
   const canEditTransactions = canEditTransactionsFor(user);
@@ -67,7 +70,7 @@ export const AccountingPage: React.FC = () => {
   return (
     <div className={styles.page}>
       <h1 className={styles.pageTitle}>Бухгалтерия</h1>
-      <Tabs items={tabItems} />
+      <Tabs items={tabItems} defaultActiveKey={params.get('tab') ?? undefined} />
     </div>
   );
 };
