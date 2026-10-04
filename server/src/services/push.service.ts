@@ -69,18 +69,31 @@ export const pushService = {
     }));
   },
 
+  /** id пользователей с ролью minRole и выше (уволенные — нет) плюс мастер-доступ */
+  async roleUserIds(minRole: typeof ROLES[keyof typeof ROLES]): Promise<string[]> {
+    const roles = Object.entries(ROLE_LEVEL).filter(([, lvl]) => lvl <= ROLE_LEVEL[minRole]).map(([r]) => r);
+    const users = await prisma.serviceman.findMany({ where: { isDismissed: false, role: { in: roles } }, select: { id: true } });
+    return [...users.map(u => u.id), 'master'];
+  },
+
   /** Всем пользователям с ролью minRole и выше (и мастер-доступу) */
   async sendToRole(minRole: typeof ROLES[keyof typeof ROLES], payload: PushPayload) {
     if (!ensureConfigured()) return;
-    const roles = Object.entries(ROLE_LEVEL).filter(([, lvl]) => lvl <= ROLE_LEVEL[minRole]).map(([r]) => r);
-    const users = await prisma.serviceman.findMany({ where: { isDismissed: false, role: { in: roles } }, select: { id: true } });
-    await pushService.sendToUsers([...users.map(u => u.id), 'master'], payload);
+    await pushService.sendToUsers(await pushService.roleUserIds(minRole), payload);
   },
 
-  async sendToServicemanByName(name: string | null | undefined, payload: PushPayload) {
-    if (!name || !ensureConfigured()) return;
-    const s = await prisma.serviceman.findUnique({ where: { name }, select: { id: true, isDismissed: true } });
-    if (s && !s.isDismissed) await pushService.sendToUsers([s.id], payload);
+  /**
+   * Новая запись: менеджерам, директорам и создателю — всегда, а мастеру записи — даже если он
+   * сотрудник. Каждому по одному уведомлению (sendToUsers убирает повторы).
+   */
+  async sendNewRecord(servicemanName: string | null | undefined, payload: PushPayload) {
+    if (!ensureConfigured()) return;
+    const ids = await pushService.roleUserIds(ROLES.MANAGER);
+    if (servicemanName) {
+      const s = await prisma.serviceman.findUnique({ where: { name: servicemanName }, select: { id: true, isDismissed: true } });
+      if (s && !s.isDismissed) ids.push(s.id);
+    }
+    await pushService.sendToUsers(ids, payload);
   },
 };
 

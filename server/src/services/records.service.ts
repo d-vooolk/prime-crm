@@ -302,10 +302,10 @@ export const recordsService = {
     });
 
     sendSmsInBackground(newRecord.id, 'ON_CREATE');
-    // Мастеру записи — пуш на телефон: когда и какая машина
-    pushInBackground(() => pushService.sendToServicemanByName(newRecord.serviceman, {
+    // Пуш менеджерам, директорам, создателю и мастеру записи: когда, какая машина и кто мастер
+    pushInBackground(() => pushService.sendNewRecord(newRecord.serviceman, {
       title: 'Новая запись',
-      body: `${formatWhen(newRecord.scheduledAt)} · ${carInfoOf(newRecord.car)}`,
+      body: `${formatWhen(newRecord.scheduledAt)} · ${carInfoOf(newRecord.car)}${newRecord.serviceman ? ` · ${newRecord.serviceman}` : ''}`,
       url: '/schedule',
       tag: `record-${newRecord.id}`,
     }));
