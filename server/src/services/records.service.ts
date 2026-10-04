@@ -3,6 +3,7 @@ import { prisma, DbClient } from '../prisma/client';
 import { AppError } from '../middleware/errorHandler';
 import { startOfDay, endOfDay } from '../utils/date';
 import { logger } from '../utils/logger';
+import { currentContext } from '../utils/requestContext';
 import { smsService } from './sms.service';
 import { cashService } from './accounting/cash.service';
 import { recordMediaService } from './recordMedia.service';
@@ -302,8 +303,9 @@ export const recordsService = {
     });
 
     sendSmsInBackground(newRecord.id, 'ON_CREATE');
-    // Пуш менеджерам, директорам, создателю и мастеру записи: когда, какая машина и кто мастер
-    pushInBackground(() => pushService.sendNewRecord(newRecord.serviceman, {
+    // Пуш менеджерам, директорам, создателю и мастеру записи (кроме автора): когда, какая машина и кто мастер
+    const authorId = currentContext()?.userId;
+    pushInBackground(() => pushService.sendNewRecord(newRecord.serviceman, authorId, {
       title: 'Новая запись',
       body: `${formatWhen(newRecord.scheduledAt)} · ${carInfoOf(newRecord.car)}${newRecord.serviceman ? ` · ${newRecord.serviceman}` : ''}`,
       url: '/schedule',

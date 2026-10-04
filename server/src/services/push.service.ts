@@ -84,16 +84,17 @@ export const pushService = {
 
   /**
    * Новая запись: менеджерам, директорам и создателю — всегда, а мастеру записи — даже если он
-   * сотрудник. Каждому по одному уведомлению (sendToUsers убирает повторы).
+   * сотрудник. Каждому по одному уведомлению (sendToUsers убирает повторы), кроме автора записи.
    */
-  async sendNewRecord(servicemanName: string | null | undefined, payload: PushPayload) {
+  async sendNewRecord(servicemanName: string | null | undefined, authorId: string | undefined, payload: PushPayload) {
     if (!ensureConfigured()) return;
     const ids = await pushService.roleUserIds(ROLES.MANAGER);
     if (servicemanName) {
       const s = await prisma.serviceman.findUnique({ where: { name: servicemanName }, select: { id: true, isDismissed: true } });
       if (s && !s.isDismissed) ids.push(s.id);
     }
-    await pushService.sendToUsers(ids, payload);
+    // Тому, кто создал запись, уведомление о ней не нужно
+    await pushService.sendToUsers(ids.filter(id => id !== authorId), payload);
   },
 };
 
