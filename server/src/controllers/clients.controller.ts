@@ -9,6 +9,11 @@ const optionalText = (max: number) => z.preprocess(
   z.string().trim().max(max).optional(),
 );
 
+const optionalDay = z.preprocess(
+  v => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+  z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Дата в формате YYYY-MM-DD').optional(),
+);
+
 const listQuerySchema = z.object({
   search: optionalText(100),
   // Телефон принимаем в любом виде, дальше работаем только с цифрами
@@ -21,6 +26,9 @@ const listQuerySchema = z.object({
   modelId: optionalText(100),
   generationId: optionalText(100),
   plate: optionalText(20),
+  serviceId: optionalText(100),
+  from: optionalDay,
+  to: optionalDay,
 });
 
 const suggestQuerySchema = z.object({

@@ -188,3 +188,32 @@
   font-size: var(--font-size-xs);
   white-space: normal;
 }
+
+// ─── Записи под фильтром «услуга / период» ─────────
+.matched {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.matchedRecord {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0 var(--spacing-xs);
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  text-align: left;
+  cursor: pointer;
+
+  &:hover { color: var(--color-primary); }
+}
+
+.matchedDate {
+  font-weight: 600;
+}

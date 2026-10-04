@@ -152,10 +152,10 @@ export const accountingApi = {
   getDebts: (archived: boolean) =>
     http.get<{ data: Debt[] }>('/accounting/debts', { params: { archived } }).then(r => r.data.data),
 
-  createDebt: (data: { description: string; amount: number; currency: Currency; direction: DebtDirection }) =>
+  createDebt: (data: { description: string; amount: number; currency: Currency; direction: DebtDirection; expenseCategory?: string }) =>
     http.post<{ data: Debt }>('/accounting/debts', data).then(r => r.data.data),
 
-  updateDebt: (id: string, data: { description?: string; amount?: number }) =>
+  updateDebt: (id: string, data: { description?: string; amount?: number; expenseCategory?: string }) =>
     http.patch<{ data: Debt }>(`/accounting/debts/${id}`, data).then(r => r.data.data),
 
   deleteDebt: (id: string) =>
@@ -192,6 +192,8 @@ export interface Debt {
   createdAt: string;
   settledAt: string | null;
   payments: DebtPayment[];
+  /** Категория затрат — только у долгов «мы должны» */
+  expenseCategory?: { id: string; name: string } | null;
 }
 
 export interface MonthlyRevenueItem {

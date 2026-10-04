@@ -15,6 +15,37 @@ export interface ClientsFilter {
   generationId?: string;
   /** Часть госномера — без пробелов/дефисов, кириллица приравнена к латинице */
   plate?: string;
+  /** Клиенты, которым делали эту услугу (в записи, кроме отменённых) */
+  serviceId?: string;
+  /** Период записи YYYY-MM-DD, включительно */
+  from?: string;
+  to?: string;
+}
+
+/** Локальная полночь дня YYYY-MM-DD — границы дня как в расписании */
+const parseDay = (value: string) => {
+  const [y, m, d] = value.split('-').map(Number);
+  return new Date(y, m - 1, d);
+};
+
+/**
+ * Условие на записи для фильтра «услуга за период». null — фильтр не задан.
+ * Одна и та же запись должна подходить и по услуге, и по дате.
+ */
+function buildRecordWhere(filter: ClientsFilter): Prisma.RecordWhereInput | null {
+  if (!filter.serviceId && !filter.from && !filter.to) return null;
+  const scheduledAt: Prisma.DateTimeFilter = {};
+  if (filter.from) scheduledAt.gte = parseDay(filter.from);
+  if (filter.to) {
+    const end = parseDay(filter.to);
+    end.setDate(end.getDate() + 1);
+    scheduledAt.lt = end;
+  }
+  return {
+    status: { not: 'CANCELLED' },
+    ...((filter.from || filter.to) && { scheduledAt }),
+    ...(filter.serviceId && { items: { some: { serviceId: filter.serviceId } } }),
+  };
 }
 
 // Буквы, которые на номерах пишут то кириллицей, то латиницей
@@ -91,19 +122,33 @@ async function buildWhere(filter: ClientsFilter): Promise<Prisma.ClientWhereInpu
   }
   if (Object.keys(car).length > 0) and.push({ cars: { some: car } });
 
+  const recordWhere = buildRecordWhere(filter);
+  if (recordWhere) and.push({ records: { some: recordWhere } });
+
   return and.length > 0 ? { AND: and } : {};
 }
 
 export const clientsService = {
   async findAll(filter: ClientsFilter = {}) {
-    return prisma.client.findMany({
+    const recordWhere = buildRecordWhere(filter);
+    const clients = await prisma.client.findMany({
       where: await buildWhere(filter),
       include: {
         cars: true,
         _count: { select: { records: true } },
+        // Подходящие под фильтр записи — какая машина и когда
+        ...(recordWhere && {
+          records: {
+            where: recordWhere,
+            select: { id: true, scheduledAt: true, status: true, car: true },
+            orderBy: { scheduledAt: 'desc' },
+          },
+        }),
       },
       orderBy: { name: 'asc' },
     });
+    // Отдаём отдельным полем: records у клиента — это вся история (GET /clients/:id)
+    return clients.map(({ records, ...client }) => (records ? { ...client, matchedRecords: records } : client));
   },
 
   /** Подсказки для автодополнения по имени: немного клиентов вместе с авто. */

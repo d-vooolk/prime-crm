@@ -320,6 +320,7 @@ model ExpenseCategory {
   sortOrder    Int?
   createdAt    DateTime          @default(now())
   transactions CashTransaction[]
+  debts        Debt[]
 }
 
 enum CapitalTransactionType {
@@ -422,6 +423,10 @@ model Debt {
   createdAt       DateTime      @default(now())
   settledAt       DateTime?
   payments        DebtPayment[]
+  // Категория затрат: погашения долга «мы должны» попадают в аналитику расходов по ней,
+  // а не в общую группу «Погашение долгов»
+  expenseCategoryId String?
+  expenseCategory   ExpenseCategory? @relation(fields: [expenseCategoryId], references: [id], onDelete: SetNull)
 }
 
 model DebtPayment {

@@ -215,6 +215,7 @@ export const accountingController = {
       amount: Number(amount),
       currency: parseBody(currencySchema, req.body.currency ?? 'BYN'),
       direction: direction === 'OWED_TO_US' ? 'OWED_TO_US' : 'WE_OWE',
+      expenseCategory: parseExpenseCategoryField(req.body.expenseCategory),
     });
     res.status(201).json({ data: debt });
   },
@@ -225,6 +226,7 @@ export const accountingController = {
     const debt = await accountingService.updateDebt(id, {
       ...(description !== undefined && { description: String(description) }),
       ...(amount !== undefined && { amount: Number(amount) }),
+      expenseCategory: parseExpenseCategoryField(req.body.expenseCategory),
     });
     res.json({ data: debt });
   },

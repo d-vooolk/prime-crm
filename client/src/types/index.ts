@@ -6,6 +6,8 @@ export interface Client {
   createdAt: string;
   cars: Car[];
   _count?: { records: number };
+  /** Записи, подошедшие под фильтр «услуга / период» в списке клиентов */
+  matchedRecords?: Array<{ id: string; scheduledAt: string; status: RecordStatus; car: Car }>;
 }
 
 /** Что отдаёт GET /clients/:id — клиент вместе со всей историей визитов */
@@ -135,7 +137,8 @@ export interface CashTransaction {
   founderSalary?: { id: string } | null;
   salaryPayment?: { id: string } | null;
   capitalTransfer?: { id: string } | null;
-  debtPayment?: { id: string } | null;
+  // Погашение долга: категория берётся из долга
+  debtPayment?: { id: string; debt?: { expenseCategory?: { id: string; name: string } | null } } | null;
 }
 
 export interface CapitalTransaction {

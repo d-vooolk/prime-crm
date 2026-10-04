@@ -94,7 +94,10 @@ const expenseColumns = [
   { title: 'Цель', dataIndex: 'description', key: 'desc', width: 200 },
   {
     title: 'Категория', key: 'category', width: 130,
-    render: (_: unknown, r: CashTransaction) => r.expenseCategory ? <Tag>{r.expenseCategory.name}</Tag> : '—',
+    render: (_: unknown, r: CashTransaction) => {
+      const category = r.expenseCategory ?? r.debtPayment?.debt?.expenseCategory;
+      return category ? <Tag>{category.name}</Tag> : '—';
+    },
   },
   { title: 'Сумма', dataIndex: 'amount', key: 'amount', width: 100, render: (v: number) => <strong>{formatPrice(v)}</strong> },
   { title: 'Изыматель', dataIndex: 'person', key: 'person', width: 120 },
@@ -610,7 +613,9 @@ export const AccountingPage: React.FC = () => {
     </div>
   );
 
-  const handleCreateDebt = async (vals: { description: string; amount: number; currency: Currency; companyOwes: boolean }) => {
+  const handleCreateDebt = async (vals: {
+    description: string; amount: number; currency: Currency; companyOwes: boolean; expenseCategory?: string;
+  }) => {
     try {
       setDebtSaving(true);
       await accountingApi.createDebt({
@@ -618,23 +623,26 @@ export const AccountingPage: React.FC = () => {
         amount: vals.amount,
         currency: vals.currency,
         direction: vals.companyOwes ? 'WE_OWE' : 'OWED_TO_US',
+        ...(vals.companyOwes && { expenseCategory: vals.expenseCategory?.trim() }),
       });
       message.success('Долг добавлен');
       setDebtCreateOpen(false);
       debtCreateForm.resetFields();
       await loadDebts();
-    } catch {
-      message.error('Не удалось добавить долг');
+    } catch (e) {
+      const err = e as { response?: { data?: { message?: string } } };
+      message.error(err.response?.data?.message || 'Не удалось добавить долг');
     } finally {
       setDebtSaving(false);
     }
   };
 
-  const handleEditDebt = async (vals: { description: string; amount?: number }) => {
+  const handleEditDebt = async (vals: { description: string; amount?: number; expenseCategory?: string }) => {
     if (!debtEditTarget) return;
     try {
       setDebtSaving(true);
-      const payload: { description?: string; amount?: number } = { description: vals.description };
+      const payload: { description?: string; amount?: number; expenseCategory?: string } = { description: vals.description };
+      if (debtEditTarget.direction === 'WE_OWE') payload.expenseCategory = vals.expenseCategory?.trim();
       if (debtEditTarget.payments.length === 0 && vals.amount !== undefined) {
         payload.amount = Math.round(vals.amount);
       }
@@ -696,6 +704,12 @@ export const AccountingPage: React.FC = () => {
             dataIndex: 'description',
             key: 'description',
             ellipsis: true,
+          },
+          {
+            title: 'Категория',
+            key: 'category',
+            width: 140,
+            render: (_: unknown, d: Debt) => d.expenseCategory ? <Tag>{d.expenseCategory.name}</Tag> : '—',
           },
           {
             title: 'Сумма',
@@ -767,7 +781,11 @@ export const AccountingPage: React.FC = () => {
                       icon={<EditOutlined />}
                       onClick={() => {
                         setDebtEditTarget(d);
-                        debtEditForm.setFieldsValue({ description: d.description, amount: d.initialAmount });
+                        debtEditForm.setFieldsValue({
+                          description: d.description,
+                          amount: d.initialAmount,
+                          expenseCategory: d.expenseCategory?.name ?? '',
+                        });
                         setDebtEditOpen(true);
                       }}
                     />
@@ -2246,6 +2264,18 @@ export const AccountingPage: React.FC = () => {
           <Form.Item label="Тип" name="companyOwes" valuePropName="checked">
             <Switch checkedChildren="Мы должны" unCheckedChildren="Нам должны" />
           </Form.Item>
+          {/* Погашения нашего долга уходят в расходы — по категории они попадут в нужную статью аналитики */}
+          <Form.Item noStyle dependencies={['companyOwes']}>
+            {({ getFieldValue }) => getFieldValue('companyOwes') && (
+              <Form.Item
+                label="Категория"
+                name="expenseCategory"
+                rules={[{ required: true, whitespace: true, message: 'Укажите категорию' }]}
+              >
+                <ExpenseCategoryInput />
+              </Form.Item>
+            )}
+          </Form.Item>
         </Form>
       </Modal>
 
@@ -2282,6 +2312,15 @@ export const AccountingPage: React.FC = () => {
               disabled={!!debtEditTarget && debtEditTarget.payments.length > 0}
             />
           </Form.Item>
+          {debtEditTarget?.direction === 'WE_OWE' && (
+            <Form.Item
+              label="Категория"
+              name="expenseCategory"
+              rules={[{ required: true, whitespace: true, message: 'Укажите категорию' }]}
+            >
+              <ExpenseCategoryInput />
+            </Form.Item>
+          )}
         </Form>
       </Modal>
 

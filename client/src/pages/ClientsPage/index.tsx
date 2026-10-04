@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { AutoComplete, Badge, Button, Input, Select, Table, Tag, Grid, List } from 'antd';
+import { AutoComplete, Badge, Button, DatePicker, Input, Select, Table, Tag, Grid, List } from 'antd';
+import dayjs, { Dayjs } from 'dayjs';
 import {
   SearchOutlined, UserOutlined, PhoneOutlined, CarOutlined, FilterOutlined, CloseOutlined,
 } from '@ant-design/icons';
@@ -7,7 +8,9 @@ import MaskedInput from 'antd-mask-input';
 import { clientsApi, ClientsFilter } from '@/api/clients.api';
 import { carsApi } from '@/api/cars.api';
 import { recordsApi } from '@/api/records.api';
-import { Car, CarBrand, CarGeneration, CarModel, Client, Record } from '@/types';
+import { servicesApi } from '@/api/services.api';
+import { Car, CarBrand, CarGeneration, CarModel, Category, Client, Record } from '@/types';
+import { formatDate } from '@/utils/formatters';
 import { RecordDetailModal } from '@/components/RecordDetailModal';
 import { ClientHistoryDrawer } from '@/components/ClientHistoryDrawer';
 import styles from './ClientsPage.module.scss';
@@ -43,6 +46,26 @@ const carLabel = (car: Car) =>
 const yearsLabel = (from?: number | null, to?: number | null) =>
   from ? ` (${from}–${to ?? 'н.в.'})` : '';
 
+const DAY_FORMAT = 'YYYY-MM-DD';
+
+const PERIOD_PRESETS: Array<{ label: string; value: [Dayjs, Dayjs] }> = [
+  { label: 'Этот месяц', value: [dayjs().startOf('month'), dayjs().endOf('month')] },
+  { label: 'Прошлый месяц', value: [dayjs().subtract(1, 'month').startOf('month'), dayjs().subtract(1, 'month').endOf('month')] },
+  { label: '3 месяца', value: [dayjs().subtract(3, 'month'), dayjs()] },
+  { label: 'Полгода', value: [dayjs().subtract(6, 'month'), dayjs()] },
+  { label: 'Этот год', value: [dayjs().startOf('year'), dayjs().endOf('year')] },
+  { label: 'Год', value: [dayjs().subtract(1, 'year'), dayjs()] },
+];
+
+/** Машины из подошедших записей — без повторов, в порядке от свежей записи */
+const matchedCars = (client: Client): Car[] => {
+  const cars = new Map<string, Car>();
+  for (const r of client.matchedRecords ?? []) {
+    if (!cars.has(r.car.id)) cars.set(r.car.id, r.car);
+  }
+  return [...cars.values()];
+};
+
 export const ClientsPage: React.FC = () => {
   const screens = Grid.useBreakpoint();
   const isMobile = !screens.md;
@@ -61,6 +84,10 @@ export const ClientsPage: React.FC = () => {
   const [brandId, setBrandId] = useState<string | undefined>();
   const [modelId, setModelId] = useState<string | undefined>();
   const [generationId, setGenerationId] = useState<string | undefined>();
+  // Услуга и период: клиенты, которым делали услугу в эти даты
+  const [serviceId, setServiceId] = useState<string | undefined>();
+  const [period, setPeriod] = useState<[Dayjs, Dayjs] | null>(null);
+  const [serviceCategories, setServiceCategories] = useState<Category[]>([]);
   // На телефоне фильтр по авто спрятан, чтобы список не уезжал за экран
   const [carFiltersOpen, setCarFiltersOpen] = useState(false);
 
@@ -77,6 +104,10 @@ export const ClientsPage: React.FC = () => {
   const debouncedName = useDebounced(name.trim());
   const debouncedPlate = useDebounced(plate.trim());
   const debouncedPhone = useDebounced(phoneDigits(phone));
+
+  useEffect(() => {
+    servicesApi.getCategories().then(setServiceCategories).catch(() => {});
+  }, []);
 
   useEffect(() => {
     setLoadingBrands(true);
@@ -114,7 +145,10 @@ export const ClientsPage: React.FC = () => {
     brandId,
     modelId,
     generationId,
-  }), [debouncedName, debouncedPhone, debouncedPlate, brandId, modelId, generationId]);
+    serviceId,
+    from: period?.[0].format(DAY_FORMAT),
+    to: period?.[1].format(DAY_FORMAT),
+  }), [debouncedName, debouncedPhone, debouncedPlate, brandId, modelId, generationId, serviceId, period]);
 
   // Список клиентов: предыдущий запрос отменяем, чтобы поздний ответ не перетёр свежий
   useEffect(() => {
@@ -156,10 +190,24 @@ export const ClientsPage: React.FC = () => {
     setName('');
     setPlate('');
     handleBrandChange(undefined);
+    setServiceId(undefined);
+    setPeriod(null);
   };
 
-  const carFiltersCount = [brandId, modelId, generationId, plate.trim()].filter(Boolean).length;
+  const recordFilterActive = !!serviceId || !!period;
+  const carFiltersCount = [brandId, modelId, generationId, plate.trim(), serviceId, period].filter(Boolean).length;
   const hasFilters = carFiltersCount > 0 || !!name.trim() || phoneDigits(phone).length > 0;
+
+  const serviceOptions = useMemo(() => serviceCategories
+    .filter(c => c.services.length > 0)
+    .map(c => ({
+      label: c.name,
+      title: c.name,
+      options: c.services.map(svc => ({
+        value: svc.id,
+        label: svc.name,
+      })),
+    })), [serviceCategories]);
 
   const handleRecordClick = async (recordId: string) => {
     try {
@@ -200,6 +248,24 @@ export const ClientsPage: React.FC = () => {
     </Tag>
   );
 
+  /** Подошедшие под фильтр визиты: дата и машина, клик открывает запись */
+  const renderMatchedRecords = (client: Client) => (
+    <div className={styles.matched}>
+      {(client.matchedRecords ?? []).map(r => (
+        <button
+          key={r.id}
+          type="button"
+          className={styles.matchedRecord}
+          onClick={e => { e.stopPropagation(); handleRecordClick(r.id); }}
+        >
+          <span className={styles.matchedDate}>{formatDate(r.scheduledAt)}</span>
+          {carLabel(r.car)}
+          {r.car.plateNumber && <span className={styles.plate}>{r.car.plateNumber}</span>}
+        </button>
+      ))}
+    </div>
+  );
+
   const columns = [
     {
       title: 'ФИО',
@@ -218,10 +284,15 @@ export const ClientsPage: React.FC = () => {
       key: 'cars',
       render: (_: unknown, row: Client) => (
         <div className={styles.cars}>
-          {row.cars.map(car => renderCarTag(car))}
+          {(recordFilterActive ? matchedCars(row) : row.cars).map(car => renderCarTag(car))}
         </div>
       ),
     },
+    ...(recordFilterActive ? [{
+      title: serviceId ? 'Когда делали услугу' : 'Записи за период',
+      key: 'matched',
+      render: (_: unknown, row: Client) => renderMatchedRecords(row),
+    }] : []),
     {
       title: 'Записей',
       key: 'visits',
@@ -229,6 +300,31 @@ export const ClientsPage: React.FC = () => {
       render: (_: unknown, row: Client) => row._count?.records || 0,
     },
   ];
+
+  const serviceFilters = (
+    <>
+      <Select
+        showSearch
+        allowClear
+        placeholder="Услуга"
+        value={serviceId}
+        onChange={setServiceId}
+        optionFilterProp="label"
+        options={serviceOptions}
+        popupMatchSelectWidth={isMobile ? true : 320}
+        className={styles.field}
+      />
+      <DatePicker.RangePicker
+        value={period}
+        onChange={v => setPeriod(v && v[0] && v[1] ? [v[0], v[1]] : null)}
+        format="DD.MM.YYYY"
+        presets={PERIOD_PRESETS}
+        placeholder={['Период с', 'по']}
+        inputReadOnly={isMobile}
+        className={styles.field}
+      />
+    </>
+  );
 
   const carFilters = (
     <>
@@ -328,11 +424,12 @@ export const ClientsPage: React.FC = () => {
                 type={carFiltersOpen ? 'primary' : 'default'}
                 block
               >
-                Авто
+                Авто и услуги
               </Button>
             </Badge>
           )}
           {!isMobile && carFilters}
+          {!isMobile && serviceFilters}
           {hasFilters && !isMobile && (
             <Button icon={<CloseOutlined />} onClick={resetFilters}>
               Сбросить
@@ -341,7 +438,10 @@ export const ClientsPage: React.FC = () => {
         </div>
 
         {isMobile && carFiltersOpen && (
-          <div className={styles.filtersRow}>{carFilters}</div>
+          <div className={styles.filtersRow}>
+            {carFilters}
+            {serviceFilters}
+          </div>
         )}
 
         {isMobile && hasFilters && (
@@ -378,7 +478,7 @@ export const ClientsPage: React.FC = () => {
                   <PhoneOutlined />
                   {client.phone}
                 </a>
-                {client.cars.length > 0 && (
+                {recordFilterActive ? renderMatchedRecords(client) : client.cars.length > 0 && (
                   <div className={styles.mobileCars}>
                     {client.cars.map(car => renderCarTag(car, styles.mobileCarTag))}
                   </div>

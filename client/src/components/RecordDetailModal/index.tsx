@@ -646,16 +646,6 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
               {r.deal.warranty && (
                 <Descriptions.Item label="Гарантия">{r.deal.warranty}</Descriptions.Item>
               )}
-              {r.deal.defects && (
-                <Descriptions.Item label="Обнаруженные недостатки" span={2}>
-                  <span className={styles.multiline}>{r.deal.defects}</span>
-                </Descriptions.Item>
-              )}
-              {r.deal.recommendations && (
-                <Descriptions.Item label="Рекомендации" span={2}>
-                  <span className={styles.multiline}>{r.deal.recommendations}</span>
-                </Descriptions.Item>
-              )}
               {r.deal.priceIncreaseReason && (
                 <Descriptions.Item label="Обоснование цены" span={2}>
                   {r.deal.priceIncreaseReason}
@@ -667,6 +657,19 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
                 </Descriptions.Item>
               )}
             </Descriptions>
+            {/* Длинные тексты — отдельными блоками на всю ширину карточки, а не в колонке Descriptions */}
+            {r.deal.defects && (
+              <div className={styles.textBlock}>
+                <div className={styles.textBlockLabel}>Обнаруженные недостатки</div>
+                <div className={styles.multiline}>{r.deal.defects}</div>
+              </div>
+            )}
+            {r.deal.recommendations && (
+              <div className={styles.textBlock}>
+                <div className={styles.textBlockLabel}>Рекомендации</div>
+                <div className={styles.multiline}>{r.deal.recommendations}</div>
+              </div>
+            )}
           </>
         )}
       </Modal>

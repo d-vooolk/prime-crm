@@ -93,6 +93,17 @@
 
 .multiline {
   white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.textBlock {
+  margin-top: var(--spacing-sm);
+}
+
+.textBlockLabel {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  margin-bottom: 2px;
 }
 
 .carLinks {

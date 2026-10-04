@@ -88,6 +88,8 @@ const SALARY_MONTH_NAMES = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', '�
 // Копейки после сложения/вычитания Float — округляем, чтобы остаток 0.0000001 не считался долгом
 const roundMoney = (v: number) => Math.round(v * 100) / 100;
 
+const DEBT_CATEGORY_SELECT = { select: { id: true, name: true } } as const;
+
 export const accountingService = {
   async getCashForMonth(year: number, month: number) {
     const from = new Date(year, month - 1, 1);
@@ -676,16 +678,25 @@ export const accountingService = {
   async getDebts(archived: boolean) {
     return prisma.debt.findMany({
       where: { status: archived ? 'SETTLED' : 'ACTIVE' },
-      include: { payments: { orderBy: { paidAt: 'asc' } } },
+      include: { payments: { orderBy: { paidAt: 'asc' } }, expenseCategory: DEBT_CATEGORY_SELECT },
       orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
     });
   },
 
-  async createDebt(data: { description: string; amount: number; currency: Currency; direction: 'WE_OWE' | 'OWED_TO_US' }) {
+  async createDebt(data: {
+    description: string; amount: number; currency: Currency; direction: 'WE_OWE' | 'OWED_TO_US'; expenseCategory?: string | null;
+  }) {
     if (!data.description) throw new AppError('Укажите, за что долг', 400);
     if (!Number.isFinite(data.amount) || data.amount <= 0) {
       throw new AppError('Сумма долга должна быть больше нуля', 400);
     }
+    // Категория нужна только нашим долгам — их погашения уходят в расходы
+    if (data.direction === 'WE_OWE' && !data.expenseCategory?.trim()) {
+      throw new AppError('Укажите категорию долга', 400);
+    }
+    const expenseCategoryId = data.direction === 'WE_OWE'
+      ? await expensesService.resolveCategoryId(data.expenseCategory)
+      : null;
     const amount = roundMoney(data.amount);
     return prisma.debt.create({
       data: {
@@ -694,15 +705,20 @@ export const accountingService = {
         initialAmount: amount,
         remainingAmount: amount,
         direction: data.direction,
+        expenseCategoryId: expenseCategoryId ?? null,
       },
-      include: { payments: true },
+      include: { payments: true, expenseCategory: DEBT_CATEGORY_SELECT },
     });
   },
 
-  async updateDebt(id: string, data: { description?: string; amount?: number }) {
+  async updateDebt(id: string, data: { description?: string; amount?: number; expenseCategory?: string | null }) {
     const debt = await prisma.debt.findUnique({ where: { id }, include: { payments: true } });
     if (!debt) throw new AppError('Долг не найден', 404);
-    const update: { description?: string; initialAmount?: number; remainingAmount?: number } = {};
+    const update: { description?: string; initialAmount?: number; remainingAmount?: number; expenseCategoryId?: string | null } = {};
+    if (data.expenseCategory !== undefined && debt.direction === 'WE_OWE') {
+      if (!data.expenseCategory?.trim()) throw new AppError('Укажите категорию долга', 400);
+      update.expenseCategoryId = await expensesService.resolveCategoryId(data.expenseCategory);
+    }
     if (data.description !== undefined) {
       if (!data.description.trim()) throw new AppError('Укажите, за что долг', 400);
       update.description = data.description.trim();
@@ -718,7 +734,7 @@ export const accountingService = {
       update.initialAmount = amount;
       update.remainingAmount = amount;
     }
-    return prisma.debt.update({ where: { id }, data: update, include: { payments: true } });
+    return prisma.debt.update({ where: { id }, data: update, include: { payments: true, expenseCategory: DEBT_CATEGORY_SELECT } });
   },
 
   async deleteDebt(id: string) {
@@ -815,7 +831,7 @@ export const accountingService = {
           status: willSettle ? 'SETTLED' : 'ACTIVE',
           settledAt: willSettle ? now : null,
         },
-        include: { payments: { orderBy: { paidAt: 'asc' } } },
+        include: { payments: { orderBy: { paidAt: 'asc' } }, expenseCategory: DEBT_CATEGORY_SELECT },
       });
     });
   },

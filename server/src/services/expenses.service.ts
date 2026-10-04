@@ -29,7 +29,8 @@ export const CASH_TRANSACTION_INCLUDE = {
   founderSalary: { select: { id: true } },
   salaryPayment: { select: { id: true } },
   capitalTransfer: { select: { id: true } },
-  debtPayment: { select: { id: true } },
+  // Категория долга — погашение с ней считается расходом этой категории (реклама, поставщики …)
+  debtPayment: { select: { id: true, debt: { select: { expenseCategory: { select: { id: true, name: true } } } } } },
 } satisfies Prisma.CashTransactionInclude;
 
 // Группы системных расходов в аналитике. Ключи с префиксом, чтобы не пересечься с категориями
@@ -189,16 +190,17 @@ export const expensesService = {
 
     const groups = new Map<string, ExpenseAnalyticsGroup>();
     for (const r of rows) {
+      const category = r.debtPayment ? r.debtPayment.debt.expenseCategory : r.expenseCategory;
       let group: { key: string; name: string };
       let kind: ExpenseGroupKind = 'system';
       if (r.founderSalary) group = SYSTEM_EXPENSE_GROUPS.founderSalary;
       else if (r.salaryPayment) group = SYSTEM_EXPENSE_GROUPS.salaryPayment;
       else if (r.capitalTransfer) group = SYSTEM_EXPENSE_GROUPS.capitalTransfer;
-      else if (r.debtPayment) group = SYSTEM_EXPENSE_GROUPS.debtPayment;
-      else if (r.expenseCategory) {
-        group = { key: `category:${r.expenseCategory.id}`, name: r.expenseCategory.name };
+      else if (category) {
+        group = { key: `category:${category.id}`, name: category.name };
         kind = 'category';
-      } else {
+      } else if (r.debtPayment) group = SYSTEM_EXPENSE_GROUPS.debtPayment;
+      else {
         group = NO_CATEGORY_GROUP;
         kind = 'none';
       }

@@ -36,6 +36,49 @@ const itemsPrepaid = (items: RecordItem[]) =>
 const recordTotal = (r: CrmRecord) =>
   r.deal ? r.deal.finalPrice : itemsTotal(r.items);
 
+/** Кто делал услугу: делёж между мастерами, отдельный исполнитель или основной мастер записи */
+const itemPerformers = (item: RecordItem, record: CrmRecord): string[] => {
+  if (item.service?.isProduct) return [];
+  if (item.servicemanSplit?.length) return item.servicemanSplit.map(e => e.name);
+  const name = item.servicemanName || record.serviceman;
+  return name ? [name] : [];
+};
+
+/** Доп. мастера записи (кроме основного) и услуги, которые делал каждый */
+const extraPerformers = (record: CrmRecord): Array<{ name: string; services: string[] }> => {
+  const map = new Map<string, string[]>();
+  for (const item of record.items) {
+    for (const name of itemPerformers(item, record)) {
+      if (name === record.serviceman) continue;
+      const services = map.get(name) ?? [];
+      const serviceName = item.service?.name || '—';
+      if (!services.includes(serviceName)) services.push(serviceName);
+      map.set(name, services);
+    }
+  }
+  return [...map].map(([name, services]) => ({ name, services }));
+};
+
+/** Основной мастер и доп. мастера с их услугами — видно сразу, без раскрытия визита */
+const VisitPerformers: React.FC<{ record: CrmRecord }> = ({ record }) => {
+  const extras = extraPerformers(record);
+  if (!record.serviceman && extras.length === 0) return null;
+  return (
+    <div className={styles.performers}>
+      {record.serviceman && (
+        <div>
+          <span className={styles.performerLabel}>Мастер:</span> {record.serviceman}
+        </div>
+      )}
+      {extras.map(e => (
+        <div key={e.name}>
+          <span className={styles.performerLabel}>Доп. мастер:</span> {e.name} — {e.services.join(', ')}
+        </div>
+      ))}
+    </div>
+  );
+};
+
 /** О чём клиента предупредили в акте — видно сразу, без раскрытия визита */
 const DealWarnings: React.FC<{ record: CrmRecord }> = ({ record }) => {
   const { defects, recommendations } = record.deal ?? {};
@@ -72,6 +115,7 @@ const VisitSummary: React.FC<{ record: CrmRecord; isCurrent: boolean }> = ({ rec
           {record.car.plateNumber ? ` · ${record.car.plateNumber}` : ''}
           {' · '}{record.items.length} услуг
         </div>
+        <VisitPerformers record={record} />
         <DealWarnings record={record} />
       </div>
       <div className={styles.visitSide}>
@@ -94,9 +138,6 @@ const VisitDetails: React.FC<{ record: CrmRecord }> = ({ record }) => {
           {record.car.brand} {record.car.model} {record.car.year}
           {record.car.plateNumber ? ` · ${record.car.plateNumber}` : ''}
         </Descriptions.Item>
-        {record.serviceman && (
-          <Descriptions.Item label="Мастер">{record.serviceman}</Descriptions.Item>
-        )}
         {record.notes && (
           <Descriptions.Item label="Примечание">{record.notes}</Descriptions.Item>
         )}
@@ -110,6 +151,10 @@ const VisitDetails: React.FC<{ record: CrmRecord }> = ({ record }) => {
         className={styles.itemsTable}
         columns={[
           { title: 'Услуга', key: 'name', render: (_, i) => i.service?.name || '—' },
+          {
+            title: 'Мастер', key: 'performer', render: (_, i) =>
+              itemPerformers(i, record).join(', ') || '—',
+          },
           { title: 'Кол-во', dataIndex: 'quantity', key: 'qty', width: 70 },
           { title: 'Цена', key: 'price', width: 90, render: (_, i) => formatPrice(i.price) },
           { title: 'Сумма', key: 'sum', width: 90, render: (_, i) => formatPrice(i.price * i.quantity) },

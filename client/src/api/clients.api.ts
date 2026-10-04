@@ -14,6 +14,11 @@ export interface ClientsFilter {
   generationId?: string;
   /** Часть госномера; пробелы, дефисы и кириллица/латиница не важны */
   plate?: string;
+  /** Клиенты, которым делали услугу (в неотменённой записи) */
+  serviceId?: string;
+  /** Период записи YYYY-MM-DD, включительно */
+  from?: string;
+  to?: string;
 }
 
 export const clientsApi = {
