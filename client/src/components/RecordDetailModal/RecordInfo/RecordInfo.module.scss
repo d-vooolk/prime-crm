@@ -1,0 +1,22 @@
+@use '@/styles/variables' as *;
+
+.divider {
+  font-size: 13px !important;
+}
+
+.linkButton {
+  padding-left: 0;
+  margin-top: -4px;
+}
+
+.carLinks {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--spacing-md);
+}
+
+.notes {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  margin: var(--spacing-sm) 0;
+}

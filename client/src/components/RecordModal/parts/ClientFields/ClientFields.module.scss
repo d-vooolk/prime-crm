@@ -1,0 +1,25 @@
+@use '@/styles/variables' as *;
+
+.optionTitle {
+  font-weight: 600;
+}
+
+.optionMeta {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.fullWidth:global(.ant-select) {
+  width: 100%;
+}
+
+.legalSwitch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 30px;
+}
+
+.legalSwitchLabel {
+  font-size: 14px;
+}

@@ -19,14 +19,16 @@ export const useUiStore = create<UiState>()(
       theme: 'light',
       selectedDate: dayjs().format('YYYY-MM-DD'),
       sidebarCollapsed: false,
+      // Атрибут ставим до обновления стора: компоненты, читающие CSS-переменные (useCssVars),
+      // при перерисовке должны уже видеть значения новой темы
       setTheme: (theme) => {
-        set({ theme });
         document.documentElement.setAttribute('data-theme', theme);
+        set({ theme });
       },
       toggleTheme: () => {
         const next = get().theme === 'light' ? 'dark' : 'light';
-        set({ theme: next });
         document.documentElement.setAttribute('data-theme', next);
+        set({ theme: next });
       },
       setSelectedDate: (selectedDate) => set({ selectedDate }),
       setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),

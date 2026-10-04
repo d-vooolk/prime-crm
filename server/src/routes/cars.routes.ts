@@ -2,6 +2,8 @@ import { Router, Request, Response } from 'express';
 import { carsController } from '../controllers/cars.controller';
 import { carsService } from '../services/cars.service';
 import { authMiddleware } from '../middleware/auth.middleware';
+import { requireRole } from '../middleware/requireRole';
+import { ROLES } from '../utils/roles';
 
 const router = Router();
 
@@ -32,8 +34,8 @@ router.get('/photo/:brandId/:modelId/:generationId', async (req: Request, res: R
   }
 });
 
-// --- Изменение: только для авторизованных, и только записи source=MANUAL ---
-router.use(authMiddleware);
+// --- Изменение: менеджеры и выше, и только записи source=MANUAL ---
+router.use(authMiddleware, requireRole(ROLES.MANAGER));
 
 router.post('/marks', carsController.createMark);
 router.patch('/marks/:markId', carsController.updateMark);

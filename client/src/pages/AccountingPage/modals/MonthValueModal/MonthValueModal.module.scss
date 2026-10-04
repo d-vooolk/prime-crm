@@ -1,0 +1,23 @@
+@use '@/styles/variables' as *;
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.label {
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.fullWidth {
+  width: 100%;
+}
+
+.hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}

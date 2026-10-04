@@ -1,0 +1,44 @@
+@use '@/styles/variables' as *;
+
+.list {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+}
+
+.fine {
+  background: var(--color-error-bg);
+  border-color: var(--color-error-border);
+}
+
+.bonus {
+  background: var(--color-success-bg);
+  border-color: var(--color-success-border);
+}
+
+.tag {
+  margin: 0;
+}
+
+.reason {
+  flex: 1;
+  font-size: 13px;
+}
+
+.fineAmount,
+.bonusAmount {
+  white-space: nowrap;
+}
+
+.fineAmount { color: var(--color-error); }
+.bonusAmount { color: var(--color-success); }

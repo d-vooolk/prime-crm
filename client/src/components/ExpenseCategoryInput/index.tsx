@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { AutoComplete } from 'antd';
-import { expensesApi, ExpenseCategory } from '@/api/expenses.api';
+import { useExpenseCategories } from '@/hooks/useReferenceData';
 import styles from './ExpenseCategoryInput.module.scss';
 
 interface ExpenseCategoryInputProps {
@@ -17,11 +17,8 @@ interface ExpenseCategoryInputProps {
 export const ExpenseCategoryInput: React.FC<ExpenseCategoryInputProps> = ({
   value, onChange, placeholder = 'Например: расходники',
 }) => {
-  const [categories, setCategories] = useState<ExpenseCategory[]>([]);
-
-  useEffect(() => {
-    expensesApi.getCategories().then(setCategories).catch(() => setCategories([]));
-  }, []);
+  // Подсказки не обязательны: при ошибке загрузки поле работает как обычный ввод (уведомление покажет QueryErrorReporter)
+  const { data: categories = [] } = useExpenseCategories();
 
   const query = (value ?? '').trim().toLowerCase();
   const options = useMemo(() => {

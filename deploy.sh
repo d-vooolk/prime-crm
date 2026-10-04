@@ -8,6 +8,10 @@ echo "→ Pulling latest changes..."
 git fetch origin main
 git reset --hard origin/main
 
+# Бэкап перед каждым деплоем: если миграция пойдёт не так, есть свежий дамп
+echo "→ Backup before deploy..."
+bash .deploy/backup.sh
+
 echo "→ Rebuilding and restarting containers..."
 docker compose up --build -d
 

@@ -1,0 +1,14 @@
+@use '@/styles/variables' as *;
+
+.fullWidth:global(.ant-picker) {
+  width: 100%;
+}
+
+.time {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.timePart:global(.ant-select) {
+  flex: 1;
+}

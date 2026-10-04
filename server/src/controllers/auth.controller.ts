@@ -1,84 +1,105 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import { z } from 'zod';
 import { prisma } from '../prisma/client';
+import { AppError } from '../middleware/errorHandler';
+import { env } from '../config/env';
+import { loginLimiter, LOCK_MINUTES } from '../utils/loginLimiter';
+import { logger } from '../utils/logger';
 import type { AuthPayload } from '../middleware/auth.middleware';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'prime-crm-secret';
-const MASTER_EMAIL = process.env.MASTER_EMAIL || 'admin@prime.local';
-const MASTER_PASSWORD = process.env.MASTER_PASSWORD || 'admin123';
+// Срок жизни токена не ограничен намеренно: сотрудники не должны входить заново каждый день.
+// Роль и увольнение всё равно проверяются по базе на каждом запросе (auth.middleware).
+const signToken = (payload: AuthPayload) => jwt.sign(payload, env.jwtSecret);
 
-const signToken = (payload: AuthPayload) =>
-  jwt.sign(payload, JWT_SECRET);
+const loginSchema = z.object({
+  email: z.string().trim().min(1, 'Введите email и пароль').max(200),
+  password: z.string().min(1, 'Введите email и пароль').max(200),
+});
+
+/** Сравнение строк за постоянное время — по времени ответа нельзя угадать пароль */
+function safeEqual(a: string, b: string) {
+  const ha = crypto.createHash('sha256').update(a).digest();
+  const hb = crypto.createHash('sha256').update(b).digest();
+  return crypto.timingSafeEqual(ha, hb);
+}
+
+const MASTER_USER = { id: 'master', name: 'Администратор', isMaster: true } as const;
 
 export const authController = {
-  async login(req: Request, res: Response, next: NextFunction) {
-    try {
-      const { email, password } = req.body as { email: string; password: string };
+  async login(req: Request, res: Response) {
+    const parsed = loginSchema.safeParse(req.body);
+    if (!parsed.success) throw new AppError(parsed.error.issues[0]?.message || 'Введите email и пароль', 400);
+    const { email, password } = parsed.data;
+    const ip = req.ip || 'unknown';
 
-      if (!email || !password) {
-        res.status(400).json({ message: 'Введите email и пароль' });
-        return;
+    const wait = loginLimiter.minutesLeft(email, ip);
+    if (wait > 0) {
+      throw new AppError(`Слишком много неудачных попыток входа. Попробуйте через ${wait} мин.`, 429);
+    }
+
+    const failed = (): never => {
+      const left = loginLimiter.fail(email, ip);
+      logger.warn('Неудачная попытка входа', { email, ip, attemptsLeft: left });
+      throw new AppError(
+        left > 0
+          ? `Неверный email или пароль. Осталось попыток: ${left}`
+          : `Неверный email или пароль. Вход заблокирован на ${LOCK_MINUTES} мин.`,
+        401,
+      );
+    };
+
+    // Мастер-доступ — учётные данные из переменных окружения
+    if (email === env.masterEmail) {
+      if (!safeEqual(password, env.masterPassword)) failed();
+      loginLimiter.success(email);
+      const user = { ...MASTER_USER, email: env.masterEmail };
+      res.json({ data: { token: signToken(user), user } });
+      return;
+    }
+
+    const serviceman = await prisma.serviceman.findFirst({
+      where: { email, isDismissed: false },
+      omit: { password: false },
+    });
+    const hash = serviceman?.password;
+    if (!serviceman || !hash) return failed();
+
+    let passwordMatch: boolean;
+    if (hash.startsWith('$2')) {
+      passwordMatch = await bcrypt.compare(password, hash);
+    } else {
+      // Старые пароли, сохранённые без хеша, — хешируем при первом удачном входе
+      passwordMatch = safeEqual(hash, password);
+      if (passwordMatch) {
+        await prisma.serviceman.update({ where: { id: serviceman.id }, data: { password: await bcrypt.hash(password, 10) } });
       }
+    }
+    if (!passwordMatch) failed();
 
-      // Master account — always works, credentials from env
-      if (email === MASTER_EMAIL) {
-        if (password !== MASTER_PASSWORD) {
-          res.status(401).json({ message: 'Неверный пароль' });
-          return;
-        }
-        const token = signToken({ id: 'master', email: MASTER_EMAIL, name: 'Администратор', isMaster: true });
-        res.json({ data: { token, user: { id: 'master', name: 'Администратор', email: MASTER_EMAIL, isMaster: true } } });
-        return;
-      }
-
-      // Regular employee login
-      const serviceman = await prisma.serviceman.findFirst({
-        where: { email, isDismissed: false },
-      });
-
-      if (!serviceman || !serviceman.password) {
-        res.status(401).json({ message: 'Неверный email или пароль' });
-        return;
-      }
-
-      let passwordMatch = false;
-
-      // Try bcrypt first (for hashed passwords)
-      if (serviceman.password.startsWith('$2')) {
-        passwordMatch = await bcrypt.compare(password, serviceman.password);
-      } else {
-        // Plain text fallback for legacy passwords — rehash on success
-        passwordMatch = serviceman.password === password;
-        if (passwordMatch) {
-          const hashed = await bcrypt.hash(password, 10);
-          await prisma.serviceman.update({ where: { id: serviceman.id }, data: { password: hashed } });
-        }
-      }
-
-      if (!passwordMatch) {
-        res.status(401).json({ message: 'Неверный email или пароль' });
-        return;
-      }
-
-      const token = signToken({
-        id: serviceman.id,
-        email: serviceman.email!,
-        name: serviceman.name,
-        role: serviceman.role || undefined,
-        isMaster: false,
-      });
-
-      res.json({
-        data: {
-          token,
-          user: { id: serviceman.id, name: serviceman.name, email: serviceman.email, role: serviceman.role, isMaster: false },
-        },
-      });
-    } catch (e) { next(e); }
+    loginLimiter.success(email);
+    const token = signToken({
+      id: serviceman.id, email: serviceman.email!, name: serviceman.name, role: serviceman.role || undefined, isMaster: false,
+    });
+    res.json({
+      data: {
+        token,
+        user: { id: serviceman.id, name: serviceman.name, email: serviceman.email, role: serviceman.role, isMaster: false },
+      },
+    });
   },
 
+  /** Актуальные данные пользователя из базы — клиент обновляет по ним роль и имя */
   async me(req: Request, res: Response) {
-    res.json({ data: req.user });
+    const user = req.user!;
+    if (user.isMaster) {
+      res.json({ data: { ...MASTER_USER, email: user.email } });
+      return;
+    }
+    const s = await prisma.serviceman.findUnique({ where: { id: user.id } });
+    if (!s) throw new AppError('Пользователь не найден', 401);
+    res.json({ data: { id: s.id, name: s.name, email: s.email, role: s.role, isMaster: false } });
   },
 };

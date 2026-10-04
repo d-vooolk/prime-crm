@@ -2,6 +2,8 @@ const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const DotenvWebpack = require('dotenv-webpack');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
+const { InjectManifest } = require('workbox-webpack-plugin');
 
 module.exports = (env = {}) => {
   const isDev = env.NODE_ENV !== 'production';
@@ -66,7 +68,21 @@ module.exports = (env = {}) => {
     plugins: [
       new HtmlWebpackPlugin({ template: './public/index.html' }),
       new DotenvWebpack({ path: `./.env.${isDev ? 'development' : 'production'}` }),
-      ...(!isDev ? [new MiniCssExtractPlugin({ filename: '[name].[contenthash].css' })] : []),
+      // ignoreOrder: стили — CSS-модули с уникальными классами, порядок их подключения в чанках
+      // не влияет на результат, а предупреждения «Conflicting order» после разбиения компонентов — шум
+      ...(!isDev ? [new MiniCssExtractPlugin({ filename: '[name].[contenthash].css', ignoreOrder: true })] : []),
+      // Манифест PWA, иконки и favicon — как есть, в корень сборки
+      new CopyWebpackPlugin({
+        patterns: [{ from: 'public', to: '.', globOptions: { ignore: ['**/index.html'] } }],
+      }),
+      // Service worker — только в продакшене: в разработке кеш мешал бы горячей перезагрузке
+      ...(!isDev ? [new InjectManifest({
+        swSrc: './src/sw.ts',
+        swDest: 'sw.js',
+        // Все чанки приложения (в том числе ленивые страницы) — в кеш при установке
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        exclude: [/\.map$/, /\.LICENSE\.txt$/],
+      })] : []),
     ],
     devServer: {
       port: 3000,

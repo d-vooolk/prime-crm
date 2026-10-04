@@ -1,8 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { SideBar } from '@/components/SideBar';
 import { BirthdayBanner } from '@/components/BirthdayBanner';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { PageLoader } from '@/components/PageLoader';
 import { useNotesNotifications } from '@/hooks/useNotesNotifications';
+import { OfflineBanner } from '@/components/OfflineBanner';
 import { useWikiPendingCount } from '@/hooks/useWikiPendingCount';
 import styles from './Layout.module.scss';
 
@@ -38,6 +41,7 @@ function useResetDocumentScroll() {
 }
 
 export const Layout: React.FC = () => {
+  const { pathname } = useLocation();
   useNotesNotifications();
   useWikiPendingCount();
   useResetDocumentScroll();
@@ -46,9 +50,15 @@ export const Layout: React.FC = () => {
     <div className={styles.root}>
       <SideBar />
       <main className={styles.main}>
+        <OfflineBanner />
         <BirthdayBanner />
         <div className={styles.pageContent} data-page-scroll>
-          <Outlet />
+          {/* Своя граница ошибок и Suspense у контента: меню остаётся на месте, а при переходе в другой раздел ошибка сбрасывается */}
+          <ErrorBoundary resetKey={pathname}>
+            <Suspense fallback={<PageLoader />}>
+              <Outlet />
+            </Suspense>
+          </ErrorBoundary>
         </div>
       </main>
     </div>

@@ -1,0 +1,43 @@
+@use '@/styles/variables' as *;
+
+.salaryStats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+
+  // На телефоне — две компактные плитки в ряд, иначе управление уезжает за экран
+  @include mobile {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+
+    :global(.ant-card-body) {
+      padding: 10px 12px;
+    }
+
+    :global(.ant-statistic-title) {
+      font-size: 11px;
+      margin-bottom: 2px;
+    }
+
+    // Специфичнее, чем общий .stat (22px) — порядок CSS разных модулей не гарантирован
+    .statCard :global(.ant-statistic-content) {
+      font-size: 16px;
+    }
+  }
+}
+
+.statCard {
+  min-width: 0;
+}
+
+.statCardHint {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+
+  @include mobile {
+    font-size: 10px;
+    margin-top: 2px;
+  }
+}

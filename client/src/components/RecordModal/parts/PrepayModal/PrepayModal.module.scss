@@ -1,0 +1,9 @@
+@use '@/styles/variables' as *;
+
+.form {
+  margin-top: 12px;
+}
+
+.fullWidth:global(.ant-input-number) {
+  width: 100%;
+}

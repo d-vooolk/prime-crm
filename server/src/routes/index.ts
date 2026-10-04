@@ -8,6 +8,8 @@ import accountingRouter from './accounting.routes';
 import notesRouter from './notes.routes';
 import wikiRouter from './wiki.routes';
 import expensesRouter from './expenses.routes';
+import stockRouter from './stock.routes';
+import pushRouter from './push.routes';
 import { authMiddleware } from '../middleware/auth.middleware';
 
 const router = Router();
@@ -24,5 +26,7 @@ router.use('/accounting', accountingRouter);
 router.use('/notes', notesRouter);
 router.use('/wiki', wikiRouter);
 router.use('/expenses', expensesRouter);
+router.use('/stock', stockRouter);
+router.use('/push', pushRouter);
 
 export default router;

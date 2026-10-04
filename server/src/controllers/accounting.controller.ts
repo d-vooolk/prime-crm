@@ -1,246 +1,274 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import { accountingService } from '../services/accounting.service';
+import { cashService } from '../services/accounting/cash.service';
+import { capitalService } from '../services/accounting/capital.service';
+import { salaryService } from '../services/accounting/salary.service';
+import { statsService } from '../services/accounting/stats.service';
+import { debtsService } from '../services/accounting/debts.service';
 import { parseExpenseCategoryField } from './expenses.controller';
 import { AppError } from '../middleware/errorHandler';
+import { parse, positiveMoney, money, dateString, requiredText, optionalText } from '../middleware/validate';
 import { currencyService } from '../services/currency.service';
 import { currencyAccountingService } from '../services/currencyAccounting.service';
+import { hasRole, ROLES } from '../utils/roles';
 
-const currencySchema = z.enum(['BYN', 'USD', 'EUR']);
+const currencySchema = z.enum(['BYN', 'USD', 'EUR'], { errorMap: () => ({ message: 'Неизвестная валюта' }) });
+const yearSchema = z.coerce.number().int().min(2000).max(2100);
+const monthSchema = z.coerce.number().int().min(1, 'Некорректный месяц').max(12, 'Некорректный месяц');
+
+const expenseSchema = z.object({
+  date: dateString(),
+  description: requiredText(500, 'Укажите цель расхода'),
+  amount: positiveMoney(),
+  person: requiredText(150, 'Выберите изымателя'),
+  founderSalary: z.object({
+    year: yearSchema,
+    month: monthSchema,
+    person: requiredText(150, 'Выберите учредителя'),
+  }).optional(),
+});
+
+const manualIncomeSchema = z.object({
+  date: dateString(),
+  description: requiredText(500, 'Укажите описание'),
+  amount: positiveMoney(),
+  person: requiredText(150, 'Выберите, кто вносит'),
+});
+
+const cashUpdateSchema = z.object({
+  date: dateString().optional(),
+  amount: positiveMoney().optional(),
+  description: z.string().trim().max(500).optional(),
+  person: z.string().trim().max(150).optional(),
+});
+
+const depositSchema = z.object({
+  date: dateString(),
+  amount: positiveMoney(),
+  currency: currencySchema,
+});
+
+const withdrawalSchema = depositSchema.extend({
+  description: optionalText(500),
+  person: requiredText(150, 'Выберите, кто забирает'),
+});
 
 const capitalTransferSchema = z.object({
-  date: z.string().min(1),
-  amountByn: z.coerce.number().positive('Сумма должна быть больше нуля'),
+  date: dateString(),
+  amountByn: positiveMoney(),
   currency: currencySchema,
-  currencyAmount: z.coerce.number().positive().optional(),
-  person: z.string().min(1, 'Выберите, кто отчисляет'),
-  description: z.string().optional(),
+  currencyAmount: positiveMoney().optional(),
+  person: requiredText(150, 'Выберите, кто отчисляет'),
+  description: optionalText(500),
 }).refine(d => d.currency === 'BYN' || d.currencyAmount != null, {
   message: 'Укажите сумму в валюте', path: ['currencyAmount'],
 });
 
-const debtPaymentSchema = z.object({
-  amount: z.coerce.number().positive('Сумма погашения должна быть больше нуля'),
-  currency: currencySchema.optional(),
-  rate: z.coerce.number().positive().optional(),
+const salaryQuerySchema = z.object({
+  servicemanName: requiredText(150, 'Не выбран сотрудник'),
+  year: yearSchema.optional(),
+  month: monthSchema.optional(),
 });
 
-const parseBody = <T>(schema: z.ZodType<T>, body: unknown): T => {
-  const parsed = schema.safeParse(body);
-  if (!parsed.success) throw new AppError(parsed.error.issues[0]?.message || 'Некорректные данные', 400);
-  return parsed.data;
-};
-
-// Выплачивать ЗП могут все роли выше «Сотрудника»
-const PAYROLL_ROLES = ['Создатель', 'Директор', 'Менеджер'];
-
-const assertCanPaySalary = (req: Request) => {
-  if (!req.user?.isMaster && !PAYROLL_ROLES.includes(req.user?.role || '')) {
-    throw new AppError('Недостаточно прав', 403);
-  }
-};
+const adjustmentSchema = z.object({
+  servicemanName: requiredText(150, 'Не выбран сотрудник'),
+  type: z.enum(['FINE', 'BONUS']),
+  amount: positiveMoney(),
+  reason: requiredText(500, 'Укажите причину'),
+  year: yearSchema,
+  month: monthSchema,
+});
 
 const salaryPaymentSchema = z.object({
-  servicemanName: z.string().min(1, 'Выберите сотрудника'),
-  year: z.coerce.number().int(),
-  month: z.coerce.number().int().min(1).max(12),
-  amount: z.coerce.number().positive('Сумма должна быть больше нуля'),
-  cardAmount: z.coerce.number().min(0).default(0),
-  date: z.string().min(1),
-  person: z.string().optional(),
+  servicemanName: requiredText(150, 'Выберите сотрудника'),
+  year: yearSchema,
+  month: monthSchema,
+  amount: positiveMoney(),
+  cardAmount: money().default(0),
+  date: dateString(),
+  person: optionalText(150),
 }).refine(d => d.cardAmount <= d.amount, { message: 'Сумма на карту больше суммы выплаты', path: ['cardAmount'] });
 
+const monthlyRevenueSchema = z.object({ year: yearSchema, month: monthSchema, amount: money() });
+const monthlyCountSchema = z.object({ year: yearSchema, month: monthSchema, count: z.coerce.number().int().min(0) });
+
+const debtCreateSchema = z.object({
+  description: requiredText(500, 'Укажите, за что долг'),
+  amount: positiveMoney('Сумма долга должна быть больше нуля'),
+  currency: currencySchema.default('BYN'),
+  direction: z.enum(['WE_OWE', 'OWED_TO_US']).default('WE_OWE'),
+});
+
+const debtUpdateSchema = z.object({
+  description: requiredText(500, 'Укажите, за что долг').optional(),
+  amount: positiveMoney('Сумма долга должна быть больше нуля').optional(),
+});
+
+const debtPaymentSchema = z.object({
+  amount: positiveMoney('Сумма погашения должна быть больше нуля'),
+  currency: currencySchema.optional(),
+  rate: z.coerce.number().positive().finite().optional(),
+});
+
+/** Сотрудник видит только свою зарплату, менеджеры и выше — любую */
+function assertCanSeeSalaryOf(req: Request, servicemanName: string) {
+  if (!hasRole(req.user, ROLES.MANAGER) && req.user?.name !== servicemanName) {
+    throw new AppError('Недостаточно прав', 403);
+  }
+}
+
 export const accountingController = {
+  // ─── Касса ──────────────────────────────────────────
   async getCash(req: Request, res: Response) {
-    const year = Number(req.query.year) || new Date().getFullYear();
-    const month = Number(req.query.month) || new Date().getMonth() + 1;
-    const data = await accountingService.getCashForMonth(year, month);
-    res.json({ data });
+    const now = new Date();
+    const { year = now.getFullYear(), month = now.getMonth() + 1 } = parse(
+      z.object({ year: yearSchema.optional(), month: monthSchema.optional() }), req.query,
+    );
+    res.json({ data: await cashService.getCashForMonth(year, month) });
   },
 
   async getBalance(_req: Request, res: Response) {
-    const balance = await accountingService.getBalance();
-    res.json({ data: { balance } });
+    res.json({ data: { balance: await cashService.getBalance() } });
   },
 
   async createExpense(req: Request, res: Response) {
-    const { date, description, amount, person, founderSalary } = req.body;
-    const tx = await accountingService.createExpense({
-      date,
-      description,
-      amount,
-      person,
-      founderSalary: founderSalary
-        ? { year: Number(founderSalary.year), month: Number(founderSalary.month), person: founderSalary.person }
-        : undefined,
-      expenseCategory: parseExpenseCategoryField(req.body.expenseCategory),
-    });
+    const data = parse(expenseSchema, req.body);
+    const tx = await cashService.createExpense({ ...data, expenseCategory: parseExpenseCategoryField(req.body.expenseCategory) });
     res.status(201).json({ data: tx });
   },
 
   async createManualIncome(req: Request, res: Response) {
-    const { date, description, amount, person } = req.body;
-    const tx = await accountingService.createManualIncome({ date, description, amount, person });
-    res.status(201).json({ data: tx });
-  },
-
-  async getCapital(_req: Request, res: Response) {
-    const data = await accountingService.getCapital();
-    res.json({ data });
-  },
-
-  async getCapitalBalance(_req: Request, res: Response) {
-    const data = await accountingService.getCapitalBalance();
-    res.json({ data });
-  },
-
-  async createDeposit(req: Request, res: Response) {
-    const { date, amount } = req.body;
-    const currency = parseBody(currencySchema, req.body.currency);
-    const tx = await accountingService.createDeposit({ date, amount, currency });
-    res.status(201).json({ data: tx });
-  },
-
-  async createWithdrawal(req: Request, res: Response) {
-    const { date, amount, description, person } = req.body;
-    const currency = parseBody(currencySchema, req.body.currency);
-    const tx = await accountingService.createWithdrawal({ date, amount, currency, description, person });
-    res.status(201).json({ data: tx });
-  },
-
-  async getRates(req: Request, res: Response) {
-    const data = await currencyService.getRates(req.query.refresh === 'true');
-    res.json({ data });
-  },
-
-  async createCapitalTransfer(req: Request, res: Response) {
-    const data = parseBody(capitalTransferSchema, req.body);
-    const tx = await currencyAccountingService.createCapitalTransfer(data);
-    res.status(201).json({ data: tx });
-  },
-
-  async getSalary(req: Request, res: Response) {
-    const servicemanName = String(req.query.servicemanName || '');
-    const year = Number(req.query.year) || new Date().getFullYear();
-    const month = Number(req.query.month) || new Date().getMonth() + 1;
-    const data = await accountingService.getSalaryData(servicemanName, year, month);
-    res.json({ data });
+    const data = parse(manualIncomeSchema, req.body);
+    res.status(201).json({ data: await cashService.createManualIncome(data) });
   },
 
   async updateCashTransaction(req: Request, res: Response) {
-    const id = String(req.params.id);
-    const { date, amount, description, person } = req.body;
-    const tx = await accountingService.updateCashTransaction(id, {
-      date, amount, description, person,
+    const data = parse(cashUpdateSchema, req.body);
+    const tx = await cashService.updateCashTransaction(String(req.params.id), {
+      ...data,
       expenseCategory: parseExpenseCategoryField(req.body.expenseCategory),
     });
     res.json({ data: tx });
   },
 
   async deleteCashTransaction(req: Request, res: Response) {
-    const id = String(req.params.id);
-    await accountingService.deleteCashTransaction(id);
+    await cashService.deleteCashTransaction(String(req.params.id));
     res.status(204).end();
   },
 
-  async getMonthlyRevenue(_req: Request, res: Response) {
-    const data = await accountingService.getMonthlyRevenue();
-    res.json({ data });
+  // ─── Капитал ────────────────────────────────────────
+  async getCapital(_req: Request, res: Response) {
+    res.json({ data: await capitalService.getCapital() });
   },
 
-  async setMonthlyRevenue(req: Request, res: Response) {
-    const { year, month, amount } = req.body;
-    const data = await accountingService.setMonthlyRevenue(Number(year), Number(month), Number(amount));
-    res.json({ data });
+  async getCapitalBalance(_req: Request, res: Response) {
+    res.json({ data: await capitalService.getCapitalBalance() });
   },
 
-  async getMonthlyRecordCount(_req: Request, res: Response) {
-    const data = await accountingService.getMonthlyRecordCount();
-    res.json({ data });
+  async createDeposit(req: Request, res: Response) {
+    const data = parse(depositSchema, req.body);
+    res.status(201).json({ data: await capitalService.createDeposit(data) });
   },
 
-  async setMonthlyRecordCount(req: Request, res: Response) {
-    const { year, month, count } = req.body;
-    const data = await accountingService.setMonthlyRecordCount(Number(year), Number(month), Number(count));
-    res.json({ data });
+  async createWithdrawal(req: Request, res: Response) {
+    const data = parse(withdrawalSchema, req.body);
+    res.status(201).json({ data: await capitalService.createWithdrawal(data) });
+  },
+
+  async createCapitalTransfer(req: Request, res: Response) {
+    const data = parse(capitalTransferSchema, req.body);
+    res.status(201).json({ data: await currencyAccountingService.createCapitalTransfer(data) });
+  },
+
+  async getRates(req: Request, res: Response) {
+    res.json({ data: await currencyService.getRates(req.query.refresh === 'true') });
+  },
+
+  // ─── Зарплата ───────────────────────────────────────
+  async getSalary(req: Request, res: Response) {
+    const now = new Date();
+    const { servicemanName, year = now.getFullYear(), month = now.getMonth() + 1 } = parse(salaryQuerySchema, req.query);
+    assertCanSeeSalaryOf(req, servicemanName);
+    res.json({ data: await salaryService.getSalaryData(servicemanName, year, month) });
   },
 
   async getSalaryHistory(req: Request, res: Response) {
-    const servicemanName = String(req.query.servicemanName || '');
-    const data = await accountingService.getSalaryHistory(servicemanName);
-    res.json({ data });
+    const { servicemanName } = parse(salaryQuerySchema, req.query);
+    assertCanSeeSalaryOf(req, servicemanName);
+    res.json({ data: await salaryService.getSalaryHistory(servicemanName) });
   },
 
   async createAdjustment(req: Request, res: Response) {
-    const { servicemanName, type, amount, reason, year, month } = req.body;
-    const adj = await accountingService.createAdjustment({ servicemanName, type, amount: Number(amount), reason, year: Number(year), month: Number(month) });
-    res.status(201).json({ data: adj });
+    const data = parse(adjustmentSchema, req.body);
+    res.status(201).json({ data: await salaryService.createAdjustment(data) });
   },
 
   async deleteAdjustment(req: Request, res: Response) {
-    const id = String(req.params.id);
-    await accountingService.deleteAdjustment(id);
+    await salaryService.deleteAdjustment(String(req.params.id));
     res.status(204).end();
   },
 
   async createSalaryPayment(req: Request, res: Response) {
-    assertCanPaySalary(req);
-    const result = salaryPaymentSchema.safeParse(req.body);
-    if (!result.success) throw new AppError('Ошибка валидации', 400, result.error.flatten());
-    const tx = await accountingService.createSalaryPayment(result.data);
-    res.status(201).json({ data: tx });
+    const data = parse(salaryPaymentSchema, req.body);
+    res.status(201).json({ data: await salaryService.createSalaryPayment(data) });
   },
 
   async deleteSalaryPayment(req: Request, res: Response) {
-    assertCanPaySalary(req);
-    await accountingService.deleteSalaryPayment(String(req.params.id));
+    await salaryService.deleteSalaryPayment(String(req.params.id));
     res.status(204).end();
   },
 
   async getFounderSalaries(_req: Request, res: Response) {
-    const records = await accountingService.getFounderSalaries();
-    res.json({ data: records });
+    res.json({ data: await salaryService.getFounderSalaries() });
   },
 
+  // ─── Статистика по месяцам ──────────────────────────
+  async getMonthlyRevenue(_req: Request, res: Response) {
+    res.json({ data: await statsService.getMonthlyRevenue() });
+  },
+
+  async setMonthlyRevenue(req: Request, res: Response) {
+    const { year, month, amount } = parse(monthlyRevenueSchema, req.body);
+    res.json({ data: await statsService.setMonthlyRevenue(year, month, amount) });
+  },
+
+  async getMonthlyRecordCount(_req: Request, res: Response) {
+    res.json({ data: await statsService.getMonthlyRecordCount() });
+  },
+
+  async setMonthlyRecordCount(req: Request, res: Response) {
+    const { year, month, count } = parse(monthlyCountSchema, req.body);
+    res.json({ data: await statsService.setMonthlyRecordCount(year, month, count) });
+  },
+
+  // ─── Долги ──────────────────────────────────────────
   async getDebts(req: Request, res: Response) {
     const archived = String(req.query.archived || 'false') === 'true';
-    const data = await accountingService.getDebts(archived);
-    res.json({ data });
+    res.json({ data: await debtsService.getDebts(archived) });
   },
 
   async createDebt(req: Request, res: Response) {
-    const { description, amount, direction } = req.body;
-    const debt = await accountingService.createDebt({
-      description: String(description || '').trim(),
-      amount: Number(amount),
-      currency: parseBody(currencySchema, req.body.currency ?? 'BYN'),
-      direction: direction === 'OWED_TO_US' ? 'OWED_TO_US' : 'WE_OWE',
-      expenseCategory: parseExpenseCategoryField(req.body.expenseCategory),
-    });
+    const data = parse(debtCreateSchema, req.body);
+    const debt = await debtsService.createDebt({ ...data, expenseCategory: parseExpenseCategoryField(req.body.expenseCategory) });
     res.status(201).json({ data: debt });
   },
 
   async updateDebt(req: Request, res: Response) {
-    const id = String(req.params.id);
-    const { description, amount } = req.body;
-    const debt = await accountingService.updateDebt(id, {
-      ...(description !== undefined && { description: String(description) }),
-      ...(amount !== undefined && { amount: Number(amount) }),
+    const data = parse(debtUpdateSchema, req.body);
+    const debt = await debtsService.updateDebt(String(req.params.id), {
+      ...data,
       expenseCategory: parseExpenseCategoryField(req.body.expenseCategory),
     });
     res.json({ data: debt });
   },
 
   async deleteDebt(req: Request, res: Response) {
-    const id = String(req.params.id);
-    await accountingService.deleteDebt(id);
+    await debtsService.deleteDebt(String(req.params.id));
     res.status(204).end();
   },
 
   async payDebt(req: Request, res: Response) {
-    const id = String(req.params.id);
-    const data = parseBody(debtPaymentSchema, req.body);
-    const debt = await accountingService.payDebt(id, data, req.user?.name);
-    res.status(201).json({ data: debt });
+    const data = parse(debtPaymentSchema, req.body);
+    res.status(201).json({ data: await debtsService.payDebt(String(req.params.id), data, req.user?.name) });
   },
 };

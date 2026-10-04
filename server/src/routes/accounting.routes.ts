@@ -1,35 +1,58 @@
 import { Router } from 'express';
 import { accountingController } from '../controllers/accounting.controller';
+import { requireRole } from '../middleware/requireRole';
+import { ROLES } from '../utils/roles';
 
 const router = Router();
 
-router.get('/cash', accountingController.getCash);
-router.get('/balance', accountingController.getBalance);
-router.post('/expense', accountingController.createExpense);
-router.post('/manual-income', accountingController.createManualIncome);
-router.get('/capital', accountingController.getCapital);
-router.get('/capital/balance', accountingController.getCapitalBalance);
-router.post('/capital/deposit', accountingController.createDeposit);
-router.post('/capital/withdrawal', accountingController.createWithdrawal);
-router.post('/capital/transfer', accountingController.createCapitalTransfer);
+/*
+ * Права повторяют вкладки бухгалтерии в интерфейсе:
+ *  - менеджер: касса, приход РС, долги, выплата ЗП, премии/штрафы;
+ *  - директор: капитал, ЗП учредителей, статистика, правка и удаление долгов;
+ *  - создатель: правка и удаление операций кассы;
+ *  - сотрудник: только своя зарплата (проверка в контроллере) и курсы валют.
+ */
+const manager = requireRole(ROLES.MANAGER);
+const director = requireRole(ROLES.DIRECTOR);
+const creator = requireRole(ROLES.CREATOR);
+
+// Касса
+router.get('/cash', manager, accountingController.getCash);
+router.get('/balance', manager, accountingController.getBalance);
+router.post('/expense', manager, accountingController.createExpense);
+router.post('/manual-income', manager, accountingController.createManualIncome);
+router.patch('/cash/:id', creator, accountingController.updateCashTransaction);
+router.delete('/cash/:id', creator, accountingController.deleteCashTransaction);
+
+// Капитал
+router.get('/capital', director, accountingController.getCapital);
+router.get('/capital/balance', director, accountingController.getCapitalBalance);
+router.post('/capital/deposit', director, accountingController.createDeposit);
+router.post('/capital/withdrawal', director, accountingController.createWithdrawal);
+// Отчисление в капитал делают из кассы — доступно менеджерам
+router.post('/capital/transfer', manager, accountingController.createCapitalTransfer);
 router.get('/rates', accountingController.getRates);
-router.get('/monthly-revenue', accountingController.getMonthlyRevenue);
-router.post('/monthly-revenue', accountingController.setMonthlyRevenue);
-router.get('/monthly-record-count', accountingController.getMonthlyRecordCount);
-router.post('/monthly-record-count', accountingController.setMonthlyRecordCount);
+
+// Статистика по месяцам: читают графики дашборда (менеджеры), правят директора
+router.get('/monthly-revenue', manager, accountingController.getMonthlyRevenue);
+router.post('/monthly-revenue', director, accountingController.setMonthlyRevenue);
+router.get('/monthly-record-count', manager, accountingController.getMonthlyRecordCount);
+router.post('/monthly-record-count', director, accountingController.setMonthlyRecordCount);
+
+// Зарплата
 router.get('/salary', accountingController.getSalary);
 router.get('/salary/history', accountingController.getSalaryHistory);
-router.patch('/cash/:id', accountingController.updateCashTransaction);
-router.delete('/cash/:id', accountingController.deleteCashTransaction);
-router.post('/salary-adjustments', accountingController.createAdjustment);
-router.delete('/salary-adjustments/:id', accountingController.deleteAdjustment);
-router.post('/salary-payments', accountingController.createSalaryPayment);
-router.delete('/salary-payments/:id', accountingController.deleteSalaryPayment);
-router.get('/founder-salaries', accountingController.getFounderSalaries);
-router.get('/debts', accountingController.getDebts);
-router.post('/debts', accountingController.createDebt);
-router.patch('/debts/:id', accountingController.updateDebt);
-router.delete('/debts/:id', accountingController.deleteDebt);
-router.post('/debts/:id/payments', accountingController.payDebt);
+router.post('/salary-adjustments', manager, accountingController.createAdjustment);
+router.delete('/salary-adjustments/:id', manager, accountingController.deleteAdjustment);
+router.post('/salary-payments', manager, accountingController.createSalaryPayment);
+router.delete('/salary-payments/:id', manager, accountingController.deleteSalaryPayment);
+router.get('/founder-salaries', director, accountingController.getFounderSalaries);
+
+// Долги
+router.get('/debts', manager, accountingController.getDebts);
+router.post('/debts', manager, accountingController.createDebt);
+router.patch('/debts/:id', director, accountingController.updateDebt);
+router.delete('/debts/:id', director, accountingController.deleteDebt);
+router.post('/debts/:id/payments', manager, accountingController.payDebt);
 
 export default router;

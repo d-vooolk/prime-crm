@@ -1,0 +1,11 @@
+@use '@/styles/variables' as *;
+
+.form {
+  margin-top: var(--spacing-md);
+}
+
+.content {
+  font-family: monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+}

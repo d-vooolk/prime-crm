@@ -372,3 +372,17 @@
 .settingsForm {
   max-width: 360px;
 }
+
+.fullWidth {
+  width: 100%;
+}
+
+// Подзаголовки разделов карточки — мельче стандартного Divider.
+// Двойной класс перебивает селектор antd (.ant-divider-horizontal.ant-divider-with-text)
+.cardDivider.cardDivider {
+  font-size: 13px;
+}
+
+.entriesError {
+  margin-bottom: var(--spacing-md);
+}

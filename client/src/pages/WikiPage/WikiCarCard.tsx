@@ -91,10 +91,10 @@ export const WikiCarCard: React.FC<Props> = ({ carKey, title, onChanged }) => {
           setEditing(true);
         }
       })
-      .catch(e => !cancelled && notify.error((e as Error).message))
+      .catch(e => !cancelled && notify.error(e))
       .finally(() => !cancelled && setLoading(false));
     return () => { cancelled = true; };
-  }, [markId, modelId, generationId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [markId, modelId, generationId, notify]);
 
   const startEdit = () => {
     setDraft(entry?.content ?? '');
@@ -115,7 +115,7 @@ export const WikiCarCard: React.FC<Props> = ({ carKey, title, onChanged }) => {
       notify.success('Сохранено');
       onChanged();
     } catch (e) {
-      notify.error((e as Error).message);
+      notify.error(e);
     } finally {
       setSaving(false);
     }
@@ -131,14 +131,16 @@ export const WikiCarCard: React.FC<Props> = ({ carKey, title, onChanged }) => {
     if (activeUploads.current > 0 || !batchChanged.current) return;
     batchChanged.current = false;
     // Сверка в конце пачки: подтягивает всё, что не удалось дописать локально
-    reloadEntry(key).catch(() => {});
+    reloadEntry(key).catch(() => {
+      // Намеренно молча: файлы уже загружены и показаны, сверка лишь уточняет список
+    });
     onChangedRef.current();
   };
 
   const upload = async (file: File, uid: string) => {
     const problem = validateFile(file);
     if (problem) {
-      notify.error(`${file.name}: ${problem}`);
+      notify.error(problem, file.name);
       return;
     }
     const key = carKey;
@@ -163,7 +165,7 @@ export const WikiCarCard: React.FC<Props> = ({ carKey, title, onChanged }) => {
         await reloadEntry(key);
       }
     } catch (e) {
-      notify.error(`${file.name}: ${(e as Error).message}`);
+      notify.error(e, file.name);
     } finally {
       setUploads(list => list.filter(u => u.uid !== uid));
       finishUpload(key);
@@ -176,7 +178,7 @@ export const WikiCarCard: React.FC<Props> = ({ carKey, title, onChanged }) => {
       setEntry(prev => (prev ? { ...prev, media: prev.media.filter(m => m.id !== mediaId) } : prev));
       onChangedRef.current();
     } catch (e) {
-      notify.error((e as Error).message);
+      notify.error(e);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -208,7 +210,7 @@ export const WikiCarCard: React.FC<Props> = ({ carKey, title, onChanged }) => {
           )}
         </div>
 
-        <Divider orientation="left" style={{ fontSize: 13 }}>Информация</Divider>
+        <Divider orientation="left" className={styles.cardDivider}>Информация</Divider>
 
         {editing ? (
           <>
@@ -234,7 +236,7 @@ export const WikiCarCard: React.FC<Props> = ({ carKey, title, onChanged }) => {
           </>
         )}
 
-        <Divider orientation="left" style={{ fontSize: 13 }}>Фото и видео</Divider>
+        <Divider orientation="left" className={styles.cardDivider}>Фото и видео</Divider>
 
         <div className={styles.mediaHeader}>
           <span className={styles.mediaTitle}>

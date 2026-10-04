@@ -1,0 +1,25 @@
+@use '@/styles/variables' as *;
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.logo {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.logoLarge {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+// Составной селектор — чтобы перебить стили antd
+.vin:global(.ant-input) {
+  text-transform: uppercase;
+  font-family: monospace;
+}

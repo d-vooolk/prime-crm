@@ -1,0 +1,59 @@
+@use '@/styles/variables' as *;
+
+.addressField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.preWrap {
+  white-space: pre-wrap;
+}
+
+.divider {
+  margin-top: var(--spacing-sm);
+
+  :global(.ant-divider-inner-text) {
+    font-size: var(--font-size-sm);
+  }
+}
+
+.subheading {
+  font-weight: 500;
+  margin-bottom: 12px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.subheadingSpaced {
+  margin-top: var(--spacing-sm);
+  margin-bottom: 10px;
+}
+
+.person {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: var(--spacing-sm);
+  padding: var(--spacing-sm) 12px;
+  background: var(--color-surface-2);
+  border-radius: 6px;
+}
+
+.personInfo {
+  flex: 1;
+}
+
+.personName {
+  font-weight: 500;
+}
+
+.personPosition {
+  color: var(--color-text-secondary);
+  margin-left: var(--spacing-sm);
+  font-size: var(--font-size-sm);
+}
+
+.addPerson {
+  margin-bottom: var(--spacing-lg);
+}

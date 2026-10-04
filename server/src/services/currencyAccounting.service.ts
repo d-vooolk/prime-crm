@@ -1,9 +1,8 @@
-import { Prisma } from '@prisma/client';
-import { prisma } from '../prisma/client';
+import { prisma, DbClient } from '../prisma/client';
 import { AppError } from '../middleware/errorHandler';
 import { ForeignCurrency, Currency, isForeignCurrency, assertRate, roundMoney, toByn } from './currency.service';
 
-type Db = Prisma.TransactionClient | typeof prisma;
+type Db = DbClient;
 
 /** Часть оплаты в валюте: сумма в BYN = amount × rate */
 export interface CurrencyPart {

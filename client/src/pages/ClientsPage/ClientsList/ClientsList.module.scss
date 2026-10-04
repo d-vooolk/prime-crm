@@ -1,0 +1,119 @@
+@use '@/styles/variables' as *;
+
+// Госномер рядом с названием авто — моноширинным, чтобы читался
+.plate {
+  margin-left: 6px;
+  font-family: monospace;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+// ─── Таблица ───────────────────────────────────────
+.row {
+  cursor: pointer;
+}
+
+.name {
+  font-weight: 500;
+}
+
+.nameIcon {
+  margin-right: 6px;
+  color: var(--color-text-muted);
+}
+
+.cars {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+// ─── Мобильный список вместо таблицы ───────────────
+.mobileItem {
+  cursor: pointer;
+  padding: var(--spacing-sm) 0 !important;
+}
+
+.mobileCard {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.mobileCardTop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+
+.mobileName {
+  font-weight: 500;
+  color: var(--color-text-primary);
+  min-width: 0;
+  word-break: break-word;
+}
+
+.mobileNameIcon {
+  margin-right: 6px;
+  color: var(--color-text-muted);
+}
+
+.mobileVisits {
+  flex-shrink: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.mobilePhone {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  font-size: var(--font-size-sm);
+  color: var(--color-primary);
+}
+
+.mobileCars {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.mobileCarTag {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  white-space: normal;
+}
+
+// ─── Записи под фильтром «услуга / период» ─────────
+.matched {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.matchedRecord {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0 var(--spacing-xs);
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  text-align: left;
+  cursor: pointer;
+
+  &:hover { color: var(--color-primary); }
+}
+
+.matchedDate {
+  font-weight: 600;
+}

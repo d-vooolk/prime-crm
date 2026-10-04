@@ -6,11 +6,8 @@ interface Props {
   onDone: () => void;
 }
 
-const COLORS = [
-  '#34d399', '#6ee7b7', '#fbbf24', '#f59e0b',
-  '#60a5fa', '#a78bfa', '#f472b6', '#fb923c',
-  '#fff', '#86efac',
-];
+// Цвета конфетти — CSS-переменные --color-confetti-1..10 из _variables.scss
+const COLOR_COUNT = 10;
 
 const COUNT = 60;
 
@@ -28,7 +25,7 @@ export const DealCelebration: React.FC<Props> = ({ onDone }) => {
       id: i,
       angle: (i / COUNT) * 360 + (Math.random() - 0.5) * (360 / COUNT),
       dist: 220 + Math.random() * 380,
-      color: COLORS[i % COLORS.length],
+      color: `var(--color-confetti-${(i % COLOR_COUNT) + 1})`,
       size: 10 + Math.random() * 16,
       dur: 0.9 + Math.random() * 0.6,
       delay: Math.random() * 0.12,
@@ -41,16 +38,15 @@ export const DealCelebration: React.FC<Props> = ({ onDone }) => {
           <div
             key={p.id}
             className={styles.particle}
+            // Траектория, размер и цвет каждой частицы случайные — передаём их CSS-переменными,
+            // всё оформление в .particle
             style={{
               '--angle': `${p.angle}deg`,
               '--dist': `${p.dist}px`,
               '--dur': `${p.dur}s`,
               '--delay': `${p.delay}s`,
-              backgroundColor: p.color,
-              width: p.size,
-              height: p.size,
-              marginLeft: -p.size / 2,
-              marginTop: -p.size / 2,
+              '--size': `${p.size}px`,
+              '--particle-color': p.color,
             } as React.CSSProperties}
           />
         ))}

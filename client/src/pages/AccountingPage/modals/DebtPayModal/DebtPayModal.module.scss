@@ -1,0 +1,37 @@
+@use '@/styles/variables' as *;
+
+.debtPay {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-md);
+}
+
+.debtPayInfo {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+
+  div {
+    margin-top: var(--spacing-xs);
+  }
+}
+
+.label {
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.debtPayAmount {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.debtPayInput {
+  flex: 1;
+}
+
+.debtPayNote {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}

@@ -1,4 +1,4 @@
-import { ForeignCurrency, ServicemanSplitEntry } from '@/types';
+import { ClientSource, ForeignCurrency, ServicemanSplitEntry } from '@/types';
 
 export interface SelectedService {
   serviceId: string;
@@ -48,6 +48,8 @@ export interface RecordFormData {
   time: string;
   serviceman: string;
   receptionist?: string;
+  /** Откуда пришёл клиент; необязательно */
+  clientSource?: ClientSource | null;
   // Юр. лицо
   isLegalEntity?: boolean;
   legalCompanyName?: string;
@@ -94,3 +96,17 @@ export const emptyFormData: RecordFormData = {
   isLegalEntity: false,
   services: [],
 };
+
+/** Действия над позицией услуги — общие для таблицы (десктоп) и карточек (мобильный) */
+export interface ServiceRowContext {
+  update: (serviceId: string, patch: Partial<SelectedService>) => void;
+  remove: (serviceId: string) => void;
+  openPrepay: (row: SelectedService) => void;
+  openSplit: (row: SelectedService) => void;
+  cancelSplit: (serviceId: string) => void;
+  equipmentOptions: { value: string; label: string }[];
+  employeeOptions: { value: string; label: string }[];
+  /** Основной мастер записи (шаг 1) — подставляется, пока сотрудник по услуге не выбран */
+  defaultServiceman: string;
+  prepaymentLocked?: boolean;
+}

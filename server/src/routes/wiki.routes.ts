@@ -1,49 +1,17 @@
-import { Router, Request, Response, NextFunction } from 'express';
-import multer from 'multer';
-import crypto from 'crypto';
+import { Router } from 'express';
 import { wikiController } from '../controllers/wiki.controller';
-import { AppError } from '../middleware/errorHandler';
-import { WIKI_MEDIA_DIR, extOf, mediaKind, MIME_EXT } from '../utils/uploads';
+import { WIKI_MEDIA_DIR } from '../utils/uploads';
+import { mediaUpload } from '../utils/mediaUpload';
 
-const MAX_FILE_SIZE_MB = 300;
-
-const upload = multer({
-  storage: multer.diskStorage({
-    destination: WIKI_MEDIA_DIR,
-    filename: (_req, file, cb) => {
-      const kind = mediaKind(file) ?? 'photo';
-      // Без расширения статика отдала бы файл без Content-Type, и браузер его не показал бы
-      const ext = extOf(file) || MIME_EXT[file.mimetype] || '';
-      cb(null, `${kind}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}${ext}`);
-    },
-  }),
-  limits: { fileSize: MAX_FILE_SIZE_MB * 1024 * 1024, files: 1 },
-  fileFilter: (_req, file, cb) => {
-    if (mediaKind(file)) cb(null, true);
-    else cb(new AppError('Можно загружать только фото и видео', 400));
-  },
-});
-
-/** Ошибки multer (размер и т.п.) превращаем в понятный AppError. */
-function uploadSingle(req: Request, res: Response, next: NextFunction) {
-  upload.single('file')(req, res, (err: unknown) => {
-    if (err instanceof multer.MulterError) {
-      next(new AppError(
-        err.code === 'LIMIT_FILE_SIZE' ? `Файл больше ${MAX_FILE_SIZE_MB} МБ` : 'Ошибка загрузки файла',
-        400,
-      ));
-      return;
-    }
-    next(err as Error | undefined);
-  });
-}
+// Видео с телефона бывают тяжёлыми, фото — нет
+const uploadMedia = mediaUpload({ dir: WIKI_MEDIA_DIR, maxPhotoMb: 40, maxVideoMb: 300 });
 
 const router = Router();
 
 router.get('/entries', wikiController.listEntries);
 router.get('/entry', wikiController.getEntry);
 router.put('/entry', wikiController.saveContent);
-router.post('/media', uploadSingle, wikiController.uploadMedia);
+router.post('/media', uploadMedia, wikiController.uploadMedia);
 router.delete('/media/:id', wikiController.deleteMedia);
 
 router.get('/revisions', wikiController.listRevisions);

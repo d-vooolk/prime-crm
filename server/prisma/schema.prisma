@@ -41,8 +41,12 @@ model Record {
   clientId           String
   carId              String
   scheduledAt        DateTime
-  serviceman         String
+  // Мастер и приёмщик хранятся по ФИО (так считается зарплата), но это внешний ключ на
+  // Serviceman.name с ON UPDATE CASCADE: переименование сотрудника переносится во всю историю
+  serviceman         String?
   receptionist       String?
+  // Откуда пришёл клиент — для статистики каналов привлечения
+  clientSource       ClientSource?
   notes              String?
   documentNumber     String?      @unique
   status             RecordStatus @default(ACTIVE)
@@ -76,6 +80,46 @@ model Record {
   car                Car          @relation(fields: [carId], references: [id])
   items              RecordItem[]
   deal               Deal?
+  media              RecordMedia[]
+  servicemanRef      Serviceman?  @relation("RecordServiceman", fields: [serviceman], references: [name], onUpdate: Cascade, onDelete: Restrict)
+  receptionistRef    Serviceman?  @relation("RecordReceptionist", fields: [receptionist], references: [name], onUpdate: Cascade, onDelete: Restrict)
+
+  @@index([scheduledAt])
+  @@index([status, scheduledAt])
+  @@index([clientId])
+  @@index([carId])
+  @@index([clientSource])
+}
+
+enum ClientSource {
+  INSTAGRAM
+  RECOMMENDATION
+  SEARCH
+  MAPS
+  OTHER
+}
+
+enum RecordMediaType {
+  PHOTO
+  VIDEO
+}
+
+// Фото и видео нюансов авто в записи. Хранятся год (expiresAt), потом файл и строка
+// удаляются фоновой очисткой (services/recordMedia.service.ts)
+model RecordMedia {
+  id             String          @id @default(cuid())
+  recordId       String
+  type           RecordMediaType
+  filename       String          @unique // имя файла в UPLOADS_DIR/records
+  originalName   String
+  size           Int
+  uploadedByName String?
+  createdAt      DateTime        @default(now())
+  expiresAt      DateTime
+  record         Record          @relation(fields: [recordId], references: [id], onDelete: Cascade)
+
+  @@index([recordId])
+  @@index([expiresAt])
 }
 
 enum RecordStatus {
@@ -88,28 +132,32 @@ model RecordItem {
   id              String     @id @default(cuid())
   recordId        String
   serviceId       String
-  price           Float
+  price           Decimal @db.Decimal(14, 2)
   quantity        Int        @default(1)
-  netProfit       Float?
+  netProfit       Decimal? @db.Decimal(14, 2)
   servicemanName  String?
   servicemanSplit Json?
   equipmentId     String?
-  prepaidAmount   Float   @default(0)
+  prepaidAmount   Decimal @db.Decimal(14, 2)   @default(0)
   prepaidByCard   Boolean @default(false)
   // Предоплата в валюте: prepaidAmount — эквивалент в BYN, здесь исходная сумма и курс
   prepaidCurrency       String?
-  prepaidCurrencyAmount Float?
+  prepaidCurrencyAmount Decimal? @db.Decimal(14, 2)
   prepaidRate           Float?
   record          Record     @relation(fields: [recordId], references: [id], onDelete: Cascade)
   service         Service    @relation(fields: [serviceId], references: [id])
   equipment       Equipment? @relation(fields: [equipmentId], references: [id])
+  servicemanRef   Serviceman? @relation("RecordItemServiceman", fields: [servicemanName], references: [name], onUpdate: Cascade, onDelete: Restrict)
+
+  @@index([recordId])
+  @@index([serviceId])
 }
 
 model Service {
   id            String       @id @default(cuid())
   name          String
   categoryId    String
-  standardPrice Float
+  standardPrice Decimal @db.Decimal(14, 2)
   estimatedTime Int
   isActive      Boolean      @default(true)
   hasEquipment  Boolean      @default(false)
@@ -131,21 +179,23 @@ model Category {
 model Deal {
   id                  String          @id @default(cuid())
   recordId            String          @unique
-  finalPrice          Float
+  finalPrice          Decimal @db.Decimal(14, 2)
   priceIncreaseReason String?
   defects             String?
   // Рекомендации клиенту — печатаются в акте под обнаруженными недостатками
   recommendations     String?
   warranty            String?
   isPaidByBankTransfer Boolean        @default(false)
-  splitCashAmount     Float?
-  splitCardAmount     Float?
+  splitCashAmount     Decimal? @db.Decimal(14, 2)
+  splitCardAmount     Decimal? @db.Decimal(14, 2)
   // Часть оплаты в валюте: [{ currency, amount, rate }], сумма в BYN = amount × rate
   currencyPayments    Json?
   closedAt            DateTime        @default(now())
   salaryDate          DateTime?
   record              Record          @relation(fields: [recordId], references: [id])
   equipment           DealEquipment[]
+
+  @@index([closedAt])
 }
 
 model DealEquipment {
@@ -160,8 +210,8 @@ model Equipment {
   id             String          @id @default(cuid())
   name           String          @unique
   warranty       String?
-  wholesalePrice Float?
-  retailPrice    Float?
+  wholesalePrice Decimal? @db.Decimal(14, 2)
+  retailPrice    Decimal? @db.Decimal(14, 2)
   isActive       Boolean         @default(true)
   deals          DealEquipment[]
   recordItems    RecordItem[]
@@ -182,11 +232,17 @@ model Serviceman {
   // при старте сервера (bootstrap/servicemanPerformers.ts)
   isPerformer    Boolean?
   profitPercent  Float     @default(0)
-  plainPassword  String?
   birthday       DateTime?
   createdAt      DateTime  @default(now())
   notes          Note[]
   salaryRates    SalaryRate[]
+  // Ссылки по ФИО (см. Record.serviceman) — для каскадного переименования
+  recordsAsServiceman   Record[]                @relation("RecordServiceman")
+  recordsAsReceptionist Record[]                @relation("RecordReceptionist")
+  recordItems           RecordItem[]            @relation("RecordItemServiceman")
+  salaryPayments        EmployeeSalaryPayment[]
+  salaryAdjustments     SalaryAdjustment[]
+  founderSalaries       FounderSalary[]
 }
 
 // История оклада: сумма действует с расчётного месяца year/month до следующей записи
@@ -195,7 +251,7 @@ model SalaryRate {
   servicemanId String
   year         Int
   month        Int
-  amount       Float
+  amount       Decimal @db.Decimal(14, 2)
   createdAt    DateTime   @default(now())
   serviceman   Serviceman @relation(fields: [servicemanId], references: [id], onDelete: Cascade)
 
@@ -285,7 +341,7 @@ model CashTransaction {
   id          String              @id @default(cuid())
   type        CashTransactionType
   date        DateTime
-  amount      Float
+  amount      Decimal @db.Decimal(14, 2)
   clientName  String?
   clientPhone String?
   carInfo     String?
@@ -296,7 +352,7 @@ model CashTransaction {
   // Приход в валюте: amount — сумма в BYN по курсу, здесь — исходная валюта и курс.
   // Такую валюту сразу отчисляем в капитал (см. capitalTransferExpense)
   currency       String?           // USD | EUR
-  currencyAmount Float?
+  currencyAmount Decimal? @db.Decimal(14, 2)
   currencyRate   Float?
   // Расход «Отчисление в капитал» за этот валютный приход. Удаляется вместе с приходом
   linkedIncomeId         String?          @unique
@@ -311,6 +367,9 @@ model CashTransaction {
   // Категория затрат (только для обычных расходов, у системных — пусто)
   expenseCategoryId String?
   expenseCategory   ExpenseCategory? @relation(fields: [expenseCategoryId], references: [id], onDelete: SetNull)
+
+  @@index([date])
+  @@index([recordId])
 }
 
 // Справочник категорий затрат для расходов кассы (расходники, поставщики, еда в офис …)
@@ -338,12 +397,13 @@ model FounderSalary {
   year              Int
   month             Int
   person            String
-  amount            Float
+  amount            Decimal @db.Decimal(14, 2)
   createdAt         DateTime         @default(now())
   // Расход в кассе, которым выдана эта ЗП. Сумма синхронизируется при правке расхода,
   // при удалении расхода запись удаляется вместе с ним
   cashTransactionId String?          @unique
   cashTransaction   CashTransaction? @relation(fields: [cashTransactionId], references: [id], onDelete: Cascade)
+  serviceman        Serviceman       @relation(fields: [person], references: [name], onUpdate: Cascade, onDelete: Restrict)
 }
 
 enum SalaryPaymentType {
@@ -359,15 +419,16 @@ model EmployeeSalaryPayment {
   month             Int
   type              SalaryPaymentType
   // Вся выплата: наличные + карта. Остаток сотрудника уменьшается на неё целиком
-  amount            Float
+  amount            Decimal @db.Decimal(14, 2)
   // Часть, переведённая на карту. В кассу (только наличные) не попадает
-  cardAmount        Float             @default(0)
+  cardAmount        Decimal @db.Decimal(14, 2)             @default(0)
   date              DateTime          @default(now())
   createdAt         DateTime          @default(now())
   // Расход в кассе на наличную часть (amount - cardAmount). Нет, если всё выплачено на карту.
   // При правке суммы расхода меняется наличная часть, при удалении расхода выплата удаляется
   cashTransactionId String?           @unique
   cashTransaction   CashTransaction?  @relation(fields: [cashTransactionId], references: [id], onDelete: Cascade)
+  serviceman        Serviceman        @relation(fields: [servicemanName], references: [name], onUpdate: Cascade, onDelete: Restrict)
 
   @@index([servicemanName, year, month])
 }
@@ -376,20 +437,23 @@ model SalaryAdjustment {
   id             String                @id @default(cuid())
   servicemanName String
   type           SalaryAdjustmentType
-  amount         Float
+  amount         Decimal @db.Decimal(14, 2)
   reason         String
   year           Int
   month          Int
   createdAt      DateTime              @default(now())
+  serviceman     Serviceman            @relation(fields: [servicemanName], references: [name], onUpdate: Cascade, onDelete: Restrict)
+
+  @@index([servicemanName, year, month])
 }
 
 model CapitalTransaction {
   id          String                 @id @default(cuid())
   type        CapitalTransactionType
   date        DateTime
-  amountByn   Float?
-  amountUsd   Float?
-  amountEur   Float?
+  amountByn   Decimal? @db.Decimal(14, 2)
+  amountUsd   Decimal? @db.Decimal(14, 2)
+  amountEur   Decimal? @db.Decimal(14, 2)
   // Курс BYN за единицу валюты, если деньги пришли через конвертацию
   rate        Float?
   description String?
@@ -416,8 +480,8 @@ model Debt {
   description     String
   // Суммы — в валюте долга
   currency        String        @default("BYN") // BYN | USD | EUR
-  initialAmount   Float
-  remainingAmount Float
+  initialAmount   Decimal @db.Decimal(14, 2)
+  remainingAmount Decimal @db.Decimal(14, 2)
   direction       DebtDirection
   status          DebtStatus    @default(ACTIVE)
   createdAt       DateTime      @default(now())
@@ -433,10 +497,10 @@ model DebtPayment {
   id                String           @id @default(cuid())
   debtId            String
   // На сколько уменьшился долг — в валюте долга
-  amount            Float
+  amount            Decimal @db.Decimal(14, 2)
   // Чем фактически платили: валюта, сумма и курс BYN за единицу (если была конвертация)
   paidCurrency      String           @default("BYN")
-  paidAmount        Float?
+  paidAmount        Decimal? @db.Decimal(14, 2)
   rate              Float?
   paidAt            DateTime         @default(now())
   cashTransactionId String?          @unique
@@ -457,7 +521,7 @@ model MonthlyRevenue {
   id        String   @id @default(cuid())
   year      Int
   month     Int
-  amount    Float
+  amount    Decimal @db.Decimal(14, 2)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -621,8 +685,8 @@ model WikiRevision {
   status             WikiRevisionStatus @default(PENDING)
   reviewedByName     String?
   reviewedAt         DateTime?
-  bonusAmount        Float?
-  bonusBaseAmount    Float? // размер премии из настроек на момент назначения — видно, что оплачено частично
+  bonusAmount        Decimal? @db.Decimal(14, 2)
+  bonusBaseAmount    Decimal? @db.Decimal(14, 2) // размер премии из настроек на момент назначения — видно, что оплачено частично
   salaryAdjustmentId String?
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
@@ -634,5 +698,100 @@ model WikiRevision {
 
 model WikiSettings {
   id          String @id @default(cuid())
-  bonusAmount Float  @default(0)
+  bonusAmount Decimal @db.Decimal(14, 2)  @default(0)
+}
+
+// --- Журнал изменений денег ---
+// Пишется автоматически расширением Prisma (src/prisma/audit.ts) на каждое изменение
+// кассы, капитала, долгов, сделок и зарплат. В интерфейсе не показывается — смотреть через psql:
+//   SELECT * FROM "AuditLog" ORDER BY "createdAt" DESC LIMIT 50;
+model AuditLog {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  userId    String?
+  userName  String?
+  action    String // create | update | delete
+  model     String
+  entityId  String?
+  before    Json?
+  after     Json?
+
+  @@index([createdAt])
+  @@index([model, entityId])
+}
+
+// --- Склад ---
+// Дерево категорий произвольной глубины. Товары лежат только в конечных категориях:
+// в категорию с подкатегориями нельзя положить товар, а в категорию с товарами — подкатегорию.
+model StockCategory {
+  id        String          @id @default(cuid())
+  name      String
+  parentId  String?
+  sortOrder Int?
+  createdAt DateTime        @default(now())
+  parent    StockCategory?  @relation("StockCategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children  StockCategory[] @relation("StockCategoryTree")
+  items     StockItem[]
+
+  @@unique([parentId, name])
+  @@index([parentId])
+}
+
+model StockItem {
+  id            String          @id @default(cuid())
+  categoryId    String
+  name          String
+  sku           String? // артикул
+  unit          String          @default("шт")
+  quantity      Decimal         @default(0) @db.Decimal(14, 3)
+  // Порог напоминания: остаток на нём или ниже — товар «заканчивается». null — не напоминать
+  minQuantity   Decimal?        @db.Decimal(14, 3)
+  purchasePrice Decimal?        @db.Decimal(14, 2)
+  notes         String?
+  isActive      Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  category      StockCategory   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  movements     StockMovement[]
+
+  @@index([categoryId])
+  @@index([name])
+}
+
+enum StockMovementType {
+  IN // приход
+  OUT // расход / списание
+  ADJUST // инвентаризация: установлен точный остаток
+}
+
+model StockMovement {
+  id            String            @id @default(cuid())
+  itemId        String
+  type          StockMovementType
+  // Изменение остатка (для ADJUST — разница со старым остатком)
+  delta         Decimal           @db.Decimal(14, 3)
+  quantityAfter Decimal           @db.Decimal(14, 3)
+  comment       String?
+  userName      String?
+  createdAt     DateTime          @default(now())
+  item          StockItem         @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId, createdAt])
+}
+
+// --- Пуш-уведомления (PWA) ---
+// Подписка одного устройства (браузера) пользователя. userId — id сотрудника или 'master'.
+// Мёртвые подписки (браузер ответил 404/410) удаляются при отправке.
+model PushSubscription {
+  id        String   @id @default(cuid())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userId    String
+  userName  String
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }

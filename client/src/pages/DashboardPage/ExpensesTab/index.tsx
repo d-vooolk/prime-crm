@@ -1,84 +1,28 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Button, Card, Col, DatePicker, Empty, Grid, Row, Segmented, Statistic, Table, Tag, message } from 'antd';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Alert, Button, Card, Col, DatePicker, Empty, Grid, Row, Segmented, Statistic, Table, Tag } from 'antd';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import dayjs, { Dayjs } from 'dayjs';
 import { expensesApi, ExpenseAnalytics, ExpenseAnalyticsGroup, ExpenseAnalyticsItem } from '@/api/expenses.api';
 import { formatPrice } from '@/utils/formatters';
+import { getErrorMessage } from '@/utils/errors';
+import {
+  ChartSeries, ChartRow, SYSTEM_GROUP_KEYS, buildChartData, buildSeries, buildSlotMap, countElapsedMonths, parseExcluded,
+} from './utils';
+import { ExpensesTooltip } from './ExpensesTooltip';
 import styles from './ExpensesTab.module.scss';
 
 // Исключённые из графика и таблицы группы (ключи групп) — запоминаются между визитами
 const EXCLUDED_STORAGE_KEY = 'prime-crm-dashboard-expenses-excluded';
 
-// Цветных слотов 8 (палитра в ExpensesTab.module.scss, проверена на различимость для дальтоников).
-// Остальные группы на графике сворачиваются в серое «Остальное»
-const SERIES_SLOTS = 8;
-const OTHER_SERIES = { key: 'other', name: 'Остальное', color: 'var(--expenses-series-other)' };
-const seriesColor = (slot: number) => `var(--expenses-series-${slot + 1})`;
 // Класс образца цвета в легенде/таблице для слота (null — «Остальное»)
 const swatchClass = (slot: number | null) =>
   `${styles.swatch} ${slot === null ? styles.seriesOther : styles[`series${slot + 1}`]}`;
 
-// Системные группы — их убирает предустановка «Только операционные»
-const SYSTEM_GROUP_KEYS = ['system:founderSalary', 'system:salaryPayment', 'system:capitalTransfer', 'system:debtPayment'];
-
 type PeriodMode = 'year' | 'range';
 
-function loadExcluded(): string[] {
-  try {
-    const raw = localStorage.getItem(EXCLUDED_STORAGE_KEY);
-    const parsed: unknown = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string') : [];
-  } catch {
-    return [];
-  }
-}
+const loadExcluded = () => parseExcluded(localStorage.getItem(EXCLUDED_STORAGE_KEY));
 
 const isSystemGroup = (g: ExpenseAnalyticsGroup) => g.kind === 'system';
-
-interface ChartSeries {
-  key: string;
-  name: string;
-  color: string;
-  // Ключи групп, которые входят в серию (у «Остального» — несколько)
-  groupKeys: string[];
-}
-
-interface ChartRow {
-  month: string;
-  label: string;
-  total: number;
-  [seriesKey: string]: number | string;
-}
-
-interface ExpensesTooltipProps {
-  active?: boolean;
-  payload?: { payload: ChartRow }[];
-  series: ChartSeries[];
-}
-
-const ExpensesTooltip: React.FC<ExpensesTooltipProps> = ({ active, payload, series }) => {
-  if (!active || !payload?.length) return null;
-  const row = payload[0].payload;
-  const rows = series
-    .map(s => ({ ...s, value: Number(row[s.key] ?? 0) }))
-    .filter(s => s.value > 0)
-    .sort((a, b) => b.value - a.value);
-  return (
-    <div className={styles.tooltip}>
-      <div className={styles.tooltipTitle}>{dayjs(`${row.month}-01`).format('MMMM YYYY')}</div>
-      {rows.map(s => (
-        <div key={s.key} className={styles.tooltipRow}>
-          <svg className={styles.lineKey} viewBox="0 0 12 2" aria-hidden><line x1="0" y1="1" x2="12" y2="1" stroke={s.color} strokeWidth="2" /></svg>
-          <strong className={styles.tooltipValue}>{formatPrice(s.value)}</strong>
-          <span className={styles.tooltipName}>{s.name}</span>
-        </div>
-      ))}
-      <div className={styles.tooltipTotal}>
-        Итого: <strong>{formatPrice(row.total)}</strong>
-      </div>
-    </div>
-  );
-};
 
 const itemColumns = [
   { title: 'Дата', dataIndex: 'date', key: 'date', width: 96, render: (d: string) => dayjs(d).format('DD.MM.YYYY') },
@@ -100,6 +44,8 @@ export const ExpensesTab: React.FC = () => {
   const [range, setRange] = useState<[Dayjs, Dayjs]>(() => [dayjs().subtract(11, 'month').startOf('month'), dayjs().startOf('month')]);
   const [data, setData] = useState<ExpenseAnalytics | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [excluded, setExcluded] = useState<string[]>(loadExcluded);
 
   const [from, to] = mode === 'year'
@@ -107,12 +53,18 @@ export const ExpensesTab: React.FC = () => {
     : [range[0].format('YYYY-MM'), range[1].format('YYYY-MM')];
 
   useEffect(() => {
+    // Быстро сменили период — устаревший ответ не должен затереть свежий
+    let cancelled = false;
     setLoading(true);
+    setError(null);
     expensesApi.getAnalytics(from, to)
-      .then(setData)
-      .catch((e: Error) => message.error(e.message))
-      .finally(() => setLoading(false));
-  }, [from, to]);
+      .then(d => { if (!cancelled) setData(d); })
+      .catch(e => { if (!cancelled) setError(getErrorMessage(e)); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [from, to, reloadKey]);
+
+  const reload = useCallback(() => setReloadKey(k => k + 1), []);
 
   useEffect(() => {
     localStorage.setItem(EXCLUDED_STORAGE_KEY, JSON.stringify(excluded));
@@ -122,40 +74,17 @@ export const ExpensesTab: React.FC = () => {
   const excludedSet = useMemo(() => new Set(excluded), [excluded]);
   const visibleGroups = useMemo(() => groups.filter(g => !excludedSet.has(g.key)), [groups, excludedSet]);
 
-  // Цвет закреплён за группой по её месту среди ВСЕХ групп периода, поэтому
-  // исключение одной группы не перекрашивает остальные
-  const slotByGroup = useMemo(() => {
-    const map = new Map<string, number | null>();
-    groups.forEach((g, i) => map.set(g.key, i < SERIES_SLOTS ? i : null));
-    return map;
-  }, [groups]);
+  // Цвет закреплён за группой по её месту среди всех групп периода (см. buildSlotMap)
+  const slotByGroup = useMemo(() => buildSlotMap(groups), [groups]);
   const groupSwatch = (key: string) => swatchClass(slotByGroup.get(key) ?? null);
 
-  const series = useMemo<ChartSeries[]>(() => {
-    const own: ChartSeries[] = [];
-    const rest: string[] = [];
-    groups.forEach((g, i) => {
-      if (excludedSet.has(g.key)) return;
-      if (i < SERIES_SLOTS) own.push({ key: `s${i}`, name: g.name, color: seriesColor(i), groupKeys: [g.key] });
-      else rest.push(g.key);
-    });
-    return rest.length ? [...own, { ...OTHER_SERIES, groupKeys: rest }] : own;
-  }, [groups, excludedSet]);
-
-  const chartData = useMemo<ChartRow[]>(() => (data?.months ?? []).map(m => {
-    const row: ChartRow = { month: m.month, label: dayjs(`${m.month}-01`).format('MMM YY'), total: 0 };
-    for (const s of series) {
-      const value = s.groupKeys.reduce((sum, key) => sum + (m.totals[key] ?? 0), 0);
-      row[s.key] = value;
-      row.total += value;
-    }
-    return row;
-  }), [data, series]);
+  const series = useMemo<ChartSeries[]>(() => buildSeries(groups, excludedSet), [groups, excludedSet]);
+  const chartData = useMemo<ChartRow[]>(() => buildChartData(data?.months ?? [], series), [data, series]);
 
   const total = visibleGroups.reduce((s, g) => s + g.total, 0);
   const operationsCount = visibleGroups.reduce((s, g) => s + g.count, 0);
   // Среднее — по уже наступившим месяцам периода, будущие не размывают его
-  const elapsedMonths = (data?.months ?? []).filter(m => !dayjs(`${m.month}-01`).isAfter(dayjs(), 'month')).length;
+  const elapsedMonths = countElapsedMonths(data?.months ?? []);
   const average = elapsedMonths > 0 ? total / elapsedMonths : 0;
   const biggest = visibleGroups[0];
 
@@ -214,6 +143,16 @@ export const ExpensesTab: React.FC = () => {
           />
         )}
       </div>
+
+      {error && (
+        <Alert
+          type="error"
+          showIcon
+          message="Не удалось загрузить расходы"
+          description={error}
+          action={<Button size="small" onClick={reload}>Повторить</Button>}
+        />
+      )}
 
       {groups.length > 0 && (
         <div className={styles.groupFilter}>

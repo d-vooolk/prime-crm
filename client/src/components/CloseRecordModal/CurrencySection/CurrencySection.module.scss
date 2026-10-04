@@ -1,0 +1,13 @@
+@use '@/styles/variables' as *;
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}

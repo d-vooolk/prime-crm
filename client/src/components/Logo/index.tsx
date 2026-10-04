@@ -2,15 +2,13 @@ import React from 'react';
 
 interface Props {
   className?: string;
-  style?: React.CSSProperties;
 }
 
-export const Logo: React.FC<Props> = ({ className, style }) => (
+export const Logo: React.FC<Props> = ({ className }) => (
   <svg
     viewBox="0 0 172 44"
     xmlns="http://www.w3.org/2000/svg"
     className={className}
-    style={style}
     role="img"
     aria-label="Prime CRM"
   >

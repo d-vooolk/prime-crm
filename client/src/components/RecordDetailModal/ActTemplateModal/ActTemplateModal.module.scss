@@ -1,0 +1,18 @@
+@use '@/styles/variables' as *;
+
+.hint {
+  margin-bottom: var(--spacing-md);
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.options {
+  display: flex !important;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tag {
+  margin-left: var(--spacing-sm);
+  font-size: 11px;
+}

@@ -1,10 +1,13 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Card, Row, Col, Form, Select, Input, Table } from 'antd';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Alert, Button, Card, Row, Col, Form, Select, Input, Table } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { carsApi } from '@/api/cars.api';
 import { wikiApi } from '@/api/wiki.api';
-import { CarBrand, CarModel, CarGeneration, WikiEntrySummary, WikiKey } from '@/types';
+import { CarModel, CarGeneration, WikiEntrySummary, WikiKey } from '@/types';
+import { useCarBrands } from '@/hooks/useReferenceData';
+import { useNotify } from '@/hooks/useNotify';
+import { getErrorMessage, isAbortError } from '@/utils/errors';
 import { WikiCarCard } from './WikiCarCard';
 import styles from './WikiPage.module.scss';
 
@@ -21,35 +24,48 @@ const generationLabel = (g: CarGeneration) =>
 const entryKey = (k: WikiKey) => `${k.markId}/${k.modelId}/${k.generationId}`;
 
 export const WikiCarsTab: React.FC<Props> = ({ markId, modelId, generationId, onSelect }) => {
-  const [brands, setBrands] = useState<CarBrand[]>([]);
+  const notify = useNotify();
+  const { data: brands = [] } = useCarBrands();
   const [models, setModels] = useState<CarModel[]>([]);
   const [generations, setGenerations] = useState<CarGeneration[]>([]);
   const [loadingModels, setLoadingModels] = useState(false);
   const [loadingGenerations, setLoadingGenerations] = useState(false);
   const [entries, setEntries] = useState<WikiEntrySummary[]>([]);
+  const [entriesError, setEntriesError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
 
-  const loadEntries = () => wikiApi.getEntries().then(setEntries).catch(() => {});
+  const loadEntries = useCallback(() => wikiApi.getEntries()
+    .then(data => { setEntries(data); setEntriesError(null); })
+    .catch(e => setEntriesError(getErrorMessage(e))), []);
 
   useEffect(() => {
-    carsApi.getBrands().then(setBrands).catch(() => {});
     loadEntries();
-  }, []);
+  }, [loadEntries]);
 
+  // Запросы моделей/поколений отменяются при смене выбора — поздний ответ не подменит список
   useEffect(() => {
     setModels([]);
-    if (!markId) return;
+    if (!markId) { setLoadingModels(false); return; }
+    const controller = new AbortController();
     setLoadingModels(true);
-    carsApi.getModels(markId).then(setModels).catch(() => {}).finally(() => setLoadingModels(false));
-  }, [markId]);
+    carsApi.getModels(markId, controller.signal)
+      .then(setModels)
+      .catch(e => { if (!isAbortError(e)) notify.error(e, 'Не удалось загрузить модели'); })
+      .finally(() => { if (!controller.signal.aborted) setLoadingModels(false); });
+    return () => controller.abort();
+  }, [markId, notify]);
 
   useEffect(() => {
     setGenerations([]);
-    if (!markId || !modelId) return;
+    if (!markId || !modelId) { setLoadingGenerations(false); return; }
+    const controller = new AbortController();
     setLoadingGenerations(true);
-    carsApi.getGenerations(markId, modelId)
-      .then(setGenerations).catch(() => {}).finally(() => setLoadingGenerations(false));
-  }, [markId, modelId]);
+    carsApi.getGenerations(markId, modelId, controller.signal)
+      .then(setGenerations)
+      .catch(e => { if (!isAbortError(e)) notify.error(e, 'Не удалось загрузить поколения'); })
+      .finally(() => { if (!controller.signal.aborted) setLoadingGenerations(false); });
+    return () => controller.abort();
+  }, [markId, modelId, notify]);
 
   const filledKeys = useMemo(() => new Set(entries.map(entryKey)), [entries]);
   const filledModels = useMemo(() => new Set(entries.map(e => `${e.markId}/${e.modelId}`)), [entries]);
@@ -157,6 +173,16 @@ export const WikiCarsTab: React.FC<Props> = ({ markId, modelId, generationId, on
       )}
 
       <Card title={`Заполненные карточки (${entries.length})`}>
+        {entriesError && (
+          <Alert
+            className={styles.entriesError}
+            type="error"
+            showIcon
+            message="Не удалось загрузить список карточек"
+            description={entriesError}
+            action={<Button size="small" onClick={loadEntries}>Повторить</Button>}
+          />
+        )}
         <Input
           className={styles.entriesSearch}
           prefix={<SearchOutlined />}

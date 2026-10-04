@@ -4,6 +4,7 @@ import cn from 'classnames';
 import { Record as CrmRecord, SmsType } from '@/types';
 import { formatPrice } from '@/utils/formatters';
 import { useAuthStore } from '@/store/authStore';
+import { isEmployee as isEmployeeRole } from '@/utils/roles';
 import styles from './RecordCard.module.scss';
 
 interface Props {
@@ -39,7 +40,7 @@ export const RecordCard: React.FC<Props> = ({ record, onClick }) => {
   const [photoLoaded, setPhotoLoaded] = useState(false);
   const [photoError, setPhotoError] = useState(false);
   const { user } = useAuthStore();
-  const isEmployee = user?.role === 'Сотрудник';
+  const isEmployee = isEmployeeRole(user);
 
   const total = deal
     ? deal.finalPrice
@@ -54,13 +55,18 @@ export const RecordCard: React.FC<Props> = ({ record, onClick }) => {
   const categoryColor = status === 'ACTIVE'
     ? (items[0]?.service?.category?.color ?? null)
     : null;
-  const cardStyle = categoryColor ? { background: toRgba(categoryColor, 0.14) } : undefined;
+  // Цвет категории приходит из данных — единственное динамическое значение, передаём его
+  // CSS-переменной, а сам фон задаёт класс .tinted
+  const cardStyle = categoryColor
+    ? { '--card-tint': toRgba(categoryColor, 0.14) } as React.CSSProperties
+    : undefined;
 
   return (
     <div
       className={cn(styles.card, {
         [styles.closed]: status === 'CLOSED',
         [styles.cancelled]: status === 'CANCELLED',
+        [styles.tinted]: !!categoryColor,
       })}
       style={cardStyle}
       onClick={onClick}
@@ -133,7 +139,7 @@ export const RecordCard: React.FC<Props> = ({ record, onClick }) => {
             ))}
             {items.length > 3 && (
               <div className={cn(styles.serviceItem, styles.serviceItemHiddenMobile)}>
-                <span style={{ color: 'var(--color-text-muted)' }}>
+                <span className={styles.moreServices}>
                   +{items.length - 3} услуги...
                 </span>
               </div>
@@ -146,11 +152,11 @@ export const RecordCard: React.FC<Props> = ({ record, onClick }) => {
             <div className={styles.total}>
               <span className={styles.totalLabel}>{deal ? 'Итого' : 'Предв. сумма'}</span>
               {totalPrepaid > 0 ? (
-                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span className={styles.totalAmount} style={{ textDecoration: 'line-through', opacity: 0.5, fontSize: 13 }}>
+                <span className={styles.totalWithPrepaid}>
+                  <span className={cn(styles.totalAmount, styles.totalStruck)}>
                     {formatPrice(total)}
                   </span>
-                  <span className={styles.totalAmount} style={{ color: 'var(--color-accent)' }}>
+                  <span className={cn(styles.totalAmount, styles.totalRemaining)}>
                     {formatPrice(total - totalPrepaid)}
                   </span>
                 </span>

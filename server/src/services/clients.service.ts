@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../prisma/client';
 import { AppError } from '../middleware/errorHandler';
+import { parseDay, nextDay } from '../utils/date';
 
 /** Фильтры списка клиентов (GET /api/clients). Все поля необязательные и комбинируются через И. */
 export interface ClientsFilter {
@@ -22,11 +23,6 @@ export interface ClientsFilter {
   to?: string;
 }
 
-/** Локальная полночь дня YYYY-MM-DD — границы дня как в расписании */
-const parseDay = (value: string) => {
-  const [y, m, d] = value.split('-').map(Number);
-  return new Date(y, m - 1, d);
-};
 
 /**
  * Условие на записи для фильтра «услуга за период». null — фильтр не задан.
@@ -36,11 +32,7 @@ function buildRecordWhere(filter: ClientsFilter): Prisma.RecordWhereInput | null
   if (!filter.serviceId && !filter.from && !filter.to) return null;
   const scheduledAt: Prisma.DateTimeFilter = {};
   if (filter.from) scheduledAt.gte = parseDay(filter.from);
-  if (filter.to) {
-    const end = parseDay(filter.to);
-    end.setDate(end.getDate() + 1);
-    scheduledAt.lt = end;
-  }
+  if (filter.to) scheduledAt.lt = nextDay(parseDay(filter.to));
   return {
     status: { not: 'CANCELLED' },
     ...((filter.from || filter.to) && { scheduledAt }),

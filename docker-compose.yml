@@ -2,10 +2,11 @@ services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
+    # Секреты — в .env рядом с этим файлом (не в git, образец — .env.example)
     environment:
       POSTGRES_DB: prime_crm
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?задайте POSTGRES_PASSWORD в .env}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -20,15 +21,19 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/prime_crm
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/prime_crm
       PORT: 3001
       NODE_ENV: production
-      CLIENT_URL: http://localhost:3000
+      CLIENT_URL: ${CLIENT_URL:?задайте CLIENT_URL в .env}
       TZ: Europe/Minsk
-      JWT_SECRET: prime-crm-jwt-secret-change-in-production
-      MASTER_EMAIL: admin@prime-auto.by
-      MASTER_PASSWORD: 82ehedub
+      JWT_SECRET: ${JWT_SECRET:?задайте JWT_SECRET в .env}
+      MASTER_EMAIL: ${MASTER_EMAIL:?задайте MASTER_EMAIL в .env}
+      MASTER_PASSWORD: ${MASTER_PASSWORD:?задайте MASTER_PASSWORD в .env}
       UPLOADS_DIR: /app/uploads
+      # Пуш-уведомления PWA; пусто — пуши выключены, остальное работает
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-}
     # Фото и видео вики лежат на хосте: пересборка контейнера их не трогает,
     # а git reset в deploy.sh не удаляет неотслеживаемую папку data/.
     volumes:
@@ -36,6 +41,12 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3001/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
 
   client:
     build:

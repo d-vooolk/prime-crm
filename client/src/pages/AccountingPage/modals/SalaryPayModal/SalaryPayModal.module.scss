@@ -1,0 +1,43 @@
+@use '@/styles/variables' as *;
+
+.payInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 16px 0;
+}
+
+.remaining,
+.overpaid {
+  font-size: 17px;
+}
+
+.remaining { color: var(--color-primary); }
+.overpaid { color: var(--color-error); }
+
+.fullWidth {
+  width: 100%;
+}
+
+.roundButtons {
+  display: flex;
+  gap: 8px;
+  margin-top: -8px;
+
+  > * {
+    flex: 1;
+  }
+}
+
+.roundHint {
+  margin: 4px 0 16px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.cardSwitch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}

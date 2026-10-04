@@ -1,0 +1,30 @@
+@use '@/styles/variables' as *;
+
+.enableRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-xs) 0 20px;
+}
+
+.label {
+  font-weight: 500;
+}
+
+.hint {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.block {
+  margin-bottom: 20px;
+}
+
+.phoneInput {
+  width: 200px;
+}
+
+.variables {
+  font-size: 12px;
+  line-height: 1.8;
+}

@@ -1,0 +1,24 @@
+@use '@/styles/variables' as *;
+
+.optionTitle {
+  font-weight: 600;
+}
+
+.optionMeta {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.fullWidth:global(.ant-select) {
+  width: 100%;
+}
+
+.addressBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.preWrap:global(.ant-input) {
+  white-space: pre-wrap;
+}

@@ -1,0 +1,22 @@
+@use '@/styles/variables' as *;
+
+.tooltip {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.label {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
+
+.blue { color: var(--color-chart-1); }
+.green { color: var(--color-chart-2); }
+.amber { color: var(--color-chart-3); }

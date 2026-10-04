@@ -1,0 +1,62 @@
+@use '@/styles/variables' as *;
+
+.tabContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.tabHeader {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.periodSelect {
+  width: 140px;
+}
+
+.chartsColumn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.emptyTop {
+  height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+}
+
+.iconGreen { color: var(--color-chart-2); }
+.iconBlue { color: var(--color-chart-1); }
+.iconPurple { color: var(--color-chart-4); }
+.iconAmber { color: var(--color-chart-3); }
+
+.statsRow {
+  @include mobile {
+    :global {
+      .ant-statistic-content {
+        display: flex;
+        align-items: center;
+        flex-wrap: nowrap;
+        gap: 4px;
+      }
+      .ant-statistic-content-value {
+        font-size: 15px !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .ant-statistic-content-prefix {
+        font-size: 14px;
+        flex-shrink: 0;
+      }
+      .ant-statistic-title {
+        font-size: 11px;
+        white-space: nowrap;
+      }
+    }
+  }
+}

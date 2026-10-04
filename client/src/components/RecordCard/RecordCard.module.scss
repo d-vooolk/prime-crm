@@ -23,6 +23,11 @@
     border-color: var(--color-record-closed-border);
   }
 
+  // Подложка цветом категории услуги (см. --card-tint в index.tsx)
+  &.tinted {
+    background: var(--card-tint);
+  }
+
   &.cancelled {
     background: var(--color-record-cancelled);
     border-color: var(--color-record-cancelled-border);
@@ -300,4 +305,25 @@
   &.smsLabelFailed {
     background: var(--color-status-cancelled);
   }
+}
+
+.moreServices {
+  color: var(--color-text-muted);
+}
+
+.totalWithPrepaid {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+// Полная сумма зачёркнута, рядом — остаток после предоплаты
+.totalAmount.totalStruck {
+  text-decoration: line-through;
+  opacity: 0.5;
+  font-size: 13px;
+}
+
+.totalAmount.totalRemaining {
+  color: var(--color-accent);
 }

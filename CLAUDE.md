@@ -353,35 +353,40 @@ GET    /api/analytics/revenue?from=&to=
 - Каждый роут регистрируется через отдельный router в `routes/`
 - Все ошибки выбрасываются через единый `AppError`, ловятся в `errorHandler`
 - Prisma-клиент — синглтон, импортируется из `src/prisma/client.ts`
-- ENV-переменные — только через `process.env`, все перечислены в `.env.example`
+- ENV-переменные — только через `process.env` (секреты — через `src/config/env.ts`, без значений по умолчанию), все перечислены в `.env.example`
+- Тело и query каждого запроса разбираются Zod-схемой через `parse()` из `middleware/validate.ts`. `req.body` никогда не передаётся в Prisma как есть
+- Права — на сервере, а не только в интерфейсе: `requireRole(ROLES.MANAGER)` на маршруте (`middleware/requireRole.ts`, роли в `utils/roles.ts`). Матрица прав повторяет клиентский `client/src/utils/roles.ts`
+- Несколько связанных записей в базу (особенно деньги) — в одной `prisma.$transaction(async tx => …)`. Функции, которые вызываются внутри транзакции, принимают `db: DbClient`
+- Деньги в базе — `Decimal @db.Decimal(14, 2)`. Расширение в `src/prisma/client.ts` отдаёт их числами. Новое денежное поле нужно добавить и туда, иначе оно придёт в JSON строкой
+- Хеш пароля скрыт глобально (`omit`). Где он нужен (вход), его запрашивают явно: `omit: { password: false }`
+- Логи — только через `utils/logger.ts` (в проде JSON-строки, `docker compose logs server`). Изменения денег пишутся автоматически в таблицу `AuditLog` (`src/prisma/audit.ts`), в интерфейсе журнал не показывается
+- Загрузка фото/видео — только через `utils/mediaUpload.ts`: формат проверяется по содержимому файла, а не по расширению
+- Тесты: `npm test` в `server/` и `client/` (vitest). Чистую логику выносить в отдельные функции и покрывать тестами
+
+### База данных и миграции
+- Схема меняется только миграциями: правка `schema.prisma` → `npx prisma migrate dev --name <что_меняем>` (нужна локальная база) или `npx prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --script` и файл в новой папке `prisma/migrations/<дата>_<имя>/migration.sql`
+- `prisma db push` в проде не используется. При старте контейнера `server/migrate.js` выполняет `prisma migrate deploy`, а базе без истории миграций один раз помечает применённой базовую миграцию `0_init`
+- Миграцию, которая меняет данные, оборачивать в `BEGIN; … COMMIT;`
+- Сотрудники связаны с записями и зарплатой по ФИО внешними ключами `ON UPDATE CASCADE`. Переименование переносит историю, удалить сотрудника с историей нельзя (только уволить)
+
+### PWA
+- Манифест и иконки — `client/public/` (копируются в сборку), service worker — `client/src/sw.ts` (workbox InjectManifest, только в продакшен-сборке; типы проверяет `tsconfig.sw.json`)
+- Регистрация, обновление версии, установка и пуш-подписка — `client/src/pwa/index.ts`; настройки устройства — `components/AppDeviceSettings`
+- Кеш: оболочка приложения — precache; `/api/uploads` — CacheFirst; GET `/api/*` — NetworkFirst (кеш только как запасной вариант без сети). При выходе из аккаунта кеш данных и пуш-подписка удаляются
+- Пуши — `server/src/services/push.service.ts` (web-push, ключи VAPID в `.env`). Триггеры: новая запись → мастеру записи, товар дошёл до порога → менеджерам, напоминания заметок (`noteReminders.ts`, раз в минуту)
+- `client/nginx.conf`: `sw.js`, `index.html` и манифест отдаются с `no-cache`, иначе телефоны застрянут на старой версии
+
+### Бэкапы
+- `.deploy/backup.sh` по cron на сервере каждый день в 03:30 UTC и перед каждым `deploy.sh`: дамп базы и снимок `data/uploads` в `/root/backups/prime-crm`
+- Хранится 7 ежедневных, 5 еженедельных и 12 ежемесячных копий базы, файлы — 7 снимков на жёстких ссылках
+- Внешнее хранилище подключается переменной `BACKUP_RCLONE_REMOTE` в `.env`
 
 ---
 
 ## Переменные окружения
 
-### server/.env.development
-```
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/prime_crm
-PORT=3001
-NODE_ENV=development
-```
-
-### server/.env.production
-```
-DATABASE_URL=postgresql://USER:PASSWORD@postgres:5432/prime_crm
-PORT=3001
-NODE_ENV=production
-```
-
-### client/.env.development
-```
-API_URL=http://localhost:3001
-```
-
-### client/.env.production
-```
-API_URL=/api
-```
+- **Продакшен:** `.env` рядом с `docker-compose.yml`, не в git, образец — `/.env.example`. В нём `POSTGRES_PASSWORD`, `JWT_SECRET`, `MASTER_EMAIL`, `MASTER_PASSWORD`, `CLIENT_URL`, `BACKUP_RCLONE_REMOTE`. Compose подставляет их в контейнеры; без обязательных переменных сервер не стартует.
+- **Разработка:** `server/.env.development`, образец — `server/.env.example`.
 
 ---
 

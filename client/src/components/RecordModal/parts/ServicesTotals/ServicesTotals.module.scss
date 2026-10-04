@@ -1,0 +1,70 @@
+@use '@/styles/variables' as *;
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.line {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.prepaid {
+  color: var(--color-status-closed);
+  font-weight: 600;
+}
+
+.strong {
+  font-weight: 600;
+}
+
+.totalLine {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.separated {
+  border-top: 1px solid var(--color-border);
+  margin-top: var(--spacing-xs);
+  padding-top: var(--spacing-xs);
+}
+
+.time {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.total {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+}
+
+// Под карточками на телефоне: своя линия сверху, шрифт мельче
+.compact {
+  gap: 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border);
+  margin-top: var(--spacing-xs);
+
+  .line {
+    font-size: 12px;
+    margin-bottom: 2px;
+
+    &:nth-child(2) {
+      margin-bottom: var(--spacing-xs);
+    }
+  }
+
+  .time {
+    font-size: 12px;
+  }
+
+  .total {
+    font-size: 16px;
+  }
+}

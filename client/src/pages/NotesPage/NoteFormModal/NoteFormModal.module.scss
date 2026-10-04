@@ -1,0 +1,9 @@
+@use '@/styles/variables' as *;
+
+.form {
+  margin-top: var(--spacing-md);
+}
+
+.fullWidth {
+  width: 100%;
+}

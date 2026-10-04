@@ -19,6 +19,8 @@ import { useAuthStore } from '@/store/authStore';
 import { useWikiStore } from '@/store/wikiStore';
 import { Logo } from '@/components/Logo';
 import { recordsApi } from '@/api/records.api';
+import { canSeePath, isManagerOrAbove } from '@/utils/roles';
+import { useStockLowCount } from '@/hooks/useStock';
 import styles from './SideBar.module.scss';
 import cn from 'classnames';
 
@@ -36,17 +38,16 @@ const NAV_ITEMS = [
 export const SideBar: React.FC = () => {
   const { selectedDate, setSelectedDate } = useUiStore();
   const { user } = useAuthStore();
-  const visibleNavItems = NAV_ITEMS.filter(item => {
-    if (user?.role === 'Сотрудник') {
-      return item.path === '/schedule' || item.path === '/wiki' || item.path === '/accounting' || item.path === '/settings';
-    }
-    return true;
-  });
+  const visibleNavItems = NAV_ITEMS.filter(item => canSeePath(user, item.path));
   const wikiPendingCount = useWikiStore(s => s.pendingCount);
   // Бейдж правок вики на проверке (счётчик ненулевой только у проверяющих)
-  const navIcon = (item: typeof NAV_ITEMS[number]) => (item.path === '/wiki'
-    ? <Badge count={wikiPendingCount} size="small">{item.icon}</Badge>
-    : item.icon);
+  // Склад живёт в настройках → справочник: бейдж заканчивающихся товаров на пункте «Настройки»
+  const { data: lowStockCount = 0 } = useStockLowCount(isManagerOrAbove(user));
+  const navIcon = (item: typeof NAV_ITEMS[number]) => {
+    if (item.path === '/wiki') return <Badge count={wikiPendingCount} size="small">{item.icon}</Badge>;
+    if (item.path === '/settings') return <Badge count={lowStockCount} size="small" color="var(--color-warning)">{item.icon}</Badge>;
+    return item.icon;
+  };
   const navigate = useNavigate();
   const location = useLocation();
   const [calendarValue, setCalendarValue] = useState<Dayjs>(dayjs(selectedDate));
@@ -56,11 +57,19 @@ export const SideBar: React.FC = () => {
     setCalendarValue(dayjs(selectedDate));
   }, [selectedDate]);
 
+  const calendarYear = calendarValue.year();
+  const calendarMonth = calendarValue.month() + 1;
+
   useEffect(() => {
-    recordsApi.getDatesWithRecords(calendarValue.year(), calendarValue.month() + 1)
+    // Быстро листают месяцы — ответ за прошлый месяц не должен затереть текущий
+    const controller = new AbortController();
+    recordsApi.getDatesWithRecords(calendarYear, calendarMonth, controller.signal)
       .then(dates => setDatesWithRecords(new Set(dates)))
-      .catch(() => {});
-  }, [calendarValue.year(), calendarValue.month()]); // eslint-disable-line react-hooks/exhaustive-deps
+      .catch(() => {
+        // Намеренно молча: точки в календаре — украшение, без них расписание работает
+      });
+    return () => controller.abort();
+  }, [calendarYear, calendarMonth]);
 
   const prevMonth = () => setCalendarValue(v => v.subtract(1, 'month'));
   const nextMonth = () => setCalendarValue(v => v.add(1, 'month'));

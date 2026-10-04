@@ -1,0 +1,32 @@
+@use '@/styles/variables' as *;
+
+.header {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-bottom: 12px;
+  gap: var(--spacing-sm);
+
+  @include mobile {
+    flex-direction: column-reverse;
+    align-items: stretch;
+
+    :global(.ant-tag) {
+      text-align: center;
+      height: auto;
+      line-height: 1.5;
+      padding: 6px 10px;
+      white-space: normal;
+    }
+
+    :global(.ant-btn) {
+      width: 100%;
+    }
+  }
+}
+
+.hint {
+  white-space: normal;
+  line-height: 1.5;
+  padding: 4px 10px;
+}

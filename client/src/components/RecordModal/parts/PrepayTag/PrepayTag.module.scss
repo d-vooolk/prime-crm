@@ -1,0 +1,6 @@
+@use '@/styles/variables' as *;
+
+.tag:global(.ant-tag) {
+  font-size: 10px;
+  margin-top: 2px;
+}

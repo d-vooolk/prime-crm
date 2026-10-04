@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Steps, Button, Form, Grid } from 'antd';
 import cn from 'classnames';
-import dayjs from 'dayjs';
 const { useBreakpoint } = Grid;
 import { Step1Client } from './steps/Step1Client';
 import { Step2Services } from './steps/Step2Services';
 import { Step3Summary } from './steps/Step3Summary';
 import { RecordFormData, emptyFormData } from './types';
+import { buildRecordPayload, missingClientFields, recordToFormData } from './recordForm';
 import { recordsApi } from '@/api/records.api';
 import { clientsApi } from '@/api/clients.api';
 import { useNotify } from '@/hooks/useNotify';
@@ -20,70 +20,6 @@ interface Props {
   initialDate?: string;
   editRecord?: CrmRecord;
   onSavedClosed?: () => void;
-}
-
-function recordToFormData(record: CrmRecord): RecordFormData {
-  return {
-    clientId: record.clientId,
-    clientName: record.client.name,
-    clientPhone: record.client.phone,
-    clientNotes: record.notes || '',
-    carId: record.carId,
-    carBrandId: record.car.brandId,
-    carBrand: record.car.brand,
-    carModelId: record.car.modelId,
-    carModel: record.car.model,
-    carGenerationId: record.car.generationId || '',
-    carGenerationName: record.car.generationName || '',
-    carYear: record.car.year,
-    carPlateNumber: record.car.plateNumber || '',
-    carMileage: record.car.mileage || '',
-    date: dayjs(record.scheduledAt).startOf('day').toISOString(),
-    time: dayjs(record.scheduledAt).format('HH:mm'),
-    serviceman: record.serviceman,
-    receptionist: record.receptionist || '',
-    isLegalEntity: record.isLegalEntity || false,
-    legalCompanyName: record.legalCompanyName || '',
-    legalAddress: record.legalAddress || '',
-    legalActualAddress: record.legalActualAddress || '',
-    legalPostalAddress: record.legalPostalAddress || '',
-    legalBankDetails: record.legalBankDetails || '',
-    legalBic: record.legalBic || '',
-    legalUnp: record.legalUnp || '',
-    legalOkpo: record.legalOkpo || '',
-    legalPhone: record.legalPhone || '',
-    legalEmail: record.legalEmail || '',
-    legalRepresentativePosition: record.legalRepresentativePosition || '',
-    legalRepresentativePositionGenitive: record.legalRepresentativePositionGenitive || '',
-    legalRepresentative: record.legalRepresentative || '',
-    legalRepresentativeGenitive: record.legalRepresentativeGenitive || '',
-    legalBasis: record.legalBasis || '',
-    legalVin: record.legalVin || '',
-    legalEndDate: record.legalEndDate || '',
-    executorSignatoryName: record.executorSignatoryName || '',
-    executorSignatoryNameGenitive: record.executorSignatoryNameGenitive || '',
-    executorSignatoryPosition: record.executorSignatoryPosition || '',
-    executorSignatoryPositionGenitive: record.executorSignatoryPositionGenitive || '',
-    executorSignatoryBasis: record.executorSignatoryBasis || '',
-    services: record.items.map(item => ({
-      serviceId: item.serviceId,
-      serviceName: item.service.name,
-      categoryName: item.service.category?.name || '',
-      price: item.price,
-      quantity: item.quantity,
-      estimatedTime: item.service.estimatedTime,
-      hasEquipment: item.service.hasEquipment ?? false,
-      equipmentId: item.equipmentId ?? undefined,
-      prepaidAmount: item.prepaidAmount ?? 0,
-      prepaidByCard: item.prepaidByCard ?? false,
-      prepaidCurrency: item.prepaidCurrency ?? null,
-      prepaidCurrencyAmount: item.prepaidCurrencyAmount ?? null,
-      prepaidRate: item.prepaidRate ?? null,
-      isProduct: item.service.isProduct ?? false,
-      servicemanName: item.servicemanName ?? undefined,
-      servicemanSplit: item.servicemanSplit?.length ? item.servicemanSplit : undefined,
-    })),
-  };
 }
 
 const STEPS = [
@@ -120,20 +56,9 @@ export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initial
     onClose();
   };
 
-  const isPhoneValid = (phone: string) => {
-    return phone.replace(/\D/g, '').length >= 11;
-  };
-
   const validateStep = (): boolean => {
     if (step === 0) {
-      const missing: string[] = [];
-      if (!data.clientName) missing.push('ФИО клиента');
-      if (!isPhoneValid(data.clientPhone)) missing.push('номер телефона');
-      if (!data.carBrandId) missing.push('марка автомобиля');
-      if (!data.carModelId) missing.push('модель автомобиля');
-      if (!data.carYear) missing.push('год автомобиля');
-      if (!data.date) missing.push('дата');
-      if (!data.time) missing.push('время');
+      const missing = missingClientFields(data);
       if (missing.length > 0) {
         notify.warning(
           'Заполните обязательные поля',
@@ -153,78 +78,7 @@ export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initial
     if (validateStep()) setStep(s => s + 1);
   };
 
-  // Назначения сотрудников отправляем только если они заданы: если оба поля
-  // опустить, сервер сохранит то, что было у позиции раньше, а при закрытии
-  // сделки подставится основной мастер записи (шаг 1).
-  const servicemanAssignment = (s: RecordFormData['services'][number]) => {
-    if (s.servicemanSplit?.length) {
-      return { servicemanName: null, servicemanSplit: s.servicemanSplit };
-    }
-    if (s.servicemanName !== undefined || s.servicemanSplit !== undefined) {
-      return { servicemanName: s.servicemanName ?? null, servicemanSplit: null };
-    }
-    return {};
-  };
-
-  const buildPayload = (clientId: string) => {
-    const [hours, minutes] = data.time.split(':').map(Number);
-    const scheduledAt = new Date(data.date);
-    scheduledAt.setHours(hours, minutes, 0, 0);
-    return {
-      clientId,
-      car: {
-        brand: data.carBrand,
-        brandId: data.carBrandId,
-        model: data.carModel,
-        modelId: data.carModelId,
-        generation: data.carGenerationName,
-        generationId: data.carGenerationId,
-        generationName: data.carGenerationName,
-        year: data.carYear,
-        plateNumber: data.carPlateNumber,
-        mileage: data.carMileage,
-      },
-      scheduledAt: scheduledAt.toISOString(),
-      serviceman: data.serviceman,
-      receptionist: data.receptionist,
-      notes: data.clientNotes,
-      isLegalEntity: data.isLegalEntity,
-      legalCompanyName: data.legalCompanyName,
-      legalAddress: data.legalAddress,
-      legalActualAddress: data.legalActualAddress,
-      legalPostalAddress: data.legalPostalAddress,
-      legalBankDetails: data.legalBankDetails,
-      legalBic: data.legalBic,
-      legalUnp: data.legalUnp,
-      legalOkpo: data.legalOkpo,
-      legalPhone: data.legalPhone,
-      legalEmail: data.legalEmail,
-      legalRepresentativePosition: data.legalRepresentativePosition,
-      legalRepresentativePositionGenitive: data.legalRepresentativePositionGenitive,
-      legalRepresentative: data.legalRepresentative,
-      legalRepresentativeGenitive: data.legalRepresentativeGenitive,
-      legalBasis: data.legalBasis,
-      legalVin: data.legalVin,
-      legalEndDate: data.legalEndDate,
-      executorSignatoryName: data.executorSignatoryName,
-      executorSignatoryNameGenitive: data.executorSignatoryNameGenitive,
-      executorSignatoryPosition: data.executorSignatoryPosition,
-      executorSignatoryPositionGenitive: data.executorSignatoryPositionGenitive,
-      executorSignatoryBasis: data.executorSignatoryBasis,
-      items: data.services.map(s => ({
-        serviceId: s.serviceId,
-        price: s.price,
-        quantity: s.quantity,
-        equipmentId: s.equipmentId,
-        prepaidAmount: s.prepaidAmount || 0,
-        prepaidByCard: s.prepaidByCard || false,
-        prepaidCurrency: s.prepaidCurrency ?? null,
-        prepaidCurrencyAmount: s.prepaidCurrencyAmount ?? null,
-        prepaidRate: s.prepaidRate ?? null,
-        ...servicemanAssignment(s),
-      })),
-    };
-  };
+  const buildPayload = (clientId: string) => buildRecordPayload(data, clientId);
 
   const handleSave = async () => {
     setLoading(true);
@@ -262,10 +116,7 @@ export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initial
       onSuccess();
       handleClose();
     } catch (e: unknown) {
-      notify.error(
-        editRecord ? 'Ошибка обновления записи' : 'Ошибка создания записи',
-        e instanceof Error ? e.message : undefined,
-      );
+      notify.error(e, editRecord ? 'Ошибка обновления записи' : 'Ошибка создания записи');
     } finally {
       setLoading(false);
     }

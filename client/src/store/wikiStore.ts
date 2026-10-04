@@ -16,8 +16,5 @@ export const useWikiStore = create<WikiState>()((set) => ({
   },
 }));
 
-export const WIKI_REVIEWER_ROLES = ['Создатель', 'Директор', 'Менеджер'];
-
-export function isWikiReviewer(user: { isMaster: boolean; role?: string } | null) {
-  return !!user && (user.isMaster || WIKI_REVIEWER_ROLES.includes(user.role || ''));
-}
+// Проверка прав живёт в utils/roles.ts; реэкспорт — чтобы не менять импорты вики
+export { WIKI_REVIEWER_ROLES, isWikiReviewer } from '@/utils/roles';

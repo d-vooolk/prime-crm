@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Card, Button, Segmented, Tag, Popconfirm, Empty, Spin, Tooltip, Alert, InputNumber,
 } from 'antd';
@@ -10,6 +10,7 @@ import { WikiKey, WikiRevision } from '@/types';
 import { useWikiStore } from '@/store/wikiStore';
 import { useNotify } from '@/hooks/useNotify';
 import { formatPrice } from '@/utils/formatters';
+import { getErrorMessage } from '@/utils/errors';
 import { WikiPhotoGallery } from './WikiPhotoGallery';
 import styles from './WikiPage.module.scss';
 
@@ -78,7 +79,7 @@ const RevisionCard: React.FC<{
       notify.success(success);
       onDone();
     } catch (e) {
-      notify.error((e as Error).message);
+      notify.error(e);
     } finally {
       setBusy(false);
     }
@@ -216,17 +217,29 @@ export const WikiReviewTab: React.FC<Props> = ({ bonusAmount, onOpenCar }) => {
   const [status, setStatus] = useState<'PENDING' | 'DONE'>('PENDING');
   const [revisions, setRevisions] = useState<WikiRevision[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  // Номер последнего запроса: при быстром переключении вкладок ответ старой не перетрёт новую
+  const requestIdRef = useRef(0);
 
-  const load = () => {
+  const load = useCallback(() => {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     wikiApi.getRevisions(status)
-      .then(setRevisions)
-      .catch(() => setRevisions([]))
-      .finally(() => setLoading(false));
+      .then(data => {
+        if (requestId !== requestIdRef.current) return;
+        setRevisions(data);
+        setLoadError(null);
+      })
+      .catch(e => {
+        if (requestId !== requestIdRef.current) return;
+        setRevisions([]);
+        setLoadError(getErrorMessage(e));
+      })
+      .finally(() => { if (requestId === requestIdRef.current) setLoading(false); });
     refreshPendingCount();
-  };
+  }, [status, refreshPendingCount]);
 
-  useEffect(load, [status]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(load, [load]);
 
   return (
     <div className={styles.section}>
@@ -245,8 +258,18 @@ export const WikiReviewTab: React.FC<Props> = ({ bonusAmount, onOpenCar }) => {
         <Alert type="info" showIcon message="Размер премии за заполнение вики не задан — укажите его во вкладке «Настройки»." />
       )}
 
+      {loadError && (
+        <Alert
+          type="error"
+          showIcon
+          message="Не удалось загрузить правки"
+          description={loadError}
+          action={<Button size="small" onClick={load}>Повторить</Button>}
+        />
+      )}
+
       <Spin spinning={loading}>
-        {revisions.length === 0 ? (
+        {loadError ? null : revisions.length === 0 ? (
           <Empty description={status === 'PENDING' ? 'Новых правок нет' : 'Проверенных правок пока нет'} />
         ) : (
           <div className={styles.revisionList}>

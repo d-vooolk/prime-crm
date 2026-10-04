@@ -1,24 +1,32 @@
 import React, { useState } from 'react';
-import { Form, Input, Button, message } from 'antd';
+import { Form, Input, Button, Alert } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '@/api/auth.api';
 import { useAuthStore } from '@/store/authStore';
 import { Logo } from '@/components/Logo';
+import { getErrorMessage } from '@/utils/errors';
 import styles from './LoginPage.module.scss';
 
 export const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
-  const { setAuth } = useAuthStore();
+  const [error, setError] = useState<string | null>(null);
+  const { setAuth, logoutReason, clearLogoutReason } = useAuthStore();
   const navigate = useNavigate();
+
+  // Причина выхода (сессия истекла) показывается до первой попытки входа
+  const shownError = error ?? logoutReason;
 
   const handleSubmit = async (values: { email: string; password: string }) => {
     setLoading(true);
+    setError(null);
+    clearLogoutReason();
     try {
       const { token, user } = await authApi.login(values.email, values.password);
       setAuth(token, user);
       navigate('/schedule', { replace: true });
     } catch (e: unknown) {
-      message.error(e instanceof Error ? e.message : 'Ошибка входа');
+      // Неверный пароль (401) и блокировка после неудачных попыток (429) — текст от сервера
+      setError(getErrorMessage(e, 'Ошибка входа'));
     } finally {
       setLoading(false);
     }
@@ -32,6 +40,8 @@ export const LoginPage: React.FC = () => {
         </div>
 
         <h2 className={styles.title}>Вход в систему</h2>
+
+        {shownError && <Alert className={styles.alert} type="error" showIcon message={shownError} />}
 
         <Form layout="vertical" onFinish={handleSubmit} size="large">
           <Form.Item
@@ -56,7 +66,7 @@ export const LoginPage: React.FC = () => {
             htmlType="submit"
             loading={loading}
             block
-            style={{ marginTop: 8 }}
+            className={styles.submit}
           >
             Войти
           </Button>

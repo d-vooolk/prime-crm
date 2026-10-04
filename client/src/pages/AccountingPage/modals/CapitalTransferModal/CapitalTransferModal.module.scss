@@ -1,0 +1,17 @@
+@use '@/styles/variables' as *;
+
+.capitalTransfer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-md);
+}
+
+.label {
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.fullWidth {
+  width: 100%;
+}

@@ -8,8 +8,8 @@
 
   @include mobile {
     flex-direction: column;
-    padding-top: 48px;
-    padding-bottom: var(--bottom-nav-height);
+    padding-top: calc(48px + env(safe-area-inset-top));
+    padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom));
   }
 }
 

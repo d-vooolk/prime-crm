@@ -56,7 +56,8 @@
   font-weight: 900;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #fff;
+  // Надпись всегда поверх тёмной подложки — белая в обеих темах
+  color: var(--color-confetti-9);
   text-shadow:
     0 0 30px rgba(52, 211, 153, 0.9),
     0 0 60px rgba(52, 211, 153, 0.5),
@@ -69,6 +70,11 @@
   position: absolute;
   top: 50%;
   left: 50%;
+  width: var(--size);
+  height: var(--size);
+  margin-left: calc(var(--size) / -2);
+  margin-top: calc(var(--size) / -2);
+  background-color: var(--particle-color);
   border-radius: 50%;
   transform-origin: 0 0;
   animation: particle var(--dur) cubic-bezier(0.2, 0.8, 0.4, 1) var(--delay) forwards;

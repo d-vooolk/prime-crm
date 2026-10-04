@@ -1,0 +1,19 @@
+@use '@/styles/variables' as *;
+
+.toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+.strong {
+  font-weight: 500;
+}
+
+.muted {
+  color: var(--color-text-secondary);
+}
+
+.fullWidth {
+  width: 100%;
+}

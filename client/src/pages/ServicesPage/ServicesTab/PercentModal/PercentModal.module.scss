@@ -1,0 +1,36 @@
+@use '@/styles/variables' as *;
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) 0;
+}
+
+.switchRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.switchLabel {
+  font-size: 14px;
+}
+
+.fieldLabel {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.fullWidth {
+  width: 100%;
+}
+
+.note {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  padding: 6px 10px;
+  background: var(--color-surface-2);
+  border-radius: 6px;
+}

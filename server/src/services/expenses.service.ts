@@ -1,5 +1,5 @@
 import { Prisma } from '@prisma/client';
-import { prisma } from '../prisma/client';
+import { prisma, DbClient } from '../prisma/client';
 import { AppError } from '../middleware/errorHandler';
 
 // Стандартный список категорий затрат — засевается при первом старте (bootstrap/expenseCategories.ts)
@@ -94,7 +94,7 @@ type SystemMarks = {
 const isSystemExpense = (tx: SystemMarks) =>
   !!(tx.founderSalary || tx.salaryPayment || tx.capitalTransfer || tx.debtPayment);
 
-async function findByName(name: string, tx: Prisma.TransactionClient = prisma) {
+async function findByName(name: string, tx: DbClient = prisma) {
   return tx.expenseCategory.findFirst({ where: { name: { equals: name, mode: 'insensitive' } } });
 }
 
@@ -136,7 +136,7 @@ export const expensesService = {
    * Категория по введённому названию: существующая (без учёта регистра) или новая.
    * undefined — поле не передано (не трогаем), null/пустая строка — убрать категорию.
    */
-  async resolveCategoryId(rawName: string | null | undefined, tx: Prisma.TransactionClient = prisma) {
+  async resolveCategoryId(rawName: string | null | undefined, tx: DbClient = prisma) {
     if (rawName === undefined) return undefined;
     const name = normalizeName(rawName ?? '');
     if (!name) return null;

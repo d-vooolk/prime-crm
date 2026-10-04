@@ -1,0 +1,47 @@
+@use '@/styles/variables' as *;
+
+// ─── Десктоп ────────────────────────────────────────
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.footerDelete {
+  display: flex;
+  align-items: center;
+}
+
+.footerSecondary {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.footerPrimary {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+// ─── Телефон ────────────────────────────────────────
+
+.footerMobile {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.footerMobileRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.footerMobileFlex {
+  flex: 1;
+  min-width: 0;
+}

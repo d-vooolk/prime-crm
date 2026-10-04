@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Drawer, Descriptions, Divider, Empty, Tag, Collapse, Spin, Table } from 'antd';
+import { Alert, Button, Drawer, Descriptions, Divider, Empty, Tag, Collapse, Spin, Table } from 'antd';
 import { clientsApi } from '@/api/clients.api';
 import { ClientWithRecords, Record as CrmRecord, RecordItem } from '@/types';
 import { formatDate, formatTime, formatPrice } from '@/utils/formatters';
+import { getErrorMessage } from '@/utils/errors';
 import styles from './ClientHistoryDrawer.module.scss';
 
 interface Props {
@@ -204,17 +205,20 @@ export const ClientHistoryDrawer: React.FC<Props> = ({
 }) => {
   const [client, setClient] = useState<ClientWithRecords | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  // Инкремент — повторная загрузка по кнопке «Повторить»
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     if (!open || !clientId) return;
     let cancelled = false;
     setLoading(true);
     clientsApi.getById(clientId)
-      .then(data => { if (!cancelled) setClient(data); })
-      .catch(() => { if (!cancelled) setClient(null); })
+      .then(data => { if (!cancelled) { setClient(data); setLoadError(null); } })
+      .catch(e => { if (!cancelled) { setClient(null); setLoadError(getErrorMessage(e)); } })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [open, clientId, refreshKey]);
+  }, [open, clientId, refreshKey, retryKey]);
 
   const records = client?.records || [];
   const closedCount = records.filter(r => r.status === 'CLOSED').length;
@@ -233,7 +237,13 @@ export const ClientHistoryDrawer: React.FC<Props> = ({
       {loading && !client ? (
         <div className={styles.loader}><Spin /></div>
       ) : !client ? (
-        <Empty description="Не удалось загрузить клиента" />
+        <Alert
+          type="error"
+          showIcon
+          message="Не удалось загрузить клиента"
+          description={loadError}
+          action={<Button size="small" onClick={() => setRetryKey(k => k + 1)}>Повторить</Button>}
+        />
       ) : (
         <>
           <Descriptions size="small" column={1}>

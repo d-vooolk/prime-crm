@@ -1,0 +1,39 @@
+@use '@/styles/variables' as *;
+
+// Составные селекторы — чтобы перебить отступы antd
+.iconButton:global(.ant-btn) {
+  padding: 0 4px;
+}
+
+.splitIcon {
+  color: var(--color-text-secondary);
+}
+
+.splitIconActive {
+  color: var(--color-primary);
+}
+
+.tag:global(.ant-tag) {
+  margin: 0;
+}
+
+.clickable {
+  cursor: pointer;
+}
+
+.split {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.cancelSplit:global(.ant-btn) {
+  padding: 0 4px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.select:global(.ant-select) {
+  width: 100%;
+}

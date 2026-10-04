@@ -1,5 +1,5 @@
 import http from './http';
-import { Record, ForeignCurrency, CurrencyPart } from '@/types';
+import { Record, ForeignCurrency, CurrencyPart, ClientSource, RecordMedia } from '@/types';
 
 export interface CompanySuggestion {
   legalCompanyName: string;
@@ -65,6 +65,7 @@ export interface CreateRecordDto {
   executorSignatoryPosition?: string;
   executorSignatoryPositionGenitive?: string;
   executorSignatoryBasis?: string;
+  clientSource?: ClientSource | null;
   items: Array<{ serviceId: string; price: number; quantity: number; netProfit?: number; servicemanName?: string | null; equipmentId?: string; servicemanSplit?: Array<{ name: string; amount: number }> | null; prepaidAmount?: number; prepaidByCard?: boolean; prepaidCurrency?: ForeignCurrency | null; prepaidCurrencyAmount?: number | null; prepaidRate?: number | null }>;
 }
 
@@ -80,16 +81,16 @@ export interface CloseDealDto {
 }
 
 export const recordsApi = {
-  getByDate: (date: string) =>
-    http.get<{ data: Record[] }>('/records', { params: { date } }).then(r => r.data.data),
+  getByDate: (date: string, signal?: AbortSignal) =>
+    http.get<{ data: Record[] }>('/records', { params: { date }, signal }).then(r => r.data.data),
 
-  getDatesWithRecords: (year: number, month: number) =>
-    http.get<{ data: string[] }>('/records/dates', { params: { year, month } }).then(r => r.data.data),
+  getDatesWithRecords: (year: number, month: number, signal?: AbortSignal) =>
+    http.get<{ data: string[] }>('/records/dates', { params: { year, month }, signal }).then(r => r.data.data),
 
-  getIncomplete: () => {
+  getIncomplete: (signal?: AbortSignal) => {
     const date = new Date();
     date.setHours(0, 0, 0, 0);
-    return http.get<{ data: Record[] }>('/records/incomplete', { params: { date: date.toISOString() } }).then(r => r.data.data);
+    return http.get<{ data: Record[] }>('/records/incomplete', { params: { date: date.toISOString() }, signal }).then(r => r.data.data);
   },
 
   getClosedOnDate: (date: string) =>
@@ -97,6 +98,25 @@ export const recordsApi = {
 
   getById: (id: string) =>
     http.get<{ data: Record }>(`/records/${id}`).then(r => r.data.data),
+
+  // Фото и видео нюансов авто — хранятся год
+  getMedia: (recordId: string) =>
+    http.get<{ data: RecordMedia[] }>(`/records/${recordId}/media`).then(r => r.data.data),
+
+  uploadMedia: (recordId: string, file: File, onProgress?: (percent: number) => void) => {
+    const form = new FormData();
+    form.append('file', file);
+    return http.post<{ data: RecordMedia }>(`/records/${recordId}/media`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 0,
+      onUploadProgress: e => {
+        if (onProgress && e.total) onProgress(Math.round((e.loaded / e.total) * 100));
+      },
+    }).then(r => r.data.data);
+  },
+
+  deleteMedia: (recordId: string, mediaId: string) =>
+    http.delete(`/records/${recordId}/media/${mediaId}`),
 
   create: (data: CreateRecordDto) =>
     http.post<{ data: Record }>('/records', data).then(r => r.data.data),

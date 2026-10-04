@@ -1,0 +1,23 @@
+@use '@/styles/variables' as *;
+
+.paid {
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+.none {
+  color: var(--color-text-secondary);
+}
+
+.diff {
+  margin-top: 16px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--color-error-bg);
+  border: 1px solid var(--color-error-border);
+  font-size: 13px;
+}
+
+.diffAmount {
+  color: var(--color-error);
+}

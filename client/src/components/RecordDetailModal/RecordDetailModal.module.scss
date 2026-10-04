@@ -11,6 +11,10 @@
 .modalContent {
   @include mobile {
     height: 100dvh;
+    // Установленное приложение (PWA) рисуется под статус-баром и полоской «домой» —
+    // прозрачные рамки сдвигают содержимое, не трогая отступы antd (фон тянется под рамку)
+    border-top: env(safe-area-inset-top) solid transparent;
+    border-bottom: env(safe-area-inset-bottom) solid transparent;
     border-radius: 0 !important;
     display: flex;
     flex-direction: column;
@@ -40,74 +44,8 @@
   }
 }
 
-// ─── Desktop footer ─────────────────────────────────
-
-.footer {
-  display: flex;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.footerDelete {
+.title {
   display: flex;
   align-items: center;
-}
-
-.footerSecondary {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.footerPrimary {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-// ─── Mobile footer ───────────────────────────────────
-
-.footerMobile {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.footerMobileRow {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.footerMobileFlex {
-  flex: 1;
-  min-width: 0;
-}
-
-.historyButton {
-  padding-left: 0;
-  margin-top: -4px;
-}
-
-.multiline {
-  white-space: pre-line;
-  overflow-wrap: anywhere;
-}
-
-.textBlock {
-  margin-top: var(--spacing-sm);
-}
-
-.textBlockLabel {
-  color: var(--color-text-secondary);
-  font-size: 13px;
-  margin-bottom: 2px;
-}
-
-.carLinks {
-  display: flex;
-  flex-wrap: wrap;
-  column-gap: var(--spacing-md);
+  gap: 12px;
 }

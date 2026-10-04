@@ -1,0 +1,16 @@
+@use '@/styles/variables' as *;
+
+// Панель действий над таблицей («Добавить сотрудника»)
+.tabActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+
+  @include mobile {
+    :global(.ant-btn) { width: 100%; }
+  }
+}
+
+.dismissed {
+  margin-top: var(--spacing-md);
+}

@@ -1,0 +1,12 @@
+@use '@/styles/variables' as *;
+
+.fullWidth {
+  width: 100%;
+}
+
+.switchRow {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: 12px;
+}

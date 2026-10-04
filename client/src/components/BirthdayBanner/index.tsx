@@ -13,7 +13,9 @@ export const BirthdayBanner: React.FC = () => {
   const [people, setPeople] = useState<BirthdayPerson[]>([]);
 
   useEffect(() => {
-    servicesApi.getTodayBirthdays().then(setPeople).catch(() => {});
+    servicesApi.getTodayBirthdays().then(setPeople).catch(() => {
+      // Намеренно молча: баннер — украшение, при ошибке его просто не показываем
+    });
   }, []);
 
   if (people.length === 0) return null;

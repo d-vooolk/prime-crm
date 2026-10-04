@@ -1,0 +1,10 @@
+@use '@/styles/variables' as *;
+
+// Заглушка той же высоты, что и график, — карточки не прыгают при загрузке
+.empty {
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+}

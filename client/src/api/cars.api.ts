@@ -29,11 +29,11 @@ export const carsApi = {
     http.get<{ data: CarBrand[] }>('/cars/marks', { params: manualOnly ? { manualOnly: true } : undefined })
       .then(r => r.data.data),
 
-  getModels: (brandId: string) =>
-    http.get<{ data: CarModel[] }>(`${marksUrl(brandId)}/models`).then(r => r.data.data),
+  getModels: (brandId: string, signal?: AbortSignal) =>
+    http.get<{ data: CarModel[] }>(`${marksUrl(brandId)}/models`, { signal }).then(r => r.data.data),
 
-  getGenerations: (brandId: string, modelId: string) =>
-    http.get<{ data: CarGeneration[] }>(`${modelsUrl(brandId, modelId)}/generations`).then(r => r.data.data),
+  getGenerations: (brandId: string, modelId: string, signal?: AbortSignal) =>
+    http.get<{ data: CarGeneration[] }>(`${modelsUrl(brandId, modelId)}/generations`, { signal }).then(r => r.data.data),
 
   // --- Ручные записи ---
 

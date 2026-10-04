@@ -1,71 +1,23 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import {
-  Modal, Form, Input, Select, Button, Divider, message,
-  Table, Empty, Tag, Tooltip, InputNumber, Switch, Grid,
-} from 'antd';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { Modal, Form, Input, Select, Button, Divider, Empty, Grid } from 'antd';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNotify } from '@/hooks/useNotify';
-import { TeamOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
-import { Record, Serviceman, CompanySettings, DocumentTemplate, CurrencyPart } from '@/types';
-import { servicesApi } from '@/api/services.api';
+import { useAllServicemen } from '@/hooks/useReferenceData';
+import { Record, CompanySettings, CurrencyPart } from '@/types';
 import { recordsApi } from '@/api/records.api';
-import { formatMoney, formatPrice, roundMoney } from '@/utils/formatters';
-import {
-  CurrencyPartsEditor, currencyPartsByn, currencyPartsValid, useCurrencyRates,
-} from '@/components/CurrencyConverter';
+import { currencyPartsByn, currencyPartsValid } from '@/components/CurrencyConverter';
 import { printCompletionAct } from '@/utils/print';
 import { DealCelebration } from '../DealCelebration';
+import { loadPrintData } from '../RecordDetailModal/printData';
+import { actTemplatesOf, pickActTemplate } from '../RecordDetailModal/documentTemplates';
+import { ItemRow, buildItemRows, itemsMissingServiceman, paymentTotals, splitPayment } from './closeDeal.utils';
+import { ItemsTable } from './ItemsTable';
+import { PaymentSection } from './PaymentSection';
+import { ServicemanSplitModal } from './ServicemanSplitModal';
+import { PaymentSplitModal } from './PaymentSplitModal';
 import styles from './CloseRecordModal.module.scss';
 
 const { useBreakpoint } = Grid;
-
-interface CurrencySectionProps {
-  value: CurrencyPart[];
-  onChange: (parts: CurrencyPart[]) => void;
-  remainingByn: number;
-}
-
-/** Часть оплаты валютой. Монтируется только по кнопке — курсы грузятся, когда они нужны */
-const CurrencySection: React.FC<CurrencySectionProps> = ({ value, onChange, remainingByn }) => {
-  const ratesState = useCurrencyRates();
-  const { rates, rateFor } = ratesState;
-
-  // Сразу первая строка — чтобы не нажимать «добавить» второй раз
-  useEffect(() => {
-    if (value.length === 0 && rates) onChange([{ currency: 'USD', amount: 0, rate: rateFor('USD') ?? 0 }]);
-  }, [value.length, rates, rateFor, onChange]);
-
-  return (
-    <div className={styles.currencySection}>
-      <div className={styles.currencyHint}>
-        Валюта сразу уходит в капитал: в кассе будет приход по курсу и расход «Отчисление в капитал».
-      </div>
-      <CurrencyPartsEditor value={value} onChange={onChange} ratesState={ratesState} remainingByn={remainingByn} />
-    </div>
-  );
-};
-
-interface ServicemanSplitEntry {
-  name: string;
-  amount: number;
-}
-
-interface ItemRow {
-  serviceId: string;
-  itemId: string;
-  serviceName: string;
-  categoryName: string;
-  price: number;
-  quantity: number;
-  estimatedTime: number;
-  netProfit: number;
-  servicemanName: string;
-  hasEquipment: boolean;
-  isProduct: boolean;
-  equipmentId?: string;
-  split?: ServicemanSplitEntry[] | null;
-  prepaidAmount: number;
-  prepaidByCard: boolean;
-}
 
 interface Props {
   record: Record;
@@ -87,10 +39,17 @@ const DEFAULT_WARRANTY = '1 месяц';
 export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuccess }) => {
   const screens = useBreakpoint();
   const isMobile = !screens.md;
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
-  const [employees, setEmployees] = useState<Serviceman[]>([]);
   const [celebrating, setCelebrating] = useState(false);
   const [items, setItems] = useState<ItemRow[]>([]);
+
+  // Исполнители — из общего кеша справочника, а не запросом при каждом открытии
+  const { data: allServicemen } = useAllServicemen();
+  const employees = useMemo(
+    () => (allServicemen ?? []).filter(s => s.isPerformer && !s.isDismissed),
+    [allServicemen],
+  );
 
   const pendingPrintRef = useRef<{
     record: Record;
@@ -98,69 +57,39 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
     templateContent: string | undefined;
   } | null>(null);
 
-  // Serviceman split modal state
+  // Разделение услуги между сотрудниками
   const [splitOpen, setSplitOpen] = useState(false);
   const [splitItemId, setSplitItemId] = useState<string | null>(null);
-  const [splitEntries, setSplitEntries] = useState<ServicemanSplitEntry[]>([]);
 
-  // Payment split state
+  // Раздельная оплата нал/безнал
   const [paymentSplitOpen, setPaymentSplitOpen] = useState(false);
   const [paymentSplitCard, setPaymentSplitCard] = useState<number | null>(null);
   // Часть остатка, оплаченная валютой, и открыт ли блок валюты
   const [currencyParts, setCurrencyParts] = useState<CurrencyPart[]>([]);
   const [currencyOpen, setCurrencyOpen] = useState(false);
-  const [paymentSplitDraft, setPaymentSplitDraft] = useState<number | null>(null);
 
   const notify = useNotify();
   const [form] = Form.useForm();
 
   useEffect(() => {
-    if (open) {
-      servicesApi.getAllServicemen().then(all =>
-        setEmployees(all.filter(s => s.isPerformer && !s.isDismissed))
-      ).catch(() => {});
+    if (!open) return;
+    setItems(buildItemRows(record));
 
-      setItems(record.items.map(i => {
-        const hasEquipment = i.service.hasEquipment ?? false;
-        const isProduct = i.service.isProduct ?? false;
-        const retailPrice = hasEquipment ? (i.equipment?.retailPrice ?? 0) : 0;
-        return {
-          serviceId: i.serviceId,
-          itemId: i.id,
-          serviceName: i.service.name,
-          categoryName: i.service.category?.name || '',
-          price: i.price,
-          quantity: i.quantity,
-          estimatedTime: i.service.estimatedTime || 0,
-          netProfit: isProduct ? 0 : i.price * i.quantity - retailPrice,
-          servicemanName: isProduct || i.servicemanSplit?.length
-            ? ''
-            : (i.servicemanName ?? record.serviceman),
-          hasEquipment,
-          isProduct,
-          equipmentId: i.equipmentId ?? undefined,
-          split: !isProduct && i.servicemanSplit?.length ? i.servicemanSplit : null,
-          prepaidAmount: i.prepaidAmount ?? 0,
-          prepaidByCard: i.prepaidByCard ?? false,
-        };
-      }));
-
-      if (record.deal) {
-        form.setFieldsValue({
-          defects: record.deal.defects || '',
-          recommendations: record.deal.recommendations || '',
-          warranty: record.deal.warranty || '',
-          isPaidByBankTransfer: record.deal.isPaidByBankTransfer || false,
-        });
-        setPaymentSplitCard(record.deal.splitCardAmount ?? null);
-        setCurrencyParts(record.deal.currencyPayments ?? []);
-        setCurrencyOpen(!!record.deal.currencyPayments?.length);
-      } else {
-        form.resetFields();
-        setPaymentSplitCard(null);
-        setCurrencyParts([]);
-        setCurrencyOpen(false);
-      }
+    if (record.deal) {
+      form.setFieldsValue({
+        defects: record.deal.defects || '',
+        recommendations: record.deal.recommendations || '',
+        warranty: record.deal.warranty || '',
+        isPaidByBankTransfer: record.deal.isPaidByBankTransfer || false,
+      });
+      setPaymentSplitCard(record.deal.splitCardAmount ?? null);
+      setCurrencyParts(record.deal.currencyPayments ?? []);
+      setCurrencyOpen(!!record.deal.currencyPayments?.length);
+    } else {
+      form.resetFields();
+      setPaymentSplitCard(null);
+      setCurrencyParts([]);
+      setCurrencyOpen(false);
     }
   }, [open, record, form]);
 
@@ -168,145 +97,28 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
     setItems(prev => prev.map(i => i.itemId === itemId ? { ...i, servicemanName, split: null } : i));
   };
 
-  const openSplitModal = (row: ItemRow) => {
-    setSplitItemId(row.itemId);
-    if (row.split && row.split.length >= 2) {
-      setSplitEntries(row.split);
-    } else {
-      setSplitEntries([
-        { name: row.servicemanName || record.serviceman, amount: row.netProfit },
-        { name: '', amount: 0 },
-      ]);
-    }
-    setSplitOpen(true);
-  };
-
-  const saveSplit = () => {
-    const valid = splitEntries.filter(e => e.name);
-    if (valid.length < 2) {
-      notify.warning('Укажите минимум двух сотрудников');
-      return;
-    }
-    const totalAmount = valid.reduce((s, e) => s + (e.amount || 0), 0);
-    if (splitItem && totalAmount > splitItem.netProfit + 0.01) {
-      notify.warning(
-        'Сумма превышает чистую прибыль',
-        `Указано: ${formatPrice(totalAmount)}, чистая прибыль услуги: ${formatPrice(splitItem.netProfit)}`,
-      );
-      return;
-    }
-    setItems(prev => prev.map(i =>
-      i.itemId === splitItemId
-        ? { ...i, split: valid, servicemanName: '' }
-        : i
-    ));
+  const saveSplit = (entries: ItemRow['split']) => {
+    setItems(prev => prev.map(i => i.itemId === splitItemId ? { ...i, split: entries, servicemanName: '' } : i));
     setSplitOpen(false);
   };
 
   const cancelSplit = (itemId: string) => {
-    setItems(prev => prev.map(i =>
-      i.itemId === itemId
-        ? { ...i, split: null, servicemanName: record.serviceman }
-        : i
-    ));
+    setItems(prev => prev.map(i => i.itemId === itemId ? { ...i, split: null, servicemanName: record.serviceman ?? '' } : i));
   };
 
   const hasEmployees = employees.length > 0;
-
   const employeeOptions = employees.map(e => ({ value: e.name, label: e.name }));
+  const missingServiceman = hasEmployees ? itemsMissingServiceman(items) : [];
 
-  const itemColumns = [
-    {
-      title: 'Услуга',
-      dataIndex: 'serviceName',
-      key: 'name',
-      render: (name: string, row: ItemRow) => (
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
-          <div>
-            <div style={{ fontWeight: 500, whiteSpace: 'nowrap' }}>{name}</div>
-            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 1 }}>{row.categoryName}</div>
-          </div>
-          {hasEmployees && !row.isProduct && (
-            <Tooltip title="Разделить между сотрудниками">
-              <Button
-                type="text"
-                size="small"
-                icon={<TeamOutlined style={{ color: row.split?.length ? 'var(--color-primary)' : 'var(--color-text-secondary)' }} />}
-                onClick={() => openSplitModal(row)}
-                style={{ marginTop: 1, padding: '0 4px' }}
-              />
-            </Tooltip>
-          )}
-        </div>
-      ),
-    },
-    {
-      title: 'Сумма',
-      key: 'total',
-      width: 100,
-      render: (_: unknown, row: ItemRow) => (
-        <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{formatPrice(row.price * row.quantity)}</span>
-      ),
-    },
-    {
-      title: 'Чистая прибыль',
-      key: 'netProfit',
-      width: 130,
-      render: (_: unknown, row: ItemRow) =>
-        row.isProduct
-          ? <span style={{ color: 'var(--color-text-secondary)' }}>—</span>
-          : <span style={{ fontWeight: 600, color: 'var(--color-success)', whiteSpace: 'nowrap' }}>{formatPrice(row.netProfit)}</span>,
-    },
-    ...(hasEmployees ? [{
-      title: 'Сотрудник',
-      key: 'serviceman',
-      width: 180,
-      render: (_: unknown, row: ItemRow) => {
-        if (row.isProduct) {
-          return <Tag color="orange" style={{ margin: 0 }}>Товар</Tag>;
-        }
-        if (row.split && row.split.length >= 2) {
-          return (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-              <Tooltip title={row.split.map(s => `${s.name}: ${formatPrice(s.amount)}`).join(' / ')}>
-                <Tag color="blue" style={{ cursor: 'pointer', margin: 0 }}>
-                  {row.split.map(s => s.name).join(', ')}
-                </Tag>
-              </Tooltip>
-              <Button
-                type="text"
-                size="small"
-                style={{ padding: '0 4px', fontSize: 11, color: 'var(--color-text-secondary)' }}
-                onClick={() => cancelSplit(row.itemId)}
-              >
-                ✕
-              </Button>
-            </div>
-          );
-        }
-        return (
-          <Select
-            size="small"
-            style={{ width: '100%' }}
-            value={row.servicemanName || undefined}
-            placeholder="Сотрудник"
-            onChange={(v: string) => updateItemServiceman(row.itemId, v)}
-            options={employeeOptions}
-          />
-        );
-      },
-    }] : []),
-  ];
-
-  const missingServiceman = hasEmployees
-    ? items.filter(i => !i.isProduct && !(i.split && i.split.length >= 2) && !i.servicemanName)
-    : [];
+  const currencyByn = currencyPartsByn(currencyParts);
+  const totals = paymentTotals(items, currencyByn);
 
   const handleClose = async () => {
     const values = await form.validateFields().catch(() => null);
+    // Ошибки полей antd уже подсветил в форме
     if (!values) return;
     if (!currencyPartsValid(currencyParts)) {
-      message.error('Укажите сумму и курс для каждой валюты');
+      notify.warning('Укажите сумму и курс для каждой валюты');
       return;
     }
 
@@ -333,40 +145,23 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
         })),
       });
 
-      const finalPrice = items.reduce((s, i) => s + i.price * i.quantity, 0);
-      const prepaidCash = items.reduce((s, i) => s + (!i.prepaidByCard ? i.prepaidAmount : 0), 0);
-      const prepaidCard = items.reduce((s, i) => s + (i.prepaidByCard ? i.prepaidAmount : 0), 0);
-      const remainingAmount = Math.max(0, finalPrice - prepaidCash - prepaidCard);
       // Разбивка нал/карта — от рублёвого остатка после валюты
-      const rubleAmount = roundMoney(remainingAmount - currencyPartsByn(currencyParts));
       await recordsApi.close(record.id, {
-        finalPrice,
+        finalPrice: totals.total,
         defects: values.defects || undefined,
         recommendations: values.recommendations || undefined,
         warranty: values.warranty || undefined,
         isPaidByBankTransfer: values.isPaidByBankTransfer || false,
-        ...(paymentSplitCard != null && rubleAmount > 0 ? {
-          splitCashAmount: roundMoney(rubleAmount - paymentSplitCard),
-          splitCardAmount: paymentSplitCard,
-        } : {}),
+        ...splitPayment(totals.rubleRemaining, paymentSplitCard),
         currencyPayments: currencyParts,
       });
 
-      const [freshRecord, settings, allTemplates] = await Promise.all([
+      const [freshRecord, { settings, templates }] = await Promise.all([
         recordsApi.getById(record.id),
-        servicesApi.getSettings().catch(() => undefined as CompanySettings | undefined),
-        servicesApi.getDocTemplates().catch(() => [] as DocumentTemplate[]),
+        loadPrintData(queryClient),
       ]);
 
-      const actTemplates = allTemplates.filter((t: DocumentTemplate) => t.type === 'completion_act');
-      const categoryIds = [...new Set(
-        freshRecord.items.map(i => i.service?.categoryId).filter((id): id is string => !!id)
-      )];
-      const categoryId = categoryIds[0] ?? null;
-      const actTemplate = (categoryId ? actTemplates.find((t: DocumentTemplate) => t.categoryId === categoryId) : null)
-        ?? actTemplates.find((t: DocumentTemplate) => !t.categoryId && t.isDefault)
-        ?? actTemplates.find((t: DocumentTemplate) => t.isDefault)
-        ?? actTemplates[0];
+      const actTemplate = pickActTemplate(freshRecord, actTemplatesOf(templates));
       pendingPrintRef.current = { record: freshRecord, settings, templateContent: actTemplate?.content };
 
       onClose();
@@ -374,27 +169,20 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
       setTimeout(() => onSuccess(), 2100);
       setTimeout(() => {
         const pd = pendingPrintRef.current;
-        if (pd?.record.deal) {
-          printCompletionAct(pd.record, pd.settings, pd.templateContent);
-        }
         pendingPrintRef.current = null;
+        if (!pd?.record.deal) return;
+        try {
+          printCompletionAct(pd.record, pd.settings, pd.templateContent);
+        } catch (e) {
+          notify.error(e, 'Не удалось распечатать акт');
+        }
       }, 2400);
     } catch (e: unknown) {
-      message.error(e instanceof Error ? e.message : 'Ошибка');
+      notify.error(e, 'Не удалось закрыть сделку');
     } finally {
       setLoading(false);
     }
   };
-
-  const total = items.reduce((s, i) => s + i.price * i.quantity, 0);
-  const totalPrepaidCash = items.reduce((s, i) => s + (!i.prepaidByCard ? i.prepaidAmount : 0), 0);
-  const totalPrepaidCard = items.reduce((s, i) => s + (i.prepaidByCard ? i.prepaidAmount : 0), 0);
-  const totalPrepaid = totalPrepaidCash + totalPrepaidCard;
-  const remaining = Math.max(0, total - totalPrepaid);
-  const currencyByn = currencyPartsByn(currencyParts);
-  // Остаток в рублях после валюты; отрицательный — клиенту сдача
-  const rubleRemaining = roundMoney(remaining - currencyByn);
-  const splitCashDisplay = paymentSplitCard != null ? roundMoney(rubleRemaining - paymentSplitCard) : null;
 
   const changeCurrencyParts = useCallback((parts: CurrencyPart[]) => {
     setCurrencyParts(parts);
@@ -409,107 +197,25 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
     <>
       {celebrating && <DealCelebration onDone={() => setCelebrating(false)} />}
 
-      {/* Split employees modal */}
-      <Modal
+      <ServicemanSplitModal
         open={splitOpen}
+        item={splitItem}
+        defaultServiceman={record.serviceman ?? ''}
+        employeeOptions={employeeOptions}
         onCancel={() => setSplitOpen(false)}
-        title={splitItem ? `Разделить: ${splitItem.serviceName}` : 'Разделить между сотрудниками'}
-        width={480}
-        footer={null}
-        destroyOnHidden
-      >
-        {splitItem && (
-          <div style={{ marginBottom: 12, color: 'var(--color-text-secondary)', fontSize: 13 }}>
-            Чистая прибыль по услуге: <strong style={{ color: 'var(--color-success)' }}>{formatPrice(splitItem.netProfit)}</strong>
-          </div>
-        )}
+        onSave={saveSplit}
+      />
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {splitEntries.map((entry, idx) => (
-            <div key={idx} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <Select
-                style={{ flex: 1 }}
-                placeholder="Сотрудник"
-                value={entry.name || undefined}
-                onChange={v => setSplitEntries(prev => prev.map((e, i) => i === idx ? { ...e, name: v } : e))}
-                options={employeeOptions}
-              />
-              <InputNumber
-                style={{ width: 130 }}
-                placeholder="Сумма"
-                min={0}
-                value={entry.amount || undefined}
-                onChange={v => setSplitEntries(prev => prev.map((e, i) => i === idx ? { ...e, amount: v ?? 0 } : e))}
-                suffix="BYN"
-              />
-              {splitEntries.length > 2 && (
-                <Button
-                  type="text"
-                  danger
-                  icon={<DeleteOutlined />}
-                  onClick={() => setSplitEntries(prev => prev.filter((_, i) => i !== idx))}
-                />
-              )}
-            </div>
-          ))}
-        </div>
-
-        <Button
-          type="dashed"
-          icon={<PlusOutlined />}
-          onClick={() => setSplitEntries(prev => [...prev, { name: '', amount: 0 }])}
-          style={{ width: '100%', marginTop: 12 }}
-        >
-          Добавить сотрудника
-        </Button>
-
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
-          <Button onClick={() => setSplitOpen(false)}>Отмена</Button>
-          <Button type="primary" onClick={saveSplit}>Сохранить</Button>
-        </div>
-      </Modal>
-
-      {/* Payment split modal */}
-      <Modal
+      <PaymentSplitModal
         open={paymentSplitOpen}
+        rubleRemaining={totals.rubleRemaining}
+        initialCard={paymentSplitCard}
         onCancel={() => setPaymentSplitOpen(false)}
-        title="Раздельная оплата"
-        width={380}
-        onOk={() => {
-          setPaymentSplitCard(paymentSplitDraft);
+        onApply={card => {
+          setPaymentSplitCard(card);
           setPaymentSplitOpen(false);
         }}
-        okText="Применить"
-        cancelText="Отмена"
-        destroyOnHidden
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '8px 0' }}>
-          <div>
-            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 4 }}>Наличные</div>
-            <InputNumber
-              style={{ width: '100%' }}
-              value={paymentSplitDraft != null ? roundMoney(rubleRemaining - paymentSplitDraft) : rubleRemaining}
-              disabled
-              suffix="BYN"
-              precision={2}
-            />
-          </div>
-          <div>
-            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 4 }}>Безнал (карта / РС)</div>
-            <InputNumber
-              style={{ width: '100%' }}
-              min={0}
-              max={rubleRemaining}
-              precision={2}
-              suffix="BYN"
-              placeholder="0.00"
-              value={paymentSplitDraft ?? undefined}
-              onChange={v => setPaymentSplitDraft(v ?? 0)}
-              autoFocus
-            />
-          </div>
-        </div>
-      </Modal>
+      />
 
       <Modal
         open={open}
@@ -528,49 +234,23 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
         }}
       >
         <Form form={form} layout="vertical">
-          <Divider orientation="left" style={{ fontSize: 13 }}>Перечень работ</Divider>
+          <Divider orientation="left" className={styles.divider}>Перечень работ</Divider>
 
           {items.length === 0 ? (
-            <Empty description="Нет услуг" style={{ margin: '16px 0' }} />
+            <Empty description="Нет услуг" className={styles.empty} />
           ) : (
-            <Table
-              dataSource={items}
-              columns={itemColumns}
-              rowKey="itemId"
-              pagination={false}
-              size="small"
-              scroll={{ x: 'max-content' }}
-              style={{ marginBottom: 8 }}
-              footer={() => (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>Итого:</span>
-                    <span style={{ fontSize: 16, fontWeight: 700 }}>{formatPrice(total)}</span>
-                  </div>
-                  {totalPrepaidCash > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--color-text-secondary)' }}>
-                      <span>Предоплата (нал):</span>
-                      <span style={{ color: 'var(--color-status-closed)', fontWeight: 600 }}>− {formatPrice(totalPrepaidCash)}</span>
-                    </div>
-                  )}
-                  {totalPrepaidCard > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--color-text-secondary)' }}>
-                      <span>Предоплата (РС):</span>
-                      <span style={{ color: 'var(--color-status-closed)', fontWeight: 600 }}>− {formatPrice(totalPrepaidCard)}</span>
-                    </div>
-                  )}
-                  {totalPrepaid > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 4, borderTop: '1px solid var(--color-border)', marginTop: 2 }}>
-                      <span style={{ fontWeight: 600 }}>К оплате:</span>
-                      <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-accent)' }}>{formatPrice(remaining)}</span>
-                    </div>
-                  )}
-                </div>
-              )}
+            <ItemsTable
+              items={items}
+              totals={totals}
+              hasEmployees={hasEmployees}
+              employeeOptions={employeeOptions}
+              onChangeServiceman={updateItemServiceman}
+              onOpenSplit={row => { setSplitItemId(row.itemId); setSplitOpen(true); }}
+              onCancelSplit={cancelSplit}
             />
           )}
 
-          <Divider orientation="left" style={{ fontSize: 13 }}>Дефекты и рекомендации</Divider>
+          <Divider orientation="left" className={styles.divider}>Дефекты и рекомендации</Divider>
 
           <Form.Item label="Обнаруженные недостатки в процессе работы" name="defects">
             <Input.TextArea rows={3} placeholder="Описание дефектов, обнаруженных в ходе выполнения работ" />
@@ -580,7 +260,7 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
             <Input.TextArea rows={3} placeholder="Что рекомендовано клиенту: замена, повторный осмотр и т.п." />
           </Form.Item>
 
-          <Divider orientation="left" style={{ fontSize: 13 }}>Гарантия</Divider>
+          <Divider orientation="left" className={styles.divider}>Гарантия</Divider>
 
           <Form.Item label="Гарантия на работу" name="warranty" initialValue={DEFAULT_WARRANTY}>
             <Select
@@ -590,66 +270,17 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
             />
           </Form.Item>
 
-          {remaining > 0 && (
-            <>
-              <Divider orientation="left" style={{ fontSize: 13 }}>Оплата</Divider>
-              {currencyOpen ? (
-                <CurrencySection value={currencyParts} onChange={changeCurrencyParts} remainingByn={remaining} />
-              ) : (
-                <Button type="dashed" size="small" className={styles.currencyButton} onClick={() => setCurrencyOpen(true)}>
-                  Оплата в валюте (USD, EUR)
-                </Button>
-              )}
-              {currencyByn > 0 && (
-                <div className={styles.currencySummary}>
-                  <span>Валютой: <strong>{formatMoney(currencyByn)}</strong></span>
-                  {rubleRemaining >= 0 ? (
-                    <span>Рублями: <strong>{formatMoney(rubleRemaining)}</strong></span>
-                  ) : (
-                    <span className={styles.currencyChange}>Сдача клиенту: <strong>{formatMoney(-rubleRemaining)}</strong></span>
-                  )}
-                </div>
-              )}
-            </>
-          )}
-
-          {rubleRemaining > 0 && (
-            <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                <Form.Item name="isPaidByBankTransfer" valuePropName="checked" noStyle>
-                  <Switch />
-                </Form.Item>
-                <span style={{ fontSize: 14 }}>Оплата по расчётному счёту (РС)</span>
-              </div>
-
-              {paymentSplitCard == null ? (
-                <Button
-                  type="dashed"
-                  size="small"
-                  onClick={() => {
-                    setPaymentSplitDraft(paymentSplitCard ?? 0);
-                    setPaymentSplitOpen(true);
-                  }}
-                  style={{ marginBottom: 16, width: 'fit-content' }}
-                >
-                  Раздельная оплата
-                </Button>
-              ) : (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, padding: '8px 12px', background: 'var(--color-surface-2)', borderRadius: 6, fontSize: 13 }}>
-                  <span>💵 Наличные: <strong>{formatPrice(splitCashDisplay!)}</strong></span>
-                  <span>💳 Безнал: <strong>{formatPrice(paymentSplitCard)}</strong></span>
-                  <Button
-                    type="text"
-                    size="small"
-                    style={{ marginLeft: 'auto', color: 'var(--color-text-secondary)' }}
-                    onClick={() => setPaymentSplitCard(null)}
-                  >
-                    Отменить
-                  </Button>
-                </div>
-              )}
-            </>
-          )}
+          <PaymentSection
+            totals={totals}
+            currencyByn={currencyByn}
+            currencyParts={currencyParts}
+            currencyOpen={currencyOpen}
+            onOpenCurrency={() => setCurrencyOpen(true)}
+            onChangeCurrency={changeCurrencyParts}
+            paymentSplitCard={paymentSplitCard}
+            onOpenPaymentSplit={() => setPaymentSplitOpen(true)}
+            onCancelPaymentSplit={() => setPaymentSplitCard(null)}
+          />
 
           <div className={styles.footer}>
             <Button onClick={onClose}>Отмена</Button>

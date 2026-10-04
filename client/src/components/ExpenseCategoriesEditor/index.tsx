@@ -1,7 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import { Button, Input, Popconfirm, Table, Tooltip, message } from 'antd';
+import React, { useState } from 'react';
+import { Alert, Button, Input, Popconfirm, Table, Tooltip } from 'antd';
 import { CheckOutlined, CloseOutlined, DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
 import { expensesApi, ExpenseCategory } from '@/api/expenses.api';
+import { useNotify } from '@/hooks/useNotify';
+import { useExpenseCategories, useInvalidateReference } from '@/hooks/useReferenceData';
+import { getErrorMessage } from '@/utils/errors';
 import styles from './ExpenseCategoriesEditor.module.scss';
 
 interface ExpenseCategoriesEditorProps {
@@ -11,22 +14,15 @@ interface ExpenseCategoriesEditorProps {
 
 /** Справочник категорий затрат для расходов кассы (Настройки → Категории расходов). */
 export const ExpenseCategoriesEditor: React.FC<ExpenseCategoriesEditorProps> = ({ readOnly }) => {
-  const [categories, setCategories] = useState<ExpenseCategory[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { data: categories = [], isLoading, isError, error, refetch } = useExpenseCategories();
+  const notify = useNotify();
+  const invalidate = useInvalidateReference();
   const [newName, setNewName] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const load = () => {
-    setLoading(true);
-    expensesApi.getCategories()
-      .then(setCategories)
-      .catch((e: Error) => message.error(e.message))
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(load, []);
+  const reload = () => invalidate('expenseCategories');
 
   const handleAdd = async () => {
     const name = newName.trim();
@@ -35,8 +31,8 @@ export const ExpenseCategoriesEditor: React.FC<ExpenseCategoriesEditorProps> = (
     try {
       await expensesApi.createCategory(name);
       setNewName('');
-      load();
-    } catch (e) { message.error((e as Error).message); }
+      await reload();
+    } catch (e) { notify.error(e, 'Не удалось добавить категорию'); }
     finally { setSaving(false); }
   };
 
@@ -48,16 +44,16 @@ export const ExpenseCategoriesEditor: React.FC<ExpenseCategoriesEditorProps> = (
     try {
       await expensesApi.updateCategory(editingId, name);
       setEditingId(null);
-      load();
-    } catch (e) { message.error((e as Error).message); }
+      await reload();
+    } catch (e) { notify.error(e, 'Не удалось переименовать категорию'); }
     finally { setSaving(false); }
   };
 
   const handleDelete = async (id: string) => {
     try {
       await expensesApi.deleteCategory(id);
-      load();
-    } catch (e) { message.error((e as Error).message); }
+      await reload();
+    } catch (e) { notify.error(e, 'Не удалось удалить категорию'); }
   };
 
   const columns = [
@@ -137,12 +133,21 @@ export const ExpenseCategoriesEditor: React.FC<ExpenseCategoriesEditorProps> = (
           </Button>
         </div>
       )}
+      {isError && (
+        <Alert
+          type="error"
+          showIcon
+          message="Не удалось загрузить категории расходов"
+          description={getErrorMessage(error)}
+          action={<Button size="small" onClick={() => refetch()}>Повторить</Button>}
+        />
+      )}
       <Table<ExpenseCategory>
         dataSource={categories}
         columns={columns}
         rowKey="id"
         size="small"
-        loading={loading}
+        loading={isLoading}
         pagination={false}
       />
     </div>

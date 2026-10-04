@@ -1,0 +1,77 @@
+@use '@/styles/variables' as *;
+
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.filtersRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--spacing-sm);
+  align-items: center;
+
+  // На телефоне поля друг под другом во всю ширину — так проще попадать пальцем
+  @include mobile { grid-template-columns: 1fr; }
+}
+
+.field {
+  width: 100%;
+  min-width: 0;
+}
+
+.toggleBadge {
+  width: 100%;
+}
+
+// ─── Подсказки по имени ────────────────────────────
+.suggestion {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px 0;
+  white-space: normal;
+}
+
+.suggestionTop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 2px var(--spacing-sm);
+}
+
+.suggestionName {
+  font-weight: 600;
+  color: var(--color-text-primary);
+  word-break: break-word;
+}
+
+.suggestionPhone {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.suggestionCars {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px var(--spacing-sm);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.suggestionCar {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+// Госномер рядом с названием авто — моноширинным, чтобы читался
+.plate {
+  margin-left: 6px;
+  font-family: monospace;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}

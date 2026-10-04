@@ -1,0 +1,41 @@
+.tab {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-sm) var(--spacing-md);
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.card {
+  min-width: 0;
+}
+
+.source {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+// Цвет точки совпадает с цветом канала на графике
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-chart-grid);
+
+  &[data-source='INSTAGRAM'] { background: var(--color-chart-1); }
+  &[data-source='RECOMMENDATION'] { background: var(--color-chart-2); }
+  &[data-source='SEARCH'] { background: var(--color-chart-3); }
+  &[data-source='MAPS'] { background: var(--color-chart-4); }
+  &[data-source='OTHER'] { background: var(--color-chart-5); }
+}

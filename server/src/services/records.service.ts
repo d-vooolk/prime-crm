@@ -1,9 +1,12 @@
-import { Prisma, CashTransactionType } from '@prisma/client';
-import { prisma } from '../prisma/client';
+import { Prisma, CashTransactionType, ClientSource } from '@prisma/client';
+import { prisma, DbClient } from '../prisma/client';
 import { AppError } from '../middleware/errorHandler';
 import { startOfDay, endOfDay } from '../utils/date';
+import { logger } from '../utils/logger';
 import { smsService } from './sms.service';
-import { accountingService } from './accounting.service';
+import { cashService } from './accounting/cash.service';
+import { recordMediaService } from './recordMedia.service';
+import { pushService, pushInBackground } from './push.service';
 import { toByn, roundMoney } from './currency.service';
 import {
   CurrencyPart, currencyAccountingService, currencyPartsByn, parseCurrencyParts,
@@ -15,7 +18,20 @@ const RECORD_INCLUDE = {
   items: { include: { service: { include: { category: true } }, equipment: true } },
   deal: { include: { equipment: { include: { equipment: true } } } },
   smsLogs: { orderBy: { sentAt: 'asc' as const } },
+  _count: { select: { media: true } },
 } as const;
+
+/** SMS отправляется в фоне: ответ не ждёт sms.by, а ошибка не роняет процесс */
+function sendSmsInBackground(recordId: string, type: 'ON_CREATE' | 'REVIEW_REQUEST') {
+  smsService.sendForRecord(recordId, type).catch(err => logger.error('Не удалось отправить SMS', { recordId, type, err }));
+}
+
+/** «05.10 в 10:30» — для уведомлений; сервер работает во времени Минска (TZ в compose) */
+const formatWhen = (d: Date) =>
+  `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')} в ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+
+const carInfoOf = (car: { brand: string; model: string; year: string; plateNumber?: string | null }) =>
+  `${car.brand} ${car.model} ${car.year}${car.plateNumber ? ' ' + car.plateNumber : ''}`;
 
 export interface CreateRecordDto {
   clientId: string;
@@ -32,32 +48,33 @@ export interface CreateRecordDto {
     mileage?: string;
   };
   scheduledAt: string;
-  serviceman: string;
-  receptionist?: string;
-  notes?: string;
+  serviceman?: string | null;
+  receptionist?: string | null;
+  notes?: string | null;
+  clientSource?: ClientSource | null;
   isLegalEntity?: boolean;
-  legalCompanyName?: string;
-  legalAddress?: string;
-  legalActualAddress?: string;
-  legalPostalAddress?: string;
-  legalBankDetails?: string;
-  legalBic?: string;
-  legalUnp?: string;
-  legalOkpo?: string;
-  legalPhone?: string;
-  legalEmail?: string;
-  legalRepresentativePosition?: string;
-  legalRepresentativePositionGenitive?: string;
-  legalRepresentative?: string;
-  legalRepresentativeGenitive?: string;
-  legalBasis?: string;
-  legalVin?: string;
-  legalEndDate?: string;
-  executorSignatoryName?: string;
-  executorSignatoryNameGenitive?: string;
-  executorSignatoryPosition?: string;
-  executorSignatoryPositionGenitive?: string;
-  executorSignatoryBasis?: string;
+  legalCompanyName?: string | null;
+  legalAddress?: string | null;
+  legalActualAddress?: string | null;
+  legalPostalAddress?: string | null;
+  legalBankDetails?: string | null;
+  legalBic?: string | null;
+  legalUnp?: string | null;
+  legalOkpo?: string | null;
+  legalPhone?: string | null;
+  legalEmail?: string | null;
+  legalRepresentativePosition?: string | null;
+  legalRepresentativePositionGenitive?: string | null;
+  legalRepresentative?: string | null;
+  legalRepresentativeGenitive?: string | null;
+  legalBasis?: string | null;
+  legalVin?: string | null;
+  legalEndDate?: string | null;
+  executorSignatoryName?: string | null;
+  executorSignatoryNameGenitive?: string | null;
+  executorSignatoryPosition?: string | null;
+  executorSignatoryPositionGenitive?: string | null;
+  executorSignatoryBasis?: string | null;
   items: Array<{
     serviceId: string;
     price: number;
@@ -181,23 +198,14 @@ export const recordsService = {
   },
 
   async findById(id: string) {
-    const record = await prisma.record.findUnique({
-      where: { id },
-      include: {
-        client: true,
-        car: true,
-        items: { include: { service: { include: { category: true } }, equipment: true } },
-        deal: { include: { equipment: { include: { equipment: true } } } },
-        smsLogs: { orderBy: { sentAt: 'asc' } },
-      },
-    });
+    const record = await prisma.record.findUnique({ where: { id }, include: RECORD_INCLUDE });
     if (!record) throw new AppError('Запись не найдена', 404);
     return record;
   },
 
   async create(data: CreateRecordDto) {
     const {
-      clientId, car, scheduledAt, serviceman, receptionist, notes, items,
+      clientId, car, scheduledAt, serviceman, receptionist, notes, items, clientSource,
       isLegalEntity, legalCompanyName, legalAddress, legalActualAddress, legalPostalAddress,
       legalBankDetails, legalBic, legalUnp, legalOkpo, legalPhone, legalEmail,
       legalRepresentativePosition, legalRepresentativePositionGenitive,
@@ -251,14 +259,15 @@ export const recordsService = {
         }
       }
 
-      return tx.record.create({
+      const created = await tx.record.create({
         data: {
           clientId,
           carId: carRecord.id,
           scheduledAt: new Date(scheduledAt),
-          serviceman,
-          receptionist,
+          serviceman: serviceman || null,
+          receptionist: receptionist || null,
           notes,
+          clientSource: clientSource ?? null,
           documentNumber,
           isLegalEntity: isLegalEntity ?? false,
           legalCompanyName, legalAddress, legalActualAddress, legalPostalAddress,
@@ -285,19 +294,21 @@ export const recordsService = {
         },
         include: RECORD_INCLUDE,
       });
+      // Предоплата — в той же транзакции: запись без прихода в кассе (или наоборот) не останется
+      await recordsService.syncPrepaymentTransactions(
+        tx, created.id, created.client.name, created.client.phone, carInfoOf(created.car), items,
+      );
+      return created;
     });
 
-    // fire-and-forget: не блокируем ответ
-    smsService.sendForRecord(newRecord.id, 'ON_CREATE');
-
-    await recordsService.syncPrepaymentTransactions(
-      newRecord.id,
-      newRecord.client.name,
-      newRecord.client.phone,
-      `${newRecord.car.brand} ${newRecord.car.model} ${newRecord.car.year}${newRecord.car.plateNumber ? ' ' + newRecord.car.plateNumber : ''}`,
-      items,
-    );
-
+    sendSmsInBackground(newRecord.id, 'ON_CREATE');
+    // Мастеру записи — пуш на телефон: когда и какая машина
+    pushInBackground(() => pushService.sendToServicemanByName(newRecord.serviceman, {
+      title: 'Новая запись',
+      body: `${formatWhen(newRecord.scheduledAt)} · ${carInfoOf(newRecord.car)}`,
+      url: '/schedule',
+      tag: `record-${newRecord.id}`,
+    }));
     return newRecord;
   },
 
@@ -306,9 +317,10 @@ export const recordsService = {
 
     const updateData: Record<string, unknown> = {};
     if (data.scheduledAt) updateData.scheduledAt = new Date(data.scheduledAt);
-    if (data.serviceman !== undefined) updateData.serviceman = data.serviceman;
-    if (data.receptionist !== undefined) updateData.receptionist = data.receptionist;
+    if (data.serviceman !== undefined) updateData.serviceman = data.serviceman || null;
+    if (data.receptionist !== undefined) updateData.receptionist = data.receptionist || null;
     if (data.notes !== undefined) updateData.notes = data.notes;
+    if (data.clientSource !== undefined) updateData.clientSource = data.clientSource;
 
     // Legal entity fields
     if (data.isLegalEntity !== undefined) updateData.isLegalEntity = data.isLegalEntity;
@@ -324,142 +336,121 @@ export const recordsService = {
       if (field in data) updateData[field] = (data as Record<string, unknown>)[field] ?? null;
     }
 
-    // Car update
-    if (data.car) {
-      const car = data.car;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const existingCar = (record as any).car as { id: string; brandId: string; modelId: string; year: string };
-      if (car.brandId !== existingCar.brandId || car.modelId !== existingCar.modelId || car.year !== existingCar.year) {
-        let carRecord = await prisma.car.findFirst({
-          where: { clientId: record.clientId, brandId: car.brandId, modelId: car.modelId, year: car.year },
-        });
-        if (!carRecord) {
-          carRecord = await prisma.car.create({
-            data: {
-              clientId: record.clientId,
-              brand: car.brand,
-              brandId: car.brandId,
-              model: car.model,
-              modelId: car.modelId,
-              generation: car.generation,
-              generationId: car.generationId != null ? String(car.generationId) : undefined,
-              generationName: car.generationName,
-              year: car.year,
-              plateNumber: car.plateNumber,
-              mileage: car.mileage,
-            },
+    // Машина, позиции, предоплата и пересчёт закрытой сделки — одной транзакцией
+    await prisma.$transaction(async (tx) => {
+      if (data.car) {
+        const car = data.car;
+        const existingCar = record.car;
+        if (car.brandId !== existingCar.brandId || car.modelId !== existingCar.modelId || car.year !== existingCar.year) {
+          let carRecord = await tx.car.findFirst({
+            where: { clientId: record.clientId, brandId: car.brandId, modelId: car.modelId, year: car.year },
           });
+          if (!carRecord) {
+            carRecord = await tx.car.create({
+              data: {
+                clientId: record.clientId,
+                brand: car.brand,
+                brandId: car.brandId,
+                model: car.model,
+                modelId: car.modelId,
+                generation: car.generation,
+                generationId: car.generationId != null ? String(car.generationId) : undefined,
+                generationName: car.generationName,
+                year: car.year,
+                plateNumber: car.plateNumber,
+                mileage: car.mileage,
+              },
+            });
+          } else {
+            const carUp: { plateNumber?: string; mileage?: string } = {};
+            if (car.plateNumber) carUp.plateNumber = car.plateNumber;
+            if (car.mileage) carUp.mileage = car.mileage;
+            if (Object.keys(carUp).length > 0) {
+              await tx.car.update({ where: { id: carRecord.id }, data: carUp });
+            }
+          }
+          updateData.carId = carRecord.id;
         } else {
-          const carUp: { plateNumber?: string; mileage?: string } = {};
-          if (car.plateNumber) carUp.plateNumber = car.plateNumber;
-          if (car.mileage) carUp.mileage = car.mileage;
+          const carUp: { plateNumber?: string | null; mileage?: string | null } = {};
+          if (car.plateNumber !== undefined) carUp.plateNumber = car.plateNumber || null;
+          if (car.mileage !== undefined) carUp.mileage = car.mileage || null;
           if (Object.keys(carUp).length > 0) {
-            await prisma.car.update({ where: { id: carRecord.id }, data: carUp });
+            await tx.car.update({ where: { id: existingCar.id }, data: carUp });
           }
         }
-        updateData.carId = carRecord.id;
-      } else {
-        const carUp: { plateNumber?: string | null; mileage?: string | null } = {};
-        if (car.plateNumber !== undefined) carUp.plateNumber = car.plateNumber || null;
-        if (car.mileage !== undefined) carUp.mileage = car.mileage || null;
-        if (Object.keys(carUp).length > 0) {
-          await prisma.car.update({ where: { id: existingCar.id }, data: carUp });
-        }
       }
-    }
 
-    if (data.items) {
-      // Позиции пересоздаются целиком, а модалка редактирования записи не передаёт
-      // назначения сотрудников (они задаются только при закрытии сделки). Если их не
-      // перенести со старых позиций, закрытая работа исчезнет из зарплаты сотрудника.
-      const unmatchedOld = [...record.items];
-      const takeOldItem = (serviceId: string) => {
-        const idx = unmatchedOld.findIndex(i => i.serviceId === serviceId);
-        return idx === -1 ? undefined : unmatchedOld.splice(idx, 1)[0];
-      };
-
-      const itemsCreate = data.items.map((item) => {
-        // Назначение считается заданным, если пришло хотя бы одно из двух полей
-        const hasAssignment = item.servicemanName !== undefined || item.servicemanSplit !== undefined;
-        const old = hasAssignment ? undefined : takeOldItem(item.serviceId);
-        const servicemanName = hasAssignment ? item.servicemanName : (old?.servicemanName ?? undefined);
-        const servicemanSplit = hasAssignment
-          ? item.servicemanSplit
-          : ((old?.servicemanSplit as Array<{ name: string; amount: number }> | null) ?? undefined);
-
-        return {
-          serviceId: item.serviceId,
-          price: item.price,
-          quantity: item.quantity,
-          netProfit: item.netProfit,
-          servicemanName: servicemanSplit?.length ? null : servicemanName,
-          servicemanSplit: servicemanSplit?.length
-            ? (servicemanSplit as Prisma.InputJsonValue)
-            : undefined,
-          equipmentId: item.equipmentId,
-          ...prepaidFields(item),
+      if (data.items) {
+        // Позиции пересоздаются целиком, а модалка редактирования записи не передаёт
+        // назначения сотрудников (они задаются только при закрытии сделки). Если их не
+        // перенести со старых позиций, закрытая работа исчезнет из зарплаты сотрудника.
+        const unmatchedOld = [...record.items];
+        const takeOldItem = (serviceId: string) => {
+          const idx = unmatchedOld.findIndex(i => i.serviceId === serviceId);
+          return idx === -1 ? undefined : unmatchedOld.splice(idx, 1)[0];
         };
-      });
 
-      await prisma.$transaction(async (tx) => {
-        await tx.recordItem.deleteMany({ where: { recordId: id } });
-        await tx.record.update({
-          where: { id },
-          data: { ...updateData, items: { create: itemsCreate } },
+        const itemsCreate = data.items.map((item) => {
+          // Назначение считается заданным, если пришло хотя бы одно из двух полей
+          const hasAssignment = item.servicemanName !== undefined || item.servicemanSplit !== undefined;
+          const old = hasAssignment ? undefined : takeOldItem(item.serviceId);
+          const servicemanName = hasAssignment ? item.servicemanName : (old?.servicemanName ?? undefined);
+          const servicemanSplit = hasAssignment
+            ? item.servicemanSplit
+            : ((old?.servicemanSplit as Array<{ name: string; amount: number }> | null) ?? undefined);
+
+          return {
+            serviceId: item.serviceId,
+            price: item.price,
+            quantity: item.quantity,
+            netProfit: item.netProfit,
+            servicemanName: servicemanSplit?.length ? null : (servicemanName || null),
+            servicemanSplit: servicemanSplit?.length
+              ? (servicemanSplit as Prisma.InputJsonValue)
+              : undefined,
+            equipmentId: item.equipmentId,
+            ...prepaidFields(item),
+          };
         });
-      });
-    } else if (Object.keys(updateData).length > 0) {
-      await prisma.record.update({ where: { id }, data: updateData });
-    }
 
-    const updated = await recordsService.findById(id);
-
-    if (record.status === 'ACTIVE' && data.items) {
-      const client = record.client as unknown as { name: string; phone: string };
-      const car = record.car as unknown as { brand: string; model: string; year: string; plateNumber?: string };
-      await recordsService.syncPrepaymentTransactions(
-        id,
-        client.name,
-        client.phone,
-        `${car.brand} ${car.model} ${car.year}${car.plateNumber ? ' ' + car.plateNumber : ''}`,
-        data.items,
-      );
-    }
-
-    if (record.status === 'CLOSED' && data.items) {
-      for (const item of updated.items) {
-        const svc = item.service as unknown as { hasEquipment: boolean; isProduct: boolean };
-        if (svc.isProduct) {
-          await prisma.recordItem.update({ where: { id: item.id }, data: { netProfit: 0, servicemanName: null } });
-        } else {
-          const retailPrice = svc.hasEquipment && item.equipment
-            ? ((item.equipment as unknown as { retailPrice?: number }).retailPrice ?? 0)
-            : 0;
-          await prisma.recordItem.update({
-            where: { id: item.id },
-            data: { netProfit: item.price * item.quantity - retailPrice },
-          });
-        }
+        await tx.recordItem.deleteMany({ where: { recordId: id } });
+        await tx.record.update({ where: { id }, data: { ...updateData, items: { create: itemsCreate } } });
+      } else if (Object.keys(updateData).length > 0) {
+        await tx.record.update({ where: { id }, data: updateData });
       }
 
-      const newFinalPrice = data.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      if (record.status === 'ACTIVE' && data.items) {
+        await recordsService.syncPrepaymentTransactions(
+          tx, id, record.client.name, record.client.phone, carInfoOf(record.car), data.items,
+        );
+      }
 
-      await prisma.deal.update({ where: { recordId: id }, data: { finalPrice: newFinalPrice } });
+      if (record.status === 'CLOSED' && data.items) {
+        const items = await tx.recordItem.findMany({ where: { recordId: id }, include: { service: true, equipment: true } });
+        for (const item of items) {
+          if (item.service.isProduct) {
+            await tx.recordItem.update({ where: { id: item.id }, data: { netProfit: 0, servicemanName: null } });
+          } else {
+            const retailPrice = item.service.hasEquipment && item.equipment ? (item.equipment.retailPrice ?? 0) : 0;
+            await tx.recordItem.update({ where: { id: item.id }, data: { netProfit: item.price * item.quantity - retailPrice } });
+          }
+        }
 
-      // Пересчитываем только закрывающие транзакции (не предоплату). Валюта остаётся как была
-      // принята, остаток после неё — одним приходом (разбивка нал/карта при правке цены не сохраняется)
-      const deal = record.deal as unknown as { closedAt: Date; isPaidByBankTransfer: boolean; currencyPayments: unknown } | null;
-      await recordsService.syncClosingTransactions(record, {
-        finalPrice: newFinalPrice,
-        isPaidByBankTransfer: deal?.isPaidByBankTransfer ?? false,
-        currencyParts: parseCurrencyParts(deal?.currencyPayments),
-        date: deal?.closedAt ?? new Date(),
-      });
+        const newFinalPrice = data.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        await tx.deal.update({ where: { recordId: id }, data: { finalPrice: newFinalPrice } });
 
-      return recordsService.findById(id);
-    }
+        // Пересчитываем только закрывающие транзакции (не предоплату). Валюта остаётся как была
+        // принята, остаток после неё — одним приходом (разбивка нал/карта при правке цены не сохраняется)
+        await recordsService.syncClosingTransactions(tx, record, {
+          finalPrice: newFinalPrice,
+          isPaidByBankTransfer: record.deal?.isPaidByBankTransfer ?? false,
+          currencyParts: parseCurrencyParts(record.deal?.currencyPayments),
+          date: record.deal?.closedAt ?? new Date(),
+        });
+      }
+    });
 
-    return updated;
+    return recordsService.findById(id);
   },
 
   async close(id: string, data: CloseDealDto) {
@@ -471,50 +462,48 @@ export const recordsService = {
     const currencyPayments = currencyParts.length ? (currencyParts as unknown as Prisma.InputJsonValue) : Prisma.DbNull;
 
     if (record.status === 'CLOSED') {
-      await prisma.deal.update({
-        where: { recordId: id },
-        // Форма закрытия присылает всё состояние: пустые поля очищаем, а не оставляем прежними
-        data: { finalPrice, defects: defects || null, recommendations: recommendations || null, warranty, isPaidByBankTransfer, splitCashAmount: isSplit ? splitCashAmount : null, splitCardAmount: isSplit ? splitCardAmount : null, currencyPayments },
-      });
-      // Пересоздаём только закрывающие транзакции, предоплату не трогаем
-      await recordsService.syncClosingTransactions(record, {
-        finalPrice,
-        isPaidByBankTransfer,
-        splitCashAmount: isSplit ? splitCashAmount : undefined,
-        splitCardAmount: isSplit ? splitCardAmount : undefined,
-        currencyParts,
-        date: new Date(),
+      await prisma.$transaction(async (tx) => {
+        await tx.deal.update({
+          where: { recordId: id },
+          // Форма закрытия присылает всё состояние: пустые поля очищаем, а не оставляем прежними
+          data: { finalPrice, defects: defects || null, recommendations: recommendations || null, warranty, isPaidByBankTransfer, splitCashAmount: isSplit ? splitCashAmount : null, splitCardAmount: isSplit ? splitCardAmount : null, currencyPayments },
+        });
+        // Пересоздаём только закрывающие транзакции, предоплату не трогаем
+        await recordsService.syncClosingTransactions(tx, record, {
+          finalPrice,
+          isPaidByBankTransfer,
+          splitCashAmount: isSplit ? splitCashAmount : undefined,
+          splitCardAmount: isSplit ? splitCardAmount : undefined,
+          currencyParts,
+          date: new Date(),
+        });
       });
       return recordsService.findById(id);
     }
 
-    // Validate: all hasEquipment services must have equipment selected
-    const missingEquipment = record.items.filter(
-      item => (item.service as unknown as { hasEquipment: boolean }).hasEquipment && !item.equipmentId
-    );
+    // Для услуг с оборудованием оборудование должно быть выбрано
+    const missingEquipment = record.items.filter(item => item.service.hasEquipment && !item.equipmentId);
     if (missingEquipment.length > 0) {
       const names = missingEquipment.map(i => i.service.name).join(', ');
       throw new AppError(`Укажите оборудование для услуг: ${names}`, 400);
     }
 
-    // Calculate netProfit per item automatically; products contribute 0 to salary
-    for (const item of record.items) {
-      const svc = item.service as unknown as { hasEquipment: boolean; isProduct: boolean };
-      if (svc.isProduct) {
-        await prisma.recordItem.update({ where: { id: item.id }, data: { netProfit: 0, servicemanName: null } });
-      } else {
-        const retailPrice = svc.hasEquipment && item.equipment ? (item.equipment.retailPrice ?? 0) : 0;
-        const netProfit = item.price * item.quantity - retailPrice;
-        await prisma.recordItem.update({ where: { id: item.id }, data: { netProfit } });
-      }
-    }
-
-    // Collect equipment IDs from record items
     const equipmentIds = record.items
       .filter(i => i.equipmentId != null)
       .map(i => i.equipmentId as string);
 
-    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    // Прибыль позиций, сделка, статус и приходы в кассе — одной транзакцией:
+    // сбой посередине не оставит закрытую запись без денег в кассе
+    await prisma.$transaction(async (tx) => {
+      // Прибыль позиции считается автоматически; товары в зарплату не идут
+      for (const item of record.items) {
+        if (item.service.isProduct) {
+          await tx.recordItem.update({ where: { id: item.id }, data: { netProfit: 0, servicemanName: null } });
+        } else {
+          const retailPrice = item.service.hasEquipment && item.equipment ? (item.equipment.retailPrice ?? 0) : 0;
+          await tx.recordItem.update({ where: { id: item.id }, data: { netProfit: item.price * item.quantity - retailPrice } });
+        }
+      }
       await tx.deal.create({
         data: {
           recordId: id,
@@ -532,23 +521,19 @@ export const recordsService = {
         },
       });
       await tx.record.update({ where: { id }, data: { status: 'CLOSED' } });
+      await recordsService.syncClosingTransactions(tx, record, {
+        finalPrice,
+        isPaidByBankTransfer,
+        splitCashAmount: isSplit ? splitCashAmount : undefined,
+        splitCardAmount: isSplit ? splitCardAmount : undefined,
+        currencyParts,
+        date: new Date(),
+      });
     });
 
-    await recordsService.syncClosingTransactions(record, {
-      finalPrice,
-      isPaidByBankTransfer,
-      splitCashAmount: isSplit ? splitCashAmount : undefined,
-      splitCardAmount: isSplit ? splitCardAmount : undefined,
-      currencyParts,
-      date: new Date(),
-    });
-    const closed = await recordsService.findById(id);
-
-    // fire-and-forget: не блокируем ответ. Повторные закрытия отсекаются
-    // и веткой выше, и правилом «отзыв один раз на запись» в sms.service.
-    smsService.sendForRecord(id, 'REVIEW_REQUEST');
-
-    return closed;
+    // Повторные закрытия отсекаются и веткой выше, и правилом «отзыв один раз на запись» в sms.service
+    sendSmsInBackground(id, 'REVIEW_REQUEST');
+    return recordsService.findById(id);
   },
 
   async setSalaryDate(id: string, salaryDate: string | null) {
@@ -576,29 +561,27 @@ export const recordsService = {
 
     const cashChanged = retainedCash !== totalPrepaidCash || retainedCard !== totalPrepaidCard;
 
-    if (cashChanged) {
-      await prisma.cashTransaction.deleteMany({ where: rublePrepayment });
-      const baseData = {
-        clientName: record.client.name,
-        clientPhone: record.client.phone,
-        carInfo: `${record.car.brand} ${record.car.model} ${record.car.year}`,
-        recordId: id,
-        date: new Date(),
-        isPrepayment: true,
-        description: 'Предоплата сохранена при отмене',
-      };
-      if (retainedCash > 0) {
-        await prisma.cashTransaction.create({ data: { ...baseData, type: 'INCOME', amount: retainedCash } });
+    // Пересоздание предоплаты и смена статуса — одной транзакцией
+    return prisma.$transaction(async (tx) => {
+      if (cashChanged) {
+        await tx.cashTransaction.deleteMany({ where: rublePrepayment });
+        const baseData = {
+          clientName: record.client.name,
+          clientPhone: record.client.phone,
+          carInfo: `${record.car.brand} ${record.car.model} ${record.car.year}`,
+          recordId: id,
+          date: new Date(),
+          isPrepayment: true,
+          description: 'Предоплата сохранена при отмене',
+        };
+        if (retainedCash > 0) {
+          await tx.cashTransaction.create({ data: { ...baseData, type: 'INCOME', amount: retainedCash } });
+        }
+        if (retainedCard > 0) {
+          await tx.cashTransaction.create({ data: { ...baseData, type: 'INCOME_RS', amount: retainedCard } });
+        }
       }
-      if (retainedCard > 0) {
-        await prisma.cashTransaction.create({ data: { ...baseData, type: 'INCOME_RS', amount: retainedCard } });
-      }
-    }
-
-    return prisma.record.update({
-      where: { id },
-      data: { status: 'CANCELLED' },
-      include: RECORD_INCLUDE,
+      return tx.record.update({ where: { id }, data: { status: 'CANCELLED' }, include: RECORD_INCLUDE });
     });
   },
 
@@ -610,9 +593,13 @@ export const recordsService = {
 
   async delete(id: string) {
     await recordsService.findById(id);
-    await prisma.cashTransaction.deleteMany({ where: { recordId: id } });
-    await prisma.deal.deleteMany({ where: { recordId: id } });
-    await prisma.record.delete({ where: { id } });
+    // Файлы фото/видео удаляем с диска до удаления строк (строки удалятся каскадом)
+    await recordMediaService.removeFilesOfRecord(id);
+    await prisma.$transaction([
+      prisma.cashTransaction.deleteMany({ where: { recordId: id } }),
+      prisma.deal.deleteMany({ where: { recordId: id } }),
+      prisma.record.delete({ where: { id } }),
+    ]);
   },
 
   async searchCompanies(search: string) {
@@ -666,6 +653,7 @@ export const recordsService = {
    * (отчисления в капитал — каскадом вместе с валютными приходами).
    */
   async syncClosingTransactions(
+    db: DbClient,
     record: { id: string; client: { name: string; phone: string }; car: { brand: string; model: string; year: string; plateNumber?: string | null } },
     data: {
       finalPrice: number;
@@ -677,22 +665,22 @@ export const recordsService = {
     },
   ) {
     const { id } = record;
-    await prisma.cashTransaction.deleteMany({ where: { recordId: id, isPrepayment: false } });
+    await db.cashTransaction.deleteMany({ where: { recordId: id, isPrepayment: false } });
 
-    const prepaidAgg = await prisma.cashTransaction.aggregate({
+    const prepaidAgg = await db.cashTransaction.aggregate({
       where: { recordId: id, isPrepayment: true, type: { in: INCOME_TYPES } },
       _sum: { amount: true },
     });
-    const remaining = Math.max(0, roundMoney(data.finalPrice - (prepaidAgg._sum.amount || 0)));
+    const remaining = Math.max(0, roundMoney(data.finalPrice - Number(prepaidAgg._sum.amount ?? 0)));
     const base = {
       recordId: id,
       clientName: record.client.name,
       clientPhone: record.client.phone,
-      carInfo: `${record.car.brand} ${record.car.model} ${record.car.year}${record.car.plateNumber ? ' ' + record.car.plateNumber : ''}`,
+      carInfo: carInfoOf(record.car),
     };
 
     for (const part of data.currencyParts) {
-      await currencyAccountingService.createCurrencyIncome(prisma, {
+      await currencyAccountingService.createCurrencyIncome(db, {
         ...base,
         part,
         date: data.date,
@@ -705,22 +693,23 @@ export const recordsService = {
       // Разбивка нал/карта считается на клиенте от остатка после валюты — если не сходится, не используем
       const hasSplit = data.splitCashAmount != null && data.splitCardAmount != null
         && Math.abs(data.splitCashAmount + data.splitCardAmount - rest) < 0.01;
-      await accountingService.createIncomeFromDeal({
+      await cashService.createIncomeFromDeal({
         ...base,
         amount: rest,
         isPaidByBankTransfer: data.isPaidByBankTransfer,
         splitCashAmount: hasSplit ? data.splitCashAmount : undefined,
         splitCardAmount: hasSplit ? data.splitCardAmount : undefined,
         closedAt: data.date,
-      });
+      }, db);
     } else if (rest < 0) {
-      await prisma.cashTransaction.create({
+      await db.cashTransaction.create({
         data: { ...base, type: 'EXPENSE', date: data.date, amount: -rest, description: 'Сдача клиенту в BYN после оплаты валютой' },
       });
     }
   },
 
   async syncPrepaymentTransactions(
+    db: DbClient,
     recordId: string,
     clientName: string,
     clientPhone: string,
@@ -728,7 +717,7 @@ export const recordsService = {
     items: Array<{ serviceId: string } & PrepaidInput>,
   ) {
     // Отчисления в капитал за валютную предоплату удаляются каскадом вместе с приходами
-    await prisma.cashTransaction.deleteMany({ where: { recordId, isPrepayment: true } });
+    await db.cashTransaction.deleteMany({ where: { recordId, isPrepayment: true } });
 
     const prepaidItems = items
       .map(i => ({ serviceId: i.serviceId, ...prepaidFields(i) }))
@@ -736,7 +725,7 @@ export const recordsService = {
     if (prepaidItems.length === 0) return;
 
     const serviceIds = prepaidItems.map(i => i.serviceId);
-    const services = await prisma.service.findMany({ where: { id: { in: serviceIds } }, select: { id: true, name: true } });
+    const services = await db.service.findMany({ where: { id: { in: serviceIds } }, select: { id: true, name: true } });
     const serviceNames = prepaidItems
       .map(i => services.find(s => s.id === i.serviceId)?.name || '')
       .filter(Boolean)
@@ -748,13 +737,13 @@ export const recordsService = {
     const cardTotal = rubleItems.filter(i => i.prepaidByCard).reduce((s, i) => s + i.prepaidAmount, 0);
 
     const base = { recordId, clientName, clientPhone, carInfo, date: new Date(), isPrepayment: true, description };
-    if (cashTotal > 0) await prisma.cashTransaction.create({ data: { ...base, type: 'INCOME', amount: cashTotal } });
-    if (cardTotal > 0) await prisma.cashTransaction.create({ data: { ...base, type: 'INCOME_RS', amount: cardTotal } });
+    if (cashTotal > 0) await db.cashTransaction.create({ data: { ...base, type: 'INCOME', amount: cashTotal } });
+    if (cardTotal > 0) await db.cashTransaction.create({ data: { ...base, type: 'INCOME_RS', amount: cardTotal } });
 
     // Каждая валютная предоплата — свой приход по своему курсу
     for (const i of prepaidItems) {
       if (!i.prepaidCurrency || !i.prepaidCurrencyAmount || !i.prepaidRate) continue;
-      await currencyAccountingService.createCurrencyIncome(prisma, {
+      await currencyAccountingService.createCurrencyIncome(db, {
         ...base,
         part: { currency: i.prepaidCurrency, amount: i.prepaidCurrencyAmount, rate: i.prepaidRate },
       });

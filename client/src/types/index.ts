@@ -1,3 +1,12 @@
+/** Текущий пользователь — как его отдают /auth/login и /auth/me */
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  role?: string;
+  isMaster: boolean;
+}
+
 export interface Client {
   id: string;
   name: string;
@@ -50,7 +59,10 @@ export interface SmsLog {
 export interface SmsSettings {
   id: string;
   enabled: boolean;
+  /** Сервер токен не отдаёт (всегда пусто). Пустой токен при сохранении — «оставить прежний» */
   token: string;
+  /** Последние символы сохранённого токена, например «••••a1b2»; пусто — токен не задан */
+  tokenMask?: string;
   alphanameId: string;
   alphaname: string;
   onCreateTemplate: string;
@@ -182,14 +194,21 @@ export interface CurrencyRates {
   fetchedAt: string;
 }
 
+/** Откуда пришёл клиент (поле записи, необязательное) */
+export type ClientSource = 'INSTAGRAM' | 'RECOMMENDATION' | 'SEARCH' | 'MAPS' | 'OTHER';
+
 export interface Record {
   id: string;
   clientId: string;
   carId: string;
   scheduledAt: string;
-  serviceman: string;
-  receptionist?: string;
+  /** null — мастер не указан */
+  serviceman: string | null;
+  receptionist?: string | null;
   notes?: string;
+  clientSource?: ClientSource | null;
+  /** Сколько фото/видео прикреплено к записи */
+  _count?: { media: number };
   documentNumber?: string;
   status: RecordStatus;
   isLegalEntity?: boolean;
@@ -261,8 +280,6 @@ export interface Serviceman {
   position?: string;
   role?: string;
   email?: string;
-  password?: string;
-  plainPassword?: string | null;
   photoUrl?: string;
   isDismissed: boolean;
   isReceptionist: boolean;
@@ -470,4 +487,87 @@ export interface WikiRevision {
 export interface WikiSettings {
   id: string;
   bonusAmount: number;
+}
+
+// ─── Фото и видео записи ───────────────────────────
+
+export interface RecordMedia {
+  id: string;
+  recordId: string;
+  type: 'PHOTO' | 'VIDEO';
+  filename: string;
+  originalName: string;
+  size: number;
+  uploadedByName?: string | null;
+  createdAt: string;
+  /** Когда файл удалится с сервера (через год после загрузки) */
+  expiresAt: string;
+  url: string;
+}
+
+// ─── Склад ─────────────────────────────────────────
+
+export interface StockCategory {
+  id: string;
+  name: string;
+  parentId: string | null;
+  sortOrder?: number | null;
+  childrenCount: number;
+  itemsCount: number;
+  lowStockCount: number;
+}
+
+export interface StockItem {
+  id: string;
+  categoryId: string;
+  name: string;
+  sku?: string | null;
+  unit: string;
+  quantity: number;
+  /** Порог напоминания; null — не напоминать */
+  minQuantity?: number | null;
+  purchasePrice?: number | null;
+  notes?: string | null;
+  /** «Расходники / Плёнки / Глянец» */
+  categoryPath: string;
+  isLow: boolean;
+}
+
+export type StockMovementType = 'IN' | 'OUT' | 'ADJUST';
+
+export interface StockMovement {
+  id: string;
+  itemId: string;
+  type: StockMovementType;
+  delta: number;
+  quantityAfter: number;
+  comment?: string | null;
+  userName?: string | null;
+  createdAt: string;
+}
+
+// ─── Каналы привлечения ────────────────────────────
+
+export interface SourceStatsRow {
+  /** Источник или NONE — не указан */
+  source: ClientSource | 'NONE';
+  records: number;
+  cancelled: number;
+  closed: number;
+  /** Доля закрытых среди неотменённых, % */
+  conversion: number;
+  revenue: number;
+  avgCheck: number;
+  clients: number;
+  newClients: number;
+}
+
+export interface SourceStats {
+  from: string;
+  to: string;
+  sources: SourceStatsRow[];
+  months: Array<{ month: string; counts: Partial<globalThis.Record<ClientSource | 'NONE', number>> }>;
+  adExpenses: number;
+  newClients: number;
+  costPerNewClient: number | null;
 }

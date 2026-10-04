@@ -1,0 +1,124 @@
+@use '@/styles/variables' as *;
+
+.table {
+  margin-bottom: var(--spacing-sm);
+}
+
+.serviceCell {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.serviceName {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.categoryName {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  margin-top: 1px;
+}
+
+.splitButton {
+  margin-top: 1px;
+  // У antd small-кнопки свои отступы — ужимаем под иконку
+  padding: 0 4px !important;
+}
+
+.splitIcon {
+  color: var(--color-text-secondary);
+}
+
+.splitIconActive {
+  color: var(--color-primary);
+}
+
+.amount {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.profit {
+  color: var(--color-success);
+}
+
+.muted {
+  color: var(--color-text-secondary);
+}
+
+.tag {
+  margin: 0;
+}
+
+.clickable {
+  cursor: pointer;
+}
+
+.splitCell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.cancelSplit {
+  padding: 0 4px !important;
+  font-size: 11px;
+  color: var(--color-text-secondary) !important;
+}
+
+.select {
+  width: 100%;
+}
+
+// ─── Итог ───────────────────────────────────────────
+
+.totals {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.totalRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.totalLabel {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.totalValue {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.prepaidRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.prepaidValue {
+  color: var(--color-status-closed);
+  font-weight: 600;
+}
+
+.dueRow {
+  padding-top: var(--spacing-xs);
+  border-top: 1px solid var(--color-border);
+  margin-top: 2px;
+}
+
+.dueLabel {
+  font-weight: 600;
+}
+
+.dueValue {
+  color: var(--color-accent);
+}

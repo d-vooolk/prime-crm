@@ -1,7 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Button, Card, Empty, Input, Popconfirm, Select, Space, message } from 'antd';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Button, Card, Empty, Input, Popconfirm, Select, Space } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { servicesApi } from '@/api/services.api';
+import { useNotify } from '@/hooks/useNotify';
+import { useCompanySettings, useInvalidateReference } from '@/hooks/useReferenceData';
+import { getErrorMessage } from '@/utils/errors';
 import { ActMemoBlock, Category } from '@/types';
 import {
   DEFAULT_ACT_MEMO, guessMemoTargets, memoBlocksFromText, newMemoBlockId,
@@ -28,15 +31,19 @@ export const ActMemoEditor: React.FC<Props> = ({ categories }) => {
   // Сохранённых памяток по услугам ещё нет — показываем перенесённые из текста, пока не нажмут «Сохранить»
   const [fromText, setFromText] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const notify = useNotify();
+  const invalidate = useInvalidateReference();
+  const { data: settings, isError, error, refetch } = useCompanySettings();
 
+  // Берём памятку из настроек один раз: повторная загрузка не должна затирать несохранённые правки.
+  // При ошибке загрузки редактор недоступен — иначе «Сохранить» перезаписал бы памятку текстом по умолчанию
+  const initializedRef = useRef(false);
   useEffect(() => {
-    servicesApi.getSettings()
-      .then(s => {
-        if (s?.actMemoBlocks) setBlocks(s.actMemoBlocks);
-        else setFromText(s?.actMemo ?? DEFAULT_ACT_MEMO);
-      })
-      .catch(() => setFromText(DEFAULT_ACT_MEMO));
-  }, []);
+    if (!settings || initializedRef.current) return;
+    initializedRef.current = true;
+    if (settings.actMemoBlocks) setBlocks(settings.actMemoBlocks);
+    else setFromText(settings.actMemo ?? DEFAULT_ACT_MEMO);
+  }, [settings]);
 
   // Автоподбор услуг ждёт справочник
   useEffect(() => {
@@ -65,9 +72,10 @@ export const ActMemoEditor: React.FC<Props> = ({ categories }) => {
       const clean = blocks.filter(hasText);
       await servicesApi.updateSettings({ actMemoBlocks: clean });
       setBlocks(clean);
-      message.success(clean.length ? 'Памятка сохранена' : 'Памятка отключена');
-    } catch {
-      message.error('Ошибка сохранения');
+      notify.toast.success(clean.length ? 'Памятка сохранена' : 'Памятка отключена');
+      await invalidate('companySettings');
+    } catch (e) {
+      notify.error(e, 'Ошибка сохранения');
     } finally {
       setSaving(false);
     }
@@ -95,6 +103,17 @@ export const ActMemoEditor: React.FC<Props> = ({ categories }) => {
         эта услуга есть в записи. Одну памятку можно привязать сразу к нескольким услугам. Шрифт подбирается
         так, чтобы акт уместился на один лист. Строка с «- » — пункт списка.
       </p>
+
+      {isError && !blocks && (
+        <Alert
+          className={styles.error}
+          type="error"
+          showIcon
+          message="Не удалось загрузить памятку"
+          description={getErrorMessage(error)}
+          action={<Button size="small" onClick={() => refetch()}>Повторить</Button>}
+        />
+      )}
 
       {blocks && blocks.length === 0 && <Empty description="Памятка не печатается" />}
 

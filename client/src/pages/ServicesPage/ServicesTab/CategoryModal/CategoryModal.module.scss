@@ -1,0 +1,11 @@
+@use '@/styles/variables' as *;
+
+.colorRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.resetBtn {
+  padding: 0;
+}

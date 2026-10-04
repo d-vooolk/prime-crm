@@ -2,6 +2,7 @@ import {useEffect, useRef} from 'react';
 import dayjs from 'dayjs';
 import {notesApi} from '@/api/notes.api';
 import {Note} from '@/types';
+import {isPushEnabledHere} from '@/pwa';
 
 function getNotificationKey(note: Note): string {
   const today = dayjs().format('YYYY-MM-DD');
@@ -25,7 +26,9 @@ function markNotified(key: string): void {
     const map = JSON.parse(raw);
     map[key] = true;
     sessionStorage.setItem('prime-crm-notified', JSON.stringify(map));
-  } catch { /* ignore */ }
+  } catch {
+    // Намеренно молча: sessionStorage недоступен (приватный режим) — максимум повторное уведомление
+  }
 }
 
 function shouldFireNow(note: Note): boolean {
@@ -67,13 +70,16 @@ export function useNotesNotifications() {
 
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
+      // Намеренно молча: отказ в разрешении — выбор пользователя, напоминания просто не придут
       Notification.requestPermission().catch(() => {});
     }
 
     const fetchNotes = async () => {
       try {
         notesRef.current = await notesApi.getAll(undefined, false);
-      } catch { /* ignore */ }
+      } catch {
+        // Намеренно молча: фоновый опрос раз в 5 минут, ошибку увидят на странице заметок
+      }
     };
 
     fetchNotes();
@@ -81,6 +87,8 @@ export function useNotesNotifications() {
 
     const checkInterval = setInterval(() => {
       if (!('Notification' in window) || Notification.permission !== 'granted') return;
+      // На устройстве включены пуши — напоминание пришлёт сервер, даже при закрытой CRM
+      if (isPushEnabledHere()) return;
       for (const note of notesRef.current) {
         if (note.isDone) continue;
         if (!shouldFireNow(note)) continue;
@@ -91,9 +99,11 @@ export function useNotesNotifications() {
           const priorityEmoji = { LOW: '🔵', MEDIUM: '🟡', HIGH: '🔴' }[note.priority] || '';
           new Notification(`${priorityEmoji} Напоминание`, {
             body: note.text,
-            icon: '/favicon.ico',
+            icon: '/icons/icon-192.png',
           });
-        } catch { /* ignore */ }
+        } catch {
+          // Намеренно молча: часть браузеров (iOS Safari) не умеет new Notification вне service worker
+        }
       }
     }, 60 * 1000);
 

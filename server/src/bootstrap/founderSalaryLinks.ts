@@ -1,5 +1,5 @@
 import { prisma } from '../prisma/client';
-import { FOUNDER_SALARY_PREFIX } from '../services/accounting.service';
+import { FOUNDER_SALARY_PREFIX } from '../services/accounting/shared';
 
 /**
  * Привязка старых записей ЗП учредителей к расходам в кассе.

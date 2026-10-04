@@ -1,0 +1,13 @@
+@use '@/styles/variables' as *;
+
+.picker {
+  margin-bottom: var(--spacing-md);
+}
+
+.fullWidth:global(.ant-select) {
+  width: 100%;
+}
+
+.empty:global(.ant-empty) {
+  margin: var(--spacing-xl) 0;
+}

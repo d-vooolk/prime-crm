@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../prisma/client';
+import { env } from '../config/env';
+import { currentContext } from '../utils/requestContext';
 
 export interface AuthPayload {
   id: string;
@@ -19,25 +21,48 @@ declare global {
   }
 }
 
+/**
+ * Проверка токена. Роль и имя берутся из базы, а не из токена: смена роли или увольнение
+ * действуют сразу, без повторного входа. Уволенный получает 401 — клиент разлогинивает его.
+ */
 export const authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
   const header = req.headers.authorization;
   if (!header?.startsWith('Bearer ')) {
     res.status(401).json({ message: 'Требуется авторизация' });
     return;
   }
-  const token = header.slice(7);
+  let payload: AuthPayload;
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET || 'prime-crm-secret') as AuthPayload;
-    if (!payload.isMaster && payload.id) {
+    payload = jwt.verify(header.slice(7), env.jwtSecret) as AuthPayload;
+  } catch {
+    res.status(401).json({ message: 'Сессия недействительна, войдите заново' });
+    return;
+  }
+  try {
+    if (payload.isMaster) {
+      req.user = payload;
+    } else {
       const serviceman = await prisma.serviceman.findUnique({ where: { id: payload.id } });
       if (!serviceman || serviceman.isDismissed) {
-        res.status(401).json({ message: 'Доступ запрещён' });
+        res.status(401).json({ message: 'Доступ закрыт' });
         return;
       }
+      req.user = {
+        id: serviceman.id,
+        email: serviceman.email ?? payload.email,
+        name: serviceman.name,
+        role: serviceman.role ?? undefined,
+        isMaster: false,
+      };
     }
-    req.user = payload;
+    // Журнал изменений и логи узнают, кто выполняет запрос
+    const ctx = currentContext();
+    if (ctx) {
+      ctx.userId = req.user.id;
+      ctx.userName = req.user.name;
+    }
     next();
-  } catch {
-    res.status(401).json({ message: 'Токен недействителен или истёк' });
+  } catch (e) {
+    next(e);
   }
 };

@@ -1,0 +1,75 @@
+@use '@/styles/variables' as *;
+
+.notes {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.services {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.service {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.serviceName {
+  font-weight: 500;
+}
+
+// Составной селектор — чтобы перебить отступы antd Tag
+.tag:global(.ant-tag) {
+  margin-left: 6px;
+}
+
+.prepayTag:global(.ant-tag) {
+  font-size: var(--font-size-xs);
+}
+
+.serviceTotal {
+  font-weight: 600;
+}
+
+.prepaidBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: var(--spacing-sm);
+}
+
+.line {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.prepaid {
+  color: var(--color-status-closed);
+  font-weight: 600;
+}
+
+.strong {
+  font-weight: 600;
+}
+
+.totalLine {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.totalLabel {
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.total {
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--color-accent);
+}

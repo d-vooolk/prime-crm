@@ -1,13 +1,17 @@
 import { Router } from 'express';
 import { clientsController } from '../controllers/clients.controller';
+import { requireRole } from '../middleware/requireRole';
+import { ROLES } from '../utils/roles';
 
 const router = Router();
+// Клиенты — от менеджера: сотрудникам контакты и история клиентов не показываются
+const manager = requireRole(ROLES.MANAGER);
 
-router.get('/', clientsController.getAll);
-router.get('/search', clientsController.searchByPhone);
-router.get('/suggest', clientsController.suggest);
-router.get('/:id', clientsController.getById);
-router.post('/', clientsController.create);
-router.patch('/:id', clientsController.update);
+router.get('/', manager, clientsController.getAll);
+router.get('/search', manager, clientsController.searchByPhone);
+router.get('/suggest', manager, clientsController.suggest);
+router.get('/:id', manager, clientsController.getById);
+router.post('/', manager, clientsController.create);
+router.patch('/:id', manager, clientsController.update);
 
 export default router;

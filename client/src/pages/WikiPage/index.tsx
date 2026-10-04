@@ -31,8 +31,10 @@ export const WikiPage: React.FC = () => {
 
   useEffect(() => {
     if (!reviewer) return;
-    wikiApi.getSettings().then(s => setBonusAmount(s.bonusAmount)).catch(() => {});
-  }, [reviewer]);
+    wikiApi.getSettings()
+      .then(s => setBonusAmount(s.bonusAmount))
+      .catch(e => notify.error(e, 'Не удалось загрузить настройки вики'));
+  }, [reviewer, notify]);
 
   const selectCar = (key: Partial<WikiKey>) => {
     const next = new URLSearchParams();
@@ -57,7 +59,7 @@ export const WikiPage: React.FC = () => {
       setBonusAmount(saved.bonusAmount);
       notify.success('Настройки вики сохранены');
     } catch (e) {
-      notify.error((e as Error).message);
+      notify.error(e, 'Не удалось сохранить настройки');
     } finally {
       setSavingSettings(false);
     }
@@ -93,7 +95,7 @@ export const WikiPage: React.FC = () => {
                 extra="Назначается кнопкой во вкладке «Проверка правок» и попадает в расчёт ЗП сотрудника."
                 rules={[{ required: true, message: 'Укажите сумму' }]}
               >
-                <InputNumber min={0} step={5} style={{ width: '100%' }} />
+                <InputNumber min={0} step={5} className={styles.fullWidth} />
               </Form.Item>
               <Button type="primary" loading={savingSettings} onClick={saveSettings}>Сохранить</Button>
             </Form>

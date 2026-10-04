@@ -1,0 +1,53 @@
+@use '@/styles/variables' as *;
+
+.divider {
+  font-size: 13px !important;
+}
+
+.prepaidTag {
+  font-size: 10px;
+  margin-top: 2px;
+}
+
+.totals {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.totalRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.prepaidValue {
+  color: var(--color-status-closed);
+  font-weight: 600;
+}
+
+.bold {
+  font-weight: 600;
+}
+
+.grandTotal {
+  text-align: right;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.textBlock {
+  margin-top: var(--spacing-sm);
+}
+
+.textBlockLabel {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.multiline {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}

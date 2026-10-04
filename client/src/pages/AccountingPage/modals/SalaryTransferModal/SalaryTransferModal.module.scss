@@ -1,0 +1,16 @@
+@use '@/styles/variables' as *;
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+}
+
+.hint {
+  margin-bottom: 12px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.fullWidth {
+  width: 100%;
+}

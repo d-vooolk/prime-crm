@@ -1,0 +1,86 @@
+@use '@/styles/variables' as *;
+
+.controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.employeeSelect {
+  width: 200px;
+}
+
+.monthPicker {
+  width: 160px;
+}
+
+.monthNav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.monthNavLabel {
+  font-size: 14px;
+  min-width: 110px;
+  text-align: center;
+}
+
+.adjustButtons {
+  display: flex;
+  gap: 8px;
+}
+
+.bonusButton {
+  border-color: var(--color-success);
+  color: var(--color-success);
+}
+
+.payButton {
+  margin-left: auto;
+}
+
+@include mobile {
+  .employeeSelect,
+  .monthPicker {
+    width: 100%;
+  }
+
+  .monthNav {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .adjustButtons {
+    width: 100%;
+
+    > * {
+      flex: 1;
+    }
+  }
+
+  .payButton {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
+.period {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-bottom: 12px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.percentTag {
+  margin: 0;
+}
+
+.empty {
+  margin-top: 40px;
+}

@@ -1,0 +1,58 @@
+@use '@/styles/variables' as *;
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  padding: var(--spacing-lg);
+}
+
+.strong {
+  font-weight: 500;
+}
+
+.rowActions {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.catLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.catDot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.catName {
+  font-weight: 600;
+}
+
+.catCount {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.catActions {
+  display: flex;
+  gap: var(--spacing-xs);
+  align-items: center;
+}

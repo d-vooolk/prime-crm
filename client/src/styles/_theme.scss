@@ -1,0 +1,176 @@
+// CSS-переменные светлой и тёмной темы. Подключается один раз в global.scss:
+// если положить их в _variables.scss, блоки :root дублировались бы в каждом SCSS-модуле.
+// ─── Цвета ────────────────────────────────────────
+:root {
+  --color-sidebar-bg: #0f2231;
+  --color-primary: #0f2231;
+  --color-primary-light: #1a3a52;
+  --color-accent: #3b82f6;
+  --color-accent-hover: #2563eb;
+
+  --color-bg: #f5f6fa;
+  --color-surface: #ffffff;
+  --color-surface-2: #f0f2f5;
+  --color-border: #e5e8ef;
+  --color-border-light: #f0f2f5;
+
+  --color-text-primary: #0f2231;
+  --color-text-secondary: #6b7280;
+  --color-text-muted: #9ca3af;
+
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+
+  --color-record-active: #ffffff;
+  --color-record-closed: #f0fdf4;
+  --color-record-cancelled: #fef2f2;
+  --color-record-closed-border: #86efac;
+  --color-record-cancelled-border: #fca5a5;
+
+  // Подсветка правок в вики: добавленный и удалённый текст
+  --color-diff-added-bg: #dcfce7;
+  --color-diff-added-text: #166534;
+  --color-diff-removed-bg: #fee2e2;
+  --color-diff-removed-text: #991b1b;
+
+  --color-status-active: #3b82f6;
+  --color-status-closed: #22c55e;
+  --color-status-cancelled: #ef4444;
+
+  // Фон всплывающих подсказок графиков и прочих «приподнятых» панелей
+  --color-bg-elevated: #ffffff;
+
+  // Мягкие подложки и рамки для статусных блоков (штрафы/премии, предупреждения)
+  --color-success-bg: rgba(34, 197, 94, 0.08);
+  --color-success-border: rgba(34, 197, 94, 0.3);
+  --color-error-bg: rgba(239, 68, 68, 0.07);
+  --color-error-border: rgba(239, 68, 68, 0.25);
+  --color-warning-bg: rgba(245, 158, 11, 0.08);
+  --color-warning-border: rgba(245, 158, 11, 0.3);
+  --color-accent-bg: rgba(59, 130, 246, 0.08);
+  --color-accent-border: rgba(59, 130, 246, 0.3);
+  --color-purple: #a855f7;
+
+  // Приоритеты заметок
+  --color-priority-low: #1890ff;
+  --color-priority-medium: #fa8c16;
+  --color-priority-high: #ff4d4f;
+
+  // Серии графиков (recharts читает их через useCssVars)
+  --color-chart-1: #3b82f6;
+  --color-chart-2: #22c55e;
+  --color-chart-3: #f59e0b;
+  --color-chart-4: #a855f7;
+  --color-chart-5: #ef4444;
+  --color-chart-6: #06b6d4;
+  --color-chart-grid: #e5e8ef;
+  --color-chart-axis: #6b7280;
+
+  // Конфетти при закрытии сделки
+  --color-confetti-1: #34d399;
+  --color-confetti-2: #6ee7b7;
+  --color-confetti-3: #fbbf24;
+  --color-confetti-4: #f59e0b;
+  --color-confetti-5: #60a5fa;
+  --color-confetti-6: #a78bfa;
+  --color-confetti-7: #f472b6;
+  --color-confetti-8: #fb923c;
+  --color-confetti-9: #ffffff;
+  --color-confetti-10: #86efac;
+
+  // ─── Отступы ──────────────────────────────────────
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
+
+  // ─── Размеры ──────────────────────────────────────
+  --sidebar-width: 280px;
+  --sidebar-collapsed-width: 64px;
+  --calendar-width: 300px;
+  --header-height: 64px;
+  --bottom-nav-height: 60px;
+  --border-radius: 12px;
+  --border-radius-sm: 8px;
+  --border-radius-lg: 16px;
+
+  // ─── Тени ─────────────────────────────────────────
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+
+  // ─── Типографика ──────────────────────────────────
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-size-xs: 11px;
+  --font-size-sm: 13px;
+  --font-size-md: 15px;
+  --font-size-lg: 18px;
+  --font-size-xl: 22px;
+  --font-size-2xl: 28px;
+
+  // ─── Переходы ─────────────────────────────────────
+  --transition: all 0.2s ease;
+  --transition-slow: all 0.35s ease;
+}
+
+// ─── Тёмная тема ────────────────────────────────────
+[data-theme='dark'] {
+  --color-sidebar-bg: #0d1929;
+  --color-primary: #e2e8f0;
+  --color-primary-light: #cbd5e1;
+  --color-accent: #60a5fa;
+  --color-accent-hover: #3b82f6;
+
+  --color-bg: #0f172a;
+  --color-surface: #1e293b;
+  --color-surface-2: #263346;
+  --color-border: #334155;
+  --color-border-light: #263346;
+
+  --color-text-primary: #f1f5f9;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+
+  --color-record-active: #1e293b;
+  --color-record-closed: #182d22;
+  --color-record-cancelled: #2a1515;
+  --color-record-closed-border: #2d5a3e;
+  --color-record-cancelled-border: #5a2626;
+
+  --color-diff-added-bg: #14532d;
+  --color-diff-added-text: #bbf7d0;
+  --color-diff-removed-bg: #5a1d1d;
+  --color-diff-removed-text: #fecaca;
+
+  --color-bg-elevated: #263346;
+
+  --color-success-bg: rgba(34, 197, 94, 0.12);
+  --color-success-border: rgba(34, 197, 94, 0.35);
+  --color-error-bg: rgba(239, 68, 68, 0.12);
+  --color-error-border: rgba(239, 68, 68, 0.35);
+  --color-warning-bg: rgba(245, 158, 11, 0.12);
+  --color-warning-border: rgba(245, 158, 11, 0.35);
+  --color-accent-bg: rgba(96, 165, 250, 0.12);
+  --color-accent-border: rgba(96, 165, 250, 0.35);
+  --color-purple: #c084fc;
+
+  --color-priority-low: #4096ff;
+  --color-priority-medium: #ffa940;
+  --color-priority-high: #ff7875;
+
+  --color-chart-1: #60a5fa;
+  --color-chart-2: #4ade80;
+  --color-chart-3: #fbbf24;
+  --color-chart-4: #c084fc;
+  --color-chart-5: #f87171;
+  --color-chart-6: #22d3ee;
+  --color-chart-grid: #334155;
+  --color-chart-axis: #94a3b8;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+}

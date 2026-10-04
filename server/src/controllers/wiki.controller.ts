@@ -4,7 +4,8 @@ import path from 'path';
 import { z } from 'zod';
 import { AppError } from '../middleware/errorHandler';
 import { wikiService, isWikiReviewer, WikiKey } from '../services/wiki.service';
-import { decodeOriginalName, mediaKind } from '../utils/uploads';
+import { decodeOriginalName, WIKI_MEDIA_DIR } from '../utils/uploads';
+import type { UploadedMedia } from '../utils/mediaUpload';
 import { createImageVariants } from '../utils/wikiImages';
 
 const keySchema = z.object({
@@ -46,23 +47,21 @@ export const wikiController = {
   },
 
   async uploadMedia(req: Request, res: Response) {
-    const file = req.file;
-    if (!file) throw new AppError('Файл не загружен', 400);
+    const upload = res.locals.media as UploadedMedia;
     let key: WikiKey;
     try {
       key = parseKey(req.body);
     } catch (e) {
-      fs.promises.unlink(file.path).catch(() => {});
+      fs.promises.unlink(path.join(WIKI_MEDIA_DIR, upload.filename)).catch(() => {});
       throw e;
     }
-    const filename = path.basename(file.filename);
-    const type = mediaKind(file) === 'video' ? 'VIDEO' : 'PHOTO';
+    const type = upload.kind === 'video' ? 'VIDEO' : 'PHOTO';
     // Сжимаем до записи в БД: в ответе и при следующем открытии карточки уже есть лёгкие варианты
-    const variants = type === 'PHOTO' ? await createImageVariants(filename) : undefined;
+    const variants = type === 'PHOTO' ? await createImageVariants(upload.filename) : undefined;
     const media = await wikiService.addMedia(key, {
-      filename,
-      originalName: decodeOriginalName(file.originalname),
-      size: file.size,
+      filename: upload.filename,
+      originalName: decodeOriginalName(upload.originalName),
+      size: upload.size,
       type,
       variants,
     }, req.user!);

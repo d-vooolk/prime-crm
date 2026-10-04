@@ -1,0 +1,15 @@
+@use '@/styles/variables' as *;
+
+.tab {
+  padding-top: var(--spacing-sm);
+}
+
+.alert {
+  margin-bottom: var(--spacing-md);
+}
+
+.empty {
+  text-align: center;
+  color: var(--color-text-muted);
+  padding: 40px;
+}

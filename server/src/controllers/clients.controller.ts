@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { AppError } from '../middleware/errorHandler';
+import { parse } from '../middleware/validate';
 import { clientsService } from '../services/clients.service';
 
 // Пустая строка в query = фильтр не задан
@@ -30,6 +31,13 @@ const listQuerySchema = z.object({
   from: optionalDay,
   to: optionalDay,
 });
+
+const clientCreateSchema = z.object({
+  name: z.string().trim().min(1, 'Укажите имя клиента').max(200),
+  phone: z.string().trim().min(5, 'Укажите телефон').max(40),
+  notes: z.preprocess(v => (v === null ? undefined : v), z.string().max(5000).optional()),
+});
+const clientUpdateSchema = clientCreateSchema.partial();
 
 const suggestQuerySchema = z.object({
   q: z.string().trim().min(1).max(100),
@@ -76,14 +84,14 @@ export const clientsController = {
 
   async create(req: Request, res: Response, next: NextFunction) {
     try {
-      const client = await clientsService.create(req.body);
+      const client = await clientsService.create(parse(clientCreateSchema, req.body));
       res.status(201).json({ data: client });
     } catch (e) { next(e); }
   },
 
   async update(req: Request, res: Response, next: NextFunction) {
     try {
-      const client = await clientsService.update(String(req.params.id), req.body);
+      const client = await clientsService.update(String(req.params.id), parse(clientUpdateSchema, req.body));
       res.json({ data: client });
     } catch (e) { next(e); }
   },

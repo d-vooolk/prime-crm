@@ -1,8 +1,13 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Input, Button, Modal, Form, InputNumber, message, Tag, Empty, Popconfirm, Tooltip, Alert, Spin } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Alert, Button } from 'antd';
 import { carsApi, CatalogItemInput } from '@/api/cars.api';
-import { CarBrand, CarModel, CarGeneration } from '@/types';
+import { CarModel, CarGeneration } from '@/types';
+import { useNotify } from '@/hooks/useNotify';
+import { useCarBrands, useInvalidateReference } from '@/hooks/useReferenceData';
+import { isAbortError } from '@/utils/errors';
+import { AnyItem, Level } from './catalog';
+import { CatalogColumn } from './CatalogColumn';
+import { CatalogEditorTarget, CatalogItemModal } from './CatalogItemModal';
 import styles from './CarCatalogEditor.module.scss';
 
 /**
@@ -14,232 +19,63 @@ import styles from './CarCatalogEditor.module.scss';
  * заведено руками: грузовые и прочее, чего у донора нет.
  */
 
-type Level = 'mark' | 'model' | 'generation';
-type AnyItem = CarBrand | CarModel | CarGeneration;
+/** Загрузка вложенного списка с отменой: при быстром переключении марок ответ по старой не затрёт новую */
+function useCancellableList<T, A extends unknown[]>(fetcher: (...args: [...A, AbortSignal]) => Promise<T[]>, errorTitle: string) {
+  const notify = useNotify();
+  const [items, setItems] = useState<T[]>([]);
+  const [loading, setLoading] = useState(false);
+  const controllerRef = useRef<AbortController | null>(null);
 
-const LEVEL_LABELS: Record<Level, { one: string; add: string; empty: string }> = {
-  mark: { one: 'марку', add: 'Добавить марку', empty: 'Марок нет' },
-  model: { one: 'модель', add: 'Добавить модель', empty: 'Выберите марку слева' },
-  generation: { one: 'поколение', add: 'Добавить поколение', empty: 'Выберите модель слева' },
-};
+  const load = useCallback(async (...args: A) => {
+    controllerRef.current?.abort();
+    const controller = new AbortController();
+    controllerRef.current = controller;
+    setLoading(true);
+    try {
+      setItems(await fetcher(...args, controller.signal));
+    } catch (e) {
+      if (isAbortError(e)) return;
+      notify.error(e, errorTitle);
+      setItems([]);
+    } finally {
+      if (controllerRef.current === controller) setLoading(false);
+    }
+  }, [fetcher, errorTitle, notify]);
 
-function yearsLabel(item: AnyItem) {
-  if (!item.year_from && !item.year_to) return null;
-  return `${item.year_from ?? '...'}–${item.year_to ?? 'н.в.'}`;
+  const clear = useCallback(() => {
+    controllerRef.current?.abort();
+    setItems([]);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => () => controllerRef.current?.abort(), []);
+
+  return { items, loading, load, clear };
 }
-
-interface ColumnProps {
-  level: Level;
-  title: string;
-  items: AnyItem[];
-  loading: boolean;
-  disabled: boolean;
-  selectedId: string | null;
-  manualOnly: boolean;
-  onSelect: (id: string) => void;
-  onAdd: () => void;
-  onEdit: (item: AnyItem) => void;
-  onDelete: (item: AnyItem) => void;
-}
-
-const Column: React.FC<ColumnProps> = ({
-  level, title, items, loading, disabled, selectedId, manualOnly, onSelect, onAdd, onEdit, onDelete,
-}) => {
-  const [query, setQuery] = useState('');
-
-  const visible = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return items.filter(i => (!manualOnly || i.source === 'MANUAL') && (!q || i.name.toLowerCase().includes(q)));
-  }, [items, query, manualOnly]);
-
-  return (
-    <div className={styles.column}>
-      <div className={styles.columnHeader}>
-        <span className={styles.columnTitle}>
-          {title}
-          {!disabled && <span className={styles.count}>{visible.length}</span>}
-        </span>
-        <Button
-          size="small"
-          type="primary"
-          icon={<PlusOutlined />}
-          disabled={disabled}
-          onClick={onAdd}
-        >
-          Добавить
-        </Button>
-      </div>
-
-      <Input
-        size="small"
-        allowClear
-        disabled={disabled}
-        prefix={<SearchOutlined />}
-        placeholder="Поиск по названию"
-        value={query}
-        onChange={e => setQuery(e.target.value)}
-        className={styles.search}
-      />
-
-      <div className={styles.list}>
-        {loading && <div className={styles.centered}><Spin size="small" /></div>}
-        {!loading && disabled && (
-          <div className={styles.centered}>
-            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={LEVEL_LABELS[level].empty} />
-          </div>
-        )}
-        {!loading && !disabled && visible.length === 0 && (
-          <div className={styles.centered}>
-            <Empty
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
-              description={query || manualOnly ? 'Ничего не найдено' : LEVEL_LABELS[level].empty}
-            />
-          </div>
-        )}
-        {!loading && !disabled && visible.map(item => {
-          const isManual = item.source === 'MANUAL';
-          const years = yearsLabel(item);
-          const photo = level === 'generation' ? (item as CarGeneration).photo : null;
-          return (
-            <div
-              key={item.id}
-              className={`${styles.row} ${selectedId === item.id ? styles.rowActive : ''}`}
-              onClick={() => onSelect(item.id)}
-            >
-              {level === 'generation' && (
-                photo
-                  ? <img src={photo.startsWith('http') ? photo : `https://${photo}`} alt="" className={styles.thumb} loading="lazy" />
-                  : <span className={styles.thumbEmpty} title="Фото не задано">—</span>
-              )}
-              <div className={styles.rowMain}>
-                <div className={styles.rowName}>
-                  {item.name}
-                  {isManual && <Tag color="gold" className={styles.badge}>вручную</Tag>}
-                </div>
-                {years && <div className={styles.rowYears}>{years}</div>}
-              </div>
-
-              <div className={styles.rowActions} onClick={e => e.stopPropagation()}>
-                {isManual ? (
-                  <>
-                    <Tooltip title="Изменить">
-                      <Button size="small" type="text" icon={<EditOutlined />} onClick={() => onEdit(item)} />
-                    </Tooltip>
-                    <Popconfirm
-                      title={`Удалить ${LEVEL_LABELS[level].one}?`}
-                      description="Вместе со всем, что вложено внутрь"
-                      okText="Удалить"
-                      cancelText="Отмена"
-                      okButtonProps={{ danger: true }}
-                      onConfirm={() => onDelete(item)}
-                    >
-                      <Tooltip title="Удалить">
-                        <Button size="small" type="text" danger icon={<DeleteOutlined />} />
-                      </Tooltip>
-                    </Popconfirm>
-                  </>
-                ) : (
-                  <Tooltip title="Запись из основного каталога, редактированию не подлежит">
-                    <span className={styles.lockHint}>из каталога</span>
-                  </Tooltip>
-                )}
-                {level !== 'generation' && <RightOutlined className={styles.chevron} />}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
 
 export const CarCatalogEditor: React.FC = () => {
-  const [marks, setMarks] = useState<CarBrand[]>([]);
-  const [models, setModels] = useState<CarModel[]>([]);
-  const [generations, setGenerations] = useState<CarGeneration[]>([]);
+  const notify = useNotify();
+  const invalidate = useInvalidateReference();
+  const { data: marks = [], isLoading: loadingMarks, isError: marksError, refetch: refetchMarks } = useCarBrands();
+  const models = useCancellableList<CarModel, [string]>(carsApi.getModels, 'Не удалось загрузить модели');
+  const generations = useCancellableList<CarGeneration, [string, string]>(carsApi.getGenerations, 'Не удалось загрузить поколения');
 
   const [markId, setMarkId] = useState<string | null>(null);
   const [modelId, setModelId] = useState<string | null>(null);
-
-  const [loadingMarks, setLoadingMarks] = useState(false);
-  const [loadingModels, setLoadingModels] = useState(false);
-  const [loadingGenerations, setLoadingGenerations] = useState(false);
-
   const [manualOnly, setManualOnly] = useState(false);
-
-  const [editor, setEditor] = useState<{ level: Level; item: AnyItem | null } | null>(null);
-  const [form] = Form.useForm<CatalogItemInput>();
+  const [editor, setEditor] = useState<CatalogEditorTarget | null>(null);
   const [saving, setSaving] = useState(false);
-  // Отдельным стейтом, чтобы предпросмотр перерисовывался по мере ввода ссылки
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [photoBroken, setPhotoBroken] = useState(false);
-
-  const loadMarks = useCallback(async () => {
-    setLoadingMarks(true);
-    try {
-      setMarks(await carsApi.getBrands());
-    } catch {
-      message.error('Не удалось загрузить марки');
-    } finally {
-      setLoadingMarks(false);
-    }
-  }, []);
-
-  const loadModels = useCallback(async (mark: string) => {
-    setLoadingModels(true);
-    try {
-      setModels(await carsApi.getModels(mark));
-    } catch {
-      message.error('Не удалось загрузить модели');
-      setModels([]);
-    } finally {
-      setLoadingModels(false);
-    }
-  }, []);
-
-  const loadGenerations = useCallback(async (mark: string, model: string) => {
-    setLoadingGenerations(true);
-    try {
-      setGenerations(await carsApi.getGenerations(mark, model));
-    } catch {
-      message.error('Не удалось загрузить поколения');
-      setGenerations([]);
-    } finally {
-      setLoadingGenerations(false);
-    }
-  }, []);
-
-  useEffect(() => { loadMarks(); }, [loadMarks]);
 
   const selectMark = (id: string) => {
     setMarkId(id);
     setModelId(null);
-    setGenerations([]);
-    loadModels(id);
+    generations.clear();
+    models.load(id);
   };
 
   const selectModel = (id: string) => {
     setModelId(id);
-    if (markId) loadGenerations(markId, id);
-  };
-
-  const openEditor = (level: Level, item: AnyItem | null) => {
-    setEditor({ level, item });
-    const photo = level === 'generation' ? (item as CarGeneration | null)?.photo ?? null : null;
-    form.setFieldsValue({
-      name: item?.name ?? '',
-      yearFrom: item?.year_from ?? null,
-      yearTo: item?.year_to ?? null,
-      photo,
-    });
-    setPhotoPreview(photo);
-  };
-
-  const closeEditor = () => {
-    setEditor(null);
-    form.resetFields();
-    setPhotoPreview(null);
-    setPhotoBroken(false);
+    if (markId) generations.load(markId, id);
   };
 
   const handleSubmit = async (values: CatalogItemInput) => {
@@ -257,20 +93,21 @@ export const CarCatalogEditor: React.FC = () => {
       if (level === 'mark') {
         if (item) await carsApi.updateMark(item.id, payload);
         else await carsApi.createMark(payload);
-        await loadMarks();
+        // Марки — общий справочник: обновятся и в форме записи
+        await invalidate('carBrands');
       } else if (level === 'model' && markId) {
         if (item) await carsApi.updateModel(markId, item.id, payload);
         else await carsApi.createModel(markId, payload);
-        await loadModels(markId);
+        await models.load(markId);
       } else if (level === 'generation' && markId && modelId) {
         if (item) await carsApi.updateGeneration(markId, modelId, item.id, payload);
         else await carsApi.createGeneration(markId, modelId, payload);
-        await loadGenerations(markId, modelId);
+        await generations.load(markId, modelId);
       }
-      message.success(item ? 'Изменения сохранены' : 'Запись добавлена');
-      closeEditor();
+      notify.toast.success(item ? 'Изменения сохранены' : 'Запись добавлена');
+      setEditor(null);
     } catch (e) {
-      message.error((e as Error).message || 'Не удалось сохранить');
+      notify.error(e, 'Не удалось сохранить');
     } finally {
       setSaving(false);
     }
@@ -280,25 +117,33 @@ export const CarCatalogEditor: React.FC = () => {
     try {
       if (level === 'mark') {
         await carsApi.deleteMark(item.id);
-        if (markId === item.id) { setMarkId(null); setModelId(null); setModels([]); setGenerations([]); }
-        await loadMarks();
+        if (markId === item.id) { setMarkId(null); setModelId(null); models.clear(); generations.clear(); }
+        await invalidate('carBrands');
       } else if (level === 'model' && markId) {
         await carsApi.deleteModel(markId, item.id);
-        if (modelId === item.id) { setModelId(null); setGenerations([]); }
-        await loadModels(markId);
+        if (modelId === item.id) { setModelId(null); generations.clear(); }
+        await models.load(markId);
       } else if (level === 'generation' && markId && modelId) {
         await carsApi.deleteGeneration(markId, modelId, item.id);
-        await loadGenerations(markId, modelId);
+        await generations.load(markId, modelId);
       }
-      message.success('Удалено');
+      notify.toast.success('Удалено');
     } catch (e) {
-      message.error((e as Error).message || 'Не удалось удалить');
+      notify.error(e, 'Не удалось удалить');
     }
   };
 
   const selectedMark = marks.find(m => m.id === markId);
-  const selectedModel = models.find(m => m.id === modelId);
+  const selectedModel = models.items.find(m => m.id === modelId);
   const manualMarkCount = marks.filter(m => m.source === 'MANUAL').length;
+
+  const columnHandlers = (level: Level) => ({
+    level,
+    manualOnly,
+    onAdd: () => setEditor({ level, item: null }),
+    onEdit: (item: AnyItem) => setEditor({ level, item }),
+    onDelete: (item: AnyItem) => handleDelete(level, item),
+  });
 
   return (
     <div className={styles.wrapper}>
@@ -311,11 +156,7 @@ export const CarCatalogEditor: React.FC = () => {
       />
 
       <div className={styles.toolbar}>
-        <Button
-          size="small"
-          type={manualOnly ? 'primary' : 'default'}
-          onClick={() => setManualOnly(v => !v)}
-        >
+        <Button size="small" type={manualOnly ? 'primary' : 'default'} onClick={() => setManualOnly(v => !v)}>
           {manualOnly ? 'Показаны только добавленные' : 'Только добавленные вручную'}
         </Button>
         {manualMarkCount > 0 && (
@@ -324,138 +165,43 @@ export const CarCatalogEditor: React.FC = () => {
       </div>
 
       <div className={styles.columns}>
-        <Column
-          level="mark"
+        <CatalogColumn
+          {...columnHandlers('mark')}
           title="Марка"
           items={marks}
           loading={loadingMarks}
+          error={marksError}
+          onRetry={() => refetchMarks()}
           disabled={false}
           selectedId={markId}
-          manualOnly={manualOnly}
           onSelect={selectMark}
-          onAdd={() => openEditor('mark', null)}
-          onEdit={item => openEditor('mark', item)}
-          onDelete={item => handleDelete('mark', item)}
         />
-        <Column
-          level="model"
+        <CatalogColumn
+          {...columnHandlers('model')}
           title={selectedMark ? `Модели · ${selectedMark.name}` : 'Модели'}
-          items={models}
-          loading={loadingModels}
+          items={models.items}
+          loading={models.loading}
           disabled={!markId}
           selectedId={modelId}
-          manualOnly={manualOnly}
           onSelect={selectModel}
-          onAdd={() => openEditor('model', null)}
-          onEdit={item => openEditor('model', item)}
-          onDelete={item => handleDelete('model', item)}
         />
-        <Column
-          level="generation"
+        <CatalogColumn
+          {...columnHandlers('generation')}
           title={selectedModel ? `Поколения · ${selectedModel.name}` : 'Поколения'}
-          items={generations}
-          loading={loadingGenerations}
+          items={generations.items}
+          loading={generations.loading}
           disabled={!modelId}
           selectedId={null}
-          manualOnly={manualOnly}
-          onSelect={() => {}}
-          onAdd={() => openEditor('generation', null)}
-          onEdit={item => openEditor('generation', item)}
-          onDelete={item => handleDelete('generation', item)}
+          onSelect={() => { /* поколение — последний уровень, выбирать нечего */ }}
         />
       </div>
 
-      <Modal
-        open={!!editor}
-        title={editor
-          ? `${editor.item ? 'Изменить' : 'Добавить'} ${LEVEL_LABELS[editor.level].one}`
-          : ''}
-        onCancel={closeEditor}
-        onOk={() => form.submit()}
-        okText={editor?.item ? 'Сохранить' : 'Добавить'}
-        okButtonProps={{ loading: saving }}
-        cancelText="Отмена"
-        destroyOnHidden
-        width={420}
-      >
-        <Form form={form} layout="vertical" onFinish={handleSubmit} className={styles.form}>
-          <Form.Item
-            label="Название"
-            name="name"
-            rules={[{ required: true, message: 'Укажите название' }]}
-          >
-            <Input
-              autoFocus
-              placeholder={editor?.level === 'mark' ? 'Например: КамАЗ'
-                : editor?.level === 'model' ? 'Например: 5490'
-                  : 'Например: I поколение'}
-            />
-          </Form.Item>
-
-          <div className={styles.yearRow}>
-            <Form.Item label="Год начала" name="yearFrom">
-              <InputNumber min={1900} max={2100} precision={0} placeholder="не важно" style={{ width: '100%' }} />
-            </Form.Item>
-            <Form.Item label="Год окончания" name="yearTo">
-              <InputNumber min={1900} max={2100} precision={0} placeholder="выпускается" style={{ width: '100%' }} />
-            </Form.Item>
-          </div>
-
-          <div className={styles.formHint}>
-            Годы указывать не обязательно. Если заполните — в карточке записи год авто
-            можно будет выбрать из этого диапазона.
-          </div>
-
-          {editor?.level === 'generation' && (
-            <>
-              <Form.Item
-                label="Ссылка на фото"
-                name="photo"
-                className={styles.photoField}
-                rules={[{
-                  validator: (_, value?: string) => {
-                    const url = value?.trim();
-                    if (!url) return Promise.resolve();
-                    return /^https?:\/\/\S+$/i.test(url)
-                      ? Promise.resolve()
-                      : Promise.reject(new Error('Ссылка должна начинаться с http:// или https://'));
-                  },
-                }]}
-              >
-                <Input
-                  allowClear
-                  placeholder="https://example.com/truck.jpg"
-                  onChange={e => {
-                    const url = e.target.value.trim();
-                    setPhotoPreview(url || null);
-                    setPhotoBroken(false);
-                  }}
-                />
-              </Form.Item>
-
-              <div className={styles.photoBox}>
-                {photoPreview && !photoBroken ? (
-                  <img
-                    src={photoPreview}
-                    alt="Предпросмотр"
-                    className={styles.photoPreview}
-                    onError={() => setPhotoBroken(true)}
-                  />
-                ) : (
-                  <div className={styles.photoEmpty}>
-                    {photoBroken ? 'Картинка не загрузилась — проверьте ссылку' : 'Фото не задано'}
-                  </div>
-                )}
-              </div>
-
-              <div className={styles.formHint}>
-                Это фото показывается на карточке записи и при выборе авто.
-                Нужна прямая ссылка на картинку, а не на страницу с ней.
-              </div>
-            </>
-          )}
-        </Form>
-      </Modal>
+      <CatalogItemModal
+        target={editor}
+        saving={saving}
+        onCancel={() => setEditor(null)}
+        onSubmit={handleSubmit}
+      />
     </div>
   );
 };

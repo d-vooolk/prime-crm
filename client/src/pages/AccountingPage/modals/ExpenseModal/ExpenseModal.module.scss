@@ -1,0 +1,25 @@
+@use '@/styles/variables' as *;
+
+.capitalTransferEntry {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-surface-2);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.founderSwitchItem {
+  margin-bottom: 0;
+}
+
+.founderSwitch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}

@@ -1,0 +1,78 @@
+@use '@/styles/variables' as *;
+
+.table {
+  // Строка сотрудника — продолжение строки услуги: без своего фона,
+  // без разделителя между ними и с уменьшенным верхним отступом.
+  :global(.ant-table-tbody > tr.ant-table-expanded-row > td) {
+    background: transparent;
+    padding: 0 8px 8px;
+  }
+
+  :global(.ant-table-tbody > tr.ant-table-expanded-row:hover > td) {
+    background: transparent;
+  }
+
+  :global(.ant-table-tbody > tr.ant-table-row:has(+ tr.ant-table-expanded-row) > td) {
+    border-bottom: none;
+  }
+}
+
+.name {
+  font-weight: 500;
+}
+
+// Составные селекторы — чтобы перебить размеры и отступы antd
+.categoryTag:global(.ant-tag) {
+  font-size: var(--font-size-xs);
+  margin-top: 2px;
+}
+
+.equipment:global(.ant-select) {
+  width: 100%;
+  margin-top: 6px;
+}
+
+.quantity:global(.ant-input-number) {
+  width: 80px;
+}
+
+.price:global(.ant-input-number) {
+  width: 90px;
+}
+
+// Суффикс «р.» вплотную к полю цены, как addon
+.currency {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--spacing-sm);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-left: none;
+  border-radius: 0 6px 6px 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.rowTotal {
+  font-weight: 600;
+}
+
+.prepaid:global(.ant-btn) {
+  color: var(--color-accent);
+}
+
+.servicemanRow {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.servicemanLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.servicemanControl {
+  width: 240px;
+}

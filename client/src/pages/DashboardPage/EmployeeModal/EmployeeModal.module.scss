@@ -1,0 +1,56 @@
+@use '@/styles/variables' as *;
+
+.content {
+  padding-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.avatar {
+  background-color: var(--color-primary) !important;
+  flex-shrink: 0;
+  font-size: 20px;
+}
+
+.name {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.position {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.statsRow {
+  margin-bottom: var(--spacing-md);
+}
+
+.stat :global(.ant-statistic-content) {
+  font-size: 20px;
+}
+
+.statGreen :global(.ant-statistic-content) { color: var(--color-chart-2); }
+.statPrimary :global(.ant-statistic-content) { color: var(--color-primary); }
+.statAmber :global(.ant-statistic-content) { color: var(--color-chart-3); }
+
+.hint {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.noChart {
+  text-align: center;
+  color: var(--color-text-muted);
+  padding: 24px 0;
+}
