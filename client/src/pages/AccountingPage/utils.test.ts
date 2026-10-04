@@ -4,7 +4,7 @@ import type { FounderSalaryRecord, MonthlyRecordCountItem, MonthlyRevenueItem, S
 import {
   buildAvgCheckRows, buildStatsChartData, cashAfterCardChange, debtPaidTotal, founderDescriptionRule,
   isEmployeeSalaryDescription, isFounderSalaryDescription, isLinkedSalaryDescription, monthKey,
-  overallAvgCheck, parseAmount, salaryRecord, summarizeFounderSalaries,
+  overallAvgCheck, parseAmount, pickDefaultPerson, salaryRecord, summarizeFounderSalaries,
 } from './utils';
 
 const rev = (key: string, amount: number): MonthlyRevenueItem => {
@@ -141,5 +141,18 @@ describe('статистика и средний чек', () => {
       { key: 'b', label: '', avg: 0 },
       { key: 'c', label: '', avg: 300 },
     ])).toBe(200);
+  });
+});
+
+describe('pickDefaultPerson', () => {
+  const list = [{ name: 'Иван' }, { name: 'Пётр' }];
+
+  it('подставляет того, кто вошёл, если он есть в списке', () => {
+    expect(pickDefaultPerson('Пётр', list, 'Иван')).toBe('Пётр');
+  });
+
+  it('иначе — сотрудника по умолчанию', () => {
+    expect(pickDefaultPerson('Анна', list, 'Иван')).toBe('Иван');
+    expect(pickDefaultPerson(undefined, list, 'Иван')).toBe('Иван');
   });
 });

@@ -170,3 +170,11 @@ export function overallAvgCheck(rows: AvgCheckRow[]): number {
   if (months.length === 0) return 0;
   return months.reduce((s, r) => s + r.avg, 0) / months.length;
 }
+
+/**
+ * Кого подставить в «Изыматель» и похожие поля: того, кто вошёл, если он есть в списке поля,
+ * иначе сотрудника по умолчанию из справочника
+ */
+export function pickDefaultPerson(userName: string | undefined, list: { name: string }[], fallback: string): string {
+  return userName && list.some(s => s.name === userName) ? userName : fallback;
+}

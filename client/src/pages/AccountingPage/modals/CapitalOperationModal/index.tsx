@@ -20,7 +20,7 @@ interface Props {
 export const CapitalOperationModal: React.FC<Props> = ({ kind, onClose }) => {
   const notify = useNotify();
   const invalidate = useInvalidateAccounting();
-  const { defaultPerson, directorServicemen } = usePersons();
+  const { defaultDirectorPerson, directorServicemen } = usePersons();
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
   // Пока модалка закрывается (kind уже null), показываем прежнюю операцию — без скачка заголовка и полей
@@ -30,8 +30,8 @@ export const CapitalOperationModal: React.FC<Props> = ({ kind, onClose }) => {
 
   useEffect(() => {
     if (kind === 'deposit') form.setFieldsValue({ date: dayjs(), currency: 'BYN' });
-    if (kind === 'withdrawal') form.setFieldsValue({ date: dayjs(), currency: 'BYN', person: defaultPerson });
-  }, [kind, defaultPerson, form]);
+    if (kind === 'withdrawal') form.setFieldsValue({ date: dayjs(), currency: 'BYN', person: defaultDirectorPerson });
+  }, [kind, defaultDirectorPerson, form]);
 
   const handleSubmit = async () => {
     const values = await form.validateFields().catch(() => null);
