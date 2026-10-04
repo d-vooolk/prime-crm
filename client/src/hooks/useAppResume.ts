@@ -3,6 +3,7 @@ import dayjs from 'dayjs';
 import { queryClient } from '@/lib/queryClient';
 import { useUiStore } from '@/store/uiStore';
 import { isLongEnoughHidden, followToday } from '@/utils/appResume';
+import { checkForUpdate } from '@/pwa';
 
 /**
  * Возврат в приложение: телефон разблокировали, CRM развернули из фона (пробыла скрытой
@@ -53,12 +54,14 @@ export function useOnAppResume(callback: () => void) {
  * Общее для всего приложения (подключается в Layout): данные react-query перечитываются
  * (активные запросы — сразу, остальные — при следующем показе), а расписание,
  * открытое на «сегодня», после смены суток переходит на новый сегодняшний день.
+ * Заодно проверяется новая версия приложения — не дожидаясь часовой проверки.
  */
 export function useAppResumeRefresh() {
   const todayRef = useRef(dayjs().format('YYYY-MM-DD'));
 
   useOnAppResume(() => {
     void queryClient.invalidateQueries();
+    checkForUpdate();
 
     const today = dayjs().format('YYYY-MM-DD');
     const { selectedDate, setSelectedDate } = useUiStore.getState();

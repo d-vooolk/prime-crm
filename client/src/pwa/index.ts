@@ -80,6 +80,14 @@ export function registerServiceWorker() {
   window.addEventListener('prime-crm:logout', () => { void forgetUserOnDevice(); });
 }
 
+/** Проверить, не вышла ли новая версия (при возврате в приложение — см. useAppResumeRefresh) */
+export function checkForUpdate() {
+  if (process.env.NODE_ENV !== 'production' || !('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.getRegistration()
+    .then(registration => registration?.update())
+    .catch(() => undefined);
+}
+
 /** Применить скачанную новую версию (перезагрузка произойдёт по controllerchange) */
 export function applyUpdate() {
   if (waitingWorker) waitingWorker.postMessage({ type: 'SKIP_WAITING' });
