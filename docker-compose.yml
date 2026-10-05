@@ -38,6 +38,8 @@ services:
       PANIC_PUBLIC_KEY: ${PANIC_PUBLIC_KEY:-}
       PANIC_PIN_HASH: ${PANIC_PIN_HASH:-}
       PANIC_DIR: /app/panic
+      # Приём заказов сотрудников из магазина vdf.by; пусто — приём выключен
+      VDF_INTEGRATION_KEY: ${VDF_INTEGRATION_KEY:-}
       BACKUPS_DIR: /app/backups
     # Фото и видео вики лежат на хосте: пересборка контейнера их не трогает,
     # а git reset в deploy.sh не удаляет неотслеживаемую папку data/.

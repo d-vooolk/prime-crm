@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Dayjs } from 'dayjs';
-import { accountingApi } from '@/api/accounting.api';
+import { accountingApi, vdfOrdersApi, VdfOrderStatus } from '@/api/accounting.api';
 
 /**
  * Данные бухгалтерии через react-query: одно действие затрагивает несколько вкладок
@@ -17,6 +17,7 @@ export const accountingKeys = {
   salaryHistory: ['accounting', 'salaryHistory'] as const,
   monthlyRevenue: ['accounting', 'monthlyRevenue'] as const,
   monthlyRecordCount: ['accounting', 'monthlyRecordCount'] as const,
+  vdfOrders: ['accounting', 'vdfOrders'] as const,
 };
 
 export type AccountingGroup = keyof typeof accountingKeys;
@@ -95,6 +96,22 @@ export const useMonthlyRecordCount = (enabled: boolean) => useQuery({
   queryKey: accountingKeys.monthlyRecordCount,
   queryFn: accountingApi.getMonthlyRecordCount,
   enabled,
+  ...FRESH,
+});
+
+export const useVdfOrders = (status: VdfOrderStatus, enabled: boolean) => useQuery({
+  queryKey: [...accountingKeys.vdfOrders, 'list', status],
+  queryFn: () => vdfOrdersApi.list(status),
+  enabled,
+  ...FRESH,
+});
+
+// Счётчик на вкладке: новые заказы приходят из магазина сами, поэтому опрашиваем
+export const useVdfPendingCount = (enabled: boolean) => useQuery({
+  queryKey: [...accountingKeys.vdfOrders, 'pendingCount'],
+  queryFn: vdfOrdersApi.pendingCount,
+  enabled,
+  refetchInterval: 2 * 60_000,
   ...FRESH,
 });
 

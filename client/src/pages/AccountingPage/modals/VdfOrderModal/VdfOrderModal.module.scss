@@ -1,0 +1,7 @@
+@use '@/styles/variables' as *;
+
+.summary {
+  margin-bottom: var(--spacing-md);
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}

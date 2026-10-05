@@ -11,12 +11,15 @@ import expensesRouter from './expenses.routes';
 import stockRouter from './stock.routes';
 import pushRouter from './push.routes';
 import securityRouter from './security.routes';
+import integrationsRouter from './integrations.routes';
 import { authMiddleware } from '../middleware/auth.middleware';
 
 const router = Router();
 
 router.use('/auth', authRouter);
 router.use('/cars', carsRouter);
+// Другие наши сайты — по общему ключу, без входа пользователя
+router.use('/integrations', integrationsRouter);
 
 router.use(authMiddleware);
 

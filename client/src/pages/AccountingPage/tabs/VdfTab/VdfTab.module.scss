@@ -1,0 +1,6 @@
+@use '@/styles/variables' as *;
+
+.hint {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}

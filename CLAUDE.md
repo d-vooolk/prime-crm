@@ -391,7 +391,7 @@ GET    /api/analytics/revenue?from=&to=
 
 ## Переменные окружения
 
-- **Продакшен:** `.env` рядом с `docker-compose.yml`, не в git, образец — `/.env.example`. В нём `POSTGRES_PASSWORD`, `JWT_SECRET`, `MASTER_EMAIL`, `MASTER_PASSWORD`, `CLIENT_URL`, `BACKUP_RCLONE_REMOTE`, `PANIC_PUBLIC_KEY`, `PANIC_PIN_HASH`. Compose подставляет их в контейнеры; без обязательных переменных сервер не стартует.
+- **Продакшен:** `.env` рядом с `docker-compose.yml`, не в git, образец — `/.env.example`. В нём `POSTGRES_PASSWORD`, `JWT_SECRET`, `MASTER_EMAIL`, `MASTER_PASSWORD`, `CLIENT_URL`, `BACKUP_RCLONE_REMOTE`, `PANIC_PUBLIC_KEY`, `PANIC_PIN_HASH`, `VDF_INTEGRATION_KEY` (приём заказов сотрудников из магазина vdf.by: `POST /api/integrations/vdf/orders` с заголовком `x-integration-key`, вкладка «VDF» в бухгалтерии). Compose подставляет их в контейнеры; без обязательных переменных сервер не стартует.
 - **Разработка:** `server/.env.development`, образец — `server/.env.example`.
 
 ---

@@ -54,6 +54,7 @@ const decimalsAsNumbers = Prisma.defineExtension({
       purchasePrice: numOrNull('purchasePrice'),
     },
     stockMovement: { delta: num('delta'), quantityAfter: num('quantityAfter') },
+    vdfOrder: { shopTotal: num('shopTotal'), amount: num('amount') },
   },
 });
 

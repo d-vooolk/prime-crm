@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { accountingController } from '../controllers/accounting.controller';
+import { vdfOrdersController } from '../controllers/vdfOrders.controller';
 import { requireRole } from '../middleware/requireRole';
 import { ROLES } from '../utils/roles';
 
@@ -7,7 +8,7 @@ const router = Router();
 
 /*
  * Права повторяют вкладки бухгалтерии в интерфейсе:
- *  - менеджер: касса, приход РС, долги, выплата ЗП, премии/штрафы;
+ *  - менеджер: касса, приход РС, долги, выплата ЗП, премии/штрафы, заказы сотрудников из vdf.by;
  *  - директор: капитал, ЗП учредителей, статистика, правка и удаление долгов;
  *  - создатель: правка и удаление операций кассы;
  *  - сотрудник: только своя зарплата (проверка в контроллере) и курсы валют.
@@ -54,5 +55,11 @@ router.post('/debts', manager, accountingController.createDebt);
 router.patch('/debts/:id', director, accountingController.updateDebt);
 router.delete('/debts/:id', director, accountingController.deleteDebt);
 router.post('/debts/:id/payments', manager, accountingController.payDebt);
+
+// Заказы сотрудников из магазина vdf.by: исполнение создаёт расход в кассе
+router.get('/vdf-orders', manager, vdfOrdersController.list);
+router.get('/vdf-orders/pending-count', manager, vdfOrdersController.pendingCount);
+router.patch('/vdf-orders/:id', manager, vdfOrdersController.updateAmount);
+router.post('/vdf-orders/:id/execute', manager, vdfOrdersController.execute);
 
 export default router;

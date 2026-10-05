@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Grid, Tabs } from 'antd';
+import { Badge, Grid, Tabs } from 'antd';
 import { useSearchParams } from 'react-router-dom';
 import dayjs, { Dayjs } from 'dayjs';
 import { useAuthStore } from '@/store/authStore';
@@ -16,6 +16,8 @@ import { CapitalTab } from './tabs/CapitalTab';
 import { SalaryTab } from './tabs/SalaryTab';
 import { FounderSalaryTab } from './tabs/FounderSalaryTab';
 import { StatsTab } from './tabs/StatsTab';
+import { VdfTab } from './tabs/VdfTab';
+import { useVdfPendingCount } from './hooks/useAccountingData';
 import styles from './AccountingPage.module.scss';
 
 /**
@@ -33,6 +35,7 @@ export const AccountingPage: React.FC = () => {
 
   // Месяц общий для приходно-расходной вкладки и прихода РС
   const [cashMonth, setCashMonth] = useState<Dayjs>(dayjs());
+  const { data: vdfPending = 0 } = useVdfPendingCount(canSeeCashflow);
 
   const tabItems = [
     ...(canSeeCashflow ? [
@@ -47,6 +50,11 @@ export const AccountingPage: React.FC = () => {
         children: <IncomeRsTab month={cashMonth} onMonthChange={setCashMonth} canEditTransactions={canEditTransactions} />,
       },
       { key: 'debts', label: 'Долги', children: <DebtsTab canManage={canSeeCapital} /> },
+      {
+        key: 'vdf',
+        label: <Badge count={vdfPending} size="small" offset={[8, -2]}>VDF</Badge>,
+        children: <VdfTab />,
+      },
     ] : []),
     ...(canSeeCapital ? [{ key: 'capital', label: 'Капитал', children: <CapitalTab /> }] : []),
     {

@@ -23,6 +23,8 @@ export const env = {
   get panicDir() { return process.env.PANIC_DIR || ''; },
   /** Папка бэкапов хоста, смонтированная в контейнер; пусто — бэкапы не трогаем */
   get backupsDir() { return process.env.BACKUPS_DIR || ''; },
+  /** Общий ключ с магазином vdf.by (routes/integrations.routes.ts); пусто — приём заказов выключен */
+  get vdfIntegrationKey() { return process.env.VDF_INTEGRATION_KEY || ''; },
 };
 
 /** Проверка при старте — падаем сразу, а не на первом входе пользователя. */

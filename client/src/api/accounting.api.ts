@@ -167,6 +167,49 @@ export const accountingApi = {
 };
 
 export type DebtDirection = 'WE_OWE' | 'OWED_TO_US';
+
+export type VdfOrderStatus = 'PENDING' | 'EXECUTED';
+
+export interface VdfOrderItem {
+  title: string;
+  options: string;
+  sku: string | null;
+  qty: number;
+  price: number;
+  sum: number;
+}
+
+/** Заказ сотрудника из магазина vdf.by: исполнение создаёт расход в кассе */
+export interface VdfOrder {
+  id: string;
+  shopOrderId: number;
+  status: VdfOrderStatus;
+  employeeName: string;
+  employeePhone: string | null;
+  items: VdfOrderItem[];
+  shopTotal: number;
+  amount: number;
+  amountEdited: boolean;
+  completedAt: string;
+  shopCancelled: boolean;
+  executedAt: string | null;
+  executedByName: string | null;
+  cashTransaction?: { id: string; person: string | null; date: string } | null;
+}
+
+export const vdfOrdersApi = {
+  list: (status: VdfOrderStatus) =>
+    http.get<{ data: VdfOrder[] }>('/accounting/vdf-orders', { params: { status } }).then(r => r.data.data),
+
+  pendingCount: () =>
+    http.get<{ data: { count: number } }>('/accounting/vdf-orders/pending-count').then(r => r.data.data.count),
+
+  updateAmount: (id: string, amount: number) =>
+    http.patch<{ data: VdfOrder }>(`/accounting/vdf-orders/${id}`, { amount }).then(r => r.data.data),
+
+  execute: (id: string, person: string) =>
+    http.post<{ data: VdfOrder }>(`/accounting/vdf-orders/${id}/execute`, { person }).then(r => r.data.data),
+};
 export type DebtStatus = 'ACTIVE' | 'SETTLED';
 
 export interface DebtPayment {
