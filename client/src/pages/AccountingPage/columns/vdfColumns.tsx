@@ -1,16 +1,18 @@
 import React from 'react';
-import { Button, Space, Tag } from 'antd';
-import { EditOutlined } from '@ant-design/icons';
+import { Button, Popconfirm, Space, Tag } from 'antd';
+import { EditOutlined, RollbackOutlined, StopOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import { VdfOrder } from '@/api/accounting.api';
+import { VdfOrder, VdfOrderStatus } from '@/api/accounting.api';
 import { formatMoney } from '@/utils/formatters';
 import { formatDate } from '../utils';
 import styles from './columns.module.scss';
 
 interface Options {
-  executed: boolean;
+  view: VdfOrderStatus;
   onEditAmount: (o: VdfOrder) => void;
   onExecute: (o: VdfOrder) => void;
+  onCancel: (o: VdfOrder) => void;
+  onRestore: (o: VdfOrder) => void;
 }
 
 /** Позиции заказа — в раскрывающейся строке */
@@ -28,7 +30,63 @@ export const VdfOrderItems: React.FC<{ order: VdfOrder }> = ({ order }) => (
   </ul>
 );
 
-export function vdfColumns({ executed, onEditAmount, onExecute }: Options): ColumnsType<VdfOrder> {
+const executedColumn = {
+  title: 'Исполнен',
+  width: 200,
+  render: (_: unknown, o: VdfOrder) => (
+    <div className={styles.amountCell}>
+      <span>{o.executedAt ? formatDate(o.executedAt) : '—'}</span>
+      <span className={styles.vdfSub}>
+        {o.cashTransaction ? `изыматель: ${o.cashTransaction.person ?? '—'}` : 'расход удалён из кассы'}
+      </span>
+      {o.shopCancelled && <Tag color="orange">отменён в магазине</Tag>}
+    </div>
+  ),
+};
+
+const pendingColumn = (
+  onEditAmount: (o: VdfOrder) => void,
+  onExecute: (o: VdfOrder) => void,
+  onCancel: (o: VdfOrder) => void,
+) => ({
+  title: '',
+  width: 320,
+  render: (_: unknown, o: VdfOrder) => (
+    <Space wrap>
+      <Button size="small" icon={<EditOutlined />} onClick={() => onEditAmount(o)}>
+        Сумма
+      </Button>
+      <Button size="small" type="primary" danger onClick={() => onExecute(o)}>
+        Исполнить
+      </Button>
+      <Button size="small" icon={<StopOutlined />} onClick={() => onCancel(o)}>
+        Отменить
+      </Button>
+    </Space>
+  ),
+});
+
+const cancelledColumn = (onRestore: (o: VdfOrder) => void) => ({
+  title: 'Отменён',
+  width: 260,
+  render: (_: unknown, o: VdfOrder) => (
+    <div className={styles.amountCell}>
+      <span>{o.cancelledAt ? formatDate(o.cancelledAt) : '—'}</span>
+      {o.cancelledByName && <span className={styles.vdfSub}>{o.cancelledByName}</span>}
+      {o.cancelReason && <span className={styles.vdfSub}>причина: {o.cancelReason}</span>}
+      <Popconfirm
+        title="Вернуть заказ в ожидающие?"
+        onConfirm={() => onRestore(o)}
+        okText="Вернуть"
+        cancelText="Нет"
+      >
+        <Button size="small" icon={<RollbackOutlined />}>Вернуть</Button>
+      </Popconfirm>
+    </div>
+  ),
+});
+
+export function vdfColumns({ view, onEditAmount, onExecute, onCancel, onRestore }: Options): ColumnsType<VdfOrder> {
   return [
     {
       title: 'Выполнен в магазине',
@@ -68,37 +126,8 @@ export function vdfColumns({ executed, onEditAmount, onExecute }: Options): Colu
         </div>
       ),
     },
-    ...(executed
-      ? [
-          {
-            title: 'Исполнен',
-            width: 200,
-            render: (_: unknown, o: VdfOrder) => (
-              <div className={styles.amountCell}>
-                <span>{o.executedAt ? formatDate(o.executedAt) : '—'}</span>
-                <span className={styles.vdfSub}>
-                  {o.cashTransaction ? `изыматель: ${o.cashTransaction.person ?? '—'}` : 'расход удалён из кассы'}
-                </span>
-                {o.shopCancelled && <Tag color="orange">отменён в магазине</Tag>}
-              </div>
-            ),
-          },
-        ]
-      : [
-          {
-            title: '',
-            width: 220,
-            render: (_: unknown, o: VdfOrder) => (
-              <Space>
-                <Button size="small" icon={<EditOutlined />} onClick={() => onEditAmount(o)}>
-                  Сумма
-                </Button>
-                <Button size="small" type="primary" danger onClick={() => onExecute(o)}>
-                  Исполнить
-                </Button>
-              </Space>
-            ),
-          },
-        ]),
+    view === 'EXECUTED'
+      ? executedColumn
+      : view === 'CANCELLED' ? cancelledColumn(onRestore) : pendingColumn(onEditAmount, onExecute, onCancel),
   ];
 }

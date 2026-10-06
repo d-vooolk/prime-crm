@@ -387,6 +387,7 @@ model ExpenseCategory {
 enum VdfOrderStatus {
   PENDING  // ждёт исполнения
   EXECUTED // исполнен: в кассе расход с категорией «vdf.by»
+  CANCELLED // отменён в бухгалтерии: оплаты не будет, магазин видит отмену
 }
 
 // Заказ сотрудника из магазина vdf.by. Магазин присылает его, когда заказ отмечен «Выполнен»,
@@ -409,6 +410,9 @@ model VdfOrder {
   executedByName    String?
   cashTransactionId String?          @unique
   cashTransaction   CashTransaction? @relation(fields: [cashTransactionId], references: [id], onDelete: SetNull)
+  cancelledAt       DateTime?
+  cancelledByName   String?
+  cancelReason      String?
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
 

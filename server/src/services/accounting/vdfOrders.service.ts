@@ -3,7 +3,9 @@ import { prisma } from '../../prisma/client';
 import { AppError } from '../../middleware/errorHandler';
 import type { AuthPayload } from '../../middleware/auth.middleware';
 import { expensesService } from '../expenses.service';
-import { planVdfOrder, vdfExpenseDescription } from './vdfOrders.logic';
+import {
+  planVdfOrder, vdfCancellation, vdfExpenseDescription, vdfNotPendingMessage, vdfPayment, VdfOrderStatus,
+} from './vdfOrders.logic';
 
 /** Категория затрат, в которую уходят заказы сотрудников из магазина */
 export const VDF_EXPENSE_CATEGORY = 'vdf.by';
@@ -70,20 +72,53 @@ export const vdfOrdersService = {
         return plan.action;
       case 'delete':
         // Условие по статусу: если заказ успели исполнить, он остаётся
-        await prisma.vdfOrder.deleteMany({ where: { shopOrderId: report.orderId, status: 'PENDING' } });
+        await prisma.vdfOrder.deleteMany({
+          where: { shopOrderId: report.orderId, status: { in: ['PENDING', 'CANCELLED'] } },
+        });
         return plan.action;
       default:
         return plan.action;
     }
   },
 
-  async list(status: 'PENDING' | 'EXECUTED') {
+  async list(status: VdfOrderStatus) {
+    const orderBy: Prisma.VdfOrderOrderByWithRelationInput = status === 'PENDING'
+      ? { completedAt: 'asc' }
+      : status === 'EXECUTED' ? { executedAt: 'desc' } : { cancelledAt: 'desc' };
     return prisma.vdfOrder.findMany({
       where: { status },
-      orderBy: status === 'PENDING' ? { completedAt: 'asc' } : { executedAt: 'desc' },
+      orderBy,
       take: status === 'PENDING' ? undefined : 200,
       include: { cashTransaction: { select: { id: true, person: true, date: true } } },
     });
+  },
+
+  /**
+   * Денежное состояние заказов целиком: оплаченные и отменённые. Магазин сверяет по нему свою бухгалтерию:
+   * удалённый из кассы расход снимает оплату, возвращённый из отмены заказ снова ждёт оплаты
+   */
+  async states() {
+    const [paid, cancelled] = await Promise.all([
+      prisma.vdfOrder.findMany({
+        where: { status: 'EXECUTED', cashTransactionId: { not: null } },
+        orderBy: { shopOrderId: 'asc' },
+        select: {
+          shopOrderId: true,
+          employeeName: true,
+          executedByName: true,
+          cashTransaction: { select: { amount: true, date: true, person: true } },
+        },
+      }),
+      prisma.vdfOrder.findMany({
+        where: { status: 'CANCELLED' },
+        orderBy: { shopOrderId: 'asc' },
+        select: { shopOrderId: true, cancelledAt: true, cancelledByName: true, cancelReason: true, updatedAt: true },
+      }),
+    ]);
+    return {
+      paid: paid.flatMap(order => vdfPayment(order) ?? []),
+      cancelled: cancelled.map(vdfCancellation),
+    };
   },
 
   async pendingCount() {
@@ -99,12 +134,35 @@ export const vdfOrdersService = {
     return prisma.vdfOrder.findUniqueOrThrow({ where: { id } });
   },
 
+  /** Отменить ожидающий заказ: оплаты не будет. Исполненный не отменяют — сначала удаляют его расход в кассе */
+  async cancel(id: string, reason: string | undefined, executor: AuthPayload) {
+    const updated = await prisma.vdfOrder.updateMany({
+      where: { id, status: 'PENDING' },
+      data: { status: 'CANCELLED', cancelledAt: new Date(), cancelledByName: executor.name, cancelReason: reason ?? null },
+    });
+    if (!updated.count) throw await notPendingError(id);
+    return prisma.vdfOrder.findUniqueOrThrow({ where: { id } });
+  },
+
+  /** Вернуть отменённый заказ в ожидающие */
+  async restore(id: string) {
+    const updated = await prisma.vdfOrder.updateMany({
+      where: { id, status: 'CANCELLED' },
+      data: { status: 'PENDING', cancelledAt: null, cancelledByName: null, cancelReason: null },
+    });
+    if (!updated.count) {
+      const exists = await prisma.vdfOrder.findUnique({ where: { id }, select: { id: true } });
+      throw exists ? new AppError('Заказ не отменён', 400) : new AppError('Заказ не найден', 404);
+    }
+    return prisma.vdfOrder.findUniqueOrThrow({ where: { id } });
+  },
+
   /** Исполнить: расход в кассе на сумму заказа сегодняшним днём и отметка заказа — одной транзакцией */
   async execute(id: string, person: string, executor: AuthPayload) {
     return prisma.$transaction(async tx => {
       const order = await tx.vdfOrder.findUnique({ where: { id } });
       if (!order) throw new AppError('Заказ не найден', 404);
-      if (order.status !== 'PENDING') throw new AppError('Заказ уже исполнен', 400);
+      if (order.status !== 'PENDING') throw new AppError(vdfNotPendingMessage(order.status), 400);
       if (!(order.amount > 0)) throw new AppError('Сумма должна быть больше нуля', 400);
 
       const expenseCategoryId = await expensesService.resolveCategoryId(VDF_EXPENSE_CATEGORY, tx);
@@ -123,13 +181,13 @@ export const vdfOrdersService = {
         where: { id, status: 'PENDING' },
         data: { status: 'EXECUTED', executedAt: new Date(), executedByName: executor.name, cashTransactionId: expense.id },
       });
-      if (!updated.count) throw new AppError('Заказ уже исполнен', 400);
+      if (!updated.count) throw new AppError('Заказ уже исполнен или отменён', 400);
       return tx.vdfOrder.findUniqueOrThrow({ where: { id } });
     });
   },
 };
 
 async function notPendingError(id: string) {
-  const exists = await prisma.vdfOrder.findUnique({ where: { id }, select: { id: true } });
-  return exists ? new AppError('Сумму исполненного заказа не меняют', 400) : new AppError('Заказ не найден', 404);
+  const order = await prisma.vdfOrder.findUnique({ where: { id }, select: { status: true } });
+  return order ? new AppError(vdfNotPendingMessage(order.status), 400) : new AppError('Заказ не найден', 404);
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Form, InputNumber, Modal, Select } from 'antd';
+import { Form, Input, InputNumber, Modal, Select } from 'antd';
 import { vdfOrdersApi, VdfOrder } from '@/api/accounting.api';
 import { formatMoney } from '@/utils/formatters';
 import { useNotify } from '@/hooks/useNotify';
@@ -10,7 +10,7 @@ import { parseAmount } from '../../utils';
 import shared from '../../shared.module.scss';
 import styles from './VdfOrderModal.module.scss';
 
-export type VdfOrderModalMode = 'amount' | 'execute';
+export type VdfOrderModalMode = 'amount' | 'execute' | 'cancel';
 
 interface Props {
   order: VdfOrder | null;
@@ -19,8 +19,9 @@ interface Props {
 }
 
 /**
- * Заказ сотрудника из vdf.by: правка суммы или исполнение.
- * Исполнение создаёт в кассе расход сегодняшним днём с категорией «vdf.by».
+ * Заказ сотрудника из vdf.by: правка суммы, исполнение или отмена.
+ * Исполнение создаёт в кассе расход сегодняшним днём с категорией «vdf.by»;
+ * отмена означает, что оплаты не будет — магазин увидит заказ отменённым.
  */
 export const VdfOrderModal: React.FC<Props> = ({ order, mode, onClose }) => {
   const notify = useNotify();
@@ -30,6 +31,7 @@ export const VdfOrderModal: React.FC<Props> = ({ order, mode, onClose }) => {
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
   const executing = mode === 'execute';
+  const cancelling = mode === 'cancel';
 
   useEffect(() => {
     if (order) form.setFieldsValue({ amount: order.amount, person: defaultPerson });
@@ -42,7 +44,11 @@ export const VdfOrderModal: React.FC<Props> = ({ order, mode, onClose }) => {
     if (!values) return;
     setSaving(true);
     try {
-      if (executing) {
+      if (cancelling) {
+        await vdfOrdersApi.cancel(order.id, values.reason?.trim() || undefined);
+        notify.toast.success('Заказ отменён');
+        invalidate('vdfOrders');
+      } else if (executing) {
         await vdfOrdersApi.execute(order.id, values.person);
         notify.toast.success('Заказ исполнен, расход добавлен в кассу');
         invalidate('vdfOrders', 'cash');
@@ -55,7 +61,9 @@ export const VdfOrderModal: React.FC<Props> = ({ order, mode, onClose }) => {
       }
       onClose();
     } catch (e) {
-      notify.error(e, executing ? 'Не удалось исполнить заказ' : 'Не удалось изменить сумму');
+      notify.error(e, cancelling
+        ? 'Не удалось отменить заказ'
+        : executing ? 'Не удалось исполнить заказ' : 'Не удалось изменить сумму');
     } finally {
       setSaving(false);
     }
@@ -63,13 +71,13 @@ export const VdfOrderModal: React.FC<Props> = ({ order, mode, onClose }) => {
 
   return (
     <Modal
-      title={`${executing ? 'Исполнить' : 'Сумма'} — заказ №${order.shopOrderId}`}
+      title={`${cancelling ? 'Отменить' : executing ? 'Исполнить' : 'Сумма'} — заказ №${order.shopOrderId}`}
       open
       onCancel={onClose}
       onOk={submit}
-      okText={executing ? 'Исполнить' : 'Сохранить'}
-      okButtonProps={{ loading: saving, danger: executing }}
-      cancelText="Отмена"
+      okText={cancelling ? 'Отменить заказ' : executing ? 'Исполнить' : 'Сохранить'}
+      okButtonProps={{ loading: saving, danger: executing || cancelling }}
+      cancelText="Закрыть"
       destroyOnHidden
     >
       <div className={styles.summary}>
@@ -77,9 +85,16 @@ export const VdfOrderModal: React.FC<Props> = ({ order, mode, onClose }) => {
         {executing && (
           <div>В кассе появится расход {formatMoney(order.amount)} сегодняшним днём, категория «vdf.by».</div>
         )}
+        {cancelling && (
+          <div>Оплаты по заказу не будет, в кассе ничего не появится. Магазин увидит заказ отменённым.</div>
+        )}
       </div>
       <Form form={form} layout="vertical" className={shared.form}>
-        {executing ? (
+        {cancelling ? (
+          <Form.Item label="Причина" name="reason" rules={[{ max: 300, message: 'Не длиннее 300 знаков' }]}>
+            <Input.TextArea rows={2} placeholder="Необязательно" autoFocus />
+          </Form.Item>
+        ) : executing ? (
           <Form.Item label="Изыматель" name="person" rules={[{ required: true, message: 'Выберите изымателя' }]}>
             <Select showSearch placeholder="Выберите сотрудника" options={personOptions(managerServicemen)} />
           </Form.Item>

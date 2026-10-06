@@ -168,7 +168,7 @@ export const accountingApi = {
 
 export type DebtDirection = 'WE_OWE' | 'OWED_TO_US';
 
-export type VdfOrderStatus = 'PENDING' | 'EXECUTED';
+export type VdfOrderStatus = 'PENDING' | 'EXECUTED' | 'CANCELLED';
 
 export interface VdfOrderItem {
   title: string;
@@ -195,6 +195,9 @@ export interface VdfOrder {
   executedAt: string | null;
   executedByName: string | null;
   cashTransaction?: { id: string; person: string | null; date: string } | null;
+  cancelledAt: string | null;
+  cancelledByName: string | null;
+  cancelReason: string | null;
 }
 
 export const vdfOrdersApi = {
@@ -209,6 +212,12 @@ export const vdfOrdersApi = {
 
   execute: (id: string, person: string) =>
     http.post<{ data: VdfOrder }>(`/accounting/vdf-orders/${id}/execute`, { person }).then(r => r.data.data),
+
+  cancel: (id: string, reason?: string) =>
+    http.post<{ data: VdfOrder }>(`/accounting/vdf-orders/${id}/cancel`, { reason }).then(r => r.data.data),
+
+  restore: (id: string) =>
+    http.post<{ data: VdfOrder }>(`/accounting/vdf-orders/${id}/restore`).then(r => r.data.data),
 };
 export type DebtStatus = 'ACTIVE' | 'SETTLED';
 
