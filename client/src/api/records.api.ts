@@ -1,5 +1,5 @@
 import http from './http';
-import { Record, ForeignCurrency, CurrencyPart, ClientSource, RecordMedia } from '@/types';
+import { Record, ForeignCurrency, CurrencyPart, RecordMedia } from '@/types';
 
 export interface CompanySuggestion {
   legalCompanyName: string;
@@ -65,7 +65,7 @@ export interface CreateRecordDto {
   executorSignatoryPosition?: string;
   executorSignatoryPositionGenitive?: string;
   executorSignatoryBasis?: string;
-  clientSource?: ClientSource | null;
+  clientSourceId?: string | null;
   items: Array<{ serviceId: string; price: number; quantity: number; netProfit?: number; servicemanName?: string | null; equipmentId?: string; servicemanSplit?: Array<{ name: string; amount: number }> | null; prepaidAmount?: number; prepaidByCard?: boolean; prepaidCurrency?: ForeignCurrency | null; prepaidCurrencyAmount?: number | null; prepaidRate?: number | null }>;
 }
 

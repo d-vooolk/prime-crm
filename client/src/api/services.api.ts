@@ -1,5 +1,5 @@
 import http from './http';
-import { Category, Equipment, Serviceman, CompanySettings, DocumentTemplate, SmsSettings, SmsConnectionInfo } from '@/types';
+import { Category, ClientSource, Equipment, Serviceman, CompanySettings, DocumentTemplate, SmsSettings, SmsConnectionInfo } from '@/types';
 
 export interface ServicemanPayload {
   name?: string;
@@ -48,6 +48,23 @@ export const servicesApi = {
 
   deleteEquipment: (id: string) =>
     http.delete(`/services/equipment/${id}`),
+
+  // Источники клиента
+  getClientSources: () =>
+    http.get<{ data: ClientSource[] }>('/services/client-sources').then(r => r.data.data),
+
+  createClientSource: (name: string) =>
+    http.post<{ data: ClientSource }>('/services/client-sources', { name }).then(r => r.data.data),
+
+  updateClientSource: (id: string, name: string) =>
+    http.patch<{ data: ClientSource }>(`/services/client-sources/${id}`, { name }).then(r => r.data.data),
+
+  moveClientSource: (id: string, direction: -1 | 1) =>
+    http.post(`/services/client-sources/${id}/move`, { direction }),
+
+  // Уже стоит в записях — скрывается из списка, иначе удаляется
+  deleteClientSource: (id: string) =>
+    http.delete(`/services/client-sources/${id}`),
 
   getServicemen: () =>
     http.get<{ data: Serviceman[] }>('/services/servicemen').then(r => r.data.data),

@@ -45,8 +45,8 @@ model Record {
   // Serviceman.name с ON UPDATE CASCADE: переименование сотрудника переносится во всю историю
   serviceman         String?
   receptionist       String?
-  // Откуда пришёл клиент — для статистики каналов привлечения
-  clientSource       ClientSource?
+  // Откуда пришёл клиент — для статистики каналов привлечения (справочник в настройках)
+  clientSourceId     String?
   notes              String?
   documentNumber     String?      @unique
   status             RecordStatus @default(ACTIVE)
@@ -83,20 +83,24 @@ model Record {
   media              RecordMedia[]
   servicemanRef      Serviceman?  @relation("RecordServiceman", fields: [serviceman], references: [name], onUpdate: Cascade, onDelete: Restrict)
   receptionistRef    Serviceman?  @relation("RecordReceptionist", fields: [receptionist], references: [name], onUpdate: Cascade, onDelete: Restrict)
+  clientSource       ClientSource? @relation(fields: [clientSourceId], references: [id], onDelete: SetNull)
 
   @@index([scheduledAt])
   @@index([status, scheduledAt])
   @@index([clientId])
   @@index([carId])
-  @@index([clientSource])
+  @@index([clientSourceId])
 }
 
-enum ClientSource {
-  INSTAGRAM
-  RECOMMENDATION
-  SEARCH
-  MAPS
-  OTHER
+// Справочник источников клиента (Настройки → Источники клиентов). Источник, который уже
+// стоит в записях, не удаляется, а скрывается из списка — статистика каналов сохраняется
+model ClientSource {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  sortOrder Int?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  records   Record[]
 }
 
 enum RecordMediaType {

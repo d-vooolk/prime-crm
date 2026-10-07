@@ -1,4 +1,4 @@
-import { ClientSource, ForeignCurrency, ServicemanSplitEntry } from '@/types';
+import { ForeignCurrency, ServicemanSplitEntry } from '@/types';
 
 export interface SelectedService {
   serviceId: string;
@@ -48,8 +48,10 @@ export interface RecordFormData {
   time: string;
   serviceman: string;
   receptionist?: string;
-  /** Откуда пришёл клиент; необязательно */
-  clientSource?: ClientSource | null;
+  /** Откуда пришёл клиент (id из справочника); необязательно */
+  clientSourceId?: string | null;
+  /** Источник, уже сохранённый в записи, — подпись, даже если его скрыли из справочника */
+  savedClientSource?: { id: string; name: string } | null;
   // Юр. лицо
   isLegalEntity?: boolean;
   legalCompanyName?: string;

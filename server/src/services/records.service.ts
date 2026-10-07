@@ -1,4 +1,4 @@
-import { Prisma, CashTransactionType, ClientSource } from '@prisma/client';
+import { Prisma, CashTransactionType } from '@prisma/client';
 import { prisma, DbClient } from '../prisma/client';
 import { AppError } from '../middleware/errorHandler';
 import { startOfDay, endOfDay } from '../utils/date';
@@ -7,6 +7,7 @@ import { currentContext } from '../utils/requestContext';
 import { smsService } from './sms.service';
 import { cashService } from './accounting/cash.service';
 import { recordMediaService } from './recordMedia.service';
+import { clientSourcesService } from './clientSources.service';
 import { pushService, pushInBackground } from './push.service';
 import { toByn, roundMoney } from './currency.service';
 import {
@@ -19,6 +20,7 @@ const RECORD_INCLUDE = {
   items: { include: { service: { include: { category: true } }, equipment: true } },
   deal: { include: { equipment: { include: { equipment: true } } } },
   smsLogs: { orderBy: { sentAt: 'asc' as const } },
+  clientSource: { select: { id: true, name: true } },
   _count: { select: { media: true } },
 } as const;
 
@@ -52,7 +54,7 @@ export interface CreateRecordDto {
   serviceman?: string | null;
   receptionist?: string | null;
   notes?: string | null;
-  clientSource?: ClientSource | null;
+  clientSourceId?: string | null;
   isLegalEntity?: boolean;
   legalCompanyName?: string | null;
   legalAddress?: string | null;
@@ -206,7 +208,7 @@ export const recordsService = {
 
   async create(data: CreateRecordDto) {
     const {
-      clientId, car, scheduledAt, serviceman, receptionist, notes, items, clientSource,
+      clientId, car, scheduledAt, serviceman, receptionist, notes, items, clientSourceId,
       isLegalEntity, legalCompanyName, legalAddress, legalActualAddress, legalPostalAddress,
       legalBankDetails, legalBic, legalUnp, legalOkpo, legalPhone, legalEmail,
       legalRepresentativePosition, legalRepresentativePositionGenitive,
@@ -215,6 +217,8 @@ export const recordsService = {
       executorSignatoryName, executorSignatoryNameGenitive,
       executorSignatoryPosition, executorSignatoryPositionGenitive, executorSignatoryBasis,
     } = data;
+
+    if (clientSourceId) await clientSourcesService.assertExists(clientSourceId);
 
     const newRecord = await prisma.$transaction(async (tx) => {
       // Генерация номера документа
@@ -268,7 +272,7 @@ export const recordsService = {
           serviceman: serviceman || null,
           receptionist: receptionist || null,
           notes,
-          clientSource: clientSource ?? null,
+          clientSourceId: clientSourceId ?? null,
           documentNumber,
           isLegalEntity: isLegalEntity ?? false,
           legalCompanyName, legalAddress, legalActualAddress, legalPostalAddress,
@@ -322,7 +326,10 @@ export const recordsService = {
     if (data.serviceman !== undefined) updateData.serviceman = data.serviceman || null;
     if (data.receptionist !== undefined) updateData.receptionist = data.receptionist || null;
     if (data.notes !== undefined) updateData.notes = data.notes;
-    if (data.clientSource !== undefined) updateData.clientSource = data.clientSource;
+    if (data.clientSourceId !== undefined) {
+      if (data.clientSourceId) await clientSourcesService.assertExists(data.clientSourceId);
+      updateData.clientSourceId = data.clientSourceId;
+    }
 
     // Legal entity fields
     if (data.isLegalEntity !== undefined) updateData.isLegalEntity = data.isLegalEntity;

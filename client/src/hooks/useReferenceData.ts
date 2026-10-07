@@ -14,6 +14,7 @@ export const referenceKeys = {
   carBrands: ['carBrands'] as const,
   equipment: ['equipment'] as const,
   expenseCategories: ['expenseCategories'] as const,
+  clientSources: ['clientSources'] as const,
 };
 
 export type ReferenceKey = keyof typeof referenceKeys;
@@ -69,6 +70,11 @@ export const referenceQueries = {
     queryFn: expensesApi.getCategories,
     meta: { errorTitle: 'Не удалось загрузить категории расходов' },
   }),
+  clientSources: queryOptions({
+    queryKey: referenceKeys.clientSources,
+    queryFn: servicesApi.getClientSources,
+    meta: { errorTitle: 'Не удалось загрузить источники клиентов' },
+  }),
 };
 
 /** enabled: false — не запрашивать (например, список нужен только определённой роли) */
@@ -94,6 +100,9 @@ export const useCarBrands = (o?: RefOptions) => useQuery({ ...referenceQueries.c
 export const useEquipment = (o?: RefOptions) => useQuery({ ...referenceQueries.equipment, ...o });
 
 export const useExpenseCategories = (o?: RefOptions) => useQuery({ ...referenceQueries.expenseCategories, ...o });
+
+/** Источники клиента (без скрытых) */
+export const useClientSources = (o?: RefOptions) => useQuery({ ...referenceQueries.clientSources, ...o });
 
 /**
  * Сбросить кеш справочников после изменения. Сотрудники инвалидируются оба списка сразу

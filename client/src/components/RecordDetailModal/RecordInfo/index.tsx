@@ -3,7 +3,6 @@ import { Button, Descriptions, Divider } from 'antd';
 import { HistoryOutlined, BookOutlined, PictureOutlined } from '@ant-design/icons';
 import type { Record } from '@/types';
 import { formatDate, formatTime } from '@/utils/formatters';
-import { clientSourceLabel } from '@/utils/clientSource';
 import { RecordMediaGallery } from '@/components/RecordMediaGallery';
 import styles from './RecordInfo.module.scss';
 
@@ -108,7 +107,7 @@ export const RecordInfo: React.FC<Props> = ({ record: r, isEmployee, onOpenHisto
         <Descriptions.Item label="Мастер приёмщик">{r.receptionist}</Descriptions.Item>
       )}
       {r.clientSource && !isEmployee && (
-        <Descriptions.Item label="Источник клиента">{clientSourceLabel(r.clientSource)}</Descriptions.Item>
+        <Descriptions.Item label="Источник клиента">{r.clientSource.name}</Descriptions.Item>
       )}
     </Descriptions>
 

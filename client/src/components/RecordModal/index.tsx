@@ -11,6 +11,7 @@ import { recordsApi } from '@/api/records.api';
 import { clientsApi } from '@/api/clients.api';
 import { useNotify } from '@/hooks/useNotify';
 import { Record as CrmRecord } from '@/types';
+import { resetViewportShift } from '@/utils/iosViewport';
 import styles from './RecordModal.module.scss';
 
 interface Props {
@@ -41,6 +42,8 @@ export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initial
 
   useEffect(() => {
     if (open) {
+      // Экран мог остаться сдвинутым после клавиатуры — тогда крестик уехал бы под статус-бар
+      resetViewportShift();
       setData(editRecord ? recordToFormData(editRecord) : { ...emptyFormData, date: initialDate || '' });
       setStep(0);
     }
@@ -171,8 +174,11 @@ export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initial
 
         <div className={styles.footer}>
           <div className={styles.footerLeft}>
-            {step > 0 && (
+            {/* На первом шаге — «Отмена»: закрыть окно можно и без крестика в углу */}
+            {step > 0 ? (
               <Button onClick={() => setStep(s => s - 1)}>Назад</Button>
+            ) : (
+              <Button onClick={handleClose}>Отмена</Button>
             )}
           </div>
           <div className={styles.footerRight}>
