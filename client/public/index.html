@@ -12,7 +12,9 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Prime CRM" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- Не black-translucent: под прозрачным статус-баром iOS 27 размывает верх приложения
+         (WebKit bug 325807), а iOS 26 укорачивает высоту экрана. iOS читает это только при установке -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="application-name" content="Prime CRM" />
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23111827'/%3E%3Cpath d='M 7 27 L 7 5 L 19.5 5 C 27 5 27 17.5 19.5 17.5 L 7 17.5' fill='none' stroke='%23ffffff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />

@@ -10,7 +10,7 @@
 
 .modalContent {
   @include mobile {
-    height: var(--app-height);
+    height: 100dvh;
     // Установленное приложение (PWA) рисуется под статус-баром и полоской «домой» —
     // прозрачные рамки сдвигают содержимое, не трогая отступы antd (фон тянется под рамку)
     // !important: у antd «.ant-modal .ant-modal-content { border: 0 }» специфичнее,

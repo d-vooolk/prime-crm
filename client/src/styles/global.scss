@@ -20,15 +20,13 @@ html {
 html,
 body {
   overscroll-behavior: none;
-  height: var(--app-height);
+  height: 100%;
   overflow: hidden;
 }
 
-// Не inset: 0 — низ фиксированного элемента iOS 26 считает от укороченного экрана (см. --app-height)
 body {
   position: fixed;
-  top: 0;
-  left: 0;
+  inset: 0;
   width: 100%;
 }
 
@@ -43,7 +41,7 @@ body {
 }
 
 #root {
-  height: var(--app-height);
+  height: 100dvh;
   overflow: hidden;
 }
 
@@ -55,14 +53,6 @@ body {
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
-}
-
-// Модалки и шторки растягиваются на весь экран, а не на укороченный (см. --app-height)
-.ant-modal-wrap,
-.ant-modal-mask,
-.ant-drawer {
-  bottom: auto !important;
-  height: var(--app-height);
 }
 
 .ant-modal-content {

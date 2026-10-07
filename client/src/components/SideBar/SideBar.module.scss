@@ -285,9 +285,7 @@
   @include mobile {
     display: flex;
     position: fixed;
-    // От верха, а не bottom: 0 — на iOS 26 низ фиксированного элемента приходится выше края
-    // экрана (см. --app-height), и под меню оставалась пустая полоса
-    top: calc(var(--app-height) - var(--bottom-nav-height) - env(safe-area-inset-bottom));
+    bottom: 0;
     left: 0;
     right: 0;
     // Полоска «домой» на iPhone не должна перекрывать кнопки меню
