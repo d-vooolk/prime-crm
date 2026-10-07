@@ -97,6 +97,8 @@
   --calendar-width: 300px;
   --header-height: 64px;
   --bottom-nav-height: 60px;
+  // Высота экрана для всего, что растянуто на весь экран (см. блок standalone ниже)
+  --app-height: 100dvh;
   --border-radius: 12px;
   --border-radius-sm: 8px;
   --border-radius-lg: 16px;
@@ -118,6 +120,15 @@
   // ─── Переходы ─────────────────────────────────────
   --transition: all 0.2s ease;
   --transition-slow: all 0.35s ease;
+}
+
+// Установленное приложение на iOS 26: при viewport-fit=cover 100dvh и 100% короче экрана
+// на высоту статус-бара (регрессия WebKit) — внизу остаётся пустая полоса. Полную высоту
+// даёт только 100lvh; в установленном приложении панелей браузера нет, так что это и есть экран
+@media (display-mode: standalone) {
+  :root {
+    --app-height: 100lvh;
+  }
 }
 
 // ─── Тёмная тема ────────────────────────────────────

@@ -2,7 +2,7 @@
 
 .root {
   display: flex;
-  height: 100dvh;
+  height: var(--app-height);
   overflow: hidden;
   background: var(--color-bg);
 
