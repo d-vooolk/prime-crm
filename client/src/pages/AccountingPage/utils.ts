@@ -1,6 +1,7 @@
 import dayjs, { Dayjs } from 'dayjs';
+import { roundMoney } from '@/utils/formatters';
 import type {
-  Debt, FounderSalaryRecord, MonthlyRecordCountItem, MonthlyRevenueItem, SalaryHistoryItem,
+  Debt, FounderSalaryRecord, MonthlyRecordCountItem, MonthlyRevenueItem, SalaryHistoryItem, VdfOrder,
 } from '@/api/accounting.api';
 
 // ─── Описания системных расходов ─────────────────────
@@ -54,6 +55,15 @@ export const CAPITAL_CURRENCY_OPTIONS = [
 
 /** Сколько уже погашено (в валюте долга) */
 export const debtPaidTotal = (d: Pick<Debt, 'payments'>) => d.payments.reduce((s, p) => s + p.amount, 0);
+
+// ─── Заказы vdf.by ───────────────────────────────────
+
+/** Сколько по заказу уже оплачено расходами в кассе */
+export const vdfPaid = (o: Pick<VdfOrder, 'payments'>) =>
+  roundMoney((o.payments ?? []).reduce((s, p) => s + p.cashTransaction.amount, 0));
+
+/** Сколько осталось оплатить */
+export const vdfRemaining = (o: Pick<VdfOrder, 'amount' | 'payments'>) => Math.max(0, roundMoney(o.amount - vdfPaid(o)));
 
 // ─── Выплата ЗП ──────────────────────────────────────
 

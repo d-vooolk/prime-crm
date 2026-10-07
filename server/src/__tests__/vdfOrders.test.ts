@@ -1,9 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { planVdfOrder, vdfCancellation, vdfExpenseDescription, vdfNotPendingMessage, vdfPayment } from '../services/accounting/vdfOrders.logic';
+import {
+  planVdfOrder, planVdfPayment, vdfCancellation, vdfExpenseDescription, vdfNotPendingMessage, vdfPaidTotal, vdfPayments,
+} from '../services/accounting/vdfOrders.logic';
 
-const pending = { status: 'PENDING' as const, amountEdited: false, shopCancelled: false };
-const executed = { status: 'EXECUTED' as const, amountEdited: false, shopCancelled: false };
-const cancelled = { status: 'CANCELLED' as const, amountEdited: false, shopCancelled: false };
+const pending = { status: 'PENDING' as const, amountEdited: false, shopCancelled: false, paid: false };
+const partial = { ...pending, paid: true };
+const executed = { status: 'EXECUTED' as const, amountEdited: false, shopCancelled: false, paid: true };
+const cancelled = { status: 'CANCELLED' as const, amountEdited: false, shopCancelled: false, paid: false };
 
 describe('planVdfOrder: заказ выполнен в магазине', () => {
   it('новый заказ появляется во входящих', () => {
@@ -16,6 +19,10 @@ describe('planVdfOrder: заказ выполнен в магазине', () => 
 
   it('поправленную вручную сумму магазин не перезаписывает', () => {
     expect(planVdfOrder({ ...pending, amountEdited: true }, true)).toEqual({ action: 'refresh', keepAmount: true });
+  });
+
+  it('после частичной оплаты сумму магазин не перезаписывает', () => {
+    expect(planVdfOrder(partial, true)).toEqual({ action: 'refresh', keepAmount: true });
   });
 
   it('исполненный не трогается', () => {
@@ -40,6 +47,10 @@ describe('planVdfOrder: в магазине сняли «Выполнен»', ()
     expect(planVdfOrder(cancelled, false)).toEqual({ action: 'delete' });
   });
 
+  it('частично оплаченный остаётся с пометкой — расход на решение администратора', () => {
+    expect(planVdfOrder(partial, false)).toEqual({ action: 'markCancelled', cancelled: true });
+  });
+
   it('исполненный остаётся с пометкой — расход на решение администратора', () => {
     expect(planVdfOrder(executed, false)).toEqual({ action: 'markCancelled', cancelled: true });
   });
@@ -59,23 +70,58 @@ describe('vdfExpenseDescription', () => {
   });
 });
 
-describe('vdfPayment', () => {
-  const order = { shopOrderId: 152, employeeName: 'Иванов Иван', executedByName: 'Пётр' };
+describe('planVdfPayment', () => {
+  it('без суммы — весь остаток, заказ исполнен', () => {
+    expect(planVdfPayment(100, 30)).toEqual({ ok: true, amount: 70, full: true });
+  });
 
-  it('сумма, дата и изыматель берутся из расхода в кассе', () => {
-    const date = new Date('2026-10-06T10:00:00.000Z');
-    expect(vdfPayment({ ...order, cashTransaction: { amount: 87.5, date, person: 'Анна' } })).toEqual({
-      orderId: 152, employeeName: 'Иванов Иван', amount: 87.5, paidAt: '2026-10-06T10:00:00.000Z', person: 'Анна',
+  it('часть остатка — частичная оплата', () => {
+    expect(planVdfPayment(100, 0, 40.5)).toEqual({ ok: true, amount: 40.5, full: false });
+  });
+
+  it('сумма, равная остатку, — полное исполнение (с копейками)', () => {
+    expect(planVdfPayment(100.3, 0.1, 100.2)).toEqual({ ok: true, amount: 100.2, full: true });
+  });
+
+  it('больше остатка нельзя', () => {
+    expect(planVdfPayment(100, 60, 50)).toEqual({ ok: false, message: 'Сумма больше остатка (40 р.)' });
+  });
+
+  it('оплачено полностью — нечего оплачивать', () => {
+    expect(planVdfPayment(100, 100).ok).toBe(false);
+  });
+});
+
+describe('vdfPaidTotal', () => {
+  it('сумма расходов без ошибок округления', () => {
+    expect(vdfPaidTotal([{ cashTransaction: { amount: 0.1 } }, { cashTransaction: { amount: 0.2 } }])).toBe(0.3);
+  });
+});
+
+describe('vdfPayments', () => {
+  const date = new Date('2026-10-06T10:00:00.000Z');
+  const order = {
+    shopOrderId: 152, status: 'PENDING' as const, employeeName: 'Иванов Иван', executedByName: null, amount: 100,
+  };
+
+  it('каждый расход — отдельная оплата, у частичной — остаток', () => {
+    expect(vdfPayments({
+      ...order,
+      payments: [
+        { paidByName: 'Пётр', cashTransaction: { amount: 30, date, person: 'Анна' } },
+        { paidByName: 'Пётр', cashTransaction: { amount: 20, date, person: null } },
+      ],
+    })).toEqual([
+      { orderId: 152, employeeName: 'Иванов Иван', amount: 30, paidAt: '2026-10-06T10:00:00.000Z', person: 'Анна', remaining: 50 },
+      { orderId: 152, employeeName: 'Иванов Иван', amount: 20, paidAt: '2026-10-06T10:00:00.000Z', person: 'Пётр', remaining: 50 },
+    ]);
+  });
+
+  it('у исполненного остатка нет, даже если расход в кассе поправили', () => {
+    const [payment] = vdfPayments({
+      ...order, status: 'EXECUTED', payments: [{ paidByName: null, cashTransaction: { amount: 90, date, person: null } }],
     });
-  });
-
-  it('без изымателя в расходе — тот, кто исполнил', () => {
-    const date = new Date('2026-10-06T10:00:00.000Z');
-    expect(vdfPayment({ ...order, cashTransaction: { amount: 10, date, person: null } })?.person).toBe('Пётр');
-  });
-
-  it('расход удалён — оплаты нет', () => {
-    expect(vdfPayment({ ...order, cashTransaction: null })).toBeNull();
+    expect(payment.remaining).toBe(0);
   });
 });
 

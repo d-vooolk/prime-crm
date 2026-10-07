@@ -4,7 +4,7 @@ import type { FounderSalaryRecord, MonthlyRecordCountItem, MonthlyRevenueItem, S
 import {
   buildAvgCheckRows, buildStatsChartData, cashAfterCardChange, debtPaidTotal, founderDescriptionRule,
   isEmployeeSalaryDescription, isFounderSalaryDescription, isLinkedSalaryDescription, monthKey,
-  overallAvgCheck, parseAmount, pickDefaultPerson, salaryRecord, summarizeFounderSalaries,
+  overallAvgCheck, parseAmount, pickDefaultPerson, salaryRecord, summarizeFounderSalaries, vdfPaid, vdfRemaining,
 } from './utils';
 
 const rev = (key: string, amount: number): MonthlyRevenueItem => {
@@ -154,5 +154,22 @@ describe('pickDefaultPerson', () => {
   it('иначе — сотрудника по умолчанию', () => {
     expect(pickDefaultPerson('Анна', list, 'Иван')).toBe('Иван');
     expect(pickDefaultPerson(undefined, list, 'Иван')).toBe('Иван');
+  });
+});
+
+describe('vdfPaid / vdfRemaining', () => {
+  const payment = (amount: number) => ({
+    id: String(amount), paidByName: null, createdAt: '', cashTransaction: { id: '', amount, date: '', person: null },
+  });
+
+  it('оплачено и остаток по расходам в кассе', () => {
+    const order = { amount: 100, payments: [payment(30.1), payment(19.9)] };
+    expect(vdfPaid(order)).toBe(50);
+    expect(vdfRemaining(order)).toBe(50);
+  });
+
+  it('без оплат остаток — вся сумма, переплата — ноль', () => {
+    expect(vdfRemaining({ amount: 80 })).toBe(80);
+    expect(vdfRemaining({ amount: 80, payments: [payment(90)] })).toBe(0);
   });
 });

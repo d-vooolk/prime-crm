@@ -179,7 +179,15 @@ export interface VdfOrderItem {
   sum: number;
 }
 
-/** Заказ сотрудника из магазина vdf.by: исполнение создаёт расход в кассе */
+/** Оплата заказа vdf.by — расход в кассе */
+export interface VdfOrderPayment {
+  id: string;
+  paidByName: string | null;
+  createdAt: string;
+  cashTransaction: { id: string; amount: number; date: string; person: string | null };
+}
+
+/** Заказ сотрудника из магазина vdf.by: исполнение (всё или частично) создаёт расход в кассе */
 export interface VdfOrder {
   id: string;
   shopOrderId: number;
@@ -194,7 +202,8 @@ export interface VdfOrder {
   shopCancelled: boolean;
   executedAt: string | null;
   executedByName: string | null;
-  cashTransaction?: { id: string; person: string | null; date: string } | null;
+  /** В списках заказов; удалённый из кассы расход оплатой не считается */
+  payments?: VdfOrderPayment[];
   cancelledAt: string | null;
   cancelledByName: string | null;
   cancelReason: string | null;
@@ -210,8 +219,9 @@ export const vdfOrdersApi = {
   updateAmount: (id: string, amount: number) =>
     http.patch<{ data: VdfOrder }>(`/accounting/vdf-orders/${id}`, { amount }).then(r => r.data.data),
 
-  execute: (id: string, person: string) =>
-    http.post<{ data: VdfOrder }>(`/accounting/vdf-orders/${id}/execute`, { person }).then(r => r.data.data),
+  /** Без суммы — на весь остаток */
+  execute: (id: string, person: string, amount?: number) =>
+    http.post<{ data: VdfOrder }>(`/accounting/vdf-orders/${id}/execute`, { person, amount }).then(r => r.data.data),
 
   cancel: (id: string, reason?: string) =>
     http.post<{ data: VdfOrder }>(`/accounting/vdf-orders/${id}/cancel`, { reason }).then(r => r.data.data),

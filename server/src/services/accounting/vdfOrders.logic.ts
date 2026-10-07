@@ -8,7 +8,13 @@
 
 export type VdfOrderStatus = 'PENDING' | 'EXECUTED' | 'CANCELLED';
 
-export type VdfOrderState = { status: VdfOrderStatus; amountEdited: boolean; shopCancelled: boolean } | null;
+/** paid — есть оплата (расход в кассе), даже частичная */
+export type VdfOrderState = {
+  status: VdfOrderStatus;
+  amountEdited: boolean;
+  shopCancelled: boolean;
+  paid: boolean;
+} | null;
 
 export type VdfOrderPlan =
   | { action: 'create' }
@@ -26,11 +32,12 @@ export function planVdfOrder(current: VdfOrderState, done: boolean): VdfOrderPla
     if (current.status === 'EXECUTED') {
       return current.shopCancelled ? { action: 'markCancelled', cancelled: false } : { action: 'none' };
     }
-    return { action: 'refresh', keepAmount: current.amountEdited };
+    // После частичной оплаты сумму не перезаписываем: остаток считается от неё
+    return { action: 'refresh', keepAmount: current.amountEdited || current.paid };
   }
   if (!current) return { action: 'none' };
-  // Неисполненный и отменённый просто исчезают; по исполненному решает администратор
-  if (current.status !== 'EXECUTED') return { action: 'delete' };
+  // Неоплаченный и отменённый просто исчезают; по оплаченному (и частично) решает администратор
+  if (current.status === 'CANCELLED' || (current.status === 'PENDING' && !current.paid)) return { action: 'delete' };
   return current.shopCancelled ? { action: 'none' } : { action: 'markCancelled', cancelled: true };
 }
 
@@ -39,24 +46,59 @@ export function vdfExpenseDescription(shopOrderId: number, employeeName: string)
   return `vdf.by: заказ №${shopOrderId}, ${employeeName}`;
 }
 
-export interface VdfPaidOrder {
-  shopOrderId: number;
-  employeeName: string;
-  executedByName: string | null;
-  cashTransaction: { amount: number; date: Date; person: string | null } | null;
+const toCents = (value: number) => Math.round(value * 100);
+
+/** Сколько оплачено: сумма расходов в кассе */
+export function vdfPaidTotal(payments: Array<{ cashTransaction: { amount: number } }>) {
+  return payments.reduce((sum, p) => sum + toCents(p.cashTransaction.amount), 0) / 100;
 }
 
-/** Оплата для магазина: заказ считается оплаченным, пока в кассе есть его расход */
-export function vdfPayment(order: VdfPaidOrder) {
-  const tx = order.cashTransaction;
-  if (!tx) return null;
-  return {
+/** Остаток к оплате, не меньше нуля */
+export function vdfRemaining(amount: number, paid: number) {
+  return Math.max(0, toCents(amount) - toCents(paid)) / 100;
+}
+
+export type VdfPaymentPlan = { ok: true; amount: number; full: boolean } | { ok: false; message: string };
+
+/**
+ * Сколько провести расходом при исполнении. Без суммы — весь остаток.
+ * Сумма, равная остатку, — тоже полное исполнение
+ */
+export function planVdfPayment(amount: number, paid: number, requested?: number): VdfPaymentPlan {
+  const remaining = toCents(vdfRemaining(amount, paid));
+  if (remaining <= 0) return { ok: false, message: 'По заказу нечего оплачивать' };
+  const pay = requested === undefined ? remaining : toCents(requested);
+  if (pay <= 0) return { ok: false, message: 'Сумма должна быть больше нуля' };
+  if (pay > remaining) return { ok: false, message: `Сумма больше остатка (${remaining / 100} р.)` };
+  return { ok: true, amount: pay / 100, full: pay === remaining };
+}
+
+export interface VdfPaidOrder {
+  shopOrderId: number;
+  status: VdfOrderStatus;
+  employeeName: string;
+  executedByName: string | null;
+  amount: number;
+  payments: Array<{
+    paidByName: string | null;
+    cashTransaction: { amount: number; date: Date; person: string | null };
+  }>;
+}
+
+/**
+ * Оплаты заказа для магазина — по одной на расход в кассе. Удалённый расход оплатой уже не считается.
+ * remaining — сколько по заказу осталось оплатить (у исполненного — ноль)
+ */
+export function vdfPayments(order: VdfPaidOrder) {
+  const remaining = order.status === 'EXECUTED' ? 0 : vdfRemaining(order.amount, vdfPaidTotal(order.payments));
+  return order.payments.map(({ paidByName, cashTransaction: tx }) => ({
     orderId: order.shopOrderId,
     employeeName: order.employeeName,
     amount: tx.amount,
     paidAt: tx.date.toISOString(),
-    person: tx.person ?? order.executedByName ?? '',
-  };
+    person: tx.person ?? paidByName ?? order.executedByName ?? '',
+    remaining,
+  }));
 }
 
 export interface VdfCancelledOrder {

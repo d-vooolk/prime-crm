@@ -368,8 +368,8 @@ model CashTransaction {
   salaryPayment EmployeeSalaryPayment?
   // Пополнение капитала, которым стал этот расход (отчисление в капитал)
   capitalTransfer CapitalTransaction?
-  // Заказ сотрудника из магазина vdf.by, исполнением которого создан этот расход
-  vdfOrder        VdfOrder?
+  // Оплата заказа сотрудника из магазина vdf.by, которой создан этот расход
+  vdfOrderPayment VdfOrderPayment?
   // Категория затрат (только для обычных расходов, у системных — пусто)
   expenseCategoryId String?
   expenseCategory   ExpenseCategory? @relation(fields: [expenseCategoryId], references: [id], onDelete: SetNull)
@@ -395,7 +395,8 @@ enum VdfOrderStatus {
 }
 
 // Заказ сотрудника из магазина vdf.by. Магазин присылает его, когда заказ отмечен «Выполнен»,
-// и отзывает, если отметку сняли. Исполнение создаёт расход в кассе на amount.
+// и отзывает, если отметку сняли. Исполнение создаёт расход в кассе: на весь остаток
+// (заказ исполнен) или на часть (заказ ждёт дальше с меньшим остатком).
 model VdfOrder {
   id                String           @id @default(cuid())
   shopOrderId       Int              @unique
@@ -412,8 +413,7 @@ model VdfOrder {
   shopCancelled     Boolean          @default(false)
   executedAt        DateTime?
   executedByName    String?
-  cashTransactionId String?          @unique
-  cashTransaction   CashTransaction? @relation(fields: [cashTransactionId], references: [id], onDelete: SetNull)
+  payments          VdfOrderPayment[]
   cancelledAt       DateTime?
   cancelledByName   String?
   cancelReason      String?
@@ -421,6 +421,19 @@ model VdfOrder {
   updatedAt         DateTime         @updatedAt
 
   @@index([status])
+}
+
+// Оплата заказа vdf.by — расход в кассе. Сумма — у расхода; удалили расход — оплаты нет
+model VdfOrderPayment {
+  id                String          @id @default(cuid())
+  orderId           String
+  order             VdfOrder        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  cashTransactionId String          @unique
+  cashTransaction   CashTransaction @relation(fields: [cashTransactionId], references: [id], onDelete: Cascade)
+  paidByName        String?
+  createdAt         DateTime        @default(now())
+
+  @@index([orderId])
 }
 
 enum CapitalTransactionType {

@@ -4,7 +4,7 @@ import { EditOutlined, RollbackOutlined, StopOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table';
 import { VdfOrder, VdfOrderStatus } from '@/api/accounting.api';
 import { formatMoney } from '@/utils/formatters';
-import { formatDate } from '../utils';
+import { formatDate, vdfPaid, vdfRemaining } from '../utils';
 import styles from './columns.module.scss';
 
 interface Options {
@@ -36,9 +36,17 @@ const executedColumn = {
   render: (_: unknown, o: VdfOrder) => (
     <div className={styles.amountCell}>
       <span>{o.executedAt ? formatDate(o.executedAt) : '—'}</span>
-      <span className={styles.vdfSub}>
-        {o.cashTransaction ? `изыматель: ${o.cashTransaction.person ?? '—'}` : 'расход удалён из кассы'}
-      </span>
+      {o.payments?.length ? (
+        o.payments.length === 1
+          ? <span className={styles.vdfSub}>изыматель: {o.payments[0].cashTransaction.person ?? '—'}</span>
+          : o.payments.map(p => (
+            <span key={p.id} className={styles.vdfSub}>
+              {formatDate(p.cashTransaction.date)} · {formatMoney(p.cashTransaction.amount)} · {p.cashTransaction.person ?? '—'}
+            </span>
+          ))
+      ) : (
+        <span className={styles.vdfSub}>расход удалён из кассы</span>
+      )}
       {o.shopCancelled && <Tag color="orange">отменён в магазине</Tag>}
     </div>
   ),
@@ -59,9 +67,12 @@ const pendingColumn = (
       <Button size="small" type="primary" danger onClick={() => onExecute(o)}>
         Исполнить
       </Button>
-      <Button size="small" icon={<StopOutlined />} onClick={() => onCancel(o)}>
-        Отменить
-      </Button>
+      {/* Частично оплаченный не отменяют: сначала удаляют его расходы в кассе */}
+      {vdfPaid(o) === 0 && (
+        <Button size="small" icon={<StopOutlined />} onClick={() => onCancel(o)}>
+          Отменить
+        </Button>
+      )}
     </Space>
   ),
 });
@@ -123,6 +134,15 @@ export function vdfColumns({ view, onEditAmount, onExecute, onCancel, onRestore 
         <div className={styles.amountCell}>
           <strong>{formatMoney(o.amount)}</strong>
           {o.amountEdited && <span className={styles.vdfSub}>в магазине {formatMoney(o.shopTotal)}</span>}
+          {o.status === 'PENDING' && vdfPaid(o) > 0 && (
+            <>
+              <Tag color="blue">исполнен частично</Tag>
+              <span className={styles.vdfSub}>
+                оплачено {formatMoney(vdfPaid(o))}, остаток {formatMoney(vdfRemaining(o))}
+              </span>
+              {o.shopCancelled && <Tag color="orange">отменён в магазине</Tag>}
+            </>
+          )}
         </div>
       ),
     },

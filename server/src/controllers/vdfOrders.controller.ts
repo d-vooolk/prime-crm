@@ -29,7 +29,11 @@ const reportSchema = z.discriminatedUnion('done', [
 
 const statusSchema = z.object({ status: z.enum(['PENDING', 'EXECUTED', 'CANCELLED']).default('PENDING') });
 const amountSchema = z.object({ amount: positiveMoney() });
-const executeSchema = z.object({ person: requiredText(150, 'Выберите изымателя') });
+// Без суммы — исполнить на весь остаток
+const executeSchema = z.object({
+  person: requiredText(150, 'Выберите изымателя'),
+  amount: positiveMoney().optional(),
+});
 const cancelSchema = z.object({ reason: optionalText(300) });
 
 export const vdfOrdersController = {
@@ -68,7 +72,7 @@ export const vdfOrdersController = {
   },
 
   async execute(req: Request, res: Response) {
-    const { person } = parse(executeSchema, req.body);
-    res.json({ data: await vdfOrdersService.execute(parse(id, req.params.id), person, req.user!) });
+    const { person, amount } = parse(executeSchema, req.body);
+    res.json({ data: await vdfOrdersService.execute(parse(id, req.params.id), person, amount, req.user!) });
   },
 };
