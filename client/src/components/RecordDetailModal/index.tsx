@@ -205,16 +205,16 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
           />
         }
       >
-        {/* Недостатки — первым блоком: сотрудник видит поле сразу при открытии записи */}
-        <DefectsEditor
-          record={r}
-          onSaved={fresh => { setLocalRecord(fresh); onRefresh(); }}
-        />
         <RecordInfo
           record={r}
           isEmployee={isEmployee}
           onOpenHistory={() => setHistoryOpen(true)}
           onOpenWiki={openWiki}
+        />
+        {/* Недостатки — между фото/видео авто и услугами */}
+        <DefectsEditor
+          record={r}
+          onSaved={fresh => { setLocalRecord(fresh); onRefresh(); }}
         />
         <RecordItems record={r} isEmployee={isEmployee} />
       </Modal>

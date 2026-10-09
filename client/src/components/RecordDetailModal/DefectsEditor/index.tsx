@@ -12,8 +12,9 @@ interface Props {
 }
 
 /**
- * Обнаруженные недостатки — в начале карточки, чтобы сотрудник видел поле сразу.
- * Пишет и правит любая роль; текст печатается в акте выполненных работ.
+ * Обнаруженные недостатки. В активной записи пишет и правит любая роль;
+ * в завершённой и отменённой — только текст, пустой блок не показывается.
+ * Текст печатается в акте выполненных работ.
  */
 export const DefectsEditor: React.FC<Props> = ({ record, onSaved }) => {
   const notify = useNotify();
@@ -28,8 +29,8 @@ export const DefectsEditor: React.FC<Props> = ({ record, onSaved }) => {
     setEditing(!saved);
   }, [record.id, saved]);
 
-  const isCancelled = record.status === 'CANCELLED';
-  if (isCancelled && !saved) return null;
+  const isEditable = record.status === 'ACTIVE';
+  if (!isEditable && !saved) return null;
 
   const handleSave = async () => {
     setSaving(true);
@@ -52,7 +53,7 @@ export const DefectsEditor: React.FC<Props> = ({ record, onSaved }) => {
   return (
     <>
       <Divider orientation="left" className={styles.divider}>Обнаруженные недостатки</Divider>
-      {editing && !isCancelled ? (
+      {editing && isEditable ? (
         <>
           <Input.TextArea
             value={draft}
@@ -71,7 +72,7 @@ export const DefectsEditor: React.FC<Props> = ({ record, onSaved }) => {
       ) : (
         <div className={styles.view}>
           <div className={styles.text}>{saved}</div>
-          {!isCancelled && (
+          {isEditable && (
             <Button
               type="link"
               size="small"
