@@ -104,6 +104,7 @@ function forViewer<T extends { client: { id: string; name: string; phone: string
 }
 
 const smsSchema = z.object({ type: z.enum(['CAR_READY', 'REVIEW_REQUEST'], { errorMap: () => ({ message: 'Неизвестный тип SMS' }) }) });
+const defectsSchema = z.object({ defects: z.string().max(10000).nullable() });
 const salaryDateSchema = z.object({ salaryDate: dateString().nullable().optional() });
 
 export const recordsController = {
@@ -205,6 +206,14 @@ export const recordsController = {
       const { type } = parse(smsSchema, req.body);
       const result = await smsService.sendForRecord(String(req.params.id), type);
       res.json({ ok: result === 'sent', result });
+    } catch (e) { next(e); }
+  },
+
+  async setDefects(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { defects } = parse(defectsSchema, req.body);
+      const record = await recordsService.setDefects(String(req.params.id), defects);
+      res.json({ data: forViewer(req, record) });
     } catch (e) { next(e); }
   },
 

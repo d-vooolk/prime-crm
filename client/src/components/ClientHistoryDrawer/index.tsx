@@ -82,7 +82,8 @@ const VisitPerformers: React.FC<{ record: CrmRecord }> = ({ record }) => {
 
 /** О чём клиента предупредили в акте — видно сразу, без раскрытия визита */
 const DealWarnings: React.FC<{ record: CrmRecord }> = ({ record }) => {
-  const { defects, recommendations } = record.deal ?? {};
+  const { defects } = record;
+  const recommendations = record.deal?.recommendations;
   if (!defects && !recommendations) return null;
   return (
     <div className={styles.warnings}>

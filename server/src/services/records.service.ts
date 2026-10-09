@@ -465,10 +465,11 @@ export const recordsService = {
 
     if (record.status === 'CLOSED') {
       await prisma.$transaction(async (tx) => {
+        if (defects !== undefined) await tx.record.update({ where: { id }, data: { defects: defects.trim() || null } });
         await tx.deal.update({
           where: { recordId: id },
           // Форма закрытия присылает всё состояние: пустые поля очищаем, а не оставляем прежними
-          data: { finalPrice, defects: defects || null, recommendations: recommendations || null, warranty, isPaidByBankTransfer, splitCashAmount: isSplit ? splitCashAmount : null, splitCardAmount: isSplit ? splitCardAmount : null, currencyPayments },
+          data: { finalPrice, recommendations: recommendations || null, warranty, isPaidByBankTransfer, splitCashAmount: isSplit ? splitCashAmount : null, splitCardAmount: isSplit ? splitCardAmount : null, currencyPayments },
         });
         // Пересоздаём только закрывающие транзакции, предоплату не трогаем
         await recordsService.syncClosingTransactions(tx, record, {
@@ -510,7 +511,6 @@ export const recordsService = {
         data: {
           recordId: id,
           finalPrice,
-          defects,
           recommendations,
           warranty,
           isPaidByBankTransfer,
@@ -522,7 +522,11 @@ export const recordsService = {
             : undefined,
         },
       });
-      await tx.record.update({ where: { id }, data: { status: 'CLOSED' } });
+      // Недостатки хранятся в записи: их могли дописать в карточке ещё до закрытия
+      await tx.record.update({
+        where: { id },
+        data: { status: 'CLOSED', ...(defects !== undefined && { defects: defects.trim() || null }) },
+      });
       await recordsService.syncClosingTransactions(tx, record, {
         finalPrice,
         isPaidByBankTransfer,
@@ -545,6 +549,13 @@ export const recordsService = {
       tag: `deal-${id}`,
     })));
     return closed;
+  },
+
+  /** Обнаруженные недостатки — правит любая роль, в том числе в закрытой записи (попадают в акт) */
+  async setDefects(id: string, defects: string | null) {
+    await recordsService.findById(id);
+    await prisma.record.update({ where: { id }, data: { defects: defects?.trim() || null } });
+    return recordsService.findById(id);
   },
 
   async setSalaryDate(id: string, salaryDate: string | null) {

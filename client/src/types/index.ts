@@ -109,7 +109,6 @@ export interface Deal {
   id: string;
   recordId: string;
   finalPrice: number;
-  defects?: string;
   recommendations?: string;
   warranty?: string;
   priceIncreaseReason?: string;
@@ -206,6 +205,8 @@ export interface Record {
   serviceman: string | null;
   receptionist?: string | null;
   notes?: string;
+  /** Обнаруженные недостатки — пишет любая роль в карточке записи, печатаются в акте */
+  defects?: string | null;
   clientSource?: ClientSource | null;
   /** Сколько фото/видео прикреплено к записи */
   _count?: { media: number };

@@ -48,6 +48,8 @@ model Record {
   // Откуда пришёл клиент — для статистики каналов привлечения
   clientSource       ClientSource?
   notes              String?
+  // Обнаруженные недостатки: пишет любая роль прямо в карточке записи, печатаются в акте
+  defects            String?
   documentNumber     String?      @unique
   status             RecordStatus @default(ACTIVE)
   smsLogs            SmsLog[]
@@ -181,8 +183,7 @@ model Deal {
   recordId            String          @unique
   finalPrice          Decimal @db.Decimal(14, 2)
   priceIncreaseReason String?
-  defects             String?
-  // Рекомендации клиенту — печатаются в акте под обнаруженными недостатками
+  // Рекомендации клиенту — печатаются в акте под обнаруженными недостатками (Record.defects)
   recommendations     String?
   warranty            String?
   isPaidByBankTransfer Boolean        @default(false)

@@ -77,7 +77,7 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
 
     if (record.deal) {
       form.setFieldsValue({
-        defects: record.deal.defects || '',
+        defects: record.defects || '',
         recommendations: record.deal.recommendations || '',
         warranty: record.deal.warranty || '',
         isPaidByBankTransfer: record.deal.isPaidByBankTransfer || false,
@@ -87,6 +87,8 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
       setCurrencyOpen(!!record.deal.currencyPayments?.length);
     } else {
       form.resetFields();
+      // Недостатки могли записать в карточке до закрытия
+      form.setFieldsValue({ defects: record.defects || '' });
       setPaymentSplitCard(null);
       setCurrencyParts([]);
       setCurrencyOpen(false);
@@ -148,7 +150,8 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
       // Разбивка нал/карта — от рублёвого остатка после валюты
       await recordsApi.close(record.id, {
         finalPrice: totals.total,
-        defects: values.defects || undefined,
+        // Пустая строка очищает недостатки в записи
+        defects: values.defects ?? '',
         recommendations: values.recommendations || undefined,
         warranty: values.warranty || undefined,
         isPaidByBankTransfer: values.isPaidByBankTransfer || false,

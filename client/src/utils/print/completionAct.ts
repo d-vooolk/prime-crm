@@ -170,7 +170,7 @@ export function printCompletionAct(record: Record, settings?: CompanySettings, t
   if (!record.deal) return;
   const html = buildCompletionActHtml(
     record, settings, formatDate(record.deal.closedAt),
-    record.deal.defects || null, record.deal.recommendations || null, templateContent,
+    record.defects || null, record.deal.recommendations || null, templateContent,
   );
   openPrintWindow(html, placeActMemo);
 }

@@ -5,6 +5,7 @@ import type { Record } from '@/types';
 import { formatDate, formatTime } from '@/utils/formatters';
 import { clientSourceLabel } from '@/utils/clientSource';
 import { RecordMediaGallery } from '@/components/RecordMediaGallery';
+import { TWO_COLUMNS } from '@/config/descriptions';
 import styles from './RecordInfo.module.scss';
 
 interface Props {
@@ -46,7 +47,7 @@ export const RecordInfo: React.FC<Props> = ({ record: r, isEmployee, onOpenHisto
     {r.isLegalEntity && !isEmployee && (
       <>
         <Divider orientation="left" className={styles.divider}>Юридическое лицо</Divider>
-        <Descriptions size="small" column={{ xs: 1, sm: 2 }}>
+        <Descriptions size="small" column={TWO_COLUMNS}>
           {r.legalCompanyName && (
             <Descriptions.Item label="Организация" span={2}>{r.legalCompanyName}</Descriptions.Item>
           )}
@@ -63,7 +64,7 @@ export const RecordInfo: React.FC<Props> = ({ record: r, isEmployee, onOpenHisto
     )}
 
     <Divider orientation="left" className={styles.divider}>Автомобиль</Divider>
-    <Descriptions size="small" column={{ xs: 1, sm: 2 }}>
+    <Descriptions size="small" column={TWO_COLUMNS}>
       <Descriptions.Item label="Марка / Модель">
         {r.car.brand} {r.car.model}
       </Descriptions.Item>
@@ -98,7 +99,7 @@ export const RecordInfo: React.FC<Props> = ({ record: r, isEmployee, onOpenHisto
     </div>
 
     <Divider orientation="left" className={styles.divider}>Запись</Divider>
-    <Descriptions size="small" column={{ xs: 1, sm: 2 }}>
+    <Descriptions size="small" column={TWO_COLUMNS}>
       <Descriptions.Item label="Принято">{formatDate(r.scheduledAt)}</Descriptions.Item>
       <Descriptions.Item label="Время">{formatTime(r.scheduledAt)}</Descriptions.Item>
       {r.serviceman && (

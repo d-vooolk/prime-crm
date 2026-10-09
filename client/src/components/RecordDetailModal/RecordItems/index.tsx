@@ -2,6 +2,7 @@ import React from 'react';
 import { Descriptions, Divider, Table, Tag } from 'antd';
 import type { Record, RecordItem } from '@/types';
 import { formatDate, formatPrice } from '@/utils/formatters';
+import { TWO_COLUMNS } from '@/config/descriptions';
 import styles from './RecordItems.module.scss';
 
 interface Props {
@@ -86,7 +87,7 @@ export const RecordItems: React.FC<Props> = ({ record: r, isEmployee }) => {
       {r.deal && (
         <>
           <Divider orientation="left" className={styles.divider}>Сделка закрыта</Divider>
-          <Descriptions size="small" column={{ xs: 1, sm: 2 }}>
+          <Descriptions size="small" column={TWO_COLUMNS}>
             <Descriptions.Item label="Выдано">{formatDate(r.deal.closedAt)}</Descriptions.Item>
             {r.deal.warranty && (
               <Descriptions.Item label="Гарантия">{r.deal.warranty}</Descriptions.Item>
@@ -102,13 +103,8 @@ export const RecordItems: React.FC<Props> = ({ record: r, isEmployee }) => {
               </Descriptions.Item>
             )}
           </Descriptions>
-          {/* Длинные тексты — отдельными блоками на всю ширину карточки, а не в колонке Descriptions */}
-          {r.deal.defects && (
-            <div className={styles.textBlock}>
-              <div className={styles.textBlockLabel}>Обнаруженные недостатки</div>
-              <div className={styles.multiline}>{r.deal.defects}</div>
-            </div>
-          )}
+          {/* Длинные тексты — отдельными блоками на всю ширину карточки, а не в колонке Descriptions.
+              Обнаруженные недостатки — в начале карточки (DefectsEditor) */}
           {r.deal.recommendations && (
             <div className={styles.textBlock}>
               <div className={styles.textBlockLabel}>Рекомендации</div>

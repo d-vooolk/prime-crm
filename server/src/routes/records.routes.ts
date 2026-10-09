@@ -27,7 +27,8 @@ router.post('/:id/send-sms', manager, recordsController.sendSms);
 router.patch('/:id/salary-date', manager, recordsController.setSalaryDate);
 router.delete('/:id', requireRole(ROLES.CREATOR), recordsController.delete);
 
-// Фото и видео нюансов авто — добавляет любая роль
+// Обнаруженные недостатки, фото и видео нюансов авто — добавляет любая роль
+router.patch('/:id/defects', recordsController.setDefects);
 router.get('/:id/media', recordMediaController.list);
 router.post('/:id/media', uploadMedia, recordMediaController.upload);
 router.delete('/:id/media/:mediaId', recordMediaController.delete);

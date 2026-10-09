@@ -141,6 +141,9 @@ export const recordsApi = {
       `/records/${id}/send-sms`, { type },
     ).then(r => r.data),
 
+  setDefects: (id: string, defects: string | null) =>
+    http.patch<{ data: Record }>(`/records/${id}/defects`, { defects }).then(r => r.data.data),
+
   setSalaryDate: (id: string, salaryDate: string | null) =>
     http.patch(`/records/${id}/salary-date`, { salaryDate }),
 

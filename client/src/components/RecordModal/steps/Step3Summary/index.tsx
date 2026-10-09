@@ -5,6 +5,7 @@ import { formatPrice } from '@/utils/formatters';
 import { RecordFormData } from '../../types';
 import { servicesTotals } from '../../calc';
 import { SectionDivider } from '../../parts/SectionDivider';
+import { TWO_COLUMNS } from '@/config/descriptions';
 import styles from './Step3Summary.module.scss';
 
 interface Props {
@@ -18,7 +19,7 @@ export const Step3Summary: React.FC<Props> = ({ data }) => {
   return (
     <div>
       <SectionDivider muted={false}>Клиент</SectionDivider>
-      <Descriptions column={{ xs: 1, sm: 2 }} size="small">
+      <Descriptions column={TWO_COLUMNS} size="small">
         <Descriptions.Item label={data.isLegalEntity ? 'ФИО представителя' : 'ФИО'}>
           {data.clientName || '—'}
         </Descriptions.Item>
@@ -28,7 +29,7 @@ export const Step3Summary: React.FC<Props> = ({ data }) => {
       {data.isLegalEntity && (
         <>
           <SectionDivider muted={false}>Юридическое лицо</SectionDivider>
-          <Descriptions column={{ xs: 1, sm: 2 }} size="small">
+          <Descriptions column={TWO_COLUMNS} size="small">
             {data.legalCompanyName && (
               <Descriptions.Item label="Организация" span={2}>{data.legalCompanyName}</Descriptions.Item>
             )}
@@ -43,7 +44,7 @@ export const Step3Summary: React.FC<Props> = ({ data }) => {
       )}
 
       <SectionDivider muted={false}>Автомобиль</SectionDivider>
-      <Descriptions column={{ xs: 1, sm: 2 }} size="small">
+      <Descriptions column={TWO_COLUMNS} size="small">
         <Descriptions.Item label="Марка / Модель">
           {data.carBrand} {data.carModel}
         </Descriptions.Item>
@@ -54,7 +55,7 @@ export const Step3Summary: React.FC<Props> = ({ data }) => {
       </Descriptions>
 
       <SectionDivider muted={false}>Запись</SectionDivider>
-      <Descriptions column={{ xs: 1, sm: 2 }} size="small">
+      <Descriptions column={TWO_COLUMNS} size="small">
         <Descriptions.Item label="Дата">
           {data.date ? dayjs(data.date).format('DD.MM.YYYY') : '—'}
         </Descriptions.Item>

@@ -14,6 +14,7 @@ import { useRecordPrint } from './useRecordPrint';
 import { RecordDetailFooter, SmsKind } from './RecordDetailFooter';
 import { RecordInfo } from './RecordInfo';
 import { RecordItems } from './RecordItems';
+import { DefectsEditor } from './DefectsEditor';
 import { ActTemplateModal } from './ActTemplateModal';
 import { CancelPrepaidModal } from './CancelPrepaidModal';
 import styles from './RecordDetailModal.module.scss';
@@ -204,6 +205,11 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
           />
         }
       >
+        {/* Недостатки — первым блоком: сотрудник видит поле сразу при открытии записи */}
+        <DefectsEditor
+          record={r}
+          onSaved={fresh => { setLocalRecord(fresh); onRefresh(); }}
+        />
         <RecordInfo
           record={r}
           isEmployee={isEmployee}
