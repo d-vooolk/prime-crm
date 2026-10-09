@@ -32,7 +32,7 @@ export const PANIC_WIPE_TABLES = [
   // Деньги
   'CashTransaction', 'CapitalTransaction', 'Debt', 'DebtPayment',
   'FounderSalary', 'EmployeeSalaryPayment', 'SalaryAdjustment', 'SalaryRate',
-  'MonthlyRevenue', 'MonthlyRecordCount', 'VdfOrder',
+  'MonthlyRevenue', 'MonthlyRecordCount', 'VdfOrder', 'VdfOrderPayment',
   // Журнал изменений денег, личные заметки, подписки устройств
   'AuditLog', 'Note', 'PushSubscription',
 ] as const;

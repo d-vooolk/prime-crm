@@ -45,8 +45,8 @@ model Record {
   // Serviceman.name с ON UPDATE CASCADE: переименование сотрудника переносится во всю историю
   serviceman         String?
   receptionist       String?
-  // Откуда пришёл клиент — для статистики каналов привлечения
-  clientSource       ClientSource?
+  // Откуда пришёл клиент — для статистики каналов привлечения (справочник в настройках)
+  clientSourceId     String?
   notes              String?
   // Обнаруженные недостатки: пишет любая роль прямо в карточке записи, печатаются в акте
   defects            String?
@@ -85,20 +85,24 @@ model Record {
   media              RecordMedia[]
   servicemanRef      Serviceman?  @relation("RecordServiceman", fields: [serviceman], references: [name], onUpdate: Cascade, onDelete: Restrict)
   receptionistRef    Serviceman?  @relation("RecordReceptionist", fields: [receptionist], references: [name], onUpdate: Cascade, onDelete: Restrict)
+  clientSource       ClientSource? @relation(fields: [clientSourceId], references: [id], onDelete: SetNull)
 
   @@index([scheduledAt])
   @@index([status, scheduledAt])
   @@index([clientId])
   @@index([carId])
-  @@index([clientSource])
+  @@index([clientSourceId])
 }
 
-enum ClientSource {
-  INSTAGRAM
-  RECOMMENDATION
-  SEARCH
-  MAPS
-  OTHER
+// Справочник источников клиента (Настройки → Источники клиентов). Источник, который уже
+// стоит в записях, не удаляется, а скрывается из списка — статистика каналов сохраняется
+model ClientSource {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  sortOrder Int?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  records   Record[]
 }
 
 enum RecordMediaType {
@@ -365,8 +369,8 @@ model CashTransaction {
   salaryPayment EmployeeSalaryPayment?
   // Пополнение капитала, которым стал этот расход (отчисление в капитал)
   capitalTransfer CapitalTransaction?
-  // Заказ сотрудника из магазина vdf.by, исполнением которого создан этот расход
-  vdfOrder        VdfOrder?
+  // Оплата заказа сотрудника из магазина vdf.by, которой создан этот расход
+  vdfOrderPayment VdfOrderPayment?
   // Категория затрат (только для обычных расходов, у системных — пусто)
   expenseCategoryId String?
   expenseCategory   ExpenseCategory? @relation(fields: [expenseCategoryId], references: [id], onDelete: SetNull)
@@ -388,10 +392,12 @@ model ExpenseCategory {
 enum VdfOrderStatus {
   PENDING  // ждёт исполнения
   EXECUTED // исполнен: в кассе расход с категорией «vdf.by»
+  CANCELLED // отменён в бухгалтерии: оплаты не будет, магазин видит отмену
 }
 
 // Заказ сотрудника из магазина vdf.by. Магазин присылает его, когда заказ отмечен «Выполнен»,
-// и отзывает, если отметку сняли. Исполнение создаёт расход в кассе на amount.
+// и отзывает, если отметку сняли. Исполнение создаёт расход в кассе: на весь остаток
+// (заказ исполнен) или на часть (заказ ждёт дальше с меньшим остатком).
 model VdfOrder {
   id                String           @id @default(cuid())
   shopOrderId       Int              @unique
@@ -408,12 +414,27 @@ model VdfOrder {
   shopCancelled     Boolean          @default(false)
   executedAt        DateTime?
   executedByName    String?
-  cashTransactionId String?          @unique
-  cashTransaction   CashTransaction? @relation(fields: [cashTransactionId], references: [id], onDelete: SetNull)
+  payments          VdfOrderPayment[]
+  cancelledAt       DateTime?
+  cancelledByName   String?
+  cancelReason      String?
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
 
   @@index([status])
+}
+
+// Оплата заказа vdf.by — расход в кассе. Сумма — у расхода; удалили расход — оплаты нет
+model VdfOrderPayment {
+  id                String          @id @default(cuid())
+  orderId           String
+  order             VdfOrder        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  cashTransactionId String          @unique
+  cashTransaction   CashTransaction @relation(fields: [cashTransactionId], references: [id], onDelete: Cascade)
+  paidByName        String?
+  createdAt         DateTime        @default(now())
+
+  @@index([orderId])
 }
 
 enum CapitalTransactionType {

@@ -193,8 +193,16 @@ export interface CurrencyRates {
   fetchedAt: string;
 }
 
-/** Откуда пришёл клиент (поле записи, необязательное) */
-export type ClientSource = 'INSTAGRAM' | 'RECOMMENDATION' | 'SEARCH' | 'MAPS' | 'OTHER';
+/** Откуда пришёл клиент — справочник в настройках (поле записи, необязательное) */
+export interface ClientSource {
+  id: string;
+  name: string;
+  sortOrder: number | null;
+  /** false — скрыт из списка, но остался в старых записях */
+  isActive: boolean;
+  /** Сколько записей с этим источником */
+  usageCount: number;
+}
 
 export interface Record {
   id: string;
@@ -207,7 +215,8 @@ export interface Record {
   notes?: string;
   /** Обнаруженные недостатки — пишет любая роль в карточке записи, печатаются в акте */
   defects?: string | null;
-  clientSource?: ClientSource | null;
+  clientSourceId?: string | null;
+  clientSource?: { id: string; name: string } | null;
   /** Сколько фото/видео прикреплено к записи */
   _count?: { media: number };
   documentNumber?: string;
@@ -550,8 +559,9 @@ export interface StockMovement {
 // ─── Каналы привлечения ────────────────────────────
 
 export interface SourceStatsRow {
-  /** Источник или NONE — не указан */
-  source: ClientSource | 'NONE';
+  /** id источника или NONE — не указан */
+  source: string;
+  name: string;
   records: number;
   cancelled: number;
   closed: number;
@@ -567,7 +577,7 @@ export interface SourceStats {
   from: string;
   to: string;
   sources: SourceStatsRow[];
-  months: Array<{ month: string; counts: Partial<globalThis.Record<ClientSource | 'NONE', number>> }>;
+  months: Array<{ month: string; counts: Partial<globalThis.Record<string, number>> }>;
   adExpenses: number;
   newClients: number;
   costPerNewClient: number | null;

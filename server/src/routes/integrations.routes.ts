@@ -34,6 +34,9 @@ function requireIntegrationKey(key: () => string) {
 }
 
 // Магазин vdf.by: заказы сотрудников для вкладки «VDF» в бухгалтерии
-router.post('/vdf/orders', requireIntegrationKey(() => env.vdfIntegrationKey), vdfOrdersController.receive);
+const vdfKey = requireIntegrationKey(() => env.vdfIntegrationKey);
+router.post('/vdf/orders', vdfKey, vdfOrdersController.receive);
+// Оплаченные и отменённые заказы — для бухгалтерии магазина
+router.get('/vdf/states', vdfKey, vdfOrdersController.states);
 
 export default router;

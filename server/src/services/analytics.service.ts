@@ -158,7 +158,7 @@ export const analyticsService = {
     const records = await prisma.record.findMany({
       where: { scheduledAt: { gte: from, lt: to } },
       select: {
-        id: true, clientId: true, clientSource: true, status: true, scheduledAt: true,
+        id: true, clientId: true, clientSourceId: true, status: true, scheduledAt: true,
         deal: { select: { finalPrice: true } },
       },
     });
@@ -177,7 +177,7 @@ export const analyticsService = {
     const rows = new Map<string, Row>();
     const months = new Map<string, Record<string, number>>();
     for (const r of records) {
-      const source = r.clientSource ?? 'NONE';
+      const source = r.clientSourceId ?? 'NONE';
       let row = rows.get(source);
       if (!row) {
         row = { source, records: 0, cancelled: 0, closed: 0, revenue: 0, clients: new Set(), newClients: new Set() };
@@ -198,12 +198,20 @@ export const analyticsService = {
       months.set(month, m);
     }
 
+    // Названия — и у скрытых из списка источников: в старых записях они остались
+    const sourceIds = [...rows.keys()].filter(k => k !== 'NONE');
+    const sourceNames = new Map(sourceIds.length
+      ? (await prisma.clientSource.findMany({ where: { id: { in: sourceIds } }, select: { id: true, name: true } }))
+        .map(s => [s.id, s.name])
+      : []);
+
     const round = (v: number) => Math.round(v * 100) / 100;
     const sources = [...rows.values()]
       .map(row => {
         const considered = row.records - row.cancelled;
         return {
           source: row.source,
+          name: row.source === 'NONE' ? 'Не указан' : sourceNames.get(row.source) ?? 'Удалён',
           records: row.records,
           cancelled: row.cancelled,
           closed: row.closed,

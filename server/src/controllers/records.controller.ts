@@ -58,7 +58,7 @@ const recordFields = {
   serviceman: nameOrNull,
   receptionist: nameOrNull,
   notes: z.string().max(5000).nullable().optional(),
-  clientSource: z.preprocess(v => (v === '' ? null : v), z.enum(['INSTAGRAM', 'RECOMMENDATION', 'SEARCH', 'MAPS', 'OTHER']).nullable().optional()),
+  clientSourceId: z.preprocess(v => (v === '' ? null : v), z.string().max(100).nullable().optional()),
   items: z.array(itemSchema).max(200),
   ...legalFields,
 };

@@ -1,10 +1,9 @@
 import React, { useEffect } from 'react';
 import { Form, Select, DatePicker, Row, Col } from 'antd';
 import dayjs, { Dayjs } from 'dayjs';
-import { Serviceman } from '@/types';
-import { useServicemen } from '@/hooks/useReferenceData';
+import { ClientSource, Serviceman } from '@/types';
+import { useClientSources, useServicemen } from '@/hooks/useReferenceData';
 import { RecordFormData } from '../../types';
-import { CLIENT_SOURCE_OPTIONS } from '@/utils/clientSource';
 import styles from './ScheduleFields.module.scss';
 
 interface Props {
@@ -13,6 +12,7 @@ interface Props {
 }
 
 const EMPTY_SERVICEMEN: Serviceman[] = [];
+const EMPTY_SOURCES: ClientSource[] = [];
 
 // Рабочие часы 09–19, минуты шагом 5
 const HOUR_OPTIONS = Array.from({ length: 11 }, (_, i) => i + 9).map(h => ({ value: h, label: String(h).padStart(2, '0') }));
@@ -21,6 +21,7 @@ const MINUTE_OPTIONS = Array.from({ length: 12 }, (_, i) => i * 5).map(m => ({ v
 /** Дата и время записи, исполнитель, мастер приёмщик и источник клиента */
 export const ScheduleFields: React.FC<Props> = ({ data, onChange }) => {
   const { data: servicemen = EMPTY_SERVICEMEN } = useServicemen();
+  const { data: clientSources = EMPTY_SOURCES } = useClientSources();
 
   // Мастер приёмщик по умолчанию — когда сотрудники загрузились, а в записи он не выбран
   useEffect(() => {
@@ -32,6 +33,11 @@ export const ScheduleFields: React.FC<Props> = ({ data, onChange }) => {
 
   const employees = servicemen.filter(s => s.isPerformer && !s.isDismissed);
   const receptionists = servicemen.filter(s => s.isReceptionist && !s.isDismissed);
+
+  // Источник из списка в настройках; уже сохранённый в записи, но скрытый оттуда — тоже показываем
+  const sourceOptions = clientSources.map(s => ({ value: s.id, label: s.name }));
+  const saved = data.savedClientSource;
+  if (saved && !sourceOptions.some(o => o.value === saved.id)) sourceOptions.push({ value: saved.id, label: saved.name });
 
   const [hour, minute] = data.time ? data.time.split(':') : [];
 
@@ -97,11 +103,11 @@ export const ScheduleFields: React.FC<Props> = ({ data, onChange }) => {
           {/* Для статистики каналов привлечения на дашборде */}
           <Form.Item label="Источник клиента">
             <Select
-              value={data.clientSource ?? undefined}
-              onChange={v => onChange({ clientSource: v ?? null })}
+              value={data.clientSourceId ?? undefined}
+              onChange={v => onChange({ clientSourceId: v ?? null })}
               placeholder="Откуда узнал о нас"
               allowClear
-              options={CLIENT_SOURCE_OPTIONS}
+              options={sourceOptions}
             />
           </Form.Item>
         </Col>

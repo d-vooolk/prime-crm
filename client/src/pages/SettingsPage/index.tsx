@@ -5,6 +5,7 @@ import { useAuthStore } from '@/store/authStore';
 import { isEmployee, isManagerOrAbove } from '@/utils/roles';
 import { CarCatalogEditor } from '@/components/CarCatalogEditor';
 import { ExpenseCategoriesEditor } from '@/components/ExpenseCategoriesEditor';
+import { ClientSourcesEditor } from '@/components/ClientSourcesEditor';
 import { ServicesPage } from '@/pages/ServicesPage';
 import { BasicTab } from './BasicTab';
 import { CompanyTab } from './CompanyTab';
@@ -31,6 +32,15 @@ export const SettingsPage: React.FC = () => {
       children: (
         <Card title="Категории расходов">
           <ExpenseCategoriesEditor readOnly={isSotrudnik} />
+        </Card>
+      ),
+    },
+    {
+      key: 'clientSources',
+      label: 'Источники клиентов',
+      children: (
+        <Card title="Источники клиентов">
+          <ClientSourcesEditor readOnly={isSotrudnik} />
         </Card>
       ),
     },

@@ -7,18 +7,14 @@ import dayjs, { Dayjs } from 'dayjs';
 import { analyticsApi } from '@/api/analytics.api';
 import { LoadError } from '@/components/Shared/LoadError';
 import { useCssVars } from '@/hooks/useCssVars';
-import type { ClientSource, SourceStatsRow } from '@/types';
+import type { SourceStatsRow } from '@/types';
 import { formatPrice } from '@/utils/formatters';
-import { CLIENT_SOURCES, clientSourceLabel } from '@/utils/clientSource';
 import styles from './SourcesTab.module.scss';
 
 interface Props {
   /** Выручку по каналам видят директора, как и на главной вкладке */
   canSeeRevenue: boolean;
 }
-
-type SourceKey = ClientSource | 'NONE';
-const SOURCE_KEYS: SourceKey[] = [...CLIENT_SOURCES, 'NONE'];
 
 const COLOR_VARS = [
   '--color-chart-1', '--color-chart-2', '--color-chart-3', '--color-chart-4', '--color-chart-5', '--color-chart-6', '--color-chart-grid',
@@ -46,16 +42,22 @@ export const SourcesTab: React.FC<Props> = ({ canSeeRevenue }) => {
   });
 
   const vars = useCssVars(COLOR_VARS);
-  // «Не указан» — нейтральным цветом сетки, чтобы не спорил с настоящими каналами
-  const colorOf = (key: SourceKey) => (key === 'NONE'
+  // Источники — справочник в настройках: цвет по месту канала в таблице (по числу записей),
+  // «Не указан» — последним и нейтральным цветом сетки, чтобы не спорил с настоящими каналами
+  const sourceKeys = useMemo(() => {
+    const rows = data?.sources ?? [];
+    return [...rows.filter(r => r.source !== 'NONE'), ...rows.filter(r => r.source === 'NONE')].map(r => r.source);
+  }, [data]);
+  const nameOf = (key: string) => data?.sources.find(s => s.source === key)?.name ?? key;
+  const colorIndex = (key: string) => (key === 'NONE' ? 'none' : String(sourceKeys.indexOf(key) % 6));
+  const colorOf = (key: string) => (key === 'NONE'
     ? vars['--color-chart-grid']
-    : vars[COLOR_VARS[CLIENT_SOURCES.indexOf(key) % 6]]);
+    : vars[COLOR_VARS[sourceKeys.indexOf(key) % 6]]);
 
   const chartData = useMemo(() => (data?.months ?? []).map(m => ({
     month: dayjs(`${m.month}-01`).format('MMM YY'),
-    ...Object.fromEntries(SOURCE_KEYS.map(k => [k, m.counts[k] ?? 0])),
-  })), [data]);
-  const presentKeys = SOURCE_KEYS.filter(k => data?.sources.some(s => s.source === k));
+    ...Object.fromEntries(sourceKeys.map(k => [k, m.counts[k] ?? 0])),
+  })), [data, sourceKeys]);
 
   const known = data?.sources.filter(s => s.source !== 'NONE') ?? [];
   const best = [...known].sort((a, b) => b.newClients - a.newClients)[0];
@@ -90,7 +92,7 @@ export const SourcesTab: React.FC<Props> = ({ canSeeRevenue }) => {
         </Col>
         <Col xs={12} md={6}>
           <Card size="small" loading={isLoading}>
-            <Statistic title="Лучший канал" value={best ? clientSourceLabel(best.source) : '—'} />
+            <Statistic title="Лучший канал" value={best ? best.name : '—'} />
           </Card>
         </Col>
         <Col xs={12} md={6}>
@@ -128,8 +130,8 @@ export const SourcesTab: React.FC<Props> = ({ canSeeRevenue }) => {
               <XAxis dataKey="month" tick={{ fontSize: 12 }} />
               <YAxis allowDecimals={false} tick={{ fontSize: 12 }} width={32} />
               <Tooltip />
-              <Legend formatter={(v: string) => clientSourceLabel(v as SourceKey)} />
-              {presentKeys.map(k => (
+              <Legend formatter={(v: string) => nameOf(v)} />
+              {sourceKeys.map(k => (
                 <Bar key={k} dataKey={k} name={k} stackId="sources" fill={colorOf(k)} />
               ))}
             </BarChart>
@@ -150,8 +152,8 @@ export const SourcesTab: React.FC<Props> = ({ canSeeRevenue }) => {
             title: 'Канал', key: 'source',
             render: (_, r) => (
               <span className={styles.source}>
-                <span className={styles.dot} data-source={r.source} />
-                {clientSourceLabel(r.source)}
+                <span className={styles.dot} data-color={colorIndex(r.source)} />
+                {r.name}
               </span>
             ),
           },

@@ -33,9 +33,10 @@
   border-radius: 50%;
   background: var(--color-chart-grid);
 
-  &[data-source='INSTAGRAM'] { background: var(--color-chart-1); }
-  &[data-source='RECOMMENDATION'] { background: var(--color-chart-2); }
-  &[data-source='SEARCH'] { background: var(--color-chart-3); }
-  &[data-source='MAPS'] { background: var(--color-chart-4); }
-  &[data-source='OTHER'] { background: var(--color-chart-5); }
+  &[data-color='0'] { background: var(--color-chart-1); }
+  &[data-color='1'] { background: var(--color-chart-2); }
+  &[data-color='2'] { background: var(--color-chart-3); }
+  &[data-color='3'] { background: var(--color-chart-4); }
+  &[data-color='4'] { background: var(--color-chart-5); }
+  &[data-color='5'] { background: var(--color-chart-6); }
 }

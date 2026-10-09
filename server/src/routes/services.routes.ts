@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { catalogController } from '../controllers/catalog.controller';
 import { equipmentController } from '../controllers/equipment.controller';
+import { clientSourcesController } from '../controllers/clientSources.controller';
 import { servicemenController } from '../controllers/servicemen.controller';
 import { settingsController, smsSettingsController, documentTemplateController } from '../controllers/settings.controller';
 import { analyticsController } from '../controllers/analytics.controller';
@@ -38,6 +39,13 @@ router.get('/equipment', equipmentController.getAll);
 router.post('/equipment', manager, equipmentController.create);
 router.patch('/equipment/:id', manager, equipmentController.update);
 router.delete('/equipment/:id', manager, equipmentController.delete);
+
+// Источники клиента (поле записи, статистика каналов на дашборде)
+router.get('/client-sources', clientSourcesController.getAll);
+router.post('/client-sources', manager, clientSourcesController.create);
+router.patch('/client-sources/:id', manager, clientSourcesController.update);
+router.post('/client-sources/:id/move', manager, clientSourcesController.move);
+router.delete('/client-sources/:id', manager, clientSourcesController.delete);
 
 // Сотрудники (менять можно только своих и младших по роли — проверка в сервисе)
 router.get('/servicemen/today-birthdays', servicemenController.getTodayBirthdays);

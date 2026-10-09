@@ -13,8 +13,10 @@
     height: 100dvh;
     // Установленное приложение (PWA) рисуется под статус-баром и полоской «домой» —
     // прозрачные рамки сдвигают содержимое, не трогая отступы antd (фон тянется под рамку)
-    border-top: env(safe-area-inset-top) solid transparent;
-    border-bottom: env(safe-area-inset-bottom) solid transparent;
+    // !important: у antd «.ant-modal .ant-modal-content { border: 0 }» специфичнее,
+    // без него рамки не было и шапка с крестиком уезжала под статус-бар
+    border-top: env(safe-area-inset-top) solid transparent !important;
+    border-bottom: env(safe-area-inset-bottom) solid transparent !important;
     border-radius: 0 !important;
     display: flex;
     flex-direction: column;

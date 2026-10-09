@@ -27,15 +27,25 @@ const reportSchema = z.discriminatedUnion('done', [
   z.object({ orderId, done: z.literal(false) }),
 ]);
 
-const statusSchema = z.object({ status: z.enum(['PENDING', 'EXECUTED']).default('PENDING') });
+const statusSchema = z.object({ status: z.enum(['PENDING', 'EXECUTED', 'CANCELLED']).default('PENDING') });
 const amountSchema = z.object({ amount: positiveMoney() });
-const executeSchema = z.object({ person: requiredText(150, 'Выберите изымателя') });
+// Без суммы — исполнить на весь остаток
+const executeSchema = z.object({
+  person: requiredText(150, 'Выберите изымателя'),
+  amount: positiveMoney().optional(),
+});
+const cancelSchema = z.object({ reason: optionalText(300) });
 
 export const vdfOrdersController = {
   /** Магазин присылает состояние заказа сотрудника (вход по ключу, а не по токену пользователя) */
   async receive(req: Request, res: Response) {
     const report = parse(reportSchema, req.body);
     res.json({ data: { result: await vdfOrdersService.receive(report) } });
+  },
+
+  /** Магазин забирает оплаченные и отменённые заказы для своей бухгалтерии (вход по ключу) */
+  async states(_req: Request, res: Response) {
+    res.json({ data: await vdfOrdersService.states() });
   },
 
   async list(req: Request, res: Response) {
@@ -52,8 +62,17 @@ export const vdfOrdersController = {
     res.json({ data: await vdfOrdersService.updateAmount(parse(id, req.params.id), amount) });
   },
 
+  async cancel(req: Request, res: Response) {
+    const { reason } = parse(cancelSchema, req.body ?? {});
+    res.json({ data: await vdfOrdersService.cancel(parse(id, req.params.id), reason, req.user!) });
+  },
+
+  async restore(req: Request, res: Response) {
+    res.json({ data: await vdfOrdersService.restore(parse(id, req.params.id)) });
+  },
+
   async execute(req: Request, res: Response) {
-    const { person } = parse(executeSchema, req.body);
-    res.json({ data: await vdfOrdersService.execute(parse(id, req.params.id), person, req.user!) });
+    const { person, amount } = parse(executeSchema, req.body);
+    res.json({ data: await vdfOrdersService.execute(parse(id, req.params.id), person, amount, req.user!) });
   },
 };

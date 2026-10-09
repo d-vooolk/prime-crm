@@ -14,7 +14,7 @@ import { logger } from '../utils/logger';
 const AUDITED_MODELS = new Set<string>([
   'CashTransaction', 'CapitalTransaction', 'Debt', 'DebtPayment', 'Deal', 'RecordItem',
   'EmployeeSalaryPayment', 'SalaryAdjustment', 'FounderSalary', 'SalaryRate', 'MonthlyRevenue',
-  'StockMovement', 'VdfOrder',
+  'StockMovement', 'VdfOrder', 'VdfOrderPayment',
 ]);
 
 const WRITE_OPS = new Set([
