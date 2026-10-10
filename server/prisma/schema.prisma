@@ -51,6 +51,9 @@ model Record {
   // Обнаруженные недостатки: пишет любая роль прямо в карточке записи, печатаются в акте
   defects            String?
   documentNumber     String?      @unique
+  // Случайный код страницы записи для клиента (zapis.prime-auto.by/<код>). Страница
+  // открывается, только пока запись активна (services/publicRecord.service.ts)
+  publicToken        String?      @unique
   status             RecordStatus @default(ACTIVE)
   smsLogs            SmsLog[]
   isLegalEntity                Boolean      @default(false)
@@ -169,8 +172,42 @@ model Service {
   hasEquipment  Boolean      @default(false)
   isProduct     Boolean      @default(false)
   customPercent Float?
+  // Тип ремонта: по нему на странице записи для клиента показываются описание, фото и вопросы
+  repairTypeId  String?
   category      Category     @relation(fields: [categoryId], references: [id])
+  repairType    RepairType?  @relation(fields: [repairTypeId], references: [id], onDelete: SetNull)
   recordItems   RecordItem[]
+
+  @@index([repairTypeId])
+}
+
+// Тип ремонта (Справочник → Типы ремонта). Услуг много, типов мало: на странице записи
+// для клиента блок каждого типа из записи показывается один раз
+model RepairType {
+  id          String            @id @default(cuid())
+  name        String            @unique // название в CRM и заголовок блока на странице
+  description String            @default("")
+  // Вопросы и ответы: [{ question, answer }]
+  faq         Json              @default("[]")
+  // Ссылки (например, на prime-auto.by): [{ title, url }]
+  links       Json              @default("[]")
+  sortOrder   Int?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  services    Service[]
+  photos      RepairTypePhoto[]
+}
+
+// Фото предстоящей работы. Файл — в UPLOADS_DIR/repair-types
+model RepairTypePhoto {
+  id           String     @id @default(cuid())
+  repairTypeId String
+  filename     String     @unique
+  sortOrder    Int        @default(0)
+  createdAt    DateTime   @default(now())
+  repairType   RepairType @relation(fields: [repairTypeId], references: [id], onDelete: Cascade)
+
+  @@index([repairTypeId])
 }
 
 model Category {
@@ -857,4 +894,50 @@ model PushSubscription {
 model SecurityState {
   id                String    @id
   sessionsRevokedAt DateTime?
+}
+
+// --- Почта (ящик на beget.ru, приём по IMAP: services/mail.service.ts) ---
+// Письмо из папки «Входящие». Удаление в CRM не трогает ящик: письмо пропадает только из CRM
+model MailMessage {
+  id          String           @id @default(cuid())
+  mailbox     String           // папка в ящике (INBOX)
+  uidValidity BigInt
+  uid         Int
+  messageId   String?          // заголовок Message-ID
+  fromName    String?
+  fromAddress String?
+  to          String?
+  subject     String?
+  date        DateTime
+  preview     String?          // начало текста для списка писем
+  text        String?
+  html        String?
+  isRead      Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+  attachments MailAttachment[]
+
+  @@unique([mailbox, uidValidity, uid])
+  @@index([date])
+  @@index([isRead])
+}
+
+// Вложение письма. Файл — в UPLOADS_DIR/mail, наружу отдаётся только через API с входом
+model MailAttachment {
+  id          String      @id @default(cuid())
+  messageId   String
+  filename    String      @unique
+  originalName String
+  contentType String
+  size        Int
+  message     MailMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+}
+
+// До какого UID письма уже забраны. Сменился UIDVALIDITY папки — забираем заново за последние дни
+model MailSyncState {
+  mailbox     String   @id
+  uidValidity BigInt
+  lastUid     Int
+  updatedAt   DateTime @updatedAt
 }

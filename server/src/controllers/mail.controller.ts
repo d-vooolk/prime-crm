@@ -1,0 +1,66 @@
+import { Request, Response } from 'express';
+import { z } from 'zod';
+import { mailService } from '../services/mail.service';
+import { parse } from '../middleware/validate';
+
+const listQuery = z.object({
+  page: z.coerce.number().int().min(1).max(100000).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(30),
+  q: z.string().trim().max(200).optional(),
+  unread: z.enum(['1', 'true']).optional(),
+});
+
+const readBody = z.object({ isRead: z.boolean() });
+
+/** Почта из ящика на beget (services/mail.service.ts) — только создатель (routes/mail.routes.ts) */
+export const mailController = {
+  async list(req: Request, res: Response) {
+    const q = parse(listQuery, req.query);
+    res.json({ data: await mailService.list({ page: q.page, pageSize: q.pageSize, q: q.q || undefined, unread: !!q.unread }) });
+  },
+
+  async unreadCount(_req: Request, res: Response) {
+    res.json({ data: await mailService.unreadCount() });
+  },
+
+  status(_req: Request, res: Response) {
+    res.json({ data: mailService.status() });
+  },
+
+  async sync(_req: Request, res: Response) {
+    await mailService.syncNow();
+    res.json({ data: mailService.status() });
+  },
+
+  async get(req: Request, res: Response) {
+    res.json({ data: await mailService.get(String(req.params.id)) });
+  },
+
+  async setRead(req: Request, res: Response) {
+    const { isRead } = parse(readBody, req.body);
+    await mailService.setRead(String(req.params.id), isRead);
+    res.json({ success: true });
+  },
+
+  async markAllRead(_req: Request, res: Response) {
+    await mailService.markAllRead();
+    res.json({ success: true });
+  },
+
+  async delete(req: Request, res: Response) {
+    await mailService.delete(String(req.params.id));
+    res.json({ success: true });
+  },
+
+  /** Вложение: картинки и PDF можно открыть, остальное — только скачать (тип octet-stream) */
+  async attachment(req: Request, res: Response) {
+    const att = await mailService.attachment(String(req.params.id));
+    res.setHeader('Content-Type', att.contentType);
+    res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.attachment(att.originalName);
+    res.sendFile(att.path, { dotfiles: 'deny' }, (err) => {
+      if (err && !res.headersSent) res.status(404).end();
+    });
+  },
+};

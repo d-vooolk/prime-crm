@@ -24,6 +24,7 @@ const serviceFields = {
   hasEquipment: z.boolean().optional(),
   isProduct: z.boolean().optional(),
   customPercent: percent.nullable().optional(),
+  repairTypeId: z.string().min(1).max(100).nullable().optional(),
 };
 
 const serviceCreateSchema = z.object(serviceFields);

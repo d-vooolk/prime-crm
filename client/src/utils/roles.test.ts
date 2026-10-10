@@ -81,3 +81,13 @@ describe('уровни ролей', () => {
     expect(getAssignableRoles(u(undefined, true))).toHaveLength(4);
   });
 });
+
+describe('почта', () => {
+  it('раздел «Почта» — только создатель и мастер', () => {
+    expect(canSeePath(u(ROLES.CREATOR), '/mail')).toBe(true);
+    expect(canSeePath(u(undefined, true), '/mail')).toBe(true);
+    expect(canSeePath(u(ROLES.DIRECTOR), '/mail')).toBe(false);
+    expect(canSeePath(u(ROLES.MANAGER), '/mail')).toBe(false);
+    expect(canSeePath(u(ROLES.EMPLOYEE), '/mail')).toBe(false);
+  });
+});

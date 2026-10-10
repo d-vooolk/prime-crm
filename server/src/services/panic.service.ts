@@ -6,7 +6,7 @@ import { pipeline } from 'stream/promises';
 import { prisma } from '../prisma/client';
 import { env } from '../config/env';
 import { logger } from '../utils/logger';
-import { RECORD_MEDIA_DIR, UPLOADS_DIR } from '../utils/uploads';
+import { MAIL_ATTACHMENTS_DIR, RECORD_MEDIA_DIR, UPLOADS_DIR } from '../utils/uploads';
 import { createPanicEncryptStream, parseHexKey, verifyPanicPin } from '../utils/panicCrypto';
 import { PanicPinGuard } from '../utils/panicPinGuard';
 import { revokeAllSessions } from '../utils/sessionRevocation';
@@ -35,6 +35,8 @@ export const PANIC_WIPE_TABLES = [
   'MonthlyRevenue', 'MonthlyRecordCount', 'VdfOrder', 'VdfOrderPayment',
   // Журнал изменений денег, личные заметки, подписки устройств
   'AuditLog', 'Note', 'PushSubscription',
+  // Почта (письма клиентов и вложения; файлы вложений — в uploads, они шифруются вместе с ним)
+  'MailMessage', 'MailAttachment',
 ] as const;
 
 const guard = new PanicPinGuard();
@@ -96,10 +98,11 @@ async function encryptUploadsAndCleanup(dir: string) {
   try {
     await encryptCommandOutput('tar', ['-czf', '-', '-C', UPLOADS_DIR, '.'], path.join(dir, 'uploads.tar.gz.enc'), false);
     await emptyDir(RECORD_MEDIA_DIR);
-    logger.warn('panic: файлы зашифрованы, фото записей удалены');
+    await emptyDir(MAIL_ATTACHMENTS_DIR);
+    logger.warn('panic: файлы зашифрованы, фото записей и вложения писем удалены');
   } catch (err) {
-    // Фото записей остаются на месте — повторное нажатие кнопки попробует снова
-    logger.error('panic: не удалось зашифровать файлы, фото записей не удалены', { err });
+    // Фото записей и вложения остаются на месте — повторное нажатие кнопки попробует снова
+    logger.error('panic: не удалось зашифровать файлы, фото записей и вложения не удалены', { err });
   } finally {
     running = false;
   }

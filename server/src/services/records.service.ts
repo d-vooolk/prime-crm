@@ -5,6 +5,7 @@ import { startOfDay, endOfDay } from '../utils/date';
 import { logger } from '../utils/logger';
 import { currentContext } from '../utils/requestContext';
 import { smsService } from './sms.service';
+import { generatePublicToken } from '../utils/publicToken';
 import { cashService } from './accounting/cash.service';
 import { recordMediaService } from './recordMedia.service';
 import { clientSourcesService } from './clientSources.service';
@@ -274,6 +275,7 @@ export const recordsService = {
           notes,
           clientSourceId: clientSourceId ?? null,
           documentNumber,
+          publicToken: generatePublicToken(),
           isLegalEntity: isLegalEntity ?? false,
           legalCompanyName, legalAddress, legalActualAddress, legalPostalAddress,
           legalBankDetails, legalBic, legalUnp, legalOkpo, legalPhone, legalEmail,

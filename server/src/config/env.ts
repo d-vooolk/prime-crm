@@ -25,6 +25,13 @@ export const env = {
   get backupsDir() { return process.env.BACKUPS_DIR || ''; },
   /** Общий ключ с магазином vdf.by (routes/integrations.routes.ts); пусто — приём заказов выключен */
   get vdfIntegrationKey() { return process.env.VDF_INTEGRATION_KEY || ''; },
+  /** Адрес страниц записи для клиента: ссылка в SMS — <адрес>/<код записи> */
+  get publicRecordUrl() { return (process.env.PUBLIC_RECORD_URL || 'https://zapis.prime-auto.by').replace(/\/+$/, ''); },
+  // Почтовый ящик (services/mail.service.ts). Нет логина или пароля — приём почты выключен
+  get mailImapHost() { return process.env.MAIL_IMAP_HOST || 'imap.beget.com'; },
+  get mailImapPort() { return Number(process.env.MAIL_IMAP_PORT) || 993; },
+  get mailUser() { return process.env.MAIL_USER || ''; },
+  get mailPassword() { return process.env.MAIL_PASSWORD || ''; },
 };
 
 /** Проверка при старте — падаем сразу, а не на первом входе пользователя. */

@@ -12,6 +12,7 @@ import stockRouter from './stock.routes';
 import pushRouter from './push.routes';
 import securityRouter from './security.routes';
 import integrationsRouter from './integrations.routes';
+import mailRouter from './mail.routes';
 import { authMiddleware } from '../middleware/auth.middleware';
 
 const router = Router();
@@ -33,5 +34,6 @@ router.use('/expenses', expensesRouter);
 router.use('/stock', stockRouter);
 router.use('/push', pushRouter);
 router.use('/security', securityRouter);
+router.use('/mail', mailRouter);
 
 export default router;

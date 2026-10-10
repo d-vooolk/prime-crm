@@ -37,14 +37,14 @@ export const catalogService = {
 
   createService(data: {
     name: string; categoryId: string; standardPrice: number; estimatedTime: number;
-    hasEquipment?: boolean; isProduct?: boolean; customPercent?: number | null;
+    hasEquipment?: boolean; isProduct?: boolean; customPercent?: number | null; repairTypeId?: string | null;
   }) {
     return prisma.service.create({ data, include: { category: true } });
   },
 
   updateService(id: string, data: Partial<{
     name: string; categoryId: string; standardPrice: number; estimatedTime: number;
-    hasEquipment: boolean; isProduct: boolean; customPercent: number | null;
+    hasEquipment: boolean; isProduct: boolean; customPercent: number | null; repairTypeId: string | null;
   }>) {
     return prisma.service.update({ where: { id }, data, include: { category: true } });
   },

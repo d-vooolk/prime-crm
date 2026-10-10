@@ -1,5 +1,5 @@
 import http from './http';
-import { Category, ClientSource, Equipment, Serviceman, CompanySettings, DocumentTemplate, SmsSettings, SmsConnectionInfo } from '@/types';
+import { Category, ClientSource, RepairType, RepairTypeFaqItem, RepairTypeLink, Equipment, Serviceman, CompanySettings, DocumentTemplate, SmsSettings, SmsConnectionInfo } from '@/types';
 
 export interface ServicemanPayload {
   name?: string;
@@ -15,6 +15,14 @@ export interface ServicemanPayload {
   baseSalary?: number;
 }
 
+export interface RepairTypePayload {
+  name: string;
+  description?: string;
+  faq?: RepairTypeFaqItem[];
+  links?: RepairTypeLink[];
+  sortOrder?: number | null;
+}
+
 export const servicesApi = {
   getCategories: () =>
     http.get<{ data: Category[] }>('/services/categories').then(r => r.data.data),
@@ -28,14 +36,38 @@ export const servicesApi = {
   deleteCategory: (id: string) =>
     http.delete(`/services/categories/${id}`),
 
-  createService: (data: { name: string; categoryId: string; standardPrice: number; estimatedTime: number; hasEquipment?: boolean; isProduct?: boolean }) =>
+  createService: (data: { name: string; categoryId: string; standardPrice: number; estimatedTime: number; hasEquipment?: boolean; isProduct?: boolean; repairTypeId?: string | null }) =>
     http.post('/services', data).then(r => r.data),
 
-  updateService: (id: string, data: Partial<{ name: string; categoryId: string; standardPrice: number; estimatedTime: number; hasEquipment: boolean; isProduct: boolean; customPercent: number | null }>) =>
+  updateService: (id: string, data: Partial<{ name: string; categoryId: string; standardPrice: number; estimatedTime: number; hasEquipment: boolean; isProduct: boolean; customPercent: number | null; repairTypeId: string | null }>) =>
     http.patch(`/services/${id}`, data).then(r => r.data),
 
   deleteService: (id: string) =>
     http.delete(`/services/${id}`),
+
+  // Типы ремонта — блоки страницы записи для клиента
+  getRepairTypes: () =>
+    http.get<{ data: RepairType[] }>('/services/repair-types').then(r => r.data.data),
+
+  createRepairType: (data: RepairTypePayload) =>
+    http.post<{ data: RepairType }>('/services/repair-types', data).then(r => r.data.data),
+
+  updateRepairType: (id: string, data: Partial<RepairTypePayload>) =>
+    http.patch<{ data: RepairType }>(`/services/repair-types/${id}`, data).then(r => r.data.data),
+
+  deleteRepairType: (id: string) =>
+    http.delete(`/services/repair-types/${id}`),
+
+  uploadRepairTypePhoto: (id: string, file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return http.post<{ data: { id: string; url: string } }>(`/services/repair-types/${id}/photos`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then(r => r.data.data);
+  },
+
+  deleteRepairTypePhoto: (id: string, photoId: string) =>
+    http.delete(`/services/repair-types/${id}/photos/${photoId}`),
 
   getEquipment: () =>
     http.get<{ data: Equipment[] }>('/services/equipment').then(r => r.data.data),

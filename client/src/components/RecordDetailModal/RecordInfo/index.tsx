@@ -1,6 +1,7 @@
 import React from 'react';
-import { Button, Descriptions, Divider } from 'antd';
-import { HistoryOutlined, BookOutlined, PictureOutlined } from '@ant-design/icons';
+import { Button, Descriptions, Divider, Typography } from 'antd';
+import { HistoryOutlined, BookOutlined, PictureOutlined, LinkOutlined } from '@ant-design/icons';
+import { useCompanySettings } from '@/hooks/useReferenceData';
 import type { Record } from '@/types';
 import { formatDate, formatTime } from '@/utils/formatters';
 import { RecordMediaGallery } from '@/components/RecordMediaGallery';
@@ -13,6 +14,23 @@ interface Props {
   onOpenHistory: () => void;
   onOpenWiki: () => void;
 }
+
+/**
+ * Ссылка на страницу записи для клиента (zapis.prime-auto.by/<код>) — открыть или скопировать,
+ * чтобы отправить вручную. Страница живёт, только пока запись активна.
+ */
+const ClientPageLink: React.FC<{ token: string }> = ({ token }) => {
+  const { data: settings } = useCompanySettings();
+  if (!settings?.publicRecordUrl) return null;
+  const url = `${settings.publicRecordUrl}/${token}`;
+  return (
+    <div className={styles.clientPage}>
+      <LinkOutlined />
+      <Typography.Link href={url} target="_blank" rel="noreferrer noopener">Страница для клиента</Typography.Link>
+      <Typography.Text copyable={{ text: url, tooltips: ['Скопировать ссылку', 'Скопировано'] }} />
+    </div>
+  );
+};
 
 /** Клиент, юрлицо, автомобиль и данные записи */
 export const RecordInfo: React.FC<Props> = ({ record: r, isEmployee, onOpenHistory, onOpenWiki }) => (
@@ -40,6 +58,7 @@ export const RecordInfo: React.FC<Props> = ({ record: r, isEmployee, onOpenHisto
         >
           История посещений клиента
         </Button>
+        {r.status === 'ACTIVE' && r.publicToken && <ClientPageLink token={r.publicToken} />}
       </>
     )}
 

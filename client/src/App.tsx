@@ -16,7 +16,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useAuthSync } from '@/hooks/useAuthSync';
 import { PwaUpdateNotice } from '@/components/PwaUpdateNotice';
 import { queryClient } from '@/lib/queryClient';
-import { isEmployee } from '@/utils/roles';
+import { canSeeMail, isEmployee } from '@/utils/roles';
 import { lightTheme, darkTheme } from '@/config/antdTheme';
 
 dayjs.locale('ru');
@@ -28,6 +28,7 @@ const WikiPage = lazy(() => import('@/pages/WikiPage').then(m => ({ default: m.W
 const SettingsPage = lazy(() => import('@/pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
 const AccountingPage = lazy(() => import('@/pages/AccountingPage').then(m => ({ default: m.AccountingPage })));
 const NotesPage = lazy(() => import('@/pages/NotesPage').then(m => ({ default: m.NotesPage })));
+const MailPage = lazy(() => import('@/pages/MailPage').then(m => ({ default: m.MailPage })));
 
 const App: React.FC = () => {
   const { theme } = useUiStore();
@@ -78,6 +79,7 @@ const App: React.FC = () => {
                     <Route path="wiki" element={<WikiPage />} />
                     <Route path="accounting" element={<AccountingPage />} />
                     <Route path="notes" element={<NotesPage />} />
+                    <Route path="mail" element={canSeeMail(user) ? <MailPage /> : <Navigate to="/schedule" replace />} />
                     <Route path="settings" element={<SettingsPage />} />
                   </Route>
                 </Routes>

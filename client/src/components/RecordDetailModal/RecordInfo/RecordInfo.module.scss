@@ -20,3 +20,11 @@
   font-size: 13px;
   margin: var(--spacing-sm) 0;
 }
+
+.clientPage {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  color: var(--color-accent);
+  font-size: 14px;
+}

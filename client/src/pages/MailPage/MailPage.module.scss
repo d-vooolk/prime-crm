@@ -1,0 +1,162 @@
+@use '@/styles/variables' as *;
+
+.page {
+  padding: 24px;
+  max-width: 960px;
+
+  @include mobile {
+    padding: 16px 12px;
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--color-text-primary);
+}
+
+.account {
+  flex: 1;
+  min-width: 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.headerActions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.alert {
+  margin-bottom: 12px;
+}
+
+.filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.search {
+  flex: 1;
+  min-width: 200px;
+}
+
+.empty {
+  padding: 48px 0;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.list li + li {
+  border-top: 1px solid var(--color-border-light);
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 12px 16px 12px 20px;
+  border: 0;
+  background: none;
+  text-align: left;
+  font-family: inherit;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  position: relative;
+
+  &:hover {
+    background: var(--color-bg);
+  }
+}
+
+.selected {
+  background: var(--color-bg);
+}
+
+// Непрочитанное — жирным и с синей точкой слева
+.unread {
+  .from,
+  .subject {
+    font-weight: 700;
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 19px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--color-accent);
+  }
+}
+
+.itemTop {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.from {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clip {
+  color: var(--color-text-secondary);
+}
+
+.date {
+  flex: none;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.subject {
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preview {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pagination {
+  margin-top: 16px;
+  text-align: center;
+}

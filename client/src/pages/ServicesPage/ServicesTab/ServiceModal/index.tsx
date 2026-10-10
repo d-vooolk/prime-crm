@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Checkbox, Form, Input, InputNumber, Modal, Select } from 'antd';
 import { servicesApi } from '@/api/services.api';
 import { useNotify } from '@/hooks/useNotify';
-import { useInvalidateReference } from '@/hooks/useReferenceData';
+import { useInvalidateReference, useRepairTypes } from '@/hooks/useReferenceData';
 import { Category, Service } from '@/types';
 import styles from './ServiceModal.module.scss';
 
@@ -23,6 +23,7 @@ interface ServiceFormValues {
   estimatedTime: number;
   hasEquipment?: boolean;
   isProduct?: boolean;
+  repairTypeId?: string | null;
 }
 
 export const ServiceModal: React.FC<Props> = ({ open, service, categoryId, categories, onClose }) => {
@@ -30,6 +31,7 @@ export const ServiceModal: React.FC<Props> = ({ open, service, categoryId, categ
   const [saving, setSaving] = useState(false);
   const notify = useNotify();
   const invalidate = useInvalidateReference();
+  const { data: repairTypes = [] } = useRepairTypes({ enabled: open });
 
   useEffect(() => {
     if (!open) return;
@@ -42,6 +44,7 @@ export const ServiceModal: React.FC<Props> = ({ open, service, categoryId, categ
         estimatedTime: service.estimatedTime,
         hasEquipment: service.hasEquipment ?? false,
         isProduct: service.isProduct ?? false,
+        repairTypeId: service.repairTypeId ?? null,
       });
     } else if (categoryId) {
       form.setFieldsValue({ categoryId });
@@ -52,10 +55,11 @@ export const ServiceModal: React.FC<Props> = ({ open, service, categoryId, categ
     const values = await form.validateFields();
     setSaving(true);
     try {
-      if (service) await servicesApi.updateService(service.id, values);
-      else await servicesApi.createService(values);
+      const payload = { ...values, repairTypeId: values.repairTypeId ?? null };
+      if (service) await servicesApi.updateService(service.id, payload);
+      else await servicesApi.createService(payload);
       notify.toast.success('Сохранено');
-      await invalidate('serviceCategories');
+      await invalidate('serviceCategories', 'repairTypes');
       onClose();
     } catch (e) {
       notify.error(e, 'Ошибка сохранения');
@@ -85,6 +89,17 @@ export const ServiceModal: React.FC<Props> = ({ open, service, categoryId, categ
         </Form.Item>
         <Form.Item label="Ориентировочное время (мин)" name="estimatedTime" rules={[{ required: true }]}>
           <InputNumber className={styles.fullWidth} min={0} step={15} />
+        </Form.Item>
+        <Form.Item
+          label="Тип ремонта"
+          name="repairTypeId"
+          extra="По типу на странице записи для клиента показываются описание, фото и вопросы-ответы"
+        >
+          <Select
+            allowClear
+            placeholder="Не выбран"
+            options={repairTypes.map(t => ({ value: t.id, label: t.name }))}
+          />
         </Form.Item>
         <Form.Item name="hasEquipment" valuePropName="checked">
           <Checkbox>Услуга с сопутствующим оборудованием (Bi-Led модули)</Checkbox>

@@ -1,0 +1,75 @@
+@use '@/styles/variables' as *;
+
+.body {
+  display: flex;
+  flex-direction: column;
+  padding: 0 !important;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  padding: 48px 0;
+}
+
+.meta {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.from {
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.address {
+  margin-left: 6px;
+  font-weight: 400;
+  font-size: 13px;
+}
+
+.secondary {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  word-break: break-word;
+}
+
+.attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.attachment {
+  max-width: 100%;
+  display: inline-flex;
+  gap: 6px;
+}
+
+.attachmentName {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Письмо занимает всё оставшееся место; фон белый — HTML писем рассчитан на светлый фон
+.frame {
+  flex: 1;
+  min-height: 60vh;
+  width: 100%;
+  border: 0;
+  background: #fff;
+}
+
+.text {
+  flex: 1;
+  margin: 0;
+  padding: 12px 16px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: inherit;
+  font-size: 15px;
+}

@@ -7,6 +7,7 @@ import { EquipmentTab } from './EquipmentTab';
 import { EmployeesTab } from './EmployeesTab';
 import { ReceptionistsTab } from './ReceptionistsTab';
 import { StockTab } from './StockTab';
+import { RepairTypesTab } from './RepairTypesTab';
 import { useStockLowCount } from '@/hooks/useStock';
 import styles from './ServicesPage.module.scss';
 
@@ -33,6 +34,8 @@ export const ServicesPage: React.FC<Props> = ({ embedded = false }) => {
         defaultActiveKey={searchParams.get('sub') ?? undefined}
         items={[
           { key: 'services', label: 'Услуги', children: <ServicesTab /> },
+          // Блоки страницы записи для клиента (zapis.prime-auto.by)
+          { key: 'repairTypes', label: 'Типы ремонта', children: <RepairTypesTab /> },
           { key: 'equipment', label: 'Bi-Led модули', children: <EquipmentTab /> },
           {
             key: 'stock',

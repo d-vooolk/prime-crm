@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { env } from '../config/env';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../prisma/client';
@@ -54,7 +55,9 @@ const jsonOrNull = (v: unknown) => (v === null ? Prisma.DbNull : (v as Prisma.In
 
 export const settingsController = {
   async get(_req: Request, res: Response) {
-    res.json({ data: await prisma.companySettings.findFirst() });
+    const settings = await prisma.companySettings.findFirst();
+    // Адрес страниц записи для клиента — карточка записи показывает ссылку на свою страницу
+    res.json({ data: settings && { ...settings, publicRecordUrl: env.publicRecordUrl } });
   },
 
   async update(req: Request, res: Response) {

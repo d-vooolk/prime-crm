@@ -1,6 +1,7 @@
 import { SmsType } from '@prisma/client';
 import { prisma } from '../prisma/client';
 import { smsBy } from './smsby.provider';
+import { publicRecordService } from './publicRecord.service';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -16,6 +17,8 @@ interface TemplateVars {
   plateNumber: string;
   companyName: string;
   services: string;
+  /** Ссылка на страницу записи для клиента */
+  link: string;
 }
 
 // Закрывающую скобку вне квантификатора экранировать не нужно — \} избыточно.
@@ -78,6 +81,8 @@ export const smsService = {
         plateNumber: record.car.plateNumber || '',
         companyName: companyCfg?.name || '',
         services,
+        // Код создаётся только если в шаблоне есть ссылка (у старых записей его может не быть)
+        link: template.includes('{{link}}') ? await publicRecordService.linkFor(record) : '',
       });
 
       const phone = record.client.phone;

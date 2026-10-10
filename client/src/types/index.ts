@@ -220,6 +220,8 @@ export interface Record {
   /** Сколько фото/видео прикреплено к записи */
   _count?: { media: number };
   documentNumber?: string;
+  /** Код страницы записи для клиента: <publicRecordUrl>/<код> */
+  publicToken?: string | null;
   status: RecordStatus;
   isLegalEntity?: boolean;
   legalCompanyName?: string;
@@ -270,6 +272,8 @@ export interface Service {
   hasEquipment?: boolean;
   isProduct?: boolean;
   customPercent?: number | null;
+  /** Тип ремонта — блок на странице записи для клиента */
+  repairTypeId?: string | null;
   /** Сколько раз услугу добавляли в записи — для сортировки по популярности */
   usageCount?: number;
   category?: Category;
@@ -313,6 +317,8 @@ export interface AuthorizedPerson {
 export interface CompanySettings {
   id: string;
   name: string;
+  /** Адрес страниц записи для клиента (только чтение, из .env сервера) */
+  publicRecordUrl?: string;
   directorName?: string;
   directorNameGenitive?: string;
   directorPosition?: string;
@@ -581,4 +587,71 @@ export interface SourceStats {
   adExpenses: number;
   newClients: number;
   costPerNewClient: number | null;
+}
+
+// ─── Типы ремонта (страница записи для клиента) ─────
+
+export interface RepairTypeFaqItem {
+  question: string;
+  answer: string;
+}
+
+export interface RepairTypeLink {
+  title: string;
+  url: string;
+}
+
+export interface RepairType {
+  id: string;
+  name: string;
+  description: string;
+  faq: RepairTypeFaqItem[];
+  links: RepairTypeLink[];
+  sortOrder: number | null;
+  /** Сколько активных услуг с этим типом */
+  servicesCount: number;
+  photos: { id: string; url: string }[];
+}
+
+// ─── Почта ──────────────────────────────────────────
+
+export interface MailListItem {
+  id: string;
+  fromName: string | null;
+  fromAddress: string | null;
+  subject: string | null;
+  date: string;
+  preview: string | null;
+  isRead: boolean;
+  attachmentsCount: number;
+}
+
+export interface MailAttachment {
+  id: string;
+  originalName: string;
+  contentType: string;
+  size: number;
+  /** Картинка или PDF — можно открыть в браузере, остальное только скачать */
+  viewable: boolean;
+}
+
+export interface MailMessage {
+  id: string;
+  fromName: string | null;
+  fromAddress: string | null;
+  to: string | null;
+  subject: string | null;
+  date: string;
+  text: string | null;
+  html: string | null;
+  isRead: boolean;
+  attachments: MailAttachment[];
+}
+
+export interface MailStatus {
+  configured: boolean;
+  connected: boolean;
+  user: string | null;
+  lastError: string | null;
+  lastSyncAt: string | null;
 }

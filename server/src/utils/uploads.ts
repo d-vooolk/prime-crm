@@ -14,9 +14,34 @@ export const WIKI_MEDIA_URL = '/api/uploads/wiki';
 export const RECORD_MEDIA_DIR = path.join(UPLOADS_DIR, 'records');
 export const RECORD_MEDIA_URL = '/api/uploads/records';
 
+// Фото типов ремонта — показываются на публичной странице записи для клиента
+export const REPAIR_TYPE_MEDIA_DIR = path.join(UPLOADS_DIR, 'repair-types');
+export const REPAIR_TYPE_MEDIA_URL = '/api/uploads/repair-types';
+
+// Вложения писем. Лежат рядом с остальными загрузками (попадают в бэкап), но статикой
+// не раздаются: только через /api/mail с входом (см. index.ts)
+export const MAIL_ATTACHMENTS_DIR = path.join(UPLOADS_DIR, 'mail');
+
+/**
+ * Путь запроса к /api/uploads ведёт в папку вложений? Сравниваем уже раскодированный и
+ * нормализованный путь — как его увидит раздача статики (%6Dail, //mail, mail/../mail).
+ */
+export function isMailAttachmentPath(requestPath: string): boolean {
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(requestPath);
+  } catch {
+    return true; // битый адрес статика всё равно не отдаст — отказываем сразу
+  }
+  const resolved = path.posix.normalize(`/${decoded.replace(/\\/g, '/')}`).toLowerCase();
+  return resolved === '/mail' || resolved.startsWith('/mail/');
+}
+
 export function ensureUploadDirs() {
   fs.mkdirSync(WIKI_MEDIA_DIR, { recursive: true });
   fs.mkdirSync(RECORD_MEDIA_DIR, { recursive: true });
+  fs.mkdirSync(REPAIR_TYPE_MEDIA_DIR, { recursive: true });
+  fs.mkdirSync(MAIL_ATTACHMENTS_DIR, { recursive: true });
 }
 
 /** Браузеры шлют имя файла в UTF-8, а busboy читает его как latin1 — возвращаем кириллицу. */

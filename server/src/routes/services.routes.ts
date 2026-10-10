@@ -5,6 +5,9 @@ import { clientSourcesController } from '../controllers/clientSources.controller
 import { servicemenController } from '../controllers/servicemen.controller';
 import { settingsController, smsSettingsController, documentTemplateController } from '../controllers/settings.controller';
 import { analyticsController } from '../controllers/analytics.controller';
+import { repairTypesController } from '../controllers/repairTypes.controller';
+import { mediaUpload } from '../utils/mediaUpload';
+import { REPAIR_TYPE_MEDIA_DIR } from '../utils/uploads';
 import { requireRole } from '../middleware/requireRole';
 import { ROLES } from '../utils/roles';
 
@@ -63,6 +66,15 @@ router.get('/categories', catalogController.listCategories);
 router.post('/categories', manager, catalogController.createCategory);
 router.patch('/categories/:id', manager, catalogController.updateCategory);
 router.delete('/categories/:id', manager, catalogController.deleteCategory);
+
+// Типы ремонта — блоки страницы записи для клиента (описание, фото, вопросы и ответы)
+const uploadRepairTypePhoto = mediaUpload({ dir: REPAIR_TYPE_MEDIA_DIR, maxPhotoMb: 40, maxVideoMb: 40 });
+router.get('/repair-types', repairTypesController.list);
+router.post('/repair-types', manager, repairTypesController.create);
+router.patch('/repair-types/:id', manager, repairTypesController.update);
+router.delete('/repair-types/:id', manager, repairTypesController.delete);
+router.post('/repair-types/:id/photos', manager, uploadRepairTypePhoto, repairTypesController.addPhoto);
+router.delete('/repair-types/:id/photos/:photoId', manager, repairTypesController.deletePhoto);
 
 // Услуги (динамический /:id — последним)
 router.post('/', manager, catalogController.createService);

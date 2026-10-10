@@ -10,6 +10,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import crypto from 'crypto';
 import apiRouter from './routes/index';
+import publicPageRouter from './routes/publicPage.routes';
 import { errorHandler } from './middleware/errorHandler';
 import { smsService } from './services/sms.service';
 import { syncCarCatalogIfNeeded } from './bootstrap/carCatalog';
@@ -20,7 +21,8 @@ import { backfillServicemanPerformers } from './bootstrap/servicemanPerformers';
 import { seedExpenseCategoriesIfEmpty } from './bootstrap/expenseCategories';
 import { recordMediaService } from './services/recordMedia.service';
 import { sendDueNoteReminders } from './services/noteReminders';
-import { UPLOADS_DIR, ensureUploadDirs } from './utils/uploads';
+import { UPLOADS_DIR, ensureUploadDirs, isMailAttachmentPath } from './utils/uploads';
+import { mailService } from './services/mail.service';
 import { assertEnv, env } from './config/env';
 import { prisma } from './prisma/client';
 import { logger } from './utils/logger';
@@ -60,7 +62,9 @@ ensureUploadDirs();
 // авторизации — иначе <img>/<video> не смогли бы их показать. Файлы никогда не перезаписываются,
 // браузер может кешировать их год. Песочница CSP и nosniff: даже если под видом фото
 // загрузили бы HTML или SVG со скриптом, браузер его не выполнит.
-app.use('/api/uploads', (_req, res, next) => {
+app.use('/api/uploads', (req, res, next) => {
+  // Вложения писем — только через /api/mail/attachments с входом
+  if (isMailAttachmentPath(req.path)) { res.status(404).end(); return; }
   res.setHeader('Content-Security-Policy', "default-src 'none'; img-src 'self'; media-src 'self'; sandbox");
   res.setHeader('X-Content-Type-Options', 'nosniff');
   next();
@@ -77,6 +81,8 @@ app.get('/health', async (_req, res) => {
   }
 });
 app.use('/api', apiRouter);
+// Страница записи для клиента (zapis.prime-auto.by/<код>) — без входа
+app.use('/zapis', publicPageRouter);
 
 app.use(errorHandler);
 
@@ -105,6 +111,8 @@ app.listen(env.port, async () => {
   await runSafely('исполнители работ', backfillServicemanPerformers);
   await runSafely('категории расходов', seedExpenseCategoriesIfEmpty);
   void runSafely('очистка старых медиа записей', () => recordMediaService.deleteExpired());
+  // Приём почты по IMAP: держит соединение и сам переподключается
+  mailService.start();
 });
 
 // Проверка напоминаний каждые 5 минут

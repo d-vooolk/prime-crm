@@ -187,7 +187,8 @@ export const SmsTab: React.FC = () => {
                 <Text code>{'{{carModel}}'}</Text> — модель{' · '}
                 <Text code>{'{{plateNumber}}'}</Text> — гос. номер{' · '}
                 <Text code>{'{{companyName}}'}</Text> — название компании{' · '}
-                <Text code>{'{{services}}'}</Text> — список услуг через запятую
+                <Text code>{'{{services}}'}</Text> — список услуг через запятую{' · '}
+                <Text code>{'{{link}}'}</Text> — ссылка на страницу записи для клиента
               </div>
             }
           />

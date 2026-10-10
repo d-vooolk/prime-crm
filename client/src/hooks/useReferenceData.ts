@@ -15,6 +15,7 @@ export const referenceKeys = {
   equipment: ['equipment'] as const,
   expenseCategories: ['expenseCategories'] as const,
   clientSources: ['clientSources'] as const,
+  repairTypes: ['repairTypes'] as const,
 };
 
 export type ReferenceKey = keyof typeof referenceKeys;
@@ -75,6 +76,11 @@ export const referenceQueries = {
     queryFn: servicesApi.getClientSources,
     meta: { errorTitle: 'Не удалось загрузить источники клиентов' },
   }),
+  repairTypes: queryOptions({
+    queryKey: referenceKeys.repairTypes,
+    queryFn: servicesApi.getRepairTypes,
+    meta: { errorTitle: 'Не удалось загрузить типы ремонта' },
+  }),
 };
 
 /** enabled: false — не запрашивать (например, список нужен только определённой роли) */
@@ -103,6 +109,9 @@ export const useExpenseCategories = (o?: RefOptions) => useQuery({ ...referenceQ
 
 /** Источники клиента (без скрытых) */
 export const useClientSources = (o?: RefOptions) => useQuery({ ...referenceQueries.clientSources, ...o });
+
+/** Типы ремонта — блоки страницы записи для клиента */
+export const useRepairTypes = (o?: RefOptions) => useQuery({ ...referenceQueries.repairTypes, ...o });
 
 /**
  * Сбросить кеш справочников после изменения. Сотрудники инвалидируются оба списка сразу
