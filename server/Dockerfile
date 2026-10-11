@@ -8,7 +8,8 @@ RUN npm run build
 
 FROM node:22-alpine
 # pg_dump той же версии, что и база (postgres:16) — для тревожной кнопки (services/panic.service.ts)
-RUN apk add --no-cache postgresql16-client
+# ffmpeg — перекодирование видео из карточки записи в H.264 MP4 (utils/recordMediaOptimize.ts)
+RUN apk add --no-cache postgresql16-client ffmpeg
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev

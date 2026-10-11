@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { cashService } from '../services/accounting/cash.service';
 import { capitalService } from '../services/accounting/capital.service';
 import { salaryService } from '../services/accounting/salary.service';
+import { employeesBoardService } from '../services/accounting/employeesBoard.service';
+import { effectiveSalaryMonth } from '../services/salaryRates';
 import { statsService } from '../services/accounting/stats.service';
 import { debtsService } from '../services/accounting/debts.service';
 import { parseExpenseCategoryField } from './expenses.controller';
@@ -190,6 +192,25 @@ export const accountingController = {
     const { servicemanName, year = now.getFullYear(), month = now.getMonth() + 1 } = parse(salaryQuerySchema, req.query);
     assertCanSeeSalaryOf(req, servicemanName);
     res.json({ data: await salaryService.getSalaryData(servicemanName, year, month) });
+  },
+
+  /** Пьедестал лидеров периода — видят все роли, суммы заработка — только менеджеры и выше */
+  async getLeaders(req: Request, res: Response) {
+    const current = effectiveSalaryMonth();
+    const { year = current.year, month = current.month } = parse(
+      z.object({ year: yearSchema.optional(), month: monthSchema.optional() }), req.query,
+    );
+    res.json({ data: await employeesBoardService.leaders(year, month, hasRole(req.user, ROLES.MANAGER)) });
+  },
+
+  /** Упущенная премия за вики: менеджеры видят всех, сотрудник — только свою */
+  async getMissedWiki(req: Request, res: Response) {
+    const current = effectiveSalaryMonth();
+    const { year = current.year, month = current.month } = parse(
+      z.object({ year: yearSchema.optional(), month: monthSchema.optional() }), req.query,
+    );
+    const onlyName = hasRole(req.user, ROLES.MANAGER) ? undefined : req.user!.name;
+    res.json({ data: await employeesBoardService.missedWiki(year, month, onlyName) });
   },
 
   async getSalaryHistory(req: Request, res: Response) {

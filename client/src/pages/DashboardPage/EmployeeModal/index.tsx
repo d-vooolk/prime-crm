@@ -1,24 +1,27 @@
 import React from 'react';
 import { Card, Row, Col, Statistic, Avatar, Modal } from 'antd';
 import cn from 'classnames';
-import { SalaryData, SalaryHistoryItem } from '@/api/accounting.api';
+import { MissedWikiItem, SalaryData, SalaryHistoryItem } from '@/api/accounting.api';
 import { Serviceman } from '@/types';
 import { formatPrice } from '@/utils/formatters';
 import { averageAnnualSalary, effectiveSalaryMonth } from '@/utils/salary';
 import { bestSalaryMonth, formatThousands } from '../utils';
 import { ChartTooltip } from '../ChartTooltip';
 import { MonthlyLineChart } from '../MonthlyLineChart';
+import { MissedWikiCard } from '../MissedWikiCard';
 import styles from './EmployeeModal.module.scss';
 
 interface Props {
   employee: Serviceman | null;
   salary?: SalaryData;
   history: SalaryHistoryItem[];
+  /** Упущенная премия за вики в периоде */
+  missed?: { amount: number; bonus: number; items: MissedWikiItem[] };
   onClose: () => void;
 }
 
 /** Подробности по сотруднику: показатели заработка и динамика по месяцам */
-export const EmployeeModal: React.FC<Props> = ({ employee, salary, history, onClose }) => {
+export const EmployeeModal: React.FC<Props> = ({ employee, salary, history, missed, onClose }) => {
   const record = bestSalaryMonth(history);
   const avgAnnual = averageAnnualSalary(history);
   const salaryPeriodLabel = effectiveSalaryMonth().format('MMMM YYYY');
@@ -38,17 +41,7 @@ export const EmployeeModal: React.FC<Props> = ({ employee, salary, history, onCl
           </div>
 
           <Row gutter={[12, 12]} className={styles.statsRow}>
-            <Col xs={12} sm={12}>
-              <Card size="small">
-                <Statistic
-                  className={styles.stat}
-                  title="% от прибыли"
-                  value={employee.profitPercent ?? 0}
-                  suffix="%"
-                />
-              </Card>
-            </Col>
-            <Col xs={12} sm={12}>
+            <Col xs={24}>
               <Card size="small">
                 <Statistic
                   className={cn(styles.stat, styles.statGreen)}
@@ -99,6 +92,10 @@ export const EmployeeModal: React.FC<Props> = ({ employee, salary, history, onCl
               </Card>
             </Col>
           </Row>
+
+          {missed && missed.items.length > 0 && (
+            <MissedWikiCard amount={missed.amount} bonus={missed.bonus} items={missed.items} />
+          )}
 
           {history.length > 1 ? (
             <Card size="small" title="Динамика заработка">

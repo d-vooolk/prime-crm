@@ -76,6 +76,42 @@
 .video {
   position: relative;
   display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+// Нет обложки (видео ещё сжимается) — тёмная заглушка той же формы
+.videoStub {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: var(--color-hero-end);
+}
+
+.processing {
+  position: absolute;
+  inset: auto 6px 6px 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 3px 6px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-celebrate-text);
+  background: rgba(18, 18, 18, 0.7);
+}
+
+.player {
+  display: block;
+  width: 100%;
+  max-height: 75vh;
+  border-radius: var(--border-radius-sm);
+  background: var(--color-hero-end);
 }
 
 .play {
@@ -84,7 +120,7 @@
   left: 50%;
   transform: translate(-50%, -50%);
   font-size: 32px;
-  color: var(--color-bg-elevated);
+  color: var(--color-celebrate-text);
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.6));
   pointer-events: none;
 }

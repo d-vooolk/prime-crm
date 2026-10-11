@@ -18,6 +18,8 @@ router.get('/closed-on', recordsController.getClosedOnDate);
 router.get('/companies', manager, recordsController.searchCompanies);
 router.get('/dates', recordsController.getDatesWithRecords);
 router.get('/:id', recordsController.getById);
+// Допродажи — только руководителям (менеджер, директор, создатель)
+router.get('/:id/opportunities', manager, recordsController.getOpportunities);
 router.post('/', manager, recordsController.create);
 router.patch('/:id', manager, recordsController.update);
 router.post('/:id/close', manager, recordsController.close);

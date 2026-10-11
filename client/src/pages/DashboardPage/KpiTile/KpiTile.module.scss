@@ -2,6 +2,7 @@
 
 .tile {
   position: relative;
+  min-width: 0;
   height: 100%;
   min-height: 150px;
   display: flex;
@@ -59,9 +60,10 @@
   box-shadow: 0 0 16px color-mix(in srgb, currentColor calc(var(--chart-glow-opacity) * 45%), transparent);
 
   @include mobile {
-    width: 28px;
-    height: 28px;
-    font-size: 14px;
+    width: 26px;
+    height: 26px;
+    font-size: 13px;
+    border-radius: 9px;
   }
 }
 
@@ -74,6 +76,13 @@
   color: var(--color-text-secondary);
   // Подпись переносится, а не обрезается
   line-height: 1.25;
+  min-width: 0;
+  overflow-wrap: anywhere;
+
+  @include mobile {
+    font-size: 10px;
+    letter-spacing: 0.03em;
+  }
 }
 
 .valueRow {
@@ -94,7 +103,8 @@
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 
-  @include mobile { font-size: 20px; }
+  // Сумма вроде «12 345 р.» должна целиком влезать в половину экрана телефона
+  @include mobile { font-size: clamp(15px, 4.6vw, 19px); }
 }
 
 .delta {

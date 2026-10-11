@@ -19,7 +19,12 @@ module.exports = (env = {}) => {
     },
     resolve: {
       extensions: ['.tsx', '.ts', '.js'],
-      alias: { '@': path.resolve(__dirname, 'src') },
+      alias: {
+        '@': path.resolve(__dirname, 'src'),
+        // antd-mask-input берёт поле из antd/lib (CommonJS-копия antd): тема ConfigProvider
+        // до неё не доходила, и поле телефона было белым. Одна копия antd — одна тема
+        'antd/lib': path.resolve(__dirname, 'node_modules/antd/es'),
+      },
     },
     module: {
       rules: [

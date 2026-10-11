@@ -16,13 +16,15 @@ interface Props {
   rank: number | null;
   salary?: SalaryData;
   history: SalaryHistoryItem[];
+  /** Упущенная премия за вики в периоде; нет — строку не показываем */
+  missed?: { amount: number; count: number };
   /** Цвет линии спарклайна строкой (из useChartColors) */
   lineColor: string;
   onClick: () => void;
 }
 
 /** Карточка сотрудника на вкладке «Сотрудники»: заработок периода, выплаты, среднее, рекорд и спарклайн */
-export const EmployeeCard: React.FC<Props> = ({ employee: m, rank, salary, history, lineColor, onClick }) => {
+export const EmployeeCard: React.FC<Props> = ({ employee: m, rank, salary, history, missed, lineColor, onClick }) => {
   const record = bestSalaryMonth(history);
   const avgAnnual = averageAnnualSalary(history);
   // Прогресс к личному рекорду месяца (рекорд — из истории, при одном месяце сравнивать не с чем)
@@ -63,10 +65,6 @@ export const EmployeeCard: React.FC<Props> = ({ employee: m, rank, salary, histo
       )}
       <div className={styles.stats}>
         <div className={styles.stat}>
-          <span className={styles.statLabel}>% от прибыли</span>
-          <span className={styles.statValue}>{m.profitPercent ?? 0}%</span>
-        </div>
-        <div className={styles.stat}>
           <span className={styles.statLabel}>Заработок (тек. период)</span>
           <span className={styles.statEarnings}>
             {salary ? formatPrice(salary.adjustedTotal) : '—'}
@@ -99,6 +97,12 @@ export const EmployeeCard: React.FC<Props> = ({ employee: m, rank, salary, histo
           </div>
         )}
       </div>
+      {missed && missed.count > 0 && (
+        <div className={styles.missed}>
+          <span>Упущено за вики · {missed.count} авто</span>
+          <b>{formatPrice(missed.amount)}</b>
+        </div>
+      )}
       {history.length > 1 && (
         <div className={styles.sparkline}>
           <ResponsiveContainer width="100%" height={56}>

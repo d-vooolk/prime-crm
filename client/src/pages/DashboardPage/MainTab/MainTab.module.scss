@@ -21,11 +21,6 @@
 .tiles4 {
   display: grid;
   gap: var(--spacing-md);
-
-  @include mobile {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-  }
 }
 
 .tiles3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -33,6 +28,15 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
 
   @include tablet { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+// Телефон — после правил колонок, иначе их перебивали четыре колонки и текст обрезался
+.tiles3,
+.tiles4 {
+  @include mobile {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
 }
 
 .tiles3 {

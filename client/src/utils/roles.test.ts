@@ -34,7 +34,7 @@ describe('роли и навигация', () => {
 
   it('сотруднику видны только разрешённые разделы', () => {
     expect(canSeePath(u(ROLES.EMPLOYEE), '/schedule')).toBe(true);
-    expect(canSeePath(u(ROLES.EMPLOYEE), '/dashboard')).toBe(false);
+    expect(canSeePath(u(ROLES.EMPLOYEE), '/dashboard')).toBe(true);
     expect(canSeePath(u(ROLES.MANAGER), '/dashboard')).toBe(true);
   });
 

@@ -99,6 +99,10 @@ export const recordsApi = {
   getById: (id: string) =>
     http.get<{ data: Record }>(`/records/${id}`).then(r => r.data.data),
 
+  /** «Открытые возможности» (BETA): допродажи по прошлым визитам таких же авто — для руководителей */
+  getOpportunities: (id: string) =>
+    http.get<{ data: RecordOpportunities }>(`/records/${id}/opportunities`).then(r => r.data.data),
+
   // Фото и видео нюансов авто — хранятся год
   getMedia: (recordId: string) =>
     http.get<{ data: RecordMedia[] }>(`/records/${recordId}/media`).then(r => r.data.data),
@@ -150,3 +154,21 @@ export const recordsApi = {
   delete: (id: string) =>
     http.delete(`/records/${id}`),
 };
+
+export interface Opportunity {
+  serviceId: string;
+  name: string;
+  /** Типичная цена — медиана по похожим визитам */
+  price: number;
+  /** В скольких похожих визитах делали попутно */
+  count: number;
+  /** С какими работами делали (причины тех визитов) */
+  togetherWith: string[];
+}
+
+export interface RecordOpportunities {
+  /** generation — по визитам того же поколения, model — по всей модели (визитов поколения мало) */
+  scope: 'generation' | 'model';
+  basedOn: number;
+  items: Opportunity[];
+}

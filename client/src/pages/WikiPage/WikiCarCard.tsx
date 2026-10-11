@@ -4,6 +4,7 @@ import {
 } from 'antd';
 import { EditOutlined, UploadOutlined, DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { useQueryClient } from '@tanstack/react-query';
 import cn from 'classnames';
 import { wikiApi } from '@/api/wiki.api';
 import { WikiEntry, WikiKey, WikiMedia } from '@/types';
@@ -56,6 +57,7 @@ function mergeMedia(prev: WikiEntry | null, next: WikiEntry | null): WikiEntry |
 
 export const WikiCarCard: React.FC<Props> = ({ carKey, title, onChanged }) => {
   const notify = useNotify();
+  const queryClient = useQueryClient();
   const [entry, setEntry] = useState<WikiEntry | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -114,6 +116,8 @@ export const WikiCarCard: React.FC<Props> = ({ carKey, title, onChanged }) => {
       setEditing(!saved.content);
       notify.success('Сохранено');
       onChanged();
+      // Описанное авто уходит из «упущенной прибыли»
+      void queryClient.invalidateQueries({ queryKey: ['missed-wiki'] });
     } catch (e) {
       notify.error(e);
     } finally {
@@ -135,6 +139,7 @@ export const WikiCarCard: React.FC<Props> = ({ carKey, title, onChanged }) => {
       // Намеренно молча: файлы уже загружены и показаны, сверка лишь уточняет список
     });
     onChangedRef.current();
+    void queryClient.invalidateQueries({ queryKey: ['missed-wiki'] });
   };
 
   const upload = async (file: File, uid: string) => {

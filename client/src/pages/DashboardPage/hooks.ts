@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { analyticsApi, Period } from '@/api/analytics.api';
 import { accountingApi, MonthlyRecordCountItem, MonthlyRevenueItem, SalaryData, SalaryHistoryItem } from '@/api/accounting.api';
 import { useServicemen } from '@/hooks/useReferenceData';
@@ -70,10 +71,20 @@ export function useDashboardData(period: Period) {
   return { summary, topServices, monthlyRevenue, monthlyRecordCount, loading, error, reload };
 }
 
-/** Сотрудники с зарплатой, их заработок за текущий расчётный период и история по месяцам */
-export function useEmployeeSalaries() {
+/**
+ * Сотрудники с зарплатой, их заработок за текущий расчётный период и история по месяцам.
+ * Скрытые в настройках («не участвует в дашборде») не показываются. onlyName — только этот
+ * сотрудник (сотрудник видит свою карточку).
+ */
+export function useEmployeeSalaries(onlyName?: string) {
   const servicemenQuery = useServicemen();
-  const employees = useMemo(() => (servicemenQuery.data ?? []).filter(hasSalary), [servicemenQuery.data]);
+  const employees = useMemo(
+    () => (servicemenQuery.data ?? [])
+      .filter(hasSalary)
+      .filter(s => s.showInDashboard !== false)
+      .filter(s => !onlyName || s.name === onlyName),
+    [servicemenQuery.data, onlyName],
+  );
   const [salaries, setSalaries] = useState<Record<string, SalaryData>>({});
   const [histories, setHistories] = useState<Record<string, SalaryHistoryItem[]>>({});
   const [loading, setLoading] = useState(false);
@@ -124,3 +135,11 @@ export function useEmployeeSalaries() {
     refetchServicemen: servicemenQuery.refetch,
   };
 }
+
+/** Пьедестал лидеров текущего расчётного периода */
+export const useLeaders = () => useQuery({
+  queryKey: ['dashboard', 'leaders'],
+  queryFn: () => accountingApi.getLeaders(),
+});
+
+export { useMissedWiki } from '@/hooks/useMissedWiki';

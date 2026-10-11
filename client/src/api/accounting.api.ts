@@ -114,6 +114,14 @@ export const accountingApi = {
   getSalaryHistory: (servicemanName: string) =>
     http.get<{ data: SalaryHistoryItem[] }>('/accounting/salary/history', { params: { servicemanName } }).then(r => r.data.data),
 
+  /** Тройка лидеров расчётного периода; earnings — null, если роли чужие деньги не видны */
+  getLeaders: () =>
+    http.get<{ data: Leader[] }>('/accounting/leaders').then(r => r.data.data),
+
+  /** Упущенная премия за вики в текущем расчётном периоде (сотрудник получает только свою) */
+  getMissedWiki: () =>
+    http.get<{ data: MissedWikiData }>('/accounting/missed-wiki').then(r => r.data.data),
+
   getMonthlyRevenue: () =>
     http.get<{ data: MonthlyRevenueItem[] }>('/accounting/monthly-revenue').then(r => r.data.data),
 
@@ -276,6 +284,29 @@ export interface MonthlyRecordCountItem {
   labelShort: string;
   count: number;
   isOverride: boolean;
+}
+
+export interface Leader {
+  name: string;
+  position: string | null;
+  place: number;
+  recordCount: number;
+  earnings: number | null;
+}
+
+export interface MissedWikiItem {
+  recordId: string;
+  closedAt: string;
+  car: string;
+  brandId: string;
+  modelId: string;
+  generationId: string;
+}
+
+export interface MissedWikiData {
+  /** Премия за заполнение карточки вики (настройки вики) */
+  bonus: number;
+  employees: { servicemanName: string; amount: number; items: MissedWikiItem[] }[];
 }
 
 export interface SalaryHistoryItem {

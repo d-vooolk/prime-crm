@@ -1,7 +1,7 @@
 import React from 'react';
 import { Tabs } from 'antd';
 import { useAuthStore } from '@/store/authStore';
-import { canSeeAvgCard, canSeeExpenses, canSeeRevenue } from '@/utils/roles';
+import { canSeeAvgCard, canSeeExpenses, canSeeRevenue, isEmployee } from '@/utils/roles';
 import { MainTab } from './MainTab';
 import { EmployeesTab } from './EmployeesTab';
 import { ExpensesTab } from './ExpensesTab';
@@ -10,6 +10,19 @@ import styles from './DashboardPage.module.scss';
 
 export const DashboardPage: React.FC = () => {
   const { user } = useAuthStore();
+
+  // Сотруднику — только пьедестал, своя карточка с зарплатой и своя упущенная прибыль
+  if (isEmployee(user)) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.header}>
+          <div className={styles.kicker}>Prime Auto · мои показатели</div>
+          <h1 className={styles.title}>Дашборд</h1>
+        </div>
+        <EmployeesTab onlyName={user?.name} />
+      </div>
+    );
+  }
 
   return (
     <div className={styles.page}>

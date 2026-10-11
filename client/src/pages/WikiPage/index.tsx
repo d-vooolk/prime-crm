@@ -8,6 +8,7 @@ import { useWikiStore, isWikiReviewer } from '@/store/wikiStore';
 import { useNotify } from '@/hooks/useNotify';
 import { WikiCarsTab } from './WikiCarsTab';
 import { WikiReviewTab } from './WikiReviewTab';
+import { WikiMissedBanner } from './WikiMissedBanner';
 import styles from './WikiPage.module.scss';
 
 /**
@@ -108,6 +109,7 @@ export const WikiPage: React.FC = () => {
   return (
     <div className={styles.page}>
       <h1 className={styles.title}>Wiki</h1>
+      <WikiMissedBanner reviewer={reviewer} selected={{ markId, modelId, generationId }} onSelect={selectCar} />
       <Tabs activeKey={tab} onChange={setTab} items={items} destroyOnHidden />
     </div>
   );

@@ -125,6 +125,11 @@ model RecordMedia {
   uploadedByName String?
   createdAt      DateTime        @default(now())
   expiresAt      DateTime
+  // Сжатие (utils/recordMediaOptimize.ts): фото — сразу при загрузке, видео — в фоне.
+  // Пока видео перекодируется, processing = true и отдаётся оригинал
+  processing     Boolean         @default(false)
+  optimized      Boolean         @default(false)
+  thumbFilename  String? // превью для сетки (фото) или кадр-обложка (видео), в UPLOADS_DIR/records
   record         Record          @relation(fields: [recordId], references: [id], onDelete: Cascade)
 
   @@index([recordId])
@@ -273,6 +278,8 @@ model Serviceman {
   // Показывать в списке исполнителей работ. null — старая запись, заполняется
   // при старте сервера (bootstrap/servicemanPerformers.ts)
   isPerformer    Boolean?
+  // Участвует в дашборде (карточки, пьедестал, упущенная прибыль); лишних скрывают в настройках
+  showInDashboard Boolean  @default(true)
   profitPercent  Float     @default(0)
   birthday       DateTime?
   createdAt      DateTime  @default(now())

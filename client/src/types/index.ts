@@ -300,6 +300,8 @@ export interface Serviceman {
   isDefault: boolean;
   /** Показывается в списке исполнителей работ */
   isPerformer?: boolean | null;
+  /** Участвует в дашборде; лишних скрывают в настройках */
+  showInDashboard?: boolean;
   profitPercent: number;
   /** Оклад текущего расчётного периода */
   baseSalary?: number;
@@ -519,6 +521,10 @@ export interface RecordMedia {
   /** Когда файл удалится с сервера (через год после загрузки) */
   expiresAt: string;
   url: string;
+  /** Сжатое превью (фото) или кадр-обложка (видео); null — нет */
+  thumbUrl?: string | null;
+  /** Видео ещё сжимается на сервере — пока открывается оригинал */
+  processing?: boolean;
 }
 
 // ─── Склад ─────────────────────────────────────────

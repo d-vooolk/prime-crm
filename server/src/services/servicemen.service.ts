@@ -16,6 +16,7 @@ export interface ServicemanInput {
   photoUrl?: string | null;
   isReceptionist?: boolean;
   isPerformer?: boolean;
+  showInDashboard?: boolean;
   birthday?: string | null;
   profitPercent?: number;
   baseSalary?: number;
@@ -86,6 +87,7 @@ export const servicemenService = {
         photoUrl: input.photoUrl ?? null,
         isReceptionist: !!input.isReceptionist,
         isPerformer: !!input.isPerformer,
+        showInDashboard: input.showInDashboard ?? true,
         birthday: input.birthday ? new Date(input.birthday) : undefined,
         ...(input.profitPercent !== undefined && { profitPercent: input.profitPercent }),
       },
@@ -117,6 +119,7 @@ export const servicemenService = {
           ...(input.photoUrl !== undefined && { photoUrl: input.photoUrl }),
           ...(input.isReceptionist !== undefined && { isReceptionist: input.isReceptionist }),
           ...(input.isPerformer !== undefined && { isPerformer: input.isPerformer }),
+          ...(input.showInDashboard !== undefined && { showInDashboard: input.showInDashboard }),
           ...(input.profitPercent !== undefined && { profitPercent: input.profitPercent }),
           ...(input.birthday !== undefined && { birthday: input.birthday ? new Date(input.birthday) : null }),
           // Снятый с приёмщиков не может оставаться приёмщиком по умолчанию

@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { recordsService } from '../services/records.service';
+import { opportunitiesService } from '../services/opportunities.service';
 import { smsService } from '../services/sms.service';
 import { prisma } from '../prisma/client';
 import { hasRole, ROLES } from '../utils/roles';
@@ -149,6 +150,13 @@ export const recordsController = {
       const date = String(req.query.date || new Date().toISOString().split('T')[0]);
       const records = await recordsService.findClosedOnDate(date);
       res.json({ data: records.map(r => forViewer(req, r)) });
+    } catch (e) { next(e); }
+  },
+
+  /** «Открытые возможности» (BETA): что можно допродать по прошлым визитам таких же авто */
+  async getOpportunities(req: Request, res: Response, next: NextFunction) {
+    try {
+      res.json({ data: await opportunitiesService.forRecord(String(req.params.id)) });
     } catch (e) { next(e); }
   },
 

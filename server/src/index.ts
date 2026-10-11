@@ -111,6 +111,8 @@ app.listen(env.port, async () => {
   await runSafely('исполнители работ', backfillServicemanPerformers);
   await runSafely('категории расходов', seedExpenseCategoriesIfEmpty);
   void runSafely('очистка старых медиа записей', () => recordMediaService.deleteExpired());
+  // Сжатие фото/видео записей, загруженных раньше, и видео, прерванных перезапуском, — в фоне
+  void runSafely('сжатие медиа записей', () => recordMediaService.resumeOptimization());
   // Приём почты по IMAP: держит соединение и сам переподключается
   mailService.start();
 });

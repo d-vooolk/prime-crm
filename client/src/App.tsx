@@ -16,7 +16,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useAuthSync } from '@/hooks/useAuthSync';
 import { PwaUpdateNotice } from '@/components/PwaUpdateNotice';
 import { queryClient } from '@/lib/queryClient';
-import { canSeeMail, isEmployee } from '@/utils/roles';
+import { canSeeMail } from '@/utils/roles';
 import { lightTheme, darkTheme } from '@/config/antdTheme';
 
 dayjs.locale('ru');
@@ -38,7 +38,6 @@ const App: React.FC = () => {
   const isMobile = !Grid.useBreakpoint().md;
   const user = useAuthStore(s => s.user);
   const token = useAuthStore(s => s.token);
-  const scheduleOnly = isEmployee(user);
 
   useAuthSync();
 
@@ -72,7 +71,7 @@ const App: React.FC = () => {
                   >
                     <Route index element={<Navigate to="/schedule" replace />} />
                     <Route path="schedule" element={<SchedulePage />} />
-                    <Route path="dashboard" element={scheduleOnly ? <Navigate to="/schedule" replace /> : <DashboardPage />} />
+                    <Route path="dashboard" element={<DashboardPage />} />
                     {/* Справочник переехал во вкладку настроек */}
                     <Route path="clients" element={<Navigate to="/settings?tab=directory" replace />} />
                     <Route path="services" element={<Navigate to="/settings?tab=directory" replace />} />

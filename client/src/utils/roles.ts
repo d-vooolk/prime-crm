@@ -74,7 +74,8 @@ export const canSeeMail = isCreatorOrAbove;
 
 // ─── Навигация ─────────────────────────────────────
 /** Сотруднику доступны только эти разделы */
-export const EMPLOYEE_ALLOWED_PATHS = ['/schedule', '/wiki', '/accounting', '/settings'];
+// Дашборд сотруднику — только пьедестал, своя карточка и упущенная прибыль (DashboardPage)
+export const EMPLOYEE_ALLOWED_PATHS = ['/schedule', '/dashboard', '/wiki', '/accounting', '/settings'];
 export const canSeePath = (u: Subject, path: string) => {
   if (path === '/mail') return canSeeMail(u);
   return !isEmployee(u) || EMPLOYEE_ALLOWED_PATHS.includes(path);

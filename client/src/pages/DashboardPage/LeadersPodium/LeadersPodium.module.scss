@@ -1,0 +1,183 @@
+@use '@/styles/variables' as *;
+
+.podium {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: var(--spacing-md);
+  padding: 20px 20px 0;
+  border-radius: var(--border-radius-lg);
+  border: 1px solid var(--color-border);
+  background:
+    radial-gradient(520px 260px at 50% 110%, rgba(162, 219, 0, calc(var(--chart-glow-opacity) * 0.22)), transparent 70%),
+    var(--color-surface);
+
+  @include mobile { padding: 16px 10px 0; }
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.kicker {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+.period {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  text-transform: capitalize;
+}
+
+.stage {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: 10px;
+  max-width: 640px;
+  margin: 0 auto;
+
+  @include mobile { gap: 6px; }
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+}
+
+.person {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+  padding-bottom: 10px;
+  text-align: center;
+}
+
+.crown {
+  font-size: 22px;
+  color: var(--color-chart-3);
+  filter: drop-shadow(0 0 8px var(--color-chart-3));
+  animation: float 2.6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+.avatar {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--color-on-accent);
+  background: var(--place-color);
+  box-shadow: 0 0 18px var(--place-glow);
+
+  @include mobile {
+    width: 42px;
+    height: 42px;
+    font-size: 18px;
+  }
+}
+
+.name {
+  max-width: 100%;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--color-text-primary);
+  // Длинное ФИО переносится, а не обрезается
+  overflow-wrap: anywhere;
+
+  @include mobile { font-size: 12px; }
+}
+
+.result {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+
+  b {
+    font-family: var(--font-display);
+    font-size: 14px;
+    color: var(--color-text-primary);
+
+    @include mobile { font-size: 12px; }
+  }
+
+  @include mobile { font-size: 11px; }
+}
+
+// Ступень: высота по месту, цвет — золото, серебро, бронза
+.block {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding-top: 10px;
+  border-radius: 14px 14px 0 0;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--place-color) 32%, transparent), color-mix(in srgb, var(--place-color) 6%, transparent));
+  border: 1px solid color-mix(in srgb, var(--place-color) 45%, transparent);
+  border-bottom: 0;
+}
+
+.placeNumber {
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--place-color);
+  text-shadow: 0 0 14px var(--place-glow);
+}
+
+.place1 {
+  --place-color: var(--color-chart-3);
+  --place-glow: rgba(251, 191, 36, 0.45);
+
+  .block { height: 96px; }
+  .avatar { width: 60px; height: 60px; font-size: 26px; }
+}
+
+.place2 {
+  --place-color: var(--color-text-secondary);
+  --place-glow: rgba(200, 200, 200, 0.3);
+
+  .block { height: 70px; }
+}
+
+.place3 {
+  --place-color: var(--color-warning);
+  --place-glow: rgba(217, 119, 6, 0.35);
+
+  .block { height: 52px; }
+}
+
+.empty {
+  opacity: 0.45;
+
+  .avatar { box-shadow: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crown { animation: none; }
+}

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Button, Divider, Empty, Image, Popconfirm, Progress, Spin, Upload } from 'antd';
-import { CameraOutlined, DeleteOutlined, PlayCircleOutlined } from '@ant-design/icons';
+import { Button, Divider, Empty, Image, Modal, Popconfirm, Progress, Spin, Upload } from 'antd';
+import { CameraOutlined, DeleteOutlined, LoadingOutlined, PlayCircleOutlined } from '@ant-design/icons';
 import type { RecordMedia } from '@/types';
 import { recordsApi } from '@/api/records.api';
 import { useAuthStore } from '@/store/authStore';
@@ -19,6 +19,9 @@ interface UploadState { id: number; name: string; percent: number }
 
 let uploadSeq = 0;
 
+/** Пока на сервере сжимается видео — проверяем, не готово ли */
+const PROCESSING_POLL_MS = 5000;
+
 /**
  * Фото и видео нюансов авто в записи. Добавлять может любая роль; удалить — тот, кто загрузил,
  * или менеджер и выше. Файлы хранятся год и потом удаляются с сервера автоматически.
@@ -29,6 +32,7 @@ export const RecordMediaGallery: React.FC<Props> = ({ recordId, onCountChange })
   const [media, setMedia] = useState<RecordMedia[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploads, setUploads] = useState<UploadState[]>([]);
+  const [playing, setPlaying] = useState<RecordMedia | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -46,6 +50,16 @@ export const RecordMediaGallery: React.FC<Props> = ({ recordId, onCountChange })
   }, [load]);
 
   useEffect(() => { onCountChange?.(media.length); }, [media.length, onCountChange]);
+
+  // Видео сжимается в фоне (минуту-две) — обновляем список, пока не закончится
+  const hasProcessing = media.some(m => m.processing);
+  useEffect(() => {
+    if (!hasProcessing) return;
+    const timer = setInterval(() => {
+      recordsApi.getMedia(recordId).then(setMedia).catch(() => undefined);
+    }, PROCESSING_POLL_MS);
+    return () => clearInterval(timer);
+  }, [hasProcessing, recordId]);
 
   const upload = async (file: File) => {
     const id = ++uploadSeq;
@@ -72,7 +86,6 @@ export const RecordMediaGallery: React.FC<Props> = ({ recordId, onCountChange })
   };
 
   const canDelete = (item: RecordMedia) => item.uploadedByName === user?.name || isManagerOrAbove(user);
-  const photos = media.filter(m => m.type === 'PHOTO');
 
   return (
     <>
@@ -101,17 +114,31 @@ export const RecordMediaGallery: React.FC<Props> = ({ recordId, onCountChange })
       ) : media.length === 0 ? (
         uploads.length === 0 && <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Нет файлов" className={styles.empty} />
       ) : (
-        <Image.PreviewGroup items={photos.map(p => p.url)}>
+        // Сетка — сжатые превью, просмотр — полное фото (preview.src)
+        <Image.PreviewGroup>
           <div className={styles.grid}>
             {media.map(item => (
               <div key={item.id} className={styles.tile}>
                 {item.type === 'PHOTO' ? (
-                  <Image src={item.url} alt={item.originalName} className={styles.thumb} />
+                  <Image
+                    src={item.thumbUrl ?? item.url}
+                    preview={{ src: item.url }}
+                    alt={item.originalName}
+                    className={styles.thumb}
+                    loading="lazy"
+                  />
                 ) : (
-                  <a href={item.url} target="_blank" rel="noreferrer noopener" className={styles.video}>
-                    <video src={item.url} preload="metadata" muted className={styles.thumb} />
-                    <PlayCircleOutlined className={styles.play} />
-                  </a>
+                  // Видео смотрим здесь же, во встроенном плеере: новая вкладка в приложении на телефоне не открывалась
+                  <button type="button" className={styles.video} onClick={() => setPlaying(item)}>
+                    {item.thumbUrl
+                      ? <img src={item.thumbUrl} alt={item.originalName} className={styles.thumb} loading="lazy" />
+                      : <span className={styles.videoStub} />}
+                    {item.processing ? (
+                      <span className={styles.processing}><LoadingOutlined /> Сжимается…</span>
+                    ) : (
+                      <PlayCircleOutlined className={styles.play} />
+                    )}
+                  </button>
                 )}
                 <div className={styles.meta} title={`Загрузил: ${item.uploadedByName ?? '—'}. Удалится ${formatDate(item.expiresAt)}`}>
                   <span className={styles.metaText}>{item.uploadedByName ?? '—'} · до {formatDate(item.expiresAt)}</span>
@@ -126,6 +153,29 @@ export const RecordMediaGallery: React.FC<Props> = ({ recordId, onCountChange })
           </div>
         </Image.PreviewGroup>
       )}
+
+      <Modal
+        open={!!playing}
+        onCancel={() => setPlaying(null)}
+        footer={null}
+        width={900}
+        centered
+        destroyOnHidden
+        title={playing?.originalName}
+      >
+        {playing && (
+          <video
+            key={playing.id}
+            src={playing.url}
+            poster={playing.thumbUrl ?? undefined}
+            controls
+            autoPlay
+            playsInline
+            preload="metadata"
+            className={styles.player}
+          />
+        )}
+      </Modal>
     </>
   );
 };

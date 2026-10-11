@@ -2,7 +2,9 @@
 /**
  * Service worker приложения (PWA). Собирается workbox InjectManifest только в продакшен-сборке.
  *  - оболочка приложения (JS/CSS/HTML) лежит в кеше — открывается мгновенно и без сети;
- *  - фото/видео (/api/uploads) — из кеша: имена файлов уникальны, содержимое не меняется;
+ *  - фото (/api/uploads) — из кеша: имена файлов уникальны, содержимое не меняется;
+ *    видео — всегда из сети: плеер запрашивает его кусками (Range), а CacheFirst отдавал бы
+ *    файл целиком — iPhone такое видео не проигрывает;
  *  - данные API (GET) — всегда из сети, а без сети — последний полученный ответ;
  *  - пуш-уведомления и переход по нажатию на них.
  */
@@ -26,8 +28,14 @@ registerRoute(new NavigationRoute(createHandlerBoundToURL('/index.html'), {
   denylist: [/^\/api\//, /^\/health/],
 }));
 
+const VIDEO_FILE = /\.(mp4|mov|m4v|webm|avi|mkv|3gp)$/i;
+
 registerRoute(
-  ({ url, request }) => url.pathname.startsWith('/api/uploads/') && request.method === 'GET',
+  ({ url, request }) => url.pathname.startsWith('/api/uploads/')
+    && request.method === 'GET'
+    && request.destination !== 'video'
+    && !request.headers.has('range')
+    && !VIDEO_FILE.test(url.pathname),
   new CacheFirst({
     cacheName: UPLOADS_CACHE,
     plugins: [

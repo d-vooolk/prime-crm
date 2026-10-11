@@ -9,6 +9,8 @@ export interface ServicemanPayload {
   password?: string;
   isReceptionist?: boolean;
   isPerformer?: boolean;
+  /** Участвует в дашборде (карточки, пьедестал, упущенная прибыль) */
+  showInDashboard?: boolean;
   birthday?: string | null;
   profitPercent?: number;
   /** Оклад: меняется с текущего расчётного периода, прошлые месяцы не пересчитываются */
