@@ -18,6 +18,9 @@
   // Текст поверх салатовой заливки
   --color-on-accent: #121212;
   --color-on-error: #ffffff;
+  // Яркий красный счётчик «Не завершены» в расписании — одинаковый в обеих темах
+  --color-alert: #ff2d2d;
+  --color-alert-glow: rgba(255, 45, 45, 0.55);
 
   --color-bg: #f2f3ef;
   --color-surface: #ffffff;

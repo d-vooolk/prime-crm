@@ -142,14 +142,17 @@
   background: var(--color-brand);
   color: var(--color-on-accent);
   font-size: var(--font-size-xs);
-  font-weight: 700;
-  padding: 1px 7px;
+  font-weight: 800;
+  padding: 1px 8px;
   border-radius: 10px;
+  box-shadow: 0 0 10px var(--color-brand-glow);
 }
 
+// Незавершённые — насыщенный красный со свечением, чтобы сразу бросался в глаза
 .columnOverdue .columnCount {
-  background: var(--color-error);
+  background: var(--color-alert);
   color: var(--color-on-error);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-alert) 25%, transparent), 0 0 12px var(--color-alert-glow);
 }
 
 .columnBody {
