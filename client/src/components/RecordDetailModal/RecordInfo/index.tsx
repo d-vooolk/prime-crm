@@ -16,8 +16,8 @@ interface Props {
 }
 
 /**
- * Ссылка на страницу записи для клиента (zapis.prime-auto.by/<код>) — открыть или скопировать,
- * чтобы отправить вручную. Страница живёт, только пока запись активна.
+ * Ссылка на страницу записи для клиента (zapis.prime-auto.by/<код>).
+ * Страница живёт, только пока запись активна.
  */
 const ClientPageLink: React.FC<{ token: string }> = ({ token }) => {
   const { data: settings } = useCompanySettings();
@@ -27,7 +27,6 @@ const ClientPageLink: React.FC<{ token: string }> = ({ token }) => {
     <div className={styles.clientPage}>
       <LinkOutlined />
       <Typography.Link href={url} target="_blank" rel="noreferrer noopener">Страница для клиента</Typography.Link>
-      <Typography.Text copyable={{ text: url, tooltips: ['Скопировать ссылку', 'Скопировано'] }} />
     </div>
   );
 };

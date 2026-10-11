@@ -18,6 +18,8 @@ COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY migrate.js ./migrate.js
+# Логотип и шрифт страницы записи для клиента (routes/publicPage.routes.ts)
+COPY assets ./assets
 EXPOSE 3001
 # Сначала миграции (prisma migrate deploy — без молчаливого удаления данных), потом сервер
 CMD ["sh", "-c", "node migrate.js && exec node dist/index.js"]
