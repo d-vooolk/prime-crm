@@ -94,14 +94,14 @@
 
 .mobileStepDotActive {
   border-color: var(--color-accent);
-  background: var(--color-accent);
-  color: #fff;
+  background: var(--color-brand);
+  color: var(--color-on-accent);
 }
 
 .mobileStepDotDone {
   border-color: var(--color-success);
   background: var(--color-success);
-  color: #fff;
+  color: var(--color-surface);
 }
 
 .mobileStepLine {

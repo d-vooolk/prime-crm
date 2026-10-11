@@ -14,7 +14,7 @@
   justify-content: space-between;
   padding: var(--spacing-lg) var(--spacing-xl);
   border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface);
+  background: transparent;
   gap: var(--spacing-md);
   flex-wrap: wrap;
   flex-shrink: 0;
@@ -25,8 +25,10 @@
 }
 
 .recordsTitle {
-  font-size: var(--font-size-xl);
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: var(--font-size-2xl);
+  font-weight: 800;
+  letter-spacing: -0.02em;
   color: var(--color-text-primary);
 
   @include mobile {
@@ -103,12 +105,14 @@
 
 .columnHeader {
   padding: var(--spacing-md) var(--spacing-lg);
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  color: var(--color-text-secondary);
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  // Метка раздела как на странице записи: салатовая, капслоком
+  color: var(--color-accent);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  background: var(--color-surface-2);
+  letter-spacing: 0.12em;
+  background: transparent;
   border-bottom: 1px solid var(--color-border);
   display: flex;
   align-items: center;
@@ -135,8 +139,8 @@
 }
 
 .columnCount {
-  background: var(--color-accent);
-  color: #fff;
+  background: var(--color-brand);
+  color: var(--color-on-accent);
   font-size: var(--font-size-xs);
   font-weight: 700;
   padding: 1px 7px;
@@ -145,6 +149,7 @@
 
 .columnOverdue .columnCount {
   background: var(--color-error);
+  color: var(--color-on-error);
 }
 
 .columnBody {

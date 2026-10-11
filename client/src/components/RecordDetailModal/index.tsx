@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Modal, Tag, Grid } from 'antd';
+import { Modal, Grid } from 'antd';
 import { Record as CrmRecord } from '@/types';
 import { CloseRecordModal } from '../CloseRecordModal';
 import { RecordModal } from '../RecordModal';
@@ -17,6 +17,7 @@ import { RecordItems } from './RecordItems';
 import { DefectsEditor } from './DefectsEditor';
 import { ActTemplateModal } from './ActTemplateModal';
 import { CancelPrepaidModal } from './CancelPrepaidModal';
+import { RecordHero } from './RecordHero';
 import styles from './RecordDetailModal.module.scss';
 
 const { useBreakpoint } = Grid;
@@ -27,12 +28,6 @@ interface Props {
   onClose: () => void;
   onRefresh: () => void;
 }
-
-const STATUS_MAP: Record<string, { color: string; label: string }> = {
-  ACTIVE: { color: 'blue', label: 'Активна' },
-  CLOSED: { color: 'green', label: 'Завершена' },
-  CANCELLED: { color: 'red', label: 'Отменена' },
-};
 
 export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRefresh }) => {
   const screens = useBreakpoint();
@@ -72,7 +67,6 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
   if (!record) return null;
 
   const r = localRecord ?? record;
-  const status = STATUS_MAP[r.status] || STATUS_MAP.ACTIVE;
   const prepaid = prepaidByMethod(r);
 
   // ─── Отмена / восстановление / удаление ───────────
@@ -178,12 +172,8 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
           content: styles.modalContent,
           body: styles.modalBody,
         }}
-        title={
-          <div className={styles.title}>
-            Запись #{r.id.slice(-8).toUpperCase()}
-            <Tag color={status.color}>{status.label}</Tag>
-          </div>
-        }
+        // Номер и статус — в шапке с фото авто (RecordHero)
+        title={null}
         footer={
           <RecordDetailFooter
             record={r}
@@ -205,6 +195,8 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
           />
         }
       >
+        {/* key: фото и его состояние загрузки — свои у каждой записи */}
+        <RecordHero key={r.id} record={r} />
         <RecordInfo
           record={r}
           isEmployee={isEmployee}

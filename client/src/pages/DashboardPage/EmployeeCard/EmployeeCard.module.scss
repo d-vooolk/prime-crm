@@ -12,18 +12,109 @@
 }
 
 .avatar {
-  background-color: var(--color-primary) !important;
+  background: var(--color-brand) !important;
+  color: var(--color-on-accent) !important;
+  font-family: var(--font-display);
+  font-weight: 800;
   flex-shrink: 0;
   font-size: 20px;
+  box-shadow: 0 0 16px var(--color-brand-glow);
 }
 
 .info {
   min-width: 0;
+  flex: 1;
+}
+
+// ─── Место в рейтинге ───────────────────────────────
+
+.rank {
+  flex: none;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--color-text-secondary);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+}
+
+// Первые три места — «медали» со свечением
+.rank1,
+.rank2,
+.rank3 {
+  color: var(--color-on-accent);
+  border-color: transparent;
+  box-shadow: 0 0 16px var(--rank-glow);
+}
+
+.rank1 { background: var(--color-chart-3); --rank-glow: rgba(251, 191, 36, 0.5); }
+.rank2 { background: var(--color-text-secondary); --rank-glow: rgba(200, 200, 200, 0.35); }
+.rank3 { background: var(--color-warning); --rank-glow: rgba(217, 119, 6, 0.4); }
+
+// ─── Прогресс к личному рекорду ─────────────────────
+
+.goal {
+  margin-bottom: var(--spacing-md);
+}
+
+.goalHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.goalPct {
+  font-family: var(--font-display);
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+  letter-spacing: 0;
+  color: var(--color-text-primary);
+}
+
+.recordBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--color-on-accent);
+  background: var(--color-brand);
+  box-shadow: 0 0 14px var(--color-brand-glow);
+}
+
+.goalBar {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-surface-2);
+  overflow: hidden;
+
+  span {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: var(--fill);
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--color-chart-2), var(--color-chart-1));
+    box-shadow: 0 0 10px color-mix(in srgb, var(--color-chart-1) calc(var(--chart-glow-opacity) * 100%), transparent);
+  }
 }
 
 .name {
+  font-family: var(--font-display);
   font-size: var(--font-size-md);
-  font-weight: 600;
+  font-weight: 700;
   color: var(--color-text-primary);
   white-space: nowrap;
   overflow: hidden;
@@ -62,9 +153,10 @@
 }
 
 .statEarnings {
+  font-family: var(--font-display);
   font-size: var(--font-size-md);
-  font-weight: 600;
-  color: var(--color-chart-2);
+  font-weight: 800;
+  color: var(--color-chart-1);
 }
 
 .statPaid {

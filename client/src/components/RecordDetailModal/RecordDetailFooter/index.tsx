@@ -49,31 +49,40 @@ export const RecordDetailFooter: React.FC<Props> = ({
     </Popconfirm>
   );
 
-  // На десктопе у иконок SMS есть подсказка, на телефоне она мешает нажатию
-  const smsButtons = (withTooltip: boolean) => {
-    const carReady = <Button icon={<CarOutlined />} loading={smsSending === 'CAR_READY'} />;
-    const review = <Button icon={<StarOutlined />} loading={smsSending === 'REVIEW_REQUEST'} />;
+  // На десктопе — иконка с подсказкой, на телефоне подсказка мешает нажатию, поэтому кнопка с текстом
+  const carReadyButton = (withTooltip: boolean) => {
+    const button = withTooltip
+      ? <Button icon={<CarOutlined />} loading={smsSending === 'CAR_READY'} />
+      : (
+        <Button icon={<CarOutlined />} loading={smsSending === 'CAR_READY'} className={styles.footerMobileFlex}>
+          Авто готово
+        </Button>
+      );
     return (
-      <>
-        <Popconfirm
-          title="Отправить SMS «Авто готово»?"
-          description={`На номер ${r.client.phone}`}
-          onConfirm={() => onSendSms('CAR_READY')}
-          okText="Отправить" cancelText="Отмена"
-        >
-          {withTooltip ? <Tooltip title="Авто готово">{carReady}</Tooltip> : carReady}
-        </Popconfirm>
-        <Popconfirm
-          title="Отправить запрос отзыва?"
-          description={`На номер ${r.client.phone}`}
-          onConfirm={() => onSendSms('REVIEW_REQUEST')}
-          okText="Отправить" cancelText="Отмена"
-        >
-          {withTooltip ? <Tooltip title="Запросить отзыв">{review}</Tooltip> : review}
-        </Popconfirm>
-      </>
+      <Popconfirm
+        title="Отправить SMS «Авто готово»?"
+        description={`На номер ${r.client.phone}`}
+        onConfirm={() => onSendSms('CAR_READY')}
+        okText="Отправить" cancelText="Отмена"
+      >
+        {withTooltip ? <Tooltip title="Авто готово">{button}</Tooltip> : button}
+      </Popconfirm>
     );
   };
+
+  // Запрос отзыва — только на десктопе
+  const reviewButton = (
+    <Popconfirm
+      title="Отправить запрос отзыва?"
+      description={`На номер ${r.client.phone}`}
+      onConfirm={() => onSendSms('REVIEW_REQUEST')}
+      okText="Отправить" cancelText="Отмена"
+    >
+      <Tooltip title="Запросить отзыв">
+        <Button icon={<StarOutlined />} loading={smsSending === 'REVIEW_REQUEST'} />
+      </Tooltip>
+    </Popconfirm>
+  );
 
   if (isMobile) {
     return (
@@ -102,18 +111,10 @@ export const RecordDetailFooter: React.FC<Props> = ({
             <Button type="primary" icon={<ReloadOutlined />} block>Восстановить</Button>
           </Popconfirm>
         )}
-        {/* SMS иконки + Заявка + Удалить */}
-        {!isEmployee && (
+        {/* SMS «Авто готово» + Удалить. Печать заявки и запрос отзыва на телефоне не нужны */}
+        {!isEmployee && (editable || canDelete) && (
           <div className={styles.footerMobileRow}>
-            {editable && smsButtons(false)}
-            <Button
-              icon={<PrinterOutlined />}
-              loading={printing}
-              onClick={r.isLegalEntity ? onPrintContract : onPrintWorkOrder}
-              className={styles.footerMobileFlex}
-            >
-              {r.isLegalEntity ? 'Договор' : 'Заявка'}
-            </Button>
+            {editable && carReadyButton(false)}
             {canDelete && deleteConfirm(
               <Button danger icon={<DeleteOutlined />} className={styles.footerMobileFlex}>Удалить</Button>,
             )}
@@ -130,7 +131,12 @@ export const RecordDetailFooter: React.FC<Props> = ({
       </div>
       {!isEmployee && (
         <div className={styles.footerSecondary}>
-          {editable && smsButtons(true)}
+          {editable && (
+            <>
+              {carReadyButton(true)}
+              {reviewButton}
+            </>
+          )}
           {r.isLegalEntity ? (
             <>
               <Button icon={<PrinterOutlined />} loading={printing} onClick={onPrintContract}>Договор</Button>

@@ -41,7 +41,8 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
   const isMobile = !screens.md;
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
-  const [celebrating, setCelebrating] = useState(false);
+  // Сумма и автомобиль для анимации закрытия; null — анимации нет
+  const [celebration, setCelebration] = useState<{ amount: number; caption: string } | null>(null);
   const [items, setItems] = useState<ItemRow[]>([]);
 
   // Исполнители — из общего кеша справочника, а не запросом при каждом открытии
@@ -168,7 +169,7 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
       pendingPrintRef.current = { record: freshRecord, settings, templateContent: actTemplate?.content };
 
       onClose();
-      setCelebrating(true);
+      setCelebration({ amount: totals.total, caption: `${record.car.brand} ${record.car.model}` });
       setTimeout(() => onSuccess(), 2100);
       setTimeout(() => {
         const pd = pendingPrintRef.current;
@@ -198,7 +199,13 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
 
   return (
     <>
-      {celebrating && <DealCelebration onDone={() => setCelebrating(false)} />}
+      {celebration && (
+        <DealCelebration
+          amount={celebration.amount}
+          caption={celebration.caption}
+          onDone={() => setCelebration(null)}
+        />
+      )}
 
       <ServicemanSplitModal
         open={splitOpen}

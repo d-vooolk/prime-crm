@@ -13,9 +13,9 @@
   flex-shrink: 0;
 
   &:hover {
-    box-shadow: var(--shadow-md);
-    border-color: var(--color-accent);
-    transform: translateY(-1px);
+    box-shadow: var(--shadow-md), 0 0 0 1px var(--color-accent-border);
+    border-color: var(--color-accent-border);
+    transform: translateY(-2px);
   }
 
   &.closed {
@@ -40,12 +40,13 @@
   left: 0;
   top: 0;
   bottom: 0;
-  width: 4px;
+  width: 3px;
   background: var(--color-status-active);
+  box-shadow: 0 0 10px var(--color-status-active);
   z-index: 1;
 
-  .closed & { background: var(--color-status-closed); }
-  .cancelled & { background: var(--color-status-cancelled); }
+  .closed & { background: var(--color-status-closed); box-shadow: 0 0 10px var(--color-status-closed); }
+  .cancelled & { background: var(--color-status-cancelled); box-shadow: none; }
 }
 
 // ─── Photo ─────────────────────────────────────────
@@ -127,8 +128,10 @@
 }
 
 .time {
+  font-family: var(--font-display);
   font-size: var(--font-size-lg);
-  font-weight: 700;
+  font-weight: 800;
+  letter-spacing: -0.01em;
   color: var(--color-text-primary);
   white-space: nowrap;
   min-width: 48px;
@@ -164,18 +167,16 @@
   flex-shrink: 0;
   font-size: var(--font-size-xs);
   font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 10px;
-  background: rgba(59, 130, 246, 0.1);
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
   color: var(--color-status-active);
 
   .closed & {
-    background: rgba(34, 197, 94, 0.1);
     color: var(--color-status-closed);
   }
 
   .cancelled & {
-    background: rgba(239, 68, 68, 0.1);
     color: var(--color-status-cancelled);
   }
 }
@@ -183,8 +184,9 @@
 .carName {
   flex: 1;
   min-width: 0;
+  font-family: var(--font-display);
   font-size: var(--font-size-md);
-  font-weight: 600;
+  font-weight: 700;
   color: var(--color-text-primary);
   white-space: nowrap;
   overflow: hidden;
@@ -259,8 +261,9 @@
 }
 
 .totalAmount {
+  font-family: var(--font-display);
   font-size: var(--font-size-md);
-  font-weight: 700;
+  font-weight: 800;
   color: var(--color-text-primary);
 
   @include mobile { font-size: var(--font-size-sm); }

@@ -1,6 +1,22 @@
 @use 'theme';
 @use 'variables' as *;
 
+// Montserrat — фирменный шрифт prime-auto.by (те же файлы, что у страницы записи для клиента)
+@font-face {
+  font-family: 'Montserrat';
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('../assets/fonts/montserrat-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Montserrat';
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('../assets/fonts/montserrat-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2212;
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -40,9 +56,28 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+// Фон как у страницы записи: едва заметное салатовое свечение по краям
+[data-theme='dark'] body {
+  background:
+    radial-gradient(900px 520px at 110% 30%, rgba(162, 219, 0, 0.05), transparent 60%),
+    radial-gradient(700px 500px at -10% 95%, rgba(162, 219, 0, 0.04), transparent 60%),
+    var(--color-bg);
+}
+
 #root {
   height: 100dvh;
   overflow: hidden;
+}
+
+// Заголовки, цифры и кнопки — фирменным Montserrat
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+::selection {
+  background: var(--color-brand);
+  color: var(--color-on-accent);
 }
 
 // ─── Ant Design overrides ────────────────────────────
@@ -59,9 +94,102 @@ body {
   border-radius: var(--border-radius-lg) !important;
 }
 
+.ant-modal-title,
+.ant-drawer-title,
+.ant-card-head-title,
+.ant-tabs-tab,
+.ant-statistic-content,
+.ant-steps-item-title,
+.ant-segmented-item-label,
+.ant-divider-inner-text,
+.ant-btn {
+  font-family: var(--font-display);
+}
+
+.ant-modal-title,
+.ant-drawer-title,
+.ant-card-head-title {
+  font-weight: 700 !important;
+  letter-spacing: -0.01em;
+}
+
 .ant-btn {
   border-radius: var(--border-radius-sm) !important;
-  font-weight: 500 !important;
+  font-weight: 600 !important;
+}
+
+// Основная кнопка — фирменный салатовый с тёмным текстом, лёгкое свечение при наведении
+.ant-btn-primary:not(.ant-btn-dangerous):not(:disabled) {
+  box-shadow: 0 6px 18px -8px var(--color-brand-glow);
+
+  &:hover {
+    box-shadow: 0 8px 22px -6px var(--color-brand-glow);
+  }
+}
+
+// Заголовки разделов в карточках — как метки на странице записи: салатовые, капслоком
+.ant-divider-horizontal.ant-divider-with-text .ant-divider-inner-text {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+// Подписи в описаниях не сливаются со значениями
+.ant-descriptions-item-label {
+  color: var(--color-text-secondary) !important;
+}
+
+.ant-descriptions-item-content {
+  color: var(--color-text-primary) !important;
+  // Длинные значения (организация, адрес, номер) переносятся, а не обрезаются
+  overflow-wrap: anywhere;
+}
+
+// Заблокированные поля: значение должно читаться, а не теряться на фоне
+.ant-input-disabled,
+.ant-input[disabled],
+.ant-input-number-disabled .ant-input-number-input,
+.ant-select-disabled .ant-select-selection-item,
+.ant-picker-disabled input {
+  color: var(--color-text-secondary) !important;
+  -webkit-text-fill-color: var(--color-text-secondary);
+}
+
+// Выбранное значение в списках (в т.ч. длинное название услуги) — во всю ширину поля
+.ant-select-single .ant-select-selector .ant-select-selection-item {
+  color: var(--color-text-primary);
+}
+
+// Салатовые элементы (галочки, шаги, выбранная дата) — с тёмным значком/текстом
+.ant-checkbox-checked .ant-checkbox-inner::after,
+.ant-tree-checkbox-checked .ant-tree-checkbox-inner::after,
+.ant-select-tree-checkbox-checked .ant-select-tree-checkbox-inner::after {
+  border-color: var(--color-on-accent) !important;
+}
+
+.ant-steps-item-process > .ant-steps-item-container > .ant-steps-item-icon > .ant-steps-icon {
+  color: var(--color-on-accent) !important;
+}
+
+.ant-picker-cell-in-view.ant-picker-cell-selected .ant-picker-cell-inner,
+.ant-picker-cell-in-view.ant-picker-cell-range-start .ant-picker-cell-inner,
+.ant-picker-cell-in-view.ant-picker-cell-range-end .ant-picker-cell-inner {
+  color: var(--color-on-accent) !important;
+}
+
+.ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled).ant-radio-button-wrapper-checked {
+  font-weight: 600;
+}
+
+// Таблицы: шапка — как метки разделов
+.ant-table-thead > tr > th {
+  font-family: var(--font-display);
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary) !important;
 }
 
 .ant-select-selector,
@@ -78,7 +206,7 @@ body {
 }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-border);
+  background: var(--color-field-border);
   border-radius: 3px;
   &:hover { background: var(--color-text-muted); }
 }

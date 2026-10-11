@@ -1,0 +1,137 @@
+@use '@/styles/variables' as *;
+
+.tile {
+  position: relative;
+  height: 100%;
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  padding: 18px 18px 0;
+  overflow: hidden;
+  border-radius: var(--border-radius-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  transition: var(--transition);
+
+  // Свечение цветом показателя в углу плитки
+  &::before {
+    content: '';
+    position: absolute;
+    top: -60px;
+    right: -60px;
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: calc(var(--chart-glow-opacity) * 0.22);
+    filter: blur(40px);
+    pointer-events: none;
+  }
+
+  &:hover {
+    border-color: color-mix(in srgb, currentColor 45%, transparent);
+    transform: translateY(-2px);
+  }
+
+  @include mobile {
+    min-height: 130px;
+    padding: 14px 14px 0;
+  }
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.icon {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  font-size: 16px;
+  color: currentColor;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, currentColor calc(var(--chart-glow-opacity) * 45%), transparent);
+
+  @include mobile {
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+  }
+}
+
+.label {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  // Подпись переносится, а не обрезается
+  line-height: 1.25;
+}
+
+.valueRow {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-top: 14px;
+}
+
+.value {
+  font-family: var(--font-display);
+  font-size: 28px;
+  line-height: 1.1;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+
+  @include mobile { font-size: 20px; }
+}
+
+.delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.up {
+  color: var(--color-success);
+  background: var(--color-success-bg);
+}
+
+.down {
+  color: var(--color-error);
+  background: var(--color-error-bg);
+}
+
+.spark {
+  margin: auto -18px 0;
+  padding-top: 8px;
+
+  @include mobile { margin: auto -14px 0; }
+
+  :global(.recharts-area-curve) {
+    filter: drop-shadow(0 0 4px color-mix(in srgb, currentColor calc(var(--chart-glow-opacity) * 100%), transparent));
+  }
+}
+
+.lime { color: var(--color-chart-1); }
+.cyan { color: var(--color-chart-2); }
+.amber { color: var(--color-chart-3); }
+.violet { color: var(--color-chart-4); }
+.pink { color: var(--color-chart-5); }
+.sky { color: var(--color-chart-6); }

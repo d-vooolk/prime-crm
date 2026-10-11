@@ -1,5 +1,7 @@
 import React from 'react';
+import cn from 'classnames';
 import { Card, Avatar } from 'antd';
+import { RocketOutlined } from '@ant-design/icons';
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
 import { SalaryData, SalaryHistoryItem } from '@/api/accounting.api';
 import { Serviceman } from '@/types';
@@ -10,6 +12,8 @@ import styles from './EmployeeCard.module.scss';
 
 interface Props {
   employee: Serviceman;
+  /** Место в рейтинге по заработку периода; null — ещё ничего не заработал */
+  rank: number | null;
   salary?: SalaryData;
   history: SalaryHistoryItem[];
   /** Цвет линии спарклайна строкой (из useChartColors) */
@@ -18,9 +22,14 @@ interface Props {
 }
 
 /** Карточка сотрудника на вкладке «Сотрудники»: заработок периода, выплаты, среднее, рекорд и спарклайн */
-export const EmployeeCard: React.FC<Props> = ({ employee: m, salary, history, lineColor, onClick }) => {
+export const EmployeeCard: React.FC<Props> = ({ employee: m, rank, salary, history, lineColor, onClick }) => {
   const record = bestSalaryMonth(history);
   const avgAnnual = averageAnnualSalary(history);
+  // Прогресс к личному рекорду месяца (рекорд — из истории, при одном месяце сравнивать не с чем)
+  const current = salary?.adjustedTotal ?? 0;
+  const recordValue = record && history.length > 1 ? record.adjustedTotal : 0;
+  const toRecord = recordValue > 0 ? Math.min(1, current / recordValue) : 0;
+  const isRecord = recordValue > 0 && current >= recordValue;
 
   return (
     <Card className={styles.card} onClick={onClick} hoverable>
@@ -32,7 +41,26 @@ export const EmployeeCard: React.FC<Props> = ({ employee: m, salary, history, li
           <div className={styles.name}>{m.name}</div>
           {m.position && <div className={styles.position}>{m.position}</div>}
         </div>
+        {rank != null && (
+          <span className={cn(styles.rank, { [styles[`rank${rank}`]]: rank <= 3 })} title="Место по заработку за период">
+            #{rank}
+          </span>
+        )}
       </div>
+      {recordValue > 0 && (
+        <div className={styles.goal}>
+          <div className={styles.goalHead}>
+            <span>До личного рекорда</span>
+            {isRecord
+              ? <span className={styles.recordBadge}><RocketOutlined /> Рекорд!</span>
+              : <span className={styles.goalPct}>{Math.round(toRecord * 100)}%</span>}
+          </div>
+          <div className={styles.goalBar}>
+            {/* Заполнение — данные, через CSS-переменную */}
+            <span style={{ '--fill': `${Math.round(toRecord * 100)}%` } as React.CSSProperties} />
+          </div>
+        </div>
+      )}
       <div className={styles.stats}>
         <div className={styles.stat}>
           <span className={styles.statLabel}>% от прибыли</span>

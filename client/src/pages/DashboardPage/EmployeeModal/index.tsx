@@ -6,7 +6,6 @@ import { Serviceman } from '@/types';
 import { formatPrice } from '@/utils/formatters';
 import { averageAnnualSalary, effectiveSalaryMonth } from '@/utils/salary';
 import { bestSalaryMonth, formatThousands } from '../utils';
-import { useChartColors } from '../useChartColors';
 import { ChartTooltip } from '../ChartTooltip';
 import { MonthlyLineChart } from '../MonthlyLineChart';
 import styles from './EmployeeModal.module.scss';
@@ -20,7 +19,6 @@ interface Props {
 
 /** Подробности по сотруднику: показатели заработка и динамика по месяцам */
 export const EmployeeModal: React.FC<Props> = ({ employee, salary, history, onClose }) => {
-  const colors = useChartColors();
   const record = bestSalaryMonth(history);
   const avgAnnual = averageAnnualSalary(history);
   const salaryPeriodLabel = effectiveSalaryMonth().format('MMMM YYYY');
@@ -109,8 +107,7 @@ export const EmployeeModal: React.FC<Props> = ({ employee, salary, history, onCl
                 hasData
                 xKey="label"
                 yKey="adjustedTotal"
-                color={colors.primary}
-                gridColor={colors.grid}
+                tone="lime"
                 height={200}
                 yWidth={40}
                 yTickFormatter={formatThousands}
@@ -119,7 +116,7 @@ export const EmployeeModal: React.FC<Props> = ({ employee, salary, history, onCl
                   <ChartTooltip
                     label={item.label}
                     name="Заработок"
-                    tone="green"
+                    tone="lime"
                     value={formatPrice(item.adjustedTotal)}
                     hint={`Машин: ${item.recordCount}`}
                   />

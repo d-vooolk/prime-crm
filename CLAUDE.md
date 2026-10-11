@@ -342,6 +342,8 @@ GET    /api/analytics/revenue?from=&to=
 - Только SCSS-модули, никаких inline-стилей
 - Переменные цветов, отступов — только через CSS-переменные из `_variables.scss`
 - Тёмная тема реализуется через `data-theme="dark"` на `<html>` + CSS-переменные
+- Оформление — фирменный стиль prime-auto.by, как у страницы записи для клиента: графит, салатовый `--color-brand` (#A2DB00, текст на нём — `--color-on-accent`), Montserrat (`--font-display`: заголовки, цифры, кнопки, меню; файлы в `client/src/assets/fonts`), Inter — данные и поля. Тёмная тема по умолчанию. Значения antd дублируются в `config/antdTheme.ts`
+- Графики дашборда — неоновые серии `--color-chart-1..6` (тон `Tone` в `useChartColors.ts`), сила свечения — `--chart-glow-opacity`; игровая панель считается в `DashboardPage/gamification.ts`
 - Брейкпоинты: mobile < 768px, tablet 768–1199px, desktop ≥ 1200px
 
 ### Компоненты

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Alert, Button, Card, Row, Col, Skeleton } from 'antd';
 import { Serviceman } from '@/types';
 import { useEmployeeSalaries } from '../hooks';
@@ -12,6 +12,11 @@ export const EmployeesTab: React.FC = () => {
   const { employees, salaries, histories, failedNames, loading, servicemenError, refetchServicemen } = useEmployeeSalaries();
   const colors = useChartColors();
   const [selected, setSelected] = useState<Serviceman | null>(null);
+
+  // Рейтинг: по заработку за текущий период, места — только у тех, кто уже заработал
+  const ranked = useMemo(() => [...employees].sort(
+    (a, b) => (salaries[b.name]?.adjustedTotal ?? 0) - (salaries[a.name]?.adjustedTotal ?? 0),
+  ), [employees, salaries]);
 
   const renderBody = () => {
     if (loading) {
@@ -39,10 +44,11 @@ export const EmployeesTab: React.FC = () => {
     if (employees.length === 0) return <div className={styles.empty}>Нет сотрудников</div>;
     return (
       <Row gutter={[16, 16]}>
-        {employees.map(m => (
+        {ranked.map((m, i) => (
           <Col key={m.id} xs={24} sm={12} lg={8}>
             <EmployeeCard
               employee={m}
+              rank={(salaries[m.name]?.adjustedTotal ?? 0) > 0 ? i + 1 : null}
               salary={salaries[m.name]}
               history={histories[m.name] ?? []}
               lineColor={colors.primary}

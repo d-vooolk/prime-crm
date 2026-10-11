@@ -6,7 +6,11 @@
   width: var(--sidebar-width);
   min-width: var(--sidebar-width);
   height: 100%;
-  background: var(--color-sidebar-bg);
+  // Графит с салатовым свечением снизу — как первый экран страницы записи
+  background:
+    radial-gradient(420px 320px at 0% 100%, rgba(162, 219, 0, 0.08), transparent 70%),
+    var(--color-sidebar-bg);
+  border-right: 1px solid var(--color-sidebar-border);
   overflow: hidden;
   user-select: none;
   flex-shrink: 0;
@@ -22,7 +26,7 @@
   align-items: center;
   gap: var(--spacing-sm);
   padding: var(--spacing-md);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--color-sidebar-border);
   min-height: 52px;
   flex-shrink: 0;
 }
@@ -37,7 +41,7 @@
 // ─── Calendar ─────────────────────────────────────
 .calendarWrap {
   flex-shrink: 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--color-sidebar-border);
 
   :global {
     .ant-picker-calendar {
@@ -66,11 +70,13 @@
       color: rgba(255, 255, 255, 0.3) !important;
     }
     .ant-picker-cell-in-view.ant-picker-cell-today .ant-picker-cell-inner::before {
-      border-color: rgba(255, 255, 255, 0.4) !important;
+      border-color: var(--color-brand) !important;
     }
     .ant-picker-cell-in-view.ant-picker-cell-selected .ant-picker-cell-inner {
-      background: var(--color-accent) !important;
-      color: #fff !important;
+      background: var(--color-brand) !important;
+      color: var(--color-on-accent) !important;
+      font-weight: 700;
+      box-shadow: 0 0 14px var(--color-brand-glow);
     }
     .ant-picker-cell:hover .ant-picker-cell-inner {
       background: rgba(255, 255, 255, 0.1) !important;
@@ -86,7 +92,7 @@
       height: 28px;
       line-height: 28px;
       font-size: 13px;
-      border-radius: 4px;
+      border-radius: 8px;
       text-align: center;
     }
     .ant-picker-calendar-full .ant-picker-panel .ant-picker-body {
@@ -109,7 +115,7 @@
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: #4ade80;
+  background: var(--color-brand);
   pointer-events: none;
   display: block;
 }
@@ -122,8 +128,9 @@
 }
 
 .calendarTitle {
+  font-family: var(--font-display);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: #fff;
   text-transform: capitalize;
   flex: 1;
@@ -139,7 +146,7 @@
   border: none;
   background: rgba(255, 255, 255, 0.08);
   color: rgba(255, 255, 255, 0.7);
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 12px;
   transition: var(--transition);
@@ -152,8 +159,21 @@
 }
 
 .todayBtn {
-  padding: 0 8px 4px;
+  padding: 0 8px 10px;
   margin-top: -4px;
+
+  // Кнопка на графитовом меню в обеих темах
+  :global(.ant-btn) {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.85);
+
+    &:hover {
+      background: var(--color-brand-soft) !important;
+      border-color: var(--color-brand) !important;
+      color: var(--color-brand) !important;
+    }
+  }
 }
 
 // ─── Nav ──────────────────────────────────────────
@@ -170,7 +190,7 @@
   justify-content: space-between;
   gap: var(--spacing-sm);
   padding: var(--spacing-sm) var(--spacing-md);
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-sidebar-border);
   margin-top: auto;
 }
 
@@ -180,9 +200,11 @@
 }
 
 .userName {
+  font-family: var(--font-display);
   font-size: var(--font-size-sm);
-  font-weight: 600;
-  color: var(--color-text-primary);
+  font-weight: 700;
+  // Меню графитовое в обеих темах — текст всегда светлый
+  color: rgba(255, 255, 255, 0.92);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -190,7 +212,7 @@
 
 .userRole {
   font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
+  color: rgba(255, 255, 255, 0.45);
   margin-top: 1px;
 }
 
@@ -216,12 +238,13 @@
 }
 
 .navItem {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--spacing-md);
   padding: 10px var(--spacing-md);
   margin: 2px var(--spacing-sm);
-  border-radius: var(--border-radius-sm);
+  border-radius: 12px;
   color: rgba(255, 255, 255, 0.6);
   cursor: pointer;
   transition: var(--transition);
@@ -229,15 +252,28 @@
   white-space: nowrap;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.06);
     color: #fff;
   }
 
+  // Активный раздел: салатовая подложка-градиент и светящаяся полоска слева
   &.active {
-    background: rgba(255, 255, 255, 0.12);
+    background: linear-gradient(90deg, rgba(162, 219, 0, 0.16), rgba(162, 219, 0, 0.02));
     color: #fff;
 
-    .navIcon { color: var(--color-accent); }
+    &::before {
+      content: '';
+      position: absolute;
+      left: -8px;
+      top: 8px;
+      bottom: 8px;
+      width: 3px;
+      border-radius: 0 3px 3px 0;
+      background: var(--color-brand);
+      box-shadow: 0 0 10px var(--color-brand-glow);
+    }
+
+    .navIcon { color: var(--color-brand); }
   }
 }
 
@@ -247,8 +283,9 @@
 }
 
 .navLabel {
+  font-family: var(--font-display);
   font-size: var(--font-size-sm);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 // ─── Mobile top header ─────────────────────────────
@@ -267,6 +304,7 @@
     height: calc(48px + env(safe-area-inset-top));
     padding-top: env(safe-area-inset-top);
     background: var(--color-sidebar-bg);
+    border-bottom: 1px solid var(--color-sidebar-border);
     z-index: 100;
     flex-shrink: 0;
   }
@@ -291,10 +329,13 @@
     // Полоска «домой» на iPhone не должна перекрывать кнопки меню
     height: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom));
     padding-bottom: env(safe-area-inset-bottom);
-    background: var(--color-surface);
-    border-top: 1px solid var(--color-border);
+    // Графитовая панель как внизу страницы записи — в обеих темах
+    background: rgba(24, 24, 24, 0.96);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid var(--color-sidebar-border);
     z-index: 100;
-    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.25);
   }
 }
 
@@ -305,13 +346,25 @@
   align-items: center;
   justify-content: center;
   gap: 2px;
-  color: var(--color-text-secondary);
+  color: rgba(255, 255, 255, 0.55);
   text-decoration: none;
+  font-family: var(--font-display);
   font-size: 10px;
+  font-weight: 600;
 
-  .icon { font-size: 20px; }
+  .icon {
+    font-size: 20px;
+    transition: transform 0.2s ease;
+  }
 
-  &.active { color: var(--color-accent); }
+  &.active {
+    color: var(--color-brand);
+
+    .icon {
+      transform: translateY(-1px);
+      filter: drop-shadow(0 0 6px var(--color-brand-glow));
+    }
+  }
 }
 
 // Кнопка «Ещё» — как пункт меню, но <button>
@@ -370,8 +423,8 @@
     bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom));
     z-index: 99;
     padding: 8px 12px 12px;
-    background: var(--color-surface);
-    border-radius: 16px 16px 0 0;
+    background: var(--color-bg-elevated);
+    border-radius: 22px 22px 0 0;
     box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.15);
     transform: translateY(calc(100% + var(--bottom-nav-height)));
     transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -397,7 +450,7 @@
 
   &.active {
     color: var(--color-accent);
-    background: var(--color-bg);
+    background: var(--color-accent-bg);
   }
 }
 

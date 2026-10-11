@@ -1,0 +1,76 @@
+@use '@/styles/variables' as *;
+
+.ring {
+  position: relative;
+  flex: none;
+
+  svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    transform: rotate(-90deg);
+  }
+}
+
+.sm { width: 72px; height: 72px; }
+.lg {
+  width: 132px;
+  height: 132px;
+
+  @include mobile {
+    width: 112px;
+    height: 112px;
+  }
+}
+
+.ticks {
+  fill: none;
+  stroke: var(--color-border);
+  stroke-width: 3;
+  stroke-dasharray: 0.25 0.75;
+}
+
+.track {
+  fill: none;
+  stroke: var(--color-surface-2);
+  stroke-width: 9;
+}
+
+.bar {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 9;
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  stroke-dashoffset: var(--ring-offset);
+  filter: drop-shadow(0 0 6px currentColor);
+  transition: stroke-dashoffset 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: fill 1.1s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes fill {
+  from { stroke-dashoffset: 100; }
+}
+
+.center {
+  color: var(--color-text-primary);
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1.1;
+}
+
+.lime { color: var(--color-chart-1); }
+.cyan { color: var(--color-chart-2); }
+.amber { color: var(--color-chart-3); }
+.violet { color: var(--color-chart-4); }
+.pink { color: var(--color-chart-5); }
+.sky { color: var(--color-chart-6); }
+
+@media (prefers-reduced-motion: reduce) {
+  .bar { animation: none; transition: none; }
+}

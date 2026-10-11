@@ -9,6 +9,10 @@
 }
 
 .modalContent {
+  // Шапка с фото авто встаёт вровень с верхним краем
+  padding-top: 0 !important;
+  overflow: hidden;
+
   @include mobile {
     height: 100dvh;
     // Установленное приложение (PWA) рисуется под статус-баром и полоской «домой» —
@@ -46,8 +50,20 @@
   }
 }
 
-.title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+// Крестик поверх фото авто — на тёмной «стеклянной» подложке
+.modal :global(.ant-modal-close) {
+  z-index: 3;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  color: var(--color-celebrate-text);
+  background: rgba(18, 18, 18, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+
+  &:hover {
+    color: var(--color-brand);
+    background: rgba(18, 18, 18, 0.75);
+  }
 }

@@ -4,22 +4,73 @@
   padding: var(--spacing-xl);
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-lg);
+  gap: var(--spacing-md);
+  // Свечение за шапкой — как на первом экране страницы записи
+  background: radial-gradient(900px 360px at 85% -10%, rgba(162, 219, 0, calc(var(--chart-glow-opacity) * 0.12)), transparent 70%);
+  min-height: 100%;
 
   @include mobile {
     padding: var(--spacing-md);
-    gap: var(--spacing-md);
+  }
+
+  // Карточки остальных вкладок (каналы, расходы, сотрудники) — в том же стиле, что и панели графиков
+  :global(.ant-card) {
+    border-radius: var(--border-radius-lg);
+    border-color: var(--color-border);
+    overflow: hidden;
+  }
+
+  :global(.ant-card-hoverable:hover) {
+    border-color: var(--color-accent-border);
+    box-shadow: 0 0 0 1px var(--color-accent-border), var(--shadow-md);
+  }
+
+  :global(.ant-statistic-content) {
+    font-family: var(--font-display);
+    font-weight: 800;
   }
 }
 
 .header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.kicker {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-accent);
 }
 
 .title {
-  font-size: var(--font-size-xl);
-  font-weight: 700;
+  font-size: var(--font-size-2xl);
+  font-weight: 800;
+  letter-spacing: -0.02em;
   color: var(--color-text-primary);
+}
+
+// Вкладки-«таблетки»: активная — салатовая
+.tabs {
+  :global {
+    .ant-tabs-nav::before { border-color: var(--color-border) !important; }
+
+    .ant-tabs-tab {
+      font-weight: 600;
+    }
+
+    .ant-tabs-tab-active .ant-tabs-tab-btn {
+      font-weight: 700;
+      text-shadow: none;
+    }
+
+    .ant-tabs-ink-bar {
+      height: 3px !important;
+      border-radius: 3px 3px 0 0;
+      box-shadow: 0 0 12px var(--color-brand-glow);
+    }
+  }
 }

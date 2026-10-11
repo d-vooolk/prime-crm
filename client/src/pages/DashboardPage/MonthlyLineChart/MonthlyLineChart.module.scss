@@ -2,9 +2,21 @@
 
 // Заглушка той же высоты, что и график, — карточки не прыгают при загрузке
 .empty {
-  height: 160px;
+  height: var(--chart-height);
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--color-text-muted);
 }
+
+// Неоновое свечение линии цветом серии (сила — --chart-glow-opacity, в светлой теме слабее)
+.chart :global(.recharts-area-curve) {
+  filter: drop-shadow(0 0 6px color-mix(in srgb, currentColor calc(var(--chart-glow-opacity) * 100%), transparent));
+}
+
+.lime { color: var(--color-chart-1); }
+.cyan { color: var(--color-chart-2); }
+.amber { color: var(--color-chart-3); }
+.violet { color: var(--color-chart-4); }
+.pink { color: var(--color-chart-5); }
+.sky { color: var(--color-chart-6); }

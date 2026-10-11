@@ -1,0 +1,190 @@
+@use '@/styles/variables' as *;
+
+// Шапка в духе первого экрана страницы записи (server/src/utils/publicRecordPage.ts → .hero):
+// фото авто на всю ширину модалки, сверху номер и статус, снизу дата и автомобиль.
+// Блок тёмный в обеих темах — текст поверх фото всегда светлый.
+.hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 210px;
+  // Модалка без верхнего отступа (RecordDetailModal.module.scss) — шапка встаёт вровень с краями
+  margin: 0 -24px var(--spacing-md);
+  padding: 18px 64px 18px 24px;
+  color: var(--color-celebrate-text);
+  background: var(--color-hero-end);
+
+  @include mobile {
+    min-height: 190px;
+    margin: 0 -24px var(--spacing-sm);
+    padding: 14px 60px 16px 16px;
+  }
+
+  // Луч фар — медленно проходит по шапке, как на странице записи
+  &::after {
+    content: '';
+    position: absolute;
+    z-index: 1;
+    top: -30%;
+    left: -60%;
+    width: 50%;
+    height: 160%;
+    transform: rotate(18deg);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), rgba(162, 219, 0, 0.1), transparent);
+    animation: beam 7s ease-in-out 1s infinite;
+    pointer-events: none;
+  }
+}
+
+@keyframes beam {
+  0% { left: -60%; }
+  55%, 100% { left: 130%; }
+}
+
+// Фон без фото: графит с салатовым свечением
+.backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: -3;
+  background: radial-gradient(120% 90% at 80% 10%, #2c3a10 0%, #171717 55%, var(--color-hero-end) 100%);
+}
+
+.photo {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 45%;
+  opacity: 0;
+  transform: scale(1.06);
+  transition: opacity 0.5s ease, transform 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.photoReady {
+  opacity: 1;
+  transform: scale(1.02);
+}
+
+// Затемнение сверху (под номер и крестик) и снизу (под текст), как на странице записи
+.shade {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(180deg, rgba(18, 18, 18, 0.6) 0%, rgba(18, 18, 18, 0.05) 32%, rgba(18, 18, 18, 0.35) 60%, var(--color-hero-end) 100%);
+}
+
+.top {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.number {
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: rgba(18, 18, 18, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.status {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.statusACTIVE {
+  background: var(--color-brand);
+  color: var(--color-on-accent);
+}
+
+.statusCLOSED {
+  background: rgba(162, 219, 0, 0.18);
+  color: var(--color-brand);
+  border: 1px solid rgba(162, 219, 0, 0.5);
+}
+
+.statusCANCELLED {
+  background: rgba(248, 113, 113, 0.18);
+  color: #fca5a5;
+  border: 1px solid rgba(248, 113, 113, 0.5);
+}
+
+.bottom {
+  position: relative;
+  z-index: 2;
+  margin-top: 40px;
+  min-width: 0;
+}
+
+.when {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 4px;
+  font-family: var(--font-display);
+}
+
+.whenDay {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.78);
+  text-transform: capitalize;
+}
+
+.whenTime {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--color-brand);
+}
+
+.car {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-size: clamp(22px, 5vw, 30px);
+  line-height: 1.12;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+
+  &::before {
+    content: '';
+    flex: none;
+    width: 24px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--color-brand);
+    box-shadow: 0 0 10px var(--color-brand-glow);
+  }
+}
+
+.details {
+  margin-top: 4px;
+  padding-left: 34px;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero::after { animation: none; display: none; }
+  .photo { transition: none; }
+}

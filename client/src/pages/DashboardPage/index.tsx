@@ -14,10 +14,12 @@ export const DashboardPage: React.FC = () => {
   return (
     <div className={styles.page}>
       <div className={styles.header}>
+        <div className={styles.kicker}>Prime Auto · аналитика</div>
         <h1 className={styles.title}>Дашборд</h1>
       </div>
 
       <Tabs
+        className={styles.tabs}
         items={[
           {
             key: 'main',

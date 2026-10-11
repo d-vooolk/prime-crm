@@ -3,20 +3,47 @@
 .tooltip {
   background: var(--color-bg-elevated);
   border: 1px solid var(--color-border);
-  border-radius: 6px;
-  padding: 8px 12px;
+  border-radius: 12px;
+  padding: 10px 14px;
   font-size: 13px;
+  box-shadow: var(--shadow-lg);
 }
 
 .label {
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-weight: 700;
   margin-bottom: 4px;
+  text-transform: capitalize;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text-secondary);
+}
+
+.value {
+  font-family: var(--font-display);
+  color: var(--color-text-primary);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
 }
 
 .muted {
+  margin-top: 2px;
   color: var(--color-text-muted);
 }
 
-.blue { color: var(--color-chart-1); }
-.green { color: var(--color-chart-2); }
+.lime { color: var(--color-chart-1); }
+.cyan { color: var(--color-chart-2); }
 .amber { color: var(--color-chart-3); }
+.violet { color: var(--color-chart-4); }
+.pink { color: var(--color-chart-5); }
+.sky { color: var(--color-chart-6); }

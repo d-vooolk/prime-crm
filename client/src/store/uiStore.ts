@@ -16,7 +16,8 @@ interface UiState {
 export const useUiStore = create<UiState>()(
   persist(
     (set, get) => ({
-      theme: 'light',
+      // Фирменный тёмный стиль (как страница записи для клиента) — по умолчанию
+      theme: 'dark',
       selectedDate: dayjs().format('YYYY-MM-DD'),
       sidebarCollapsed: false,
       // Атрибут ставим до обновления стора: компоненты, читающие CSS-переменные (useCssVars),
@@ -36,6 +37,12 @@ export const useUiStore = create<UiState>()(
     }),
     {
       name: 'prime-crm-ui',
+      // v1: новое оформление — один раз включаем всем тёмную тему, светлую можно вернуть в настройках
+      version: 1,
+      migrate: (persisted, version) => {
+        const state = (persisted ?? {}) as Pick<UiState, 'theme' | 'sidebarCollapsed'>;
+        return version < 1 ? { ...state, theme: 'dark' as const } : state;
+      },
       partialize: (s) => ({ theme: s.theme, sidebarCollapsed: s.sidebarCollapsed }),
     }
   )

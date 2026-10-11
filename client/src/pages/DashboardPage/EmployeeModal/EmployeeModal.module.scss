@@ -14,9 +14,13 @@
 }
 
 .avatar {
-  background-color: var(--color-primary) !important;
+  background: var(--color-brand) !important;
+  color: var(--color-on-accent) !important;
+  font-family: var(--font-display);
+  font-weight: 800;
   flex-shrink: 0;
   font-size: 20px;
+  box-shadow: 0 0 16px var(--color-brand-glow);
 }
 
 .name {
@@ -39,7 +43,7 @@
   font-size: 20px;
 }
 
-.statGreen :global(.ant-statistic-content) { color: var(--color-chart-2); }
+.statGreen :global(.ant-statistic-content) { color: var(--color-chart-1); }
 .statPrimary :global(.ant-statistic-content) { color: var(--color-primary); }
 .statAmber :global(.ant-statistic-content) { color: var(--color-chart-3); }
 

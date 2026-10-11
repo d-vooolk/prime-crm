@@ -3,7 +3,7 @@
 .tabContent {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-lg);
+  gap: var(--spacing-md);
 }
 
 .tabHeader {
@@ -12,51 +12,101 @@
 }
 
 .periodSelect {
-  width: 140px;
+  width: 100%;
 }
 
-.chartsColumn {
-  display: flex;
-  flex-direction: column;
+// ─── Плитки показателей ─────────────────────────────
+
+.tiles3,
+.tiles4 {
+  display: grid;
   gap: var(--spacing-md);
-}
 
-.emptyTop {
-  height: 240px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-muted);
-}
-
-.iconGreen { color: var(--color-chart-2); }
-.iconBlue { color: var(--color-chart-1); }
-.iconPurple { color: var(--color-chart-4); }
-.iconAmber { color: var(--color-chart-3); }
-
-.statsRow {
   @include mobile {
-    :global {
-      .ant-statistic-content {
-        display: flex;
-        align-items: center;
-        flex-wrap: nowrap;
-        gap: 4px;
-      }
-      .ant-statistic-content-value {
-        font-size: 15px !important;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-      .ant-statistic-content-prefix {
-        font-size: 14px;
-        flex-shrink: 0;
-      }
-      .ant-statistic-title {
-        font-size: 11px;
-        white-space: nowrap;
-      }
-    }
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
   }
+}
+
+.tiles3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.tiles4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+
+  @include tablet { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.tiles3 {
+  @include mobile {
+    // Третья плитка — во всю ширину, чтобы не оставлять дыру
+    > :last-child { grid-column: 1 / -1; }
+  }
+}
+
+// ─── Графики ────────────────────────────────────────
+
+.chartsMain {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--spacing-md);
+
+  @include tablet-down { grid-template-columns: minmax(0, 1fr); }
+}
+
+.chartsSingle {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.chartsPair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-md);
+
+  @include tablet-down { grid-template-columns: minmax(0, 1fr); }
+}
+
+.panel {
+  position: relative;
+  min-width: 0;
+  padding: 20px 20px 14px;
+  border-radius: var(--border-radius-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+
+  // Салатовая полоска сверху — как у блоков страницы записи
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 20px;
+    right: 20px;
+    height: 3px;
+    border-radius: 0 0 3px 3px;
+    background: linear-gradient(90deg, var(--color-brand), transparent);
+  }
+
+  @include mobile { padding: 16px 14px 10px; }
+}
+
+.panelKicker {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+.panelTitle {
+  margin: 2px 0 14px;
+  font-size: var(--font-size-lg);
+  font-weight: 800;
+  color: var(--color-text-primary);
+}
+
+.revenuePanel {
+  background:
+    radial-gradient(700px 240px at 50% 110%, rgba(162, 219, 0, calc(var(--chart-glow-opacity) * 0.1)), transparent 70%),
+    var(--color-surface);
 }
