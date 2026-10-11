@@ -43,7 +43,8 @@ export const BRAND = {
   routeUrl: 'https://yandex.by/maps/?rtext=~53.871641%2C27.523566&rtt=auto',
   // Куда оставлять отзывы (страница /otzyv — ссылка из SMS после закрытия сделки)
   reviewYandex: 'https://yandex.by/maps/org/praym_avto/191443735649/reviews/',
-  reviewGoogle: 'https://share.google/0rglRqmySH812MKpd',
+  // Прямая ссылка на форму отзыва из Google Business Profile («Попросить оставить отзыв»)
+  reviewGoogle: 'https://g.page/r/CTekH0fKwR39EBM/review',
 } as const;
 
 export function escapeHtml(value: string): string {
@@ -322,16 +323,16 @@ body{padding-bottom:0}
 .rv .logo{align-self:flex-start}
 .rv__hero{text-align:center;padding:44px 0 28px}
 .stars{display:flex;justify-content:center;gap:6px;margin-bottom:26px}
-.stars svg{width:46px;height:46px;color:var(--green);filter:drop-shadow(0 0 14px rgba(162,219,0,.55));opacity:0;transform:scale(.4) rotate(-25deg);animation:pop .5s cubic-bezier(.2,1.6,.4,1) forwards}
+/* звёзды загораются по очереди и повторяют это каждые ~3 секунды */
+.stars svg{width:46px;height:46px;color:var(--green);filter:drop-shadow(0 0 14px rgba(162,219,0,.55));opacity:0;transform:scale(.4) rotate(-25deg);animation:pop 3.2s cubic-bezier(.2,1.6,.4,1) infinite}
 .stars svg:nth-child(1){animation-delay:.10s}.stars svg:nth-child(2){animation-delay:.22s}.stars svg:nth-child(3){animation-delay:.34s}.stars svg:nth-child(4){animation-delay:.46s}.stars svg:nth-child(5){animation-delay:.58s}
-@keyframes pop{to{opacity:1;transform:none}}
+@keyframes pop{0%{opacity:0;transform:scale(.4) rotate(-25deg)}14%{opacity:1;transform:scale(1.15)}22%,84%{opacity:1;transform:none}100%{opacity:0;transform:scale(.6)}}
 .rv__title{margin:0 0 14px;font-size:clamp(28px,8vw,36px);line-height:1.1;font-weight:800;letter-spacing:-.02em}
 .rv__title span{color:var(--green)}
 .rv__text{margin:0 auto;max-width:400px;color:var(--muted);font-size:15px}
 .rv__list{display:flex;flex-direction:column;gap:14px;margin-top:8px}
 .platform{position:relative;display:flex;align-items:center;gap:16px;padding:18px;border-radius:22px;text-decoration:none;background:linear-gradient(135deg,#242424,#1a1a1a);border:1px solid var(--line);box-shadow:0 18px 40px rgba(0,0,0,.35);transition:transform .15s}
 .platform:active{transform:scale(.98)}
-.platform--main{border-color:rgba(162,219,0,.55);box-shadow:0 18px 40px rgba(0,0,0,.35),0 0 0 4px rgba(162,219,0,.07)}
 .platform__icon{flex:none;width:56px;height:56px;border-radius:16px;display:grid;place-items:center;background:#fff}
 .platform__icon svg{width:34px;height:34px}
 .platform__icon--ya{background:transparent}
@@ -340,7 +341,6 @@ body{padding-bottom:0}
 .platform__name{display:block;font-size:18px;font-weight:800}
 .platform__hint{display:block;font-size:13px;color:var(--muted)}
 .platform__go{flex:none;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--green);color:#121212}
-.platform__tag{position:absolute;top:-10px;right:18px;padding:3px 10px;border-radius:999px;background:var(--green);color:#121212;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
 .ideas{margin-top:28px;text-align:center}
 .ideas p{margin:0 0 12px;font-size:13px;color:var(--muted)}
 .ideas div{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
@@ -353,9 +353,8 @@ body{padding-bottom:0}
 
 /** Просьба об отзыве: сразу две площадки, без данных клиента — ссылка работает всегда */
 export function renderReviewPage(v: { logoSvg: string }): string {
-  const platform = (href: string, iconClass: string, icon: string, name: string, hint: string, tag = '') => `
-    <a class="platform${tag ? ' platform--main' : ''}" href="${href}" target="_blank" rel="noopener">
-      ${tag ? `<span class="platform__tag">${tag}</span>` : ''}
+  const platform = (href: string, iconClass: string, icon: string, name: string, hint: string) => `
+    <a class="platform" href="${href}" target="_blank" rel="noopener">
       <span class="platform__icon ${iconClass}">${icon}</span>
       <span class="platform__body"><span class="platform__name">${name}</span><span class="platform__hint">${hint}</span></span>
       <span class="platform__go">${ICON.arrow}</span>
@@ -369,7 +368,7 @@ export function renderReviewPage(v: { logoSvg: string }): string {
     <p class="rv__text">Нам очень важно ваше мнение. Отзыв помогает другим водителям найти мастерскую, которой можно доверить свет, а нам — становиться лучше. Это займёт меньше минуты.</p>
   </section>
   <div class="rv__list">
-    ${platform(BRAND.reviewYandex, 'platform__icon--ya', YANDEX_ICON, 'Яндекс Карты', 'Оставить отзыв на Яндексе', 'Рекомендуем')}
+    ${platform(BRAND.reviewYandex, 'platform__icon--ya', YANDEX_ICON, 'Яндекс Карты', 'Оставить отзыв на Яндексе')}
     ${platform(BRAND.reviewGoogle, '', GOOGLE_ICON, 'Google Карты', 'Оставить отзыв в Google')}
   </div>
   <div class="ideas">
