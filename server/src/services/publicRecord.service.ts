@@ -7,10 +7,8 @@ import { buildIcs, googleCalendarUrl, type CalendarEvent } from '../utils/record
 
 const TZ = 'Europe/Minsk';
 
-/** Длительность события в календаре: по времени услуг, но не меньше 30 минут и не больше 8 часов */
-const MIN_MINUTES = 30;
-const DEFAULT_MINUTES = 60;
-const MAX_MINUTES = 8 * 60;
+/** Событие в календаре клиента всегда на 1 час: это время приезда, а не длительность работ */
+const EVENT_MINUTES = 60;
 
 /** «пятница», «17», «окт», «10:00» по минскому времени */
 function whenParts(date: Date) {
@@ -45,7 +43,6 @@ async function loadActiveRecord(token: string) {
           service: {
             select: {
               name: true,
-              estimatedTime: true,
               repairType: {
                 select: {
                   id: true, name: true, description: true, faq: true, links: true, sortOrder: true,
@@ -67,14 +64,12 @@ const serviceLines = (r: ActiveRecord) =>
   r.items.map(i => (i.quantity > 1 ? `${i.service.name} × ${i.quantity}` : i.service.name));
 
 function calendarEvent(token: string, r: ActiveRecord): CalendarEvent {
-  const minutes = r.items.reduce((sum, i) => sum + (i.service.estimatedTime || 0) * i.quantity, 0) || DEFAULT_MINUTES;
-  const duration = Math.min(MAX_MINUTES, Math.max(MIN_MINUTES, minutes));
   const carTitle = `${r.car.brand} ${r.car.model}`.trim();
   const services = serviceLines(r);
   return {
     uid: `${token}@zapis.prime-auto.by`,
     start: r.scheduledAt,
-    end: new Date(r.scheduledAt.getTime() + duration * 60 * 1000),
+    end: new Date(r.scheduledAt.getTime() + EVENT_MINUTES * 60 * 1000),
     title: `Prime Auto — ${carTitle}`,
     description: [
       services.length ? `Услуги: ${services.join(', ')}` : '',
