@@ -2,12 +2,12 @@ import fs from 'fs';
 import path from 'path';
 import express, { Router, Request, Response } from 'express';
 import { publicRecordService } from '../services/publicRecord.service';
-import { renderGonePage, renderRecordPage } from '../utils/publicRecordPage';
+import { renderGonePage, renderRecordPage, renderReviewPage } from '../utils/publicRecordPage';
 import { logger } from '../utils/logger';
 
 /**
  * Страница записи для клиента без входа. В проде nginx поддомена zapis.prime-auto.by
- * проксирует «/<код>», «/<код>/calendar.ics» и «/assets/…» сюда, а «/api/cars/photo/» и
+ * проксирует «/<код>», «/<код>/calendar.ics», «/otzyv» и «/assets/…» сюда, а «/api/cars/photo/» и
  * «/api/uploads/repair-types/» — в API (картинки страницы). Конфиг — .deploy/nginx-zapis.conf.
  */
 const router = Router();
@@ -39,6 +39,11 @@ function send(res: Response, status: number, html: string) {
 }
 
 router.use('/assets', express.static(ASSETS_DIR, { maxAge: '30d', index: false, dotfiles: 'deny' }));
+
+// Просьба об отзыве (Яндекс и Google) — ссылка из SMS после закрытия сделки, без данных клиента
+router.get('/otzyv', (_req: Request, res: Response) => {
+  send(res, 200, renderReviewPage({ logoSvg: LOGO_SVG }));
+});
 
 router.get('/:token/calendar.ics', async (req: Request, res: Response) => {
   const ics = await publicRecordService.getCalendar(String(req.params.token));

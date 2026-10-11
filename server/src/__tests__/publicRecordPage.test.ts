@@ -164,3 +164,14 @@ describe('код страницы записи', () => {
     expect(isPublicTokenFormat('0a1b2c3d4e5f')).toBe(true); // код из миграции (hex)
   });
 });
+
+describe('страница отзывов', () => {
+  it('ведёт и на Яндекс, и на Google', async () => {
+    const { renderReviewPage } = await import('../utils/publicRecordPage');
+    const html = renderReviewPage({ logoSvg: LOGO });
+    expect(html).toContain(`href="${BRAND.reviewYandex}"`);
+    expect(html).toContain(`href="${BRAND.reviewGoogle}"`);
+    expect(html).toContain(LOGO);
+    expect(html).not.toContain('<script');
+  });
+});

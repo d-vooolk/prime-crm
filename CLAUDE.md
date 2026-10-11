@@ -379,7 +379,7 @@ GET    /api/analytics/revenue?from=&to=
 ### Страница записи для клиента
 - `https://zapis.prime-auto.by/<код>`: код — `Record.publicToken` (12 случайных символов, создаётся при записи), ссылка в SMS — переменная `{{link}}`, в карточке записи — «Страница для клиента»
 - HTML без скриптов собирается сервером при каждом открытии (`routes/publicPage.routes.ts` → `services/publicRecord.service.ts` → `utils/publicRecordPage.ts`), упор на телефоны. Запись закрыта или отменена — «страница недоступна» (410), отдельно ничего не хранится и не копится
-- Оформление — фирменный стиль prime-auto.by: логотип и шрифт Montserrat в `server/assets/record-page` (отдаются по `/zapis/assets/…`), контакты и мессенджеры — `BRAND` в `utils/publicRecordPage.ts`. Нажатие на дату — событие `/zapis/<код>/calendar.ics` (`utils/recordCalendar.ts`), рядом ссылка на Google Календарь
+- Оформление — фирменный стиль prime-auto.by: логотип и шрифт Montserrat в `server/assets/record-page` (отдаются по `/zapis/assets/…`), контакты и мессенджеры — `BRAND` в `utils/publicRecordPage.ts`. Нажатие на дату — событие на 1 час `/zapis/<код>/calendar.ics` (`utils/recordCalendar.ts`), рядом ссылка на Google Календарь. Страница отзывов (Яндекс и Google, без данных клиента) — `zapis.prime-auto.by/otzyv`, ссылки в `BRAND`
 - Блоки страницы — типы ремонта (Справочник → «Типы ремонта»: описание, фото, вопросы-ответы, ссылки), тип назначается услуге. Фото сжимаются в WebP 1280px (`UPLOADS_DIR/repair-types`)
 - Nginx поддомена — `.deploy/nginx-zapis.conf`: наружу только `/<код>`, `/api/cars/photo/` и `/api/uploads/repair-types/`. Адрес — `PUBLIC_RECORD_URL`
 

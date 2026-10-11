@@ -41,6 +41,9 @@ export const BRAND = {
   mapUrl: 'https://yandex.by/maps/org/praym_avto/191443735649/',
   // Маршрут на машине от текущего местоположения до мастерской
   routeUrl: 'https://yandex.by/maps/?rtext=~53.871641%2C27.523566&rtt=auto',
+  // Куда оставлять отзывы (страница /otzyv — ссылка из SMS после закрытия сделки)
+  reviewYandex: 'https://yandex.by/maps/org/praym_avto/191443735649/reviews/',
+  reviewGoogle: 'https://share.google/0rglRqmySH812MKpd',
 } as const;
 
 export function escapeHtml(value: string): string {
@@ -184,7 +187,7 @@ footer a{text-decoration:none}
 @media (prefers-reduced-motion:reduce){.hero::after{animation:none;display:none}}
 `;
 
-function page(title: string, body: string): string {
+function page(title: string, body: string, extraStyles = ''): string {
   return `<!doctype html>
 <html lang="ru">
 <head>
@@ -196,7 +199,7 @@ function page(title: string, body: string): string {
 <meta name="format-detection" content="telephone=no">
 <title>${escapeHtml(title)}</title>
 <link rel="preload" href="assets/montserrat-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
-<style>${STYLES}</style>
+<style>${STYLES}${extraStyles}</style>
 </head>
 <body>
 ${body}
@@ -300,4 +303,80 @@ export function renderGonePage(v: GonePageView): string {
 </div>
 ${ctaBar()}`;
   return page('Prime Auto', body);
+}
+
+// ─── Страница отзывов (zapis.prime-auto.by/otzyv) ───
+
+const STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z" fill="currentColor"/></svg>';
+
+const YANDEX_ICON = '<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="24" fill="#FC3F1D"/><path d="M26.9 37h4.6V11h-6.7c-6.8 0-10.3 3.5-10.3 8.6 0 4.1 1.9 6.5 5.4 9L13.8 37h5l6.4-9.6-2.2-1.5c-2.7-1.8-4-3.2-4-6.3 0-2.7 1.9-4.6 5.6-4.6h2.3V37z" fill="#fff"/></svg>';
+
+const GOOGLE_ICON = '<svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 8 3l5.7-5.7C34 6.1 29.3 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 8 3l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2c-2 1.5-4.5 2.4-7.2 2.4-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.6-.4-3.9z"/></svg>';
+
+const REVIEW_STYLES = `
+body{padding-bottom:0}
+.rv{position:relative;isolation:isolate;max-width:520px;margin:0 auto;min-height:100vh;min-height:100svh;padding:calc(18px + env(safe-area-inset-top)) 18px calc(28px + env(safe-area-inset-bottom));display:flex;flex-direction:column;overflow:hidden}
+/* мягкое салатовое свечение за звёздами */
+.rv::before{content:"";position:absolute;z-index:-1;top:30px;left:50%;width:520px;height:520px;transform:translateX(-50%);background:radial-gradient(closest-side,rgba(162,219,0,.22),rgba(162,219,0,.06) 55%,transparent 72%);animation:glow 6s ease-in-out infinite}
+@keyframes glow{0%,100%{opacity:.7;transform:translateX(-50%) scale(1)}50%{opacity:1;transform:translateX(-50%) scale(1.08)}}
+.rv .logo{align-self:flex-start}
+.rv__hero{text-align:center;padding:44px 0 28px}
+.stars{display:flex;justify-content:center;gap:6px;margin-bottom:26px}
+.stars svg{width:46px;height:46px;color:var(--green);filter:drop-shadow(0 0 14px rgba(162,219,0,.55));opacity:0;transform:scale(.4) rotate(-25deg);animation:pop .5s cubic-bezier(.2,1.6,.4,1) forwards}
+.stars svg:nth-child(1){animation-delay:.10s}.stars svg:nth-child(2){animation-delay:.22s}.stars svg:nth-child(3){animation-delay:.34s}.stars svg:nth-child(4){animation-delay:.46s}.stars svg:nth-child(5){animation-delay:.58s}
+@keyframes pop{to{opacity:1;transform:none}}
+.rv__title{margin:0 0 14px;font-size:clamp(28px,8vw,36px);line-height:1.1;font-weight:800;letter-spacing:-.02em}
+.rv__title span{color:var(--green)}
+.rv__text{margin:0 auto;max-width:400px;color:var(--muted);font-size:15px}
+.rv__list{display:flex;flex-direction:column;gap:14px;margin-top:8px}
+.platform{position:relative;display:flex;align-items:center;gap:16px;padding:18px;border-radius:22px;text-decoration:none;background:linear-gradient(135deg,#242424,#1a1a1a);border:1px solid var(--line);box-shadow:0 18px 40px rgba(0,0,0,.35);transition:transform .15s}
+.platform:active{transform:scale(.98)}
+.platform--main{border-color:rgba(162,219,0,.55);box-shadow:0 18px 40px rgba(0,0,0,.35),0 0 0 4px rgba(162,219,0,.07)}
+.platform__icon{flex:none;width:56px;height:56px;border-radius:16px;display:grid;place-items:center;background:#fff}
+.platform__icon svg{width:34px;height:34px}
+.platform__icon--ya{background:transparent}
+.platform__icon--ya svg{width:56px;height:56px}
+.platform__body{flex:1;min-width:0}
+.platform__name{display:block;font-size:18px;font-weight:800}
+.platform__hint{display:block;font-size:13px;color:var(--muted)}
+.platform__go{flex:none;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--green);color:#121212}
+.platform__tag{position:absolute;top:-10px;right:18px;padding:3px 10px;border-radius:999px;background:var(--green);color:#121212;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.ideas{margin-top:28px;text-align:center}
+.ideas p{margin:0 0 12px;font-size:13px;color:var(--muted)}
+.ideas div{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+.ideas span{padding:8px 12px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.03);font-size:13px;font-weight:500}
+.rv__foot{margin-top:auto;padding-top:32px;display:flex;align-items:center;justify-content:space-between;color:var(--muted);font-size:13px}
+.rv__foot svg{width:84px;height:auto;opacity:.7}
+.rv__foot a{text-decoration:none}
+@media (prefers-reduced-motion:reduce){.stars svg{animation:none;opacity:1;transform:none}.rv::before{animation:none}}
+`;
+
+/** Просьба об отзыве: сразу две площадки, без данных клиента — ссылка работает всегда */
+export function renderReviewPage(v: { logoSvg: string }): string {
+  const platform = (href: string, iconClass: string, icon: string, name: string, hint: string, tag = '') => `
+    <a class="platform${tag ? ' platform--main' : ''}" href="${href}" target="_blank" rel="noopener">
+      ${tag ? `<span class="platform__tag">${tag}</span>` : ''}
+      <span class="platform__icon ${iconClass}">${icon}</span>
+      <span class="platform__body"><span class="platform__name">${name}</span><span class="platform__hint">${hint}</span></span>
+      <span class="platform__go">${ICON.arrow}</span>
+    </a>`;
+  const body = `
+<div class="rv">
+  <a class="logo" href="${BRAND.site}" target="_blank" rel="noopener" aria-label="Prime Auto">${v.logoSvg}</a>
+  <section class="rv__hero">
+    <div class="stars" role="img" aria-label="5 звёзд">${STAR.repeat(5)}</div>
+    <h1 class="rv__title">Спасибо, что выбрали <span>Prime&nbsp;Auto</span>!</h1>
+    <p class="rv__text">Нам очень важно ваше мнение. Отзыв помогает другим водителям найти мастерскую, которой можно доверить свет, а нам — становиться лучше. Это займёт меньше минуты.</p>
+  </section>
+  <div class="rv__list">
+    ${platform(BRAND.reviewYandex, 'platform__icon--ya', YANDEX_ICON, 'Яндекс Карты', 'Оставить отзыв на Яндексе', 'Рекомендуем')}
+    ${platform(BRAND.reviewGoogle, '', GOOGLE_ICON, 'Google Карты', 'Оставить отзыв в Google')}
+  </div>
+  <div class="ideas">
+    <p>О чём можно рассказать</p>
+    <div><span>Результат до и после</span><span>Качество работы</span><span>Сроки</span><span>Отношение мастеров</span></div>
+  </div>
+  <footer class="rv__foot">${v.logoSvg}<a href="${escapeHtml(telHref(BRAND.phone))}">${escapeHtml(BRAND.phone)}</a></footer>
+</div>`;
+  return page('Оставьте отзыв — Prime Auto', body, REVIEW_STYLES);
 }
