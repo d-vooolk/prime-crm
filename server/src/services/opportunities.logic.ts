@@ -8,6 +8,7 @@
  *   сейчас:  ремонт ДХО → предложим полировку фар, но не Bi-Led модули (это была причина визита).
  * Дополнительно:
  *   - не предлагаем то, что уже есть в записи и что этому же авто уже делали;
+ *   - не предлагаем услуги, исключённые в настройках (Настройки → Открытые возможности);
  *   - не предлагаем работу дороже всей текущей записи — допродажа не должна быть больше заказа;
  *   - визиты, где делали то же, что сейчас, весят вдвое больше: попутное к той же работе
  *     уместнее, чем попутное к чему-то другому; визиты того же поколения весят больше, чем просто модели.
@@ -58,7 +59,11 @@ export function mainServiceIds(items: VisitItem[]): Set<string> {
   return new Set(items.filter(i => i.amount === max).map(i => i.serviceId));
 }
 
-export function findOpportunities(current: CurrentVisit, visits: PastVisit[]): Opportunity[] {
+export function findOpportunities(
+  current: CurrentVisit,
+  visits: PastVisit[],
+  excluded: ReadonlySet<string> = new Set(),
+): Opportunity[] {
   const currentIds = new Set(current.items.map(i => i.serviceId));
   const currentTotal = current.items.reduce((s, i) => s + i.amount, 0);
   // Что этому автомобилю уже делали — повторно не предлагаем
@@ -75,7 +80,7 @@ export function findOpportunities(current: CurrentVisit, visits: PastVisit[]): O
 
     for (const item of visit.items) {
       if (main.has(item.serviceId)) continue;
-      if (currentIds.has(item.serviceId) || doneOnThisCar.has(item.serviceId)) continue;
+      if (currentIds.has(item.serviceId) || doneOnThisCar.has(item.serviceId) || excluded.has(item.serviceId)) continue;
       const entry = acc.get(item.serviceId) ?? { name: item.name, prices: [], score: 0, together: new Set<string>() };
       entry.prices.push(item.amount);
       entry.score += weight;

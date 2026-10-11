@@ -76,6 +76,9 @@ router.delete('/repair-types/:id', manager, repairTypesController.delete);
 router.post('/repair-types/:id/photos', manager, uploadRepairTypePhoto, repairTypesController.addPhoto);
 router.delete('/repair-types/:id/photos/:photoId', manager, repairTypesController.deletePhoto);
 
+// Услуги, исключённые из «Открытых возможностей» карточки записи
+router.put('/opportunity-exclusions', manager, catalogController.setOpportunityExclusions);
+
 // Услуги (динамический /:id — последним)
 router.post('/', manager, catalogController.createService);
 router.patch('/:id', manager, catalogController.updateService);

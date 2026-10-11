@@ -274,6 +274,8 @@ export interface Service {
   customPercent?: number | null;
   /** Тип ремонта — блок на странице записи для клиента */
   repairTypeId?: string | null;
+  /** Не предлагать в «Открытых возможностях» (Настройки → Открытые возможности) */
+  excludeFromOpportunities?: boolean;
   /** Сколько раз услугу добавляли в записи — для сортировки по популярности */
   usageCount?: number;
   category?: Category;

@@ -67,7 +67,9 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
 
   if (!record) return null;
 
-  const r = localRecord ?? record;
+  // Локальная копия обновляется эффектом уже после первого кадра: пока она от прошлой записи,
+  // показываем пришедшую. Иначе первый кадр рисовался со старой записью и её фото/видео
+  const r = localRecord && localRecord.id === record.id ? localRecord : record;
   const prepaid = prepaidByMethod(r);
 
   // ─── Отмена / восстановление / удаление ───────────

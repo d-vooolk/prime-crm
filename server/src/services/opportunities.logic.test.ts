@@ -40,6 +40,11 @@ describe('findOpportunities', () => {
     expect(result.map(o => o.serviceId)).toEqual(['polish', 'glass']);
   });
 
+  it('исключённые в настройках услуги не предлагаются', () => {
+    const result = findOpportunities({ carId: 'car', items: [DRL] }, [visit([BILED, DRL, POLISH, WASH])], new Set(['polish']));
+    expect(result.map(o => o.serviceId)).toEqual(['wash']);
+  });
+
   it('визиты из одной работы ничего не дают', () => {
     expect(findOpportunities({ carId: 'car', items: [DRL] }, [visit([POLISH])])).toEqual([]);
   });

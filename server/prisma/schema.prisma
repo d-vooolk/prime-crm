@@ -179,6 +179,8 @@ model Service {
   customPercent Float?
   // Тип ремонта: по нему на странице записи для клиента показываются описание, фото и вопросы
   repairTypeId  String?
+  // Не предлагать в «Открытых возможностях» карточки записи (Настройки → Открытые возможности)
+  excludeFromOpportunities Boolean @default(false)
   category      Category     @relation(fields: [categoryId], references: [id])
   repairType    RepairType?  @relation(fields: [repairTypeId], references: [id], onDelete: SetNull)
   recordItems   RecordItem[]

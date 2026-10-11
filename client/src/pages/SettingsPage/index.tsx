@@ -12,6 +12,7 @@ import { CompanyTab } from './CompanyTab';
 import { AidProtocolTab } from './AidProtocolTab';
 import { SmsTab } from './SmsTab';
 import { TemplatesTab } from './TemplatesTab';
+import { OpportunitiesTab } from './OpportunitiesTab';
 import styles from './SettingsPage.module.scss';
 
 export const SettingsPage: React.FC = () => {
@@ -53,9 +54,12 @@ export const SettingsPage: React.FC = () => {
         </Card>
       ),
     },
-    // Тревожная кнопка — только руководителям (сервер проверяет роль сам)
+    // Допродажи в карточке записи и тревожная кнопка — только руководителям (сервер проверяет роль сам)
     ...(isManagerOrAbove(user)
-      ? [{ key: 'aid', label: 'Протокол AID', children: <AidProtocolTab /> }]
+      ? [
+        { key: 'opportunities', label: 'Открытые возможности', children: <OpportunitiesTab /> },
+        { key: 'aid', label: 'Протокол AID', children: <AidProtocolTab /> },
+      ]
       : []),
   ];
 

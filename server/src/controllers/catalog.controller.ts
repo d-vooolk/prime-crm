@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import { catalogService } from '../services/catalog.service';
+import { opportunitiesService } from '../services/opportunities.service';
 import { parse, requiredText, money, percent } from '../middleware/validate';
 
 const color = z.string().trim().max(30).nullable().optional();
@@ -31,6 +32,12 @@ const serviceCreateSchema = z.object(serviceFields);
 const serviceUpdateSchema = z.object(serviceFields).partial();
 
 export const catalogController = {
+  /** Услуги, которые не предлагаются в «Открытых возможностях» */
+  async setOpportunityExclusions(req: Request, res: Response) {
+    const { serviceIds } = parse(z.object({ serviceIds: z.array(z.string().min(1).max(50)).max(1000) }), req.body);
+    res.json({ data: await opportunitiesService.setExcluded(serviceIds) });
+  },
+
   async listCategories(_req: Request, res: Response) {
     res.json({ data: await catalogService.listCategories() });
   },

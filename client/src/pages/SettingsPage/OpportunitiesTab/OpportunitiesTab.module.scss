@@ -1,0 +1,34 @@
+@use '@/styles/variables' as *;
+
+.title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.beta {
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--color-on-accent);
+  background: var(--color-brand);
+}
+
+.hint {
+  margin-bottom: var(--spacing-md);
+}
+
+.label {
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.select {
+  width: 100%;
+}
+
+.actions {
+  margin-top: var(--spacing-md);
+}

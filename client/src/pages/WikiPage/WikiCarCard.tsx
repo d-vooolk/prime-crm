@@ -55,6 +55,33 @@ function mergeMedia(prev: WikiEntry | null, next: WikiEntry | null): WikiEntry |
   };
 }
 
+/**
+ * Шапка карточки: фото поколения из справочника на фоне, как в карточке записи.
+ * Фото нет или не загрузилось — фирменный графитовый фон.
+ */
+const WikiCarHero: React.FC<{ carKey: WikiKey; title: string; meta?: React.ReactNode }> = ({ carKey, title, meta }) => {
+  const [photo, setPhoto] = useState<'loading' | 'ready' | 'error'>('loading');
+  const src = `/api/cars/photo/${carKey.markId}/${carKey.modelId}/${carKey.generationId}`;
+  return (
+    <div className={cn(styles.hero, { [styles.heroWithPhoto]: photo !== 'error' })}>
+      {photo !== 'error' && (
+        <img
+          src={src}
+          alt=""
+          className={cn(styles.heroPhoto, { [styles.heroPhotoReady]: photo === 'ready' })}
+          onLoad={() => setPhoto('ready')}
+          onError={() => setPhoto('error')}
+        />
+      )}
+      <div className={styles.heroShade} />
+      <div className={styles.heroText}>
+        <div className={styles.heroTitle}>{title}</div>
+        {meta && <div className={styles.heroMeta}>{meta}</div>}
+      </div>
+    </div>
+  );
+};
+
 export const WikiCarCard: React.FC<Props> = ({ carKey, title, onChanged }) => {
   const notify = useNotify();
   const queryClient = useQueryClient();
@@ -204,16 +231,17 @@ export const WikiCarCard: React.FC<Props> = ({ carKey, title, onChanged }) => {
   ), [removeMedia]);
 
   return (
-    <Card>
+    <Card className={styles.carCard}>
       <Spin spinning={loading}>
-        <div className={styles.cardHeader}>
-          <div className={styles.cardTitle}>{title}</div>
-          {entry?.updatedByName && (
-            <div className={styles.cardMeta}>
-              Обновлено {dayjs(entry.updatedAt).format('DD.MM.YYYY HH:mm')} · {entry.updatedByName}
-            </div>
-          )}
-        </div>
+        {/* key: при выборе другого авто состояние загрузки фото начинается заново */}
+        <WikiCarHero
+          key={keyString(carKey)}
+          carKey={carKey}
+          title={title}
+          meta={entry?.updatedByName
+            ? `Обновлено ${dayjs(entry.updatedAt).format('DD.MM.YYYY HH:mm')} · ${entry.updatedByName}`
+            : undefined}
+        />
 
         <Divider orientation="left" className={styles.cardDivider}>Информация</Divider>
 

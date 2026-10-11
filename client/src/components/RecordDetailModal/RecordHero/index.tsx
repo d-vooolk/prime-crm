@@ -28,7 +28,7 @@ export const RecordHero: React.FC<Props> = ({ record: r }) => {
   const when = dayjs(r.scheduledAt);
 
   return (
-    <div className={styles.hero}>
+    <div className={cn(styles.hero, { [styles.withPhoto]: showPhoto })}>
       <div className={styles.backdrop} />
       {showPhoto && (
         <img

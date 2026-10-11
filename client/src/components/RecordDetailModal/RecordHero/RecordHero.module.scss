@@ -23,6 +23,12 @@
     padding: 14px 60px 16px 16px;
   }
 
+  // Фото справочника — 1050×650: шапка в тех же пропорциях, снимок виден целиком, без обрезки
+  &.withPhoto {
+    min-height: 0;
+    aspect-ratio: 105 / 65;
+  }
+
   // Луч фар — медленно проходит по шапке, как на странице записи
   &::after {
     content: '';
@@ -61,22 +67,21 @@
   object-fit: cover;
   object-position: center 45%;
   opacity: 0;
-  transform: scale(1.06);
-  transition: opacity 0.5s ease, transform 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: opacity 0.5s ease;
 }
 
 .photoReady {
   opacity: 1;
-  transform: scale(1.02);
 }
 
-// Затемнение сверху (под номер и крестик) и снизу (под текст), как на странице записи
+// Затемнение только у краёв: сверху под номер и крестик, снизу под текст.
+// Середина снимка (сам автомобиль) остаётся чистой
 .shade {
   position: absolute;
   inset: 0;
   z-index: -1;
   background:
-    linear-gradient(180deg, rgba(18, 18, 18, 0.6) 0%, rgba(18, 18, 18, 0.05) 32%, rgba(18, 18, 18, 0.35) 60%, var(--color-hero-end) 100%);
+    linear-gradient(180deg, rgba(18, 18, 18, 0.55) 0%, rgba(18, 18, 18, 0) 22%, rgba(18, 18, 18, 0) 55%, rgba(18, 18, 18, 0.55) 78%, var(--color-hero-end) 100%);
 }
 
 .top {

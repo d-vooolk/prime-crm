@@ -12,6 +12,15 @@ const itemsOf = (items: { serviceId: string; price: number; quantity: number; se
 
 /** «Открытые возможности» (BETA): допродажи по прошлым визитам таких же автомобилей */
 export const opportunitiesService = {
+  /** Настройки → Открытые возможности: ровно эти услуги не предлагаются */
+  async setExcluded(serviceIds: string[]) {
+    await prisma.$transaction([
+      prisma.service.updateMany({ where: { id: { notIn: serviceIds }, excludeFromOpportunities: true }, data: { excludeFromOpportunities: false } }),
+      prisma.service.updateMany({ where: { id: { in: serviceIds } }, data: { excludeFromOpportunities: true } }),
+    ]);
+    return { serviceIds };
+  },
+
   async forRecord(recordId: string) {
     const record = await prisma.record.findUnique({
       where: { id: recordId },
@@ -50,10 +59,16 @@ export const opportunitiesService = {
     const scope = car.generationId && sameGeneration.length >= MIN_GENERATION_VISITS ? 'generation' : 'model';
     const considered = scope === 'generation' ? sameGeneration : visits;
 
+    const excluded = await prisma.service.findMany({ where: { excludeFromOpportunities: true }, select: { id: true } });
+
     return {
       scope,
       basedOn: considered.length,
-      items: findOpportunities({ carId: record.carId, items: itemsOf(record.items) }, considered),
+      items: findOpportunities(
+        { carId: record.carId, items: itemsOf(record.items) },
+        considered,
+        new Set(excluded.map(s => s.id)),
+      ),
     };
   },
 };

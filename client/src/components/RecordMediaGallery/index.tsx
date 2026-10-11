@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Button, Divider, Empty, Image, Modal, Popconfirm, Progress, Spin, Upload } from 'antd';
 import { CameraOutlined, DeleteOutlined, LoadingOutlined, PlayCircleOutlined } from '@ant-design/icons';
 import type { RecordMedia } from '@/types';
@@ -34,20 +34,21 @@ export const RecordMediaGallery: React.FC<Props> = ({ recordId, onCountChange })
   const [uploads, setUploads] = useState<UploadState[]>([]);
   const [playing, setPlaying] = useState<RecordMedia | null>(null);
 
-  const load = useCallback(async () => {
-    try {
-      setMedia(await recordsApi.getMedia(recordId));
-    } catch (e) {
-      notify.error(e, 'Не удалось загрузить фото записи');
-    } finally {
-      setLoading(false);
-    }
-  }, [recordId, notify]);
+  // Запись, которая сейчас открыта: ответы и загрузки по другой записи сюда не попадают
+  const currentId = useRef(recordId);
+  currentId.current = recordId;
 
   useEffect(() => {
+    // Сразу убираем файлы прошлой записи, иначе они мелькали в новой карточке
+    setMedia([]);
     setLoading(true);
-    void load();
-  }, [load]);
+    let cancelled = false;
+    recordsApi.getMedia(recordId)
+      .then(list => { if (!cancelled) setMedia(list); })
+      .catch(e => { if (!cancelled) notify.error(e, 'Не удалось загрузить фото записи'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [recordId, notify]);
 
   useEffect(() => { onCountChange?.(media.length); }, [media.length, onCountChange]);
 
@@ -56,7 +57,9 @@ export const RecordMediaGallery: React.FC<Props> = ({ recordId, onCountChange })
   useEffect(() => {
     if (!hasProcessing) return;
     const timer = setInterval(() => {
-      recordsApi.getMedia(recordId).then(setMedia).catch(() => undefined);
+      recordsApi.getMedia(recordId)
+        .then(list => { if (currentId.current === recordId) setMedia(list); })
+        .catch(() => undefined);
     }, PROCESSING_POLL_MS);
     return () => clearInterval(timer);
   }, [hasProcessing, recordId]);
@@ -68,7 +71,7 @@ export const RecordMediaGallery: React.FC<Props> = ({ recordId, onCountChange })
       const created = await recordsApi.uploadMedia(recordId, file, percent => {
         setUploads(prev => prev.map(u => (u.id === id ? { ...u, percent } : u)));
       });
-      setMedia(prev => [...prev, created]);
+      if (currentId.current === created.recordId) setMedia(prev => [...prev, created]);
     } catch (e) {
       notify.error(e, `Не удалось загрузить «${file.name}»`);
     } finally {

@@ -26,6 +26,10 @@ export interface RepairTypePayload {
 }
 
 export const servicesApi = {
+  /** Ровно эти услуги не предлагаются в «Открытых возможностях» карточки записи */
+  setOpportunityExclusions: (serviceIds: string[]) =>
+    http.put<{ data: { serviceIds: string[] } }>('/services/opportunity-exclusions', { serviceIds }).then(r => r.data.data),
+
   getCategories: () =>
     http.get<{ data: Category[] }>('/services/categories').then(r => r.data.data),
 
