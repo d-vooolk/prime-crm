@@ -174,6 +174,7 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
           wrapper: styles.modalWrap,
           content: styles.modalContent,
           body: styles.modalBody,
+          footer: styles.modalFooter,
         }}
         // Номер и статус — в шапке с фото авто (RecordHero)
         title={null}
