@@ -373,7 +373,7 @@ GET    /api/analytics/revenue?from=&to=
 - Манифест и иконки — `client/public/` (копируются в сборку), service worker — `client/src/sw.ts` (workbox InjectManifest, только в продакшен-сборке; типы проверяет `tsconfig.sw.json`)
 - Регистрация, обновление версии, установка и пуш-подписка — `client/src/pwa/index.ts`; настройки устройства — `components/AppDeviceSettings`
 - Кеш: оболочка приложения — precache; `/api/uploads` — CacheFirst; GET `/api/*` — NetworkFirst (кеш только как запасной вариант без сети). При выходе из аккаунта кеш данных и пуш-подписка удаляются
-- Пуши — `server/src/services/push.service.ts` (web-push, ключи VAPID в `.env`). Триггеры: новая запись → менеджерам, директорам, создателю и мастеру записи (кроме автора), сделка закрыта → каждому сотруднику его заработок с неё (`dealPayments` в `salaryCalc.ts`, кроме закрывшего), товар дошёл до порога → менеджерам, новое письмо → создателю (`mail.service.ts`), напоминания заметок (`noteReminders.ts`, раз в минуту)
+- Пуши — `server/src/services/push.service.ts` (web-push, ключи VAPID в `.env`). Триггеры: новая запись → менеджерам, директорам, создателю и мастеру записи (кроме автора), сделка закрыта → каждому сотруднику его заработок с неё (`dealPayments` в `salaryCalc.ts`, кроме закрывшего), товар дошёл до порога → менеджерам, новое письмо → сотрудникам с ролью «Создатель» (`mail.service.ts`), напоминания заметок (`noteReminders.ts`, раз в минуту)
 - `client/nginx.conf`: `sw.js`, `index.html` и манифест отдаются с `no-cache`, иначе телефоны застрянут на старой версии
 
 ### Страница записи для клиента
@@ -383,8 +383,9 @@ GET    /api/analytics/revenue?from=&to=
 - Nginx поддомена — `.deploy/nginx-zapis.conf`: наружу только `/<код>`, `/api/cars/photo/` и `/api/uploads/repair-types/`. Адрес — `PUBLIC_RECORD_URL`
 
 ### Почта
-- Ящик на beget по IMAP (`services/mail.service.ts`, imapflow + mailparser): постоянное соединение с IDLE, переподключение через минуту, контрольная проверка раз в 5 минут. Только «Входящие», только чтение: «прочитано» и удаление — в CRM, ящик не меняется
-- Раздел «Почта» и пуш о новом письме — только роль «Создатель» (и мастер-доступ), `requireRole(ROLES.CREATOR)`
+- Ящик на beget по IMAP (`services/mail.service.ts`, imapflow + mailparser): постоянное соединение с IDLE, переподключение через минуту, контрольная проверка раз в 5 минут. Только «Входящие»: «прочитано» и удаление — только в CRM; ящик меняет лишь «В спам»
+- Раздел «Почта» — только роль «Создатель» (и мастер-доступ), `requireRole(ROLES.CREATOR)`. Пуш о новом письме — только сотрудникам с ролью «Создатель» (`pushService.sendToCreators`), мастер-доступу не приходит
+- «В спам» — перенос письма в папку \Junk ящика (у beget `INBOX.Junk`) отдельным коротким соединением с правом записи, затем удаление из CRM
 - Вложения — `UPLOADS_DIR/mail`, статикой `/api/uploads` не раздаются (`isMailAttachmentPath`), только через `/api/mail/attachments/:id`. HTML письма показывается в iframe с sandbox и CSP без скриптов
 - `MAIL_USER` / `MAIL_PASSWORD` в `.env`; пусто — приём выключен
 

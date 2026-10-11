@@ -34,6 +34,10 @@ export const mailApi = {
   markAllRead: () =>
     http.post('/mail/read-all'),
 
+  /** Перенести в папку «Спам» в ящике и убрать из CRM */
+  moveToSpam: (id: string) =>
+    http.post(`/mail/${id}/spam`),
+
   deleteMessage: (id: string) =>
     http.delete(`/mail/${id}`),
 

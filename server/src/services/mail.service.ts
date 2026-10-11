@@ -10,7 +10,6 @@ import { AppError } from '../middleware/errorHandler';
 import { MAIL_ATTACHMENTS_DIR } from '../utils/uploads';
 import { clip, isViewableType, makePreview, pickNewUids, safeContentType } from '../utils/mail';
 import { pushService, pushInBackground } from './push.service';
-import { ROLES } from '../utils/roles';
 
 /**
  * Приём почты из ящика на beget.ru по IMAP (только «Входящие», только чтение).
@@ -245,13 +244,43 @@ function saveState(uidValidity: bigint, lastUid: number) {
   });
 }
 
-/** Пуш создателю (и мастер-доступу) — почту видят только они. При первом запуске (старые письма) не шлём */
+/** Пуш только сотрудникам с ролью «Создатель». При первом запуске (старые письма) не шлём */
 function notifyNewMail(added: { fromName: string | null; fromAddress: string | null; subject: string | null }[]) {
   const first = added[0];
   const body = added.length === 1
     ? `${first.fromName || first.fromAddress || 'Без отправителя'}: ${first.subject || '(без темы)'}`
     : `${added.length} новых писем`;
-  pushInBackground(() => pushService.sendToRole(ROLES.CREATOR, { title: 'Новое письмо', body, url: '/mail', tag: 'mail' }));
+  pushInBackground(() => pushService.sendToCreators({ title: 'Новое письмо', body, url: '/mail', tag: 'mail' }));
+}
+
+/** Папка «Спам», если в ящике нет пометки \Junk (у beget — INBOX.Junk) */
+const SPAM_FOLDERS = ['INBOX.Junk', 'INBOX.Spam', 'Junk', 'Spam'];
+
+/**
+ * Отдельное короткое соединение для изменений в ящике (перенос в спам). Постоянное соединение
+ * открывает «Входящие» только на чтение и ждёт новых писем — его не трогаем.
+ */
+async function withWritableConnection<T>(fn: (imap: ImapFlow) => Promise<T>): Promise<T> {
+  const imap = new ImapFlow({
+    host: env.mailImapHost,
+    port: env.mailImapPort,
+    secure: true,
+    auth: { user: env.mailUser, pass: env.mailPassword },
+    logger: false,
+    disableAutoIdle: true,
+  });
+  imap.on('error', (err: Error) => logger.warn('Почта: ошибка соединения (изменение ящика)', { err: err.message }));
+  try {
+    await imap.connect();
+  } catch (err) {
+    logger.warn('Почта: не удалось подключиться для изменения ящика', { err: err instanceof Error ? err.message : String(err) });
+    throw new AppError('Не удалось связаться с почтовым сервером, попробуйте позже', 502);
+  }
+  try {
+    return await fn(imap);
+  } finally {
+    await imap.logout().catch(() => imap.close());
+  }
 }
 
 // ─── Чтение из CRM ──────────────────────────────────
@@ -358,6 +387,33 @@ export const mailService = {
     const attachments = await prisma.mailAttachment.findMany({ where: { messageId: id }, select: { filename: true } });
     await prisma.mailMessage.delete({ where: { id } });
     await Promise.all(attachments.map(a => fs.promises.unlink(path.join(MAIL_ATTACHMENTS_DIR, a.filename)).catch(() => undefined)));
+  },
+
+  /**
+   * «В спам»: письмо переносится в папку «Спам» в ящике beget и удаляется из CRM.
+   * Если в ящике его уже нет (удалили с телефона) — просто убираем из CRM.
+   */
+  async moveToSpam(id: string) {
+    if (!isConfigured()) throw new AppError('Почта не настроена', 400);
+    const msg = await prisma.mailMessage.findUnique({ where: { id }, select: { mailbox: true, uidValidity: true, uid: true } });
+    if (!msg) throw new AppError('Письмо не найдено', 404);
+
+    await withWritableConnection(async (imap) => {
+      const boxes = await imap.list();
+      const spam = boxes.find(b => b.specialUse === '\\Junk') ?? boxes.find(b => SPAM_FOLDERS.includes(b.path));
+      if (!spam) throw new AppError('В почтовом ящике нет папки «Спам»', 400);
+      const lock = await imap.getMailboxLock(msg.mailbox);
+      try {
+        // Папку пересоздали — UID писем в ней другие, переносить по старому UID нельзя
+        if (imap.mailbox && BigInt(imap.mailbox.uidValidity) !== msg.uidValidity) {
+          throw new AppError('Папка в ящике изменилась, обновите почту и попробуйте снова', 409);
+        }
+        await imap.messageMove(String(msg.uid), spam.path, { uid: true });
+      } finally {
+        lock.release();
+      }
+    });
+    await mailService.delete(id);
   },
 
   async attachment(id: string) {

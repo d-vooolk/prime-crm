@@ -47,6 +47,11 @@ export const mailController = {
     res.json({ success: true });
   },
 
+  async moveToSpam(req: Request, res: Response) {
+    await mailService.moveToSpam(String(req.params.id));
+    res.json({ success: true });
+  },
+
   async delete(req: Request, res: Response) {
     await mailService.delete(String(req.params.id));
     res.json({ success: true });

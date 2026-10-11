@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Button, Drawer, Grid, Popconfirm, Space, Spin, Tooltip } from 'antd';
-import { DeleteOutlined, EyeInvisibleOutlined, PaperClipOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EyeInvisibleOutlined, PaperClipOutlined, StopOutlined } from '@ant-design/icons';
 import { mailApi } from '@/api/mail.api';
 import { useInvalidateMail, useMailMessage } from '@/hooks/useMail';
 import { useNotify } from '@/hooks/useNotify';
@@ -59,6 +59,22 @@ export const MailMessageDrawer: React.FC<Props> = ({ id, onClose }) => {
     }
   };
 
+  const [movingToSpam, setMovingToSpam] = useState(false);
+  const toSpam = async () => {
+    if (!msg) return;
+    setMovingToSpam(true);
+    try {
+      await mailApi.moveToSpam(msg.id);
+      notify.toast.success('Письмо перенесено в спам');
+      await invalidate();
+      onClose();
+    } catch (e) {
+      notify.error(e, 'Не удалось перенести в спам');
+    } finally {
+      setMovingToSpam(false);
+    }
+  };
+
   const remove = async () => {
     if (!msg) return;
     try {
@@ -83,6 +99,16 @@ export const MailMessageDrawer: React.FC<Props> = ({ id, onClose }) => {
           <Tooltip title="Отметить непрочитанным">
             <Button icon={<EyeInvisibleOutlined />} onClick={markUnread} />
           </Tooltip>
+          <Popconfirm
+            title="Перенести в спам?"
+            description="Письмо уйдёт в папку «Спам» в почтовом ящике и пропадёт из CRM"
+            okText="В спам"
+            onConfirm={toSpam}
+          >
+            <Tooltip title="В спам">
+              <Button icon={<StopOutlined />} loading={movingToSpam}>{!isMobile && 'В спам'}</Button>
+            </Tooltip>
+          </Popconfirm>
           <Popconfirm title="Удалить письмо из CRM?" description="В почтовом ящике оно останется" onConfirm={remove}>
             <Button danger icon={<DeleteOutlined />} />
           </Popconfirm>

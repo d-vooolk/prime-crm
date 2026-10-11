@@ -77,6 +77,13 @@ export const pushService = {
     return [...users.map(u => u.id), 'master'];
   },
 
+  /** Только сотрудникам с ролью «Создатель» (без мастер-доступа и младших ролей) */
+  async sendToCreators(payload: PushPayload) {
+    if (!ensureConfigured()) return;
+    const users = await prisma.serviceman.findMany({ where: { isDismissed: false, role: ROLES.CREATOR }, select: { id: true } });
+    await pushService.sendToUsers(users.map(u => u.id), payload);
+  },
+
   /** Всем пользователям с ролью minRole и выше (и мастер-доступу) */
   async sendToRole(minRole: typeof ROLES[keyof typeof ROLES], payload: PushPayload) {
     if (!ensureConfigured()) return;

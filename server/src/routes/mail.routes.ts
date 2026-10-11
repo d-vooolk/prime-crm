@@ -15,6 +15,7 @@ router.post('/read-all', mailController.markAllRead);
 router.get('/attachments/:id', mailController.attachment);
 router.get('/:id', mailController.get);
 router.patch('/:id', mailController.setRead);
+router.post('/:id/spam', mailController.moveToSpam);
 router.delete('/:id', mailController.delete);
 
 export default router;
