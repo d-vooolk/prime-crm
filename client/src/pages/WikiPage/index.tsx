@@ -6,6 +6,7 @@ import { WikiKey } from '@/types';
 import { useAuthStore } from '@/store/authStore';
 import { useWikiStore, isWikiReviewer } from '@/store/wikiStore';
 import { useNotify } from '@/hooks/useNotify';
+import { isEmployee } from '@/utils/roles';
 import { WikiCarsTab } from './WikiCarsTab';
 import { WikiReviewTab } from './WikiReviewTab';
 import { WikiMissedBanner } from './WikiMissedBanner';
@@ -109,7 +110,10 @@ export const WikiPage: React.FC = () => {
   return (
     <div className={styles.page}>
       <h1 className={styles.title}>Wiki</h1>
-      <WikiMissedBanner reviewer={reviewer} selected={{ markId, modelId, generationId }} onSelect={selectCar} />
+      {/* Упущенная премия за вики — только сотрудникам, по своим авто */}
+      {isEmployee(user) && (
+        <WikiMissedBanner selected={{ markId, modelId, generationId }} onSelect={selectCar} />
+      )}
       <Tabs activeKey={tab} onChange={setTab} items={items} destroyOnHidden />
     </div>
   );

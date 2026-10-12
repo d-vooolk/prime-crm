@@ -4,7 +4,7 @@ import { DownloadOutlined, PlayCircleOutlined } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
 import { cameraApi, CameraArchiveRange } from '@/api/camera.api';
 import { getErrorMessage } from '@/utils/errors';
-import { ARCHIVE_MAX_HOURS, archiveRangeError, formatArchiveRange, overlapsArchive } from '../archive.utils';
+import { ARCHIVE_MAX_HOURS, archiveRangeError, defaultArchiveRange, formatArchiveRange, overlapsArchive } from '../archive.utils';
 import styles from './ArchiveModal.module.scss';
 
 interface Props {
@@ -34,6 +34,8 @@ export const ArchiveModal: React.FC<Props> = ({ open, onClose }) => {
         if (cancelled) return;
         setRanges(list);
         setToken(session.token);
+        // По умолчанию — весь архив: от самой ранней записи до момента открытия (можно изменить)
+        setValue(defaultArchiveRange(list));
         setLoadError(null);
       })
       .catch(e => { if (!cancelled) setLoadError(getErrorMessage(e)); })
@@ -50,7 +52,7 @@ export const ArchiveModal: React.FC<Props> = ({ open, onClose }) => {
   const fileUrl = (inline: boolean) =>
     cameraApi.archiveFileUrl(token!, start!.toISOString(), end!.toISOString(), inline);
 
-  // Клик по записанному промежутку подставляет его (длинный — последние 4 часа)
+  // Клик по записанному промежутку подставляет его (длиннее суток — последние 24 часа)
   const pickRange = (range: CameraArchiveRange) => {
     const rangeEnd = dayjs(range.end);
     const earliest = rangeEnd.subtract(ARCHIVE_MAX_HOURS, 'hour');

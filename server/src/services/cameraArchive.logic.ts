@@ -22,8 +22,11 @@ export function pickFilesToDelete(files: ArchiveFile[], maxBytes: number): Archi
   return result;
 }
 
-/** Самый длинный кусок архива, который можно выгрузить за раз (≈2,7 ГБ при 1,5 Мбит/с) */
-export const ARCHIVE_MAX_EXPORT_SECONDS = 4 * 60 * 60;
+/**
+ * Самый длинный промежуток выгрузки за раз. По умолчанию выгружается весь архив
+ * (от самой ранней записи до сейчас), а 10 ГБ — это около 15 часов, так что сутки — с запасом
+ */
+export const ARCHIVE_MAX_EXPORT_SECONDS = 24 * 60 * 60;
 
 /** Промежуток выгрузки: конец позже начала и не длиннее лимита. null — промежуток некорректен */
 export function exportDurationSeconds(start: Date, end: Date): number | null {

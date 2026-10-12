@@ -64,7 +64,7 @@ export const cameraArchiveService = {
   async exportRange(token: string, start: Date, end: Date) {
     if (!(await canWatch(token))) throw new AppError('Доступ к камере закрыт', 401);
     const duration = exportDurationSeconds(start, end);
-    if (duration == null) throw new AppError('Некорректный промежуток: не больше 4 часов, конец позже начала', 400);
+    if (duration == null) throw new AppError('Некорректный промежуток: не больше суток, конец позже начала', 400);
 
     const url = `${env.cameraPlaybackUrl}/get?path=${PATH}&start=${encodeURIComponent(start.toISOString())}`
       + `&duration=${duration}&format=mp4`;

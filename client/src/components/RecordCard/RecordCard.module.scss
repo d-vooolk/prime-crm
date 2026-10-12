@@ -1,7 +1,13 @@
 @use '@/styles/variables' as *;
 
 .card {
-  background: var(--color-surface);
+  // Цвет свечения фона: категория услуги (--card-accent из index.tsx) или статус записи.
+  // Фон — как у карточек заметок (NotesPage/NoteCard): поверхность и мягкое свечение справа сверху
+  --card-accent: var(--color-status-active);
+
+  background:
+    radial-gradient(260px 120px at 100% 0%, color-mix(in srgb, var(--card-accent) 9%, transparent), transparent 70%),
+    var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--border-radius);
   cursor: pointer;
@@ -19,17 +25,12 @@
   }
 
   &.closed {
-    background: var(--color-record-closed);
+    --card-accent: var(--color-status-closed);
     border-color: var(--color-record-closed-border);
   }
 
-  // Подложка цветом категории услуги (см. --card-tint в index.tsx)
-  &.tinted {
-    background: var(--card-tint);
-  }
-
   &.cancelled {
-    background: var(--color-record-cancelled);
+    --card-accent: var(--color-status-cancelled);
     border-color: var(--color-record-cancelled-border);
     opacity: 0.7;
   }

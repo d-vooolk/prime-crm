@@ -343,7 +343,7 @@ GET    /api/analytics/revenue?from=&to=
 - Переменные цветов, отступов — только через CSS-переменные из `_variables.scss`
 - Тёмная тема реализуется через `data-theme="dark"` на `<html>` + CSS-переменные
 - Оформление — фирменный стиль prime-auto.by, как у страницы записи для клиента: графит, салатовый `--color-brand` (#A2DB00, текст на нём — `--color-on-accent`), Montserrat (`--font-display`: заголовки, цифры, кнопки, меню; файлы в `client/src/assets/fonts`), Inter — данные и поля. Тёмная тема по умолчанию. Значения antd дублируются в `config/antdTheme.ts`
-- Дашборд «Сотрудники»: пьедестал (`/accounting/leaders`, всем ролям; суммы — от менеджера), упущенная премия за вики (`/accounting/missed-wiki`, логика — `missedWiki.logic.ts`: главный сотрудник закрытой сделки не заполнил карточку вики, которой до закрытия не было; период ЗП 25-е–24-е). Сотрудник видит в дашборде только пьедестал, свою карточку и упущенную прибыль. Скрыть сотрудника из дашборда — `Serviceman.showInDashboard`
+- Дашборд «Сотрудники»: пьедестал (`/accounting/leaders`, всем ролям; суммы — от менеджера), упущенная премия за вики (`/accounting/missed-wiki`, логика — `missedWiki.logic.ts`: главный сотрудник закрытой сделки не заполнил карточку вики, которой до закрытия не было; период ЗП 25-е–24-е). В разделе Wiki список упущенного показывается только сотрудникам (`WikiMissedBanner`), руководителям — нет. Сотрудник видит в дашборде только пьедестал, свою карточку и упущенную прибыль. Скрыть сотрудника из дашборда — `Serviceman.showInDashboard`
 - «Открытые возможности» (BETA) в карточке записи — `services/opportunities.logic.ts`: попутные работы из прошлых визитов той же модели/поколения, без причины визита и не дороже текущего заказа; только менеджер и выше
 - Графики дашборда — неоновые серии `--color-chart-1..6` (тон `Tone` в `useChartColors.ts`), сила свечения — `--chart-glow-opacity`; игровая панель считается в `DashboardPage/gamification.ts`
 - Брейкпоинты: mobile < 768px, tablet 768–1199px, desktop ≥ 1200px
@@ -400,7 +400,7 @@ GET    /api/analytics/revenue?from=&to=
 - Компьютер в офисе (`.deploy/camera/office-camera.ps1`, задача планировщика при включении) перекодирует RTSP камеры в H.264 и шлёт по SRT с паролем `CAMERA_SRT_PASSPHRASE` в контейнер `mediamtx` (`.deploy/mediamtx.yml`, наружу только 8890/udp)
 - Сервер отдаёт HLS из MediaMTX через `/api/camera/live/<токен>/…` (`services/camera.service.ts`): токен просмотра — `utils/cameraToken.ts` (только для камеры, 12 ч), роль и увольнение проверяются по базе. Маршрут подключён до `authMiddleware`. Service worker `/api/camera/` не кеширует
 - Офис выключен на ночь — «Камера выключена — офис закрыт», страница сама проверяет раз в 15 секунд
-- Архив — запись MediaMTX в `data/camera` (не в бэкапах), лимит `CAMERA_ARCHIVE_MAX_GB` держит `services/cameraArchive.service.ts` (удаляет самые старые). Выгрузка промежутка до 4 часов — `/api/camera/archive-file/<токен>/camera.mp4`
+- Архив — запись MediaMTX в `data/camera` (не в бэкапах), лимит `CAMERA_ARCHIVE_MAX_GB` держит `services/cameraArchive.service.ts` (удаляет самые старые). Выгрузка промежутка до суток (по умолчанию — весь архив) — `/api/camera/archive-file/<токен>/camera.mp4`
 
 ### Бэкапы
 - `.deploy/backup.sh` по cron на сервере каждый день в 03:30 UTC и перед каждым `deploy.sh`: дамп базы и снимок `data/uploads` в `/root/backups/prime-crm`

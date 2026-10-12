@@ -7,17 +7,16 @@ import { formatPrice } from '@/utils/formatters';
 import styles from './WikiPage.module.scss';
 
 interface Props {
-  /** Проверяющий видит всех сотрудников, сотрудник — свои авто */
-  reviewer: boolean;
   selected: WikiKey;
   onSelect: (key: WikiKey) => void;
 }
 
 /**
- * Авто, по которым в этом расчётном периоде упущена премия за вики: сделка закрыта, а карточку
- * никто из главных сотрудников не заполнил. Заполнить ещё не поздно — нажатие открывает карточку.
+ * Авто сотрудника, по которым в этом расчётном периоде упущена премия за вики: сделка закрыта,
+ * а карточку он не заполнил. Заполнить ещё не поздно — нажатие открывает карточку.
+ * Показывается только сотрудникам (WikiPage); руководители видят упущенное в дашборде.
  */
-export const WikiMissedBanner: React.FC<Props> = ({ reviewer, selected, onSelect }) => {
+export const WikiMissedBanner: React.FC<Props> = ({ selected, onSelect }) => {
   const { data } = useMissedWiki();
   const rows = (data?.employees ?? []).flatMap(e => e.items.map(i => ({ ...i, servicemanName: e.servicemanName })));
   if (!data || rows.length === 0) return null;
@@ -33,9 +32,7 @@ export const WikiMissedBanner: React.FC<Props> = ({ reviewer, selected, onSelect
         <div>
           <div className={styles.missedKicker}>Упущенная прибыль</div>
           <div className={styles.missedTitle}>
-            {reviewer
-              ? `Не описано после сделок: ${rows.length} авто · ${formatPrice(total)}`
-              : `Можно заработать ${formatPrice(total)} — опишите ${rows.length} авто`}
+            {`Можно заработать ${formatPrice(total)} — опишите ${rows.length} авто`}
           </div>
         </div>
       </div>
@@ -48,7 +45,6 @@ export const WikiMissedBanner: React.FC<Props> = ({ reviewer, selected, onSelect
             onClick={() => onSelect({ markId: r.brandId, modelId: r.modelId, generationId: r.generationId })}
           >
             {r.car}
-            {reviewer && <span className={styles.missedWho}>{r.servicemanName}</span>}
           </button>
         ))}
       </div>

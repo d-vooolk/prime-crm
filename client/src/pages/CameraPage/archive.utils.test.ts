@@ -1,20 +1,38 @@
 import { describe, expect, it } from 'vitest';
 import dayjs from 'dayjs';
-import { archiveRangeError, formatArchiveRange, overlapsArchive } from './archive.utils';
+import { archiveRangeError, defaultArchiveRange, formatArchiveRange, overlapsArchive } from './archive.utils';
 
 describe('archiveRangeError', () => {
   const start = dayjs('2026-10-12T09:00:00');
 
   it('нормальный промежуток', () => {
     expect(archiveRangeError(start, start.add(30, 'minute'))).toBeNull();
-    expect(archiveRangeError(start, start.add(4, 'hour'))).toBeNull();
+    expect(archiveRangeError(start, start.add(24, 'hour'))).toBeNull();
   });
 
   it('пустой, обратный и слишком длинный', () => {
     expect(archiveRangeError(null, start)).not.toBeNull();
     expect(archiveRangeError(start, start)).not.toBeNull();
     expect(archiveRangeError(start, start.subtract(1, 'minute'))).not.toBeNull();
-    expect(archiveRangeError(start, start.add(4, 'hour').add(1, 'minute'))).not.toBeNull();
+    expect(archiveRangeError(start, start.add(24, 'hour').add(1, 'minute'))).not.toBeNull();
+  });
+});
+
+describe('defaultArchiveRange', () => {
+  const now = dayjs('2026-10-12T18:30:00');
+
+  it('от самой ранней записи до сейчас', () => {
+    const ranges = [
+      { start: '2026-10-12T14:00:00', end: '2026-10-12T18:00:00' },
+      { start: '2026-10-12T09:05:30', end: '2026-10-12T12:00:00' },
+    ];
+    const [start, end] = defaultArchiveRange(ranges, now)!;
+    expect(start.format('DD.MM HH:mm:ss')).toBe('12.10 09:05:00');
+    expect(end.isSame(now)).toBe(true);
+  });
+
+  it('записей нет — null', () => {
+    expect(defaultArchiveRange([], now)).toBeNull();
   });
 });
 

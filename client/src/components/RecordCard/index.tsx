@@ -25,16 +25,6 @@ const SMS_LABELS: Record<SmsType, string> = {
   REVIEW_REQUEST: 'SMS запрос отзыва',
 };
 
-function toRgba(color: string, alpha: number): string {
-  const rgbMatch = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
-  if (rgbMatch) return `rgba(${rgbMatch[1]}, ${rgbMatch[2]}, ${rgbMatch[3]}, ${alpha})`;
-  const clean = color.replace('#', '');
-  const r = parseInt(clean.slice(0, 2), 16);
-  const g = parseInt(clean.slice(2, 4), 16);
-  const b = parseInt(clean.slice(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
 export const RecordCard: React.FC<Props> = ({ record, onClick }) => {
   const { client, car, items, status, scheduledAt, serviceman, deal, smsLogs } = record;
   const [photoLoaded, setPhotoLoaded] = useState(false);
@@ -56,9 +46,9 @@ export const RecordCard: React.FC<Props> = ({ record, onClick }) => {
     ? (items[0]?.service?.category?.color ?? null)
     : null;
   // Цвет категории приходит из данных — единственное динамическое значение, передаём его
-  // CSS-переменной, а сам фон задаёт класс .tinted
+  // CSS-переменной, а свечение фона (как у заметок) задаёт .card
   const cardStyle = categoryColor
-    ? { '--card-tint': toRgba(categoryColor, 0.14) } as React.CSSProperties
+    ? { '--card-accent': categoryColor } as React.CSSProperties
     : undefined;
 
   return (
@@ -66,7 +56,6 @@ export const RecordCard: React.FC<Props> = ({ record, onClick }) => {
       className={cn(styles.card, {
         [styles.closed]: status === 'CLOSED',
         [styles.cancelled]: status === 'CANCELLED',
-        [styles.tinted]: !!categoryColor,
       })}
       style={cardStyle}
       onClick={onClick}
