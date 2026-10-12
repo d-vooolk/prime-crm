@@ -32,6 +32,9 @@ export const env = {
   get mailImapPort() { return Number(process.env.MAIL_IMAP_PORT) || 993; },
   get mailUser() { return process.env.MAIL_USER || ''; },
   get mailPassword() { return process.env.MAIL_PASSWORD || ''; },
+  // Камера офиса: приёмник видео MediaMTX в docker-сети (.deploy/README-camera.md)
+  get cameraHlsUrl() { return (process.env.CAMERA_HLS_URL || 'http://mediamtx:8888').replace(/\/+$/, ''); },
+  get cameraApiUrl() { return (process.env.CAMERA_API_URL || 'http://mediamtx:9997').replace(/\/+$/, ''); },
 };
 
 /** Проверка при старте — падаем сразу, а не на первом входе пользователя. */

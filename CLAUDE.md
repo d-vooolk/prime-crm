@@ -395,6 +395,12 @@ GET    /api/analytics/revenue?from=&to=
 - Вложения — `UPLOADS_DIR/mail`, статикой `/api/uploads` не раздаются (`isMailAttachmentPath`), только через `/api/mail/attachments/:id`. HTML письма показывается в iframe с sandbox и CSP без скриптов
 - `MAIL_USER` / `MAIL_PASSWORD` в `.env`; пусто — приём выключен
 
+### Камера офиса
+- Раздел «Камера» — менеджер и выше (`canSeeCamera`, на сервере `requireRole(ROLES.MANAGER)`). Подробно и установка — `.deploy/README-camera.md`
+- Компьютер в офисе (`.deploy/camera/office-camera.ps1`, задача планировщика при включении) перекодирует RTSP камеры в H.264 и шлёт по SRT с паролем `CAMERA_SRT_PASSPHRASE` в контейнер `mediamtx` (`.deploy/mediamtx.yml`, наружу только 8890/udp)
+- Сервер отдаёт HLS из MediaMTX через `/api/camera/live/<токен>/…` (`services/camera.service.ts`): токен просмотра — `utils/cameraToken.ts` (только для камеры, 12 ч), роль и увольнение проверяются по базе. Маршрут подключён до `authMiddleware`. Service worker `/api/camera/` не кеширует
+- Офис выключен на ночь — «Камера выключена — офис закрыт», страница сама проверяет раз в 15 секунд
+
 ### Бэкапы
 - `.deploy/backup.sh` по cron на сервере каждый день в 03:30 UTC и перед каждым `deploy.sh`: дамп базы и снимок `data/uploads` в `/root/backups/prime-crm`
 - Хранится 7 ежедневных, 5 еженедельных и 12 ежемесячных копий базы, файлы — 7 снимков на жёстких ссылках
@@ -410,7 +416,7 @@ GET    /api/analytics/revenue?from=&to=
 
 ## Переменные окружения
 
-- **Продакшен:** `.env` рядом с `docker-compose.yml`, не в git, образец — `/.env.example`. В нём `POSTGRES_PASSWORD`, `JWT_SECRET`, `MASTER_EMAIL`, `MASTER_PASSWORD`, `CLIENT_URL`, `BACKUP_RCLONE_REMOTE`, `PANIC_PUBLIC_KEY`, `PANIC_PIN_HASH`, `VDF_INTEGRATION_KEY` (приём заказов сотрудников из магазина vdf.by: `POST /api/integrations/vdf/orders` с заголовком `x-integration-key`, вкладка «VDF» в бухгалтерии), `PUBLIC_RECORD_URL` (страница записи для клиента), `MAIL_IMAP_HOST`, `MAIL_IMAP_PORT`, `MAIL_USER`, `MAIL_PASSWORD` (почта beget). Compose подставляет их в контейнеры; без обязательных переменных сервер не стартует.
+- **Продакшен:** `.env` рядом с `docker-compose.yml`, не в git, образец — `/.env.example`. В нём `POSTGRES_PASSWORD`, `JWT_SECRET`, `MASTER_EMAIL`, `MASTER_PASSWORD`, `CLIENT_URL`, `BACKUP_RCLONE_REMOTE`, `PANIC_PUBLIC_KEY`, `PANIC_PIN_HASH`, `VDF_INTEGRATION_KEY` (приём заказов сотрудников из магазина vdf.by: `POST /api/integrations/vdf/orders` с заголовком `x-integration-key`, вкладка «VDF» в бухгалтерии), `PUBLIC_RECORD_URL` (страница записи для клиента), `MAIL_IMAP_HOST`, `MAIL_IMAP_PORT`, `MAIL_USER`, `MAIL_PASSWORD` (почта beget), `CAMERA_SRT_PASSPHRASE` (видео камеры офиса, обязательна). Compose подставляет их в контейнеры; без обязательных переменных сервер не стартует.
 - **Разработка:** `server/.env.development`, образец — `server/.env.example`.
 
 ---

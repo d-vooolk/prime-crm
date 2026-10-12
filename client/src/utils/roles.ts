@@ -72,12 +72,17 @@ export const isWikiReviewer = (u: Subject) => !!u && isManagerOrAbove(u);
 /** Почту компании (ящик на beget) видит только создатель */
 export const canSeeMail = isCreatorOrAbove;
 
+// ─── Камера офиса ──────────────────────────────────
+/** Видео с камеры в офисе — менеджер и выше (на сервере — routes/camera.routes.ts) */
+export const canSeeCamera = isManagerOrAbove;
+
 // ─── Навигация ─────────────────────────────────────
 /** Сотруднику доступны только эти разделы */
 // Дашборд сотруднику — только пьедестал, своя карточка и упущенная прибыль (DashboardPage)
 export const EMPLOYEE_ALLOWED_PATHS = ['/schedule', '/dashboard', '/wiki', '/accounting', '/settings'];
 export const canSeePath = (u: Subject, path: string) => {
   if (path === '/mail') return canSeeMail(u);
+  if (path === '/camera') return canSeeCamera(u);
   return !isEmployee(u) || EMPLOYEE_ALLOWED_PATHS.includes(path);
 };
 

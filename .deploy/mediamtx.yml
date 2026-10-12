@@ -1,0 +1,47 @@
+# Приёмник видео с камеры офиса (раздел «Камера» в CRM). Подробно — .deploy/README-camera.md
+#
+# Компьютер в офисе отправляет видео по SRT на порт 8890/udp — единственный порт наружу.
+# Поток зашифрован паролем CAMERA_SRT_PASSPHRASE из .env (docker-compose передаёт его
+# переменными MTX_PATHS_OFFICE_SRT*PASSPHRASE): без него ни отправить, ни забрать видео по SRT нельзя.
+# HLS (8888) и API (9997) доступны только внутри docker-сети — их читает сервер CRM,
+# который сам проверяет вход и роль (server/src/routes/cameraStream.routes.ts).
+
+logLevel: info
+logDestinations: [stdout]
+
+authMethod: internal
+authInternalUsers:
+  - user: any
+    pass:
+    ips: []
+    permissions:
+      - action: publish
+        path: office
+      - action: read
+        path: office
+      - action: api
+
+api: yes
+apiAddress: :9997
+metrics: no
+pprof: no
+playback: no
+
+rtsp: no
+rtmp: no
+webrtc: no
+
+hls: yes
+hlsAddress: :8888
+# Плейлист готов сразу, как только пришло видео, а не после первого зрителя
+hlsAlwaysRemux: yes
+hlsVariant: fmp4
+hlsSegmentCount: 7
+hlsSegmentDuration: 1s
+
+srt: yes
+srtAddress: :8890
+
+paths:
+  # Камера офиса. Других путей нет — чужие потоки не принимаются
+  office:

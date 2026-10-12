@@ -11,6 +11,7 @@ import {
   RightOutlined,
   MailOutlined,
   AppstoreOutlined,
+  VideoCameraOutlined,
 } from '@ant-design/icons';
 import { Calendar, ConfigProvider, Button, Badge } from 'antd';
 import type { Dayjs } from 'dayjs';
@@ -37,11 +38,12 @@ const NAV_ITEMS = [
   { path: '/accounting', label: 'Бухгалтерия', icon: <AccountBookOutlined /> },
   { path: '/notes', label: 'Заметки', icon: <FileTextOutlined /> },
   { path: '/mail', label: 'Почта', icon: <MailOutlined /> },
+  { path: '/camera', label: 'Камера', icon: <VideoCameraOutlined /> },
   { path: '/settings', label: 'Настройки', icon: <SettingOutlined /> },
 ];
 
 /** На телефоне эти пункты — в меню «Ещё» (крайний правый пункт нижней навигации) */
-const MORE_PATHS = ['/mail', '/settings'];
+const MORE_PATHS = ['/mail', '/camera', '/settings'];
 
 export const SideBar: React.FC = () => {
   const { selectedDate, setSelectedDate } = useUiStore();
