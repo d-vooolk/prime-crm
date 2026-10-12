@@ -1,0 +1,39 @@
+@use '@/styles/variables' as *;
+
+.hint {
+  margin-bottom: var(--spacing-md);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(180px, 260px) 1fr auto;
+  gap: var(--spacing-sm);
+  align-items: start;
+
+  @include mobile {
+    grid-template-columns: 1fr;
+  }
+}
+
+.name,
+.services {
+  width: 100%;
+}
+
+.actions {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.label {
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}

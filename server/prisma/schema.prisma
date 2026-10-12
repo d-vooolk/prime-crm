@@ -181,11 +181,16 @@ model Service {
   repairTypeId  String?
   // Не предлагать в «Открытых возможностях» карточки записи (Настройки → Открытые возможности)
   excludeFromOpportunities Boolean @default(false)
+  // Раздел вики, который мастер заполняет после такой работы (Настройки → Упущенная прибыль).
+  // Нет раздела — после работы заполнять в вики нечего (полировка, оклейка)
+  wikiSectionId String?
   category      Category     @relation(fields: [categoryId], references: [id])
   repairType    RepairType?  @relation(fields: [repairTypeId], references: [id], onDelete: SetNull)
+  wikiSection   WikiSection? @relation(fields: [wikiSectionId], references: [id], onDelete: SetNull)
   recordItems   RecordItem[]
 
   @@index([repairTypeId])
+  @@index([wikiSectionId])
 }
 
 // Тип ремонта (Справочник → Типы ремонта). Услуг много, типов мало: на странице записи
@@ -733,8 +738,40 @@ model WikiEntry {
   updatedAt      DateTime       @updatedAt
   media          WikiMedia[]
   revisions      WikiRevision[]
+  sections       WikiEntrySection[]
 
   @@unique([markId, modelId, generationId])
+}
+
+// Раздел карточки вики по виду работ («Bi-Led модули», «Ремонт ДХО»). Общий текст карточки
+// (WikiEntry.content) — раздел «Общее», отдельной строки у него нет.
+// К разделу привязаны услуги: закрыта сделка с такой услугой, а раздел у этого авто пуст —
+// мастер упустил премию за вики (accounting/missedWiki.logic.ts)
+model WikiSection {
+  id        String             @id @default(cuid())
+  name      String             @unique
+  sortOrder Int                @default(0)
+  createdAt DateTime           @default(now())
+  services  Service[]
+  contents  WikiEntrySection[]
+  media     WikiMedia[]
+  revisions WikiRevision[]
+}
+
+// Текст раздела в карточке. Раздел с текстом или файлами удалить нельзя (Restrict)
+model WikiEntrySection {
+  id            String      @id @default(cuid())
+  entryId       String
+  sectionId     String
+  content       String      @default("")
+  updatedByName String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  entry         WikiEntry   @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  section       WikiSection @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+
+  @@unique([entryId, sectionId])
+  @@index([sectionId])
 }
 
 enum WikiMediaType {
@@ -750,6 +787,8 @@ model WikiMedia {
   originalName   String
   size           Int
   uploadedByName  String?
+  // Раздел карточки; null — «Общее»
+  sectionId       String?
   createdAt       DateTime      @default(now())
   // Сжатые варианты фото (UPLOADS_DIR/wiki/variants/<имя файла без расширения>/).
   // Нет вариантов (видео, HEIC, битый файл) — показываем оригинал.
@@ -761,8 +800,10 @@ model WikiMedia {
   mediumFilename  String?
   variantsVersion Int           @default(0) // версия параметров сжатия, 0 — ещё не обрабатывали
   entry           WikiEntry     @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  section         WikiSection?  @relation(fields: [sectionId], references: [id], onDelete: Restrict)
 
   @@index([entryId])
+  @@index([sectionId])
 }
 
 enum WikiRevisionStatus {
@@ -772,13 +813,15 @@ enum WikiRevisionStatus {
 }
 
 // Правка сотрудника. Пока правка не проверена, последующие сохранения того же автора
-// по той же карточке дописываются в неё: prevContent остаётся исходным, newContent обновляется.
+// по тому же разделу карточки дописываются в неё: prevContent остаётся исходным, newContent обновляется.
 model WikiRevision {
   id                 String             @id @default(cuid())
   entryId            String
   authorId           String
   authorName         String
   authorRole         String?
+  // Раздел карточки; null — «Общее». Удалённый раздел оставляет правку в истории
+  sectionId          String?
   prevContent        String
   newContent         String
   addedMedia         Json?              // [{ id, type, filename, originalName }]
@@ -792,6 +835,7 @@ model WikiRevision {
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
   entry              WikiEntry          @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  section            WikiSection?       @relation(fields: [sectionId], references: [id], onDelete: SetNull)
 
   @@index([status])
   @@index([entryId])

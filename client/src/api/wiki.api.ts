@@ -1,6 +1,6 @@
 import http from './http';
 import {
-  WikiEntry, WikiEntrySummary, WikiKey, WikiMedia, WikiRevision, WikiSettings,
+  WikiEntry, WikiEntrySummary, WikiKey, WikiMedia, WikiRevision, WikiSection, WikiSettings,
 } from '@/types';
 
 export const wikiApi = {
@@ -10,15 +10,17 @@ export const wikiApi = {
   getEntry: (key: WikiKey) =>
     http.get<{ data: WikiEntry | null }>('/wiki/entry', { params: key }).then(r => r.data.data),
 
-  saveContent: (key: WikiKey, content: string) =>
-    http.put<{ data: WikiEntry }>('/wiki/entry', { ...key, content }).then(r => r.data.data),
+  /** sectionId: null — «Общее» */
+  saveContent: (key: WikiKey, sectionId: string | null, content: string) =>
+    http.put<{ data: WikiEntry }>('/wiki/entry', { ...key, sectionId, content }).then(r => r.data.data),
 
-  uploadMedia: (key: WikiKey, file: File, onProgress?: (percent: number) => void) => {
+  uploadMedia: (key: WikiKey, sectionId: string | null, file: File, onProgress?: (percent: number) => void) => {
     const form = new FormData();
     // Поля ключа — до файла: так multer разберёт их раньше, чем начнёт писать файл
     form.append('markId', key.markId);
     form.append('modelId', key.modelId);
     form.append('generationId', key.generationId);
+    if (sectionId) form.append('sectionId', sectionId);
     form.append('file', file);
     return http.post<{ data: WikiMedia }>('/wiki/media', form, {
       headers: { 'Content-Type': 'multipart/form-data' },
@@ -44,6 +46,18 @@ export const wikiApi = {
   /** amount — сумма премии, если отличается от настроек (частичная оплата) */
   reward: (id: string, amount?: number) =>
     http.post(`/wiki/revisions/${id}/reward`, amount === undefined ? {} : { amount }),
+
+  getSections: () =>
+    http.get<{ data: WikiSection[] }>('/wiki/sections').then(r => r.data.data),
+
+  createSection: (data: Pick<WikiSection, 'name' | 'serviceIds'>) =>
+    http.post<{ data: WikiSection[] }>('/wiki/sections', data).then(r => r.data.data),
+
+  updateSection: (id: string, data: Partial<Pick<WikiSection, 'name' | 'serviceIds'>>) =>
+    http.patch<{ data: WikiSection[] }>(`/wiki/sections/${id}`, data).then(r => r.data.data),
+
+  deleteSection: (id: string) =>
+    http.delete<{ data: WikiSection[] }>(`/wiki/sections/${id}`).then(r => r.data.data),
 
   getSettings: () =>
     http.get<{ data: WikiSettings }>('/wiki/settings').then(r => r.data.data),

@@ -15,7 +15,9 @@ interface Props {
   markId: string;
   modelId: string;
   generationId: string;
-  onSelect: (key: Partial<WikiKey>) => void;
+  /** Открытый раздел карточки */
+  sectionId?: string;
+  onSelect: (key: Partial<WikiKey>, sectionId?: string) => void;
 }
 
 const generationLabel = (g: CarGeneration) =>
@@ -23,7 +25,7 @@ const generationLabel = (g: CarGeneration) =>
 
 const entryKey = (k: WikiKey) => `${k.markId}/${k.modelId}/${k.generationId}`;
 
-export const WikiCarsTab: React.FC<Props> = ({ markId, modelId, generationId, onSelect }) => {
+export const WikiCarsTab: React.FC<Props> = ({ markId, modelId, generationId, sectionId, onSelect }) => {
   const notify = useNotify();
   const { data: brands = [] } = useCarBrands();
   const [models, setModels] = useState<CarModel[]>([]);
@@ -168,6 +170,8 @@ export const WikiCarsTab: React.FC<Props> = ({ markId, modelId, generationId, on
           key={`${markId}/${modelId}/${generationId}`}
           carKey={{ markId, modelId, generationId }}
           title={title}
+          sectionId={sectionId}
+          onSectionChange={id => onSelect({ markId, modelId, generationId }, id)}
           onChanged={loadEntries}
         />
       )}

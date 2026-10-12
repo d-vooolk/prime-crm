@@ -301,6 +301,9 @@ export interface MissedWikiItem {
   brandId: string;
   modelId: string;
   generationId: string;
+  /** Раздел карточки, который нужно заполнить */
+  sectionId: string;
+  sectionName: string;
 }
 
 export interface MissedWikiData {

@@ -1,12 +1,19 @@
 /**
  * Упущенная прибыль за вики — чистый расчёт без базы.
  *
- * За заполнение вики сотрудник получает премию (настройки вики). Сделка закрыта, главный
- * сотрудник записи (Record.serviceman) после закрытия ничего не внёс в карточку вики этого
- * автомобиля (марка/модель/поколение) — это упущенная премия. Если карточка в вики к моменту
- * закрытия уже была заполнена, заполнять нечего — не упущено.
- * Одно поколение в периоде считается один раз: премия за одну карточку одна.
+ * За заполнение вики сотрудник получает премию (настройки вики). Карточка вики автомобиля
+ * (марка/модель/поколение) делится на разделы по видам работ, к разделу привязаны услуги
+ * (Настройки → Упущенная прибыль). Сделка закрыта, в ней была услуга раздела, а главный
+ * сотрудник записи (Record.serviceman) после закрытия ничего не внёс в этот раздел — это
+ * упущенная премия. Услуги без раздела (полировка, оклейка) вики не требуют.
+ * Если раздел к моменту закрытия уже был заполнен, заполнять нечего — не упущено.
+ * Один раздел одного поколения в периоде считается один раз: премия за него одна.
  */
+
+export interface WikiSectionRef {
+  id: string;
+  name: string;
+}
 
 export interface ClosedDealCar {
   recordId: string;
@@ -16,20 +23,23 @@ export interface ClosedDealCar {
   modelId: string;
   generationId: string | null;
   car: string;
+  /** Разделы вики по услугам записи */
+  sections: WikiSectionRef[];
 }
 
-export interface WikiEntryState {
+export interface WikiSectionState {
+  /** Когда в разделе появились текст или файлы */
   createdAt: Date;
-  /** В карточке сейчас есть текст или файлы */
+  /** В разделе сейчас есть текст или файлы */
   filled: boolean;
   updatedByName: string | null;
   updatedAt: Date;
 }
 
+/** Правка или загруженный файл сотрудника в разделе карточки */
 export interface WikiContribution {
   key: string;
   authorName: string;
-  createdAt: Date;
   updatedAt: Date;
 }
 
@@ -40,6 +50,8 @@ export interface MissedWikiItem {
   brandId: string;
   modelId: string;
   generationId: string;
+  sectionId: string;
+  sectionName: string;
 }
 
 export interface MissedWikiSummary {
@@ -51,9 +63,13 @@ export interface MissedWikiSummary {
 export const wikiKey = (c: { brandId: string; modelId: string; generationId: string }) =>
   `${c.brandId}/${c.modelId}/${c.generationId}`;
 
+/** Ключ раздела карточки */
+export const wikiSectionKey = (c: { brandId: string; modelId: string; generationId: string }, sectionId: string) =>
+  `${wikiKey(c)}#${sectionId}`;
+
 export function missedWiki(
   deals: ClosedDealCar[],
-  entries: Map<string, WikiEntryState>,
+  sections: Map<string, WikiSectionState>,
   contributions: WikiContribution[],
   bonus: number,
   names: string[],
@@ -64,26 +80,30 @@ export function missedWiki(
   for (const deal of sorted) {
     const items = byName.get(deal.serviceman);
     if (!items || !deal.generationId) continue;
-    const key = wikiKey({ brandId: deal.brandId, modelId: deal.modelId, generationId: deal.generationId });
-    if (items.some(i => wikiKey(i) === key)) continue;
+    const car = { brandId: deal.brandId, modelId: deal.modelId, generationId: deal.generationId };
 
-    const entry = entries.get(key);
-    // Карточка уже была заполнена до закрытия сделки — заполнять было нечего
-    if (entry && entry.filled && entry.createdAt < deal.closedAt) continue;
+    for (const section of deal.sections) {
+      const key = wikiSectionKey(car, section.id);
+      if (items.some(i => wikiSectionKey(i, i.sectionId) === key)) continue;
 
-    const contributed = contributions.some(c =>
-      c.key === key && c.authorName === deal.serviceman && c.updatedAt >= deal.closedAt,
-    ) || (!!entry && entry.updatedByName === deal.serviceman && entry.updatedAt >= deal.closedAt);
-    if (contributed) continue;
+      const state = sections.get(key);
+      // Раздел уже был заполнен до закрытия сделки — заполнять было нечего
+      if (state && state.filled && state.createdAt < deal.closedAt) continue;
 
-    items.push({
-      recordId: deal.recordId,
-      closedAt: deal.closedAt,
-      car: deal.car,
-      brandId: deal.brandId,
-      modelId: deal.modelId,
-      generationId: deal.generationId,
-    });
+      const contributed = contributions.some(c =>
+        c.key === key && c.authorName === deal.serviceman && c.updatedAt >= deal.closedAt,
+      ) || (!!state && state.updatedByName === deal.serviceman && state.updatedAt >= deal.closedAt);
+      if (contributed) continue;
+
+      items.push({
+        recordId: deal.recordId,
+        closedAt: deal.closedAt,
+        car: deal.car,
+        ...car,
+        sectionId: section.id,
+        sectionName: section.name,
+      });
+    }
   }
 
   return names.map(name => {

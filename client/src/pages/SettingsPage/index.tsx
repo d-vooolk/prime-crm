@@ -13,6 +13,7 @@ import { AidProtocolTab } from './AidProtocolTab';
 import { SmsTab } from './SmsTab';
 import { TemplatesTab } from './TemplatesTab';
 import { OpportunitiesTab } from './OpportunitiesTab';
+import { MissedProfitTab } from './MissedProfitTab';
 import styles from './SettingsPage.module.scss';
 
 export const SettingsPage: React.FC = () => {
@@ -54,10 +55,12 @@ export const SettingsPage: React.FC = () => {
         </Card>
       ),
     },
-    // Допродажи в карточке записи и тревожная кнопка — только руководителям (сервер проверяет роль сам)
+    // Допродажи в карточке записи, разделы вики для упущенной прибыли и тревожная кнопка —
+    // только руководителям (сервер проверяет роль сам)
     ...(isManagerOrAbove(user)
       ? [
         { key: 'opportunities', label: 'Открытые возможности', children: <OpportunitiesTab /> },
+        { key: 'missedProfit', label: 'Упущенная прибыль', children: <MissedProfitTab /> },
         { key: 'aid', label: 'Протокол AID', children: <AidProtocolTab /> },
       ]
       : []),

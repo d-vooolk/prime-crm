@@ -13,8 +13,9 @@ import { WikiMissedBanner } from './WikiMissedBanner';
 import styles from './WikiPage.module.scss';
 
 /**
- * Wiki по автомобилям. Выбранный автомобиль и вкладка живут в адресе
- * (?mark=&model=&generation=&tab=) — так на карточку ведёт кнопка из записи.
+ * Wiki по автомобилям. Выбранный автомобиль, раздел карточки и вкладка живут в адресе
+ * (?mark=&model=&generation=&section=&tab=) — так на карточку ведёт кнопка из записи
+ * и упущенная прибыль (сразу в незаполненный раздел).
  */
 export const WikiPage: React.FC = () => {
   const [params, setParams] = useSearchParams();
@@ -30,6 +31,7 @@ export const WikiPage: React.FC = () => {
   const markId = params.get('mark') || '';
   const modelId = params.get('model') || '';
   const generationId = params.get('generation') || '';
+  const sectionId = params.get('section') || undefined;
 
   useEffect(() => {
     if (!reviewer) return;
@@ -38,11 +40,12 @@ export const WikiPage: React.FC = () => {
       .catch(e => notify.error(e, 'Не удалось загрузить настройки вики'));
   }, [reviewer, notify]);
 
-  const selectCar = (key: Partial<WikiKey>) => {
+  const selectCar = (key: Partial<WikiKey>, section?: string) => {
     const next = new URLSearchParams();
     if (key.markId) next.set('mark', key.markId);
     if (key.modelId) next.set('model', key.modelId);
     if (key.generationId) next.set('generation', key.generationId);
+    if (key.generationId && section) next.set('section', section);
     setParams(next, { replace: true });
   };
 
@@ -68,7 +71,13 @@ export const WikiPage: React.FC = () => {
   };
 
   const carsTab = (
-    <WikiCarsTab markId={markId} modelId={modelId} generationId={generationId} onSelect={selectCar} />
+    <WikiCarsTab
+      markId={markId}
+      modelId={modelId}
+      generationId={generationId}
+      sectionId={sectionId}
+      onSelect={selectCar}
+    />
   );
 
   const items = [
@@ -112,7 +121,7 @@ export const WikiPage: React.FC = () => {
       <h1 className={styles.title}>Wiki</h1>
       {/* Упущенная премия за вики — только сотрудникам, по своим авто */}
       {isEmployee(user) && (
-        <WikiMissedBanner selected={{ markId, modelId, generationId }} onSelect={selectCar} />
+        <WikiMissedBanner selected={{ markId, modelId, generationId }} sectionId={sectionId} onSelect={selectCar} />
       )}
       <Tabs activeKey={tab} onChange={setTab} items={items} destroyOnHidden />
     </div>

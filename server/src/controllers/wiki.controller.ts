@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { z } from 'zod';
 import { AppError } from '../middleware/errorHandler';
+import { parse } from '../middleware/validate';
 import { wikiService, isWikiReviewer, WikiKey } from '../services/wiki.service';
 import { decodeOriginalName, WIKI_MEDIA_DIR } from '../utils/uploads';
 import type { UploadedMedia } from '../utils/mediaUpload';
@@ -25,6 +26,15 @@ const rewardSchema = z.object({
   amount: z.number().positive('Сумма премии должна быть больше нуля').finite().optional(),
 });
 
+/** Раздел карточки: пусто — «Общее» */
+const sectionIdSchema = z.preprocess(v => (v === '' ? null : v), z.string().min(1).max(50).nullable().optional())
+  .transform(v => v ?? null);
+
+const sectionSchema = z.object({
+  name: z.string().trim().min(1, 'Укажите название раздела').max(100),
+  serviceIds: z.array(z.string().min(1).max(50)).max(1000),
+});
+
 function requireReviewer(req: Request) {
   if (!isWikiReviewer(req.user!)) throw new AppError('Недостаточно прав', 403);
 }
@@ -40,17 +50,19 @@ export const wikiController = {
   },
 
   async saveContent(req: Request, res: Response) {
-    const { content, ...key } = req.body as Record<string, unknown>;
+    const { content, sectionId, ...key } = req.body as Record<string, unknown>;
     if (typeof content !== 'string') throw new AppError('Нет текста', 400);
-    const entry = await wikiService.saveContent(parseKey(key), content, req.user!);
+    const entry = await wikiService.saveContent(parseKey(key), parse(sectionIdSchema, sectionId), content, req.user!);
     res.json({ data: entry });
   },
 
   async uploadMedia(req: Request, res: Response) {
     const upload = res.locals.media as UploadedMedia;
     let key: WikiKey;
+    let sectionId: string | null;
     try {
       key = parseKey(req.body);
+      sectionId = parse(sectionIdSchema, (req.body as Record<string, unknown>).sectionId);
     } catch (e) {
       fs.promises.unlink(path.join(WIKI_MEDIA_DIR, upload.filename)).catch(() => {});
       throw e;
@@ -58,7 +70,7 @@ export const wikiController = {
     const type = upload.kind === 'video' ? 'VIDEO' : 'PHOTO';
     // Сжимаем до записи в БД: в ответе и при следующем открытии карточки уже есть лёгкие варианты
     const variants = type === 'PHOTO' ? await createImageVariants(upload.filename) : undefined;
-    const media = await wikiService.addMedia(key, {
+    const media = await wikiService.addMedia(key, sectionId, {
       filename: upload.filename,
       originalName: decodeOriginalName(upload.originalName),
       size: upload.size,
@@ -98,6 +110,22 @@ export const wikiController = {
     }
     await wikiService.reward(String(req.params.id), req.user!, result.data.amount);
     res.json({ data: { ok: true } });
+  },
+
+  async listSections(_req: Request, res: Response) {
+    res.json({ data: await wikiService.listSections() });
+  },
+
+  async createSection(req: Request, res: Response) {
+    res.status(201).json({ data: await wikiService.createSection(parse(sectionSchema, req.body)) });
+  },
+
+  async updateSection(req: Request, res: Response) {
+    res.json({ data: await wikiService.updateSection(String(req.params.id), parse(sectionSchema.partial(), req.body)) });
+  },
+
+  async deleteSection(req: Request, res: Response) {
+    res.json({ data: await wikiService.deleteSection(String(req.params.id)) });
   },
 
   async getSettings(_req: Request, res: Response) {

@@ -16,11 +16,12 @@ import styles from './WikiPage.module.scss';
 
 interface Props {
   bonusAmount: number;
-  onOpenCar: (key: WikiKey) => void;
+  onOpenCar: (key: WikiKey, sectionId?: string) => void;
 }
 
 const carTitle = (r: WikiRevision) =>
-  [r.entry.markName, r.entry.modelName, r.entry.generationName].filter(Boolean).join(' ');
+  [r.entry.markName, r.entry.modelName, r.entry.generationName].filter(Boolean).join(' ')
+  + (r.sectionName ? ` · ${r.sectionName}` : '');
 
 const countChars = (s: string) => s.replace(/\s/g, '').length;
 
@@ -54,7 +55,7 @@ const DiffView: React.FC<{ prev: string; next: string }> = ({ prev, next }) => {
 const RevisionCard: React.FC<{
   revision: WikiRevision;
   bonusAmount: number;
-  onOpenCar: (key: WikiKey) => void;
+  onOpenCar: (key: WikiKey, sectionId?: string) => void;
   onDone: () => void;
 }> = ({ revision: r, bonusAmount, onOpenCar, onDone }) => {
   const notify = useNotify();
@@ -101,7 +102,10 @@ const RevisionCard: React.FC<{
         <Button
           type="link"
           icon={<BookOutlined />}
-          onClick={() => onOpenCar({ markId: r.entry.markId, modelId: r.entry.modelId, generationId: r.entry.generationId })}
+          onClick={() => onOpenCar(
+            { markId: r.entry.markId, modelId: r.entry.modelId, generationId: r.entry.generationId },
+            r.sectionId ?? undefined,
+          )}
         >
           Открыть карточку
         </Button>

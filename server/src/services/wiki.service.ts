@@ -38,7 +38,10 @@ export interface UploadedFile {
   variants?: ImageVariants;
 }
 
-const entryInclude = { media: { orderBy: { createdAt: 'asc' } } } satisfies Prisma.WikiEntryInclude;
+const entryInclude = {
+  media: { orderBy: { createdAt: 'asc' } },
+  sections: { select: { sectionId: true, content: true, updatedByName: true, updatedAt: true } },
+} satisfies Prisma.WikiEntryInclude;
 
 type EntryWithMedia = Prisma.WikiEntryGetPayload<{ include: typeof entryInclude }>;
 
@@ -97,28 +100,50 @@ async function getOrCreateEntry(key: WikiKey) {
   });
 }
 
+/** Раздел карточки; null — «Общее» (WikiEntry.content) */
+type SectionId = string | null;
+
+async function assertSection(sectionId: SectionId) {
+  if (sectionId && !(await prisma.wikiSection.findUnique({ where: { id: sectionId } }))) {
+    throw new AppError('Раздел вики не найден', 400);
+  }
+}
+
+async function readContent(entryId: string, sectionId: SectionId) {
+  if (!sectionId) {
+    return (await prisma.wikiEntry.findUniqueOrThrow({ where: { id: entryId }, select: { content: true } })).content;
+  }
+  const row = await prisma.wikiEntrySection.findUnique({
+    where: { entryId_sectionId: { entryId, sectionId } },
+    select: { content: true },
+  });
+  return row?.content ?? '';
+}
+
 function asMediaRefs(value: Prisma.JsonValue | null): MediaRef[] {
   return Array.isArray(value) ? (value as unknown as MediaRef[]) : [];
 }
 
 /**
  * Фиксирует правку сотрудника для проверки. Пока правка не проверена, всё, что автор
- * меняет в этой карточке, копится в одной записи — проверяющий видит итоговую разницу.
+ * меняет в этом разделе карточки, копится в одной записи — проверяющий видит итоговую разницу.
+ * Разделы — отдельные правки: премия за вики и упущенная прибыль считаются по разделам.
  */
 async function trackRevision(
   entryId: string,
+  sectionId: SectionId,
   user: AuthPayload,
   change: { prevContent?: string; newContent?: string; added?: MediaRef; removed?: MediaRef },
 ) {
   if (isWikiReviewer(user)) return;
 
   const pending = await prisma.wikiRevision.findFirst({
-    where: { entryId, authorId: user.id, status: 'PENDING' },
+    where: { entryId, sectionId, authorId: user.id, status: 'PENDING' },
   });
 
-  const current = await prisma.wikiEntry.findUniqueOrThrow({ where: { id: entryId }, select: { content: true } });
-  const prevContent = pending?.prevContent ?? change.prevContent ?? current.content;
-  const newContent = change.newContent ?? pending?.newContent ?? current.content;
+  const current = await readContent(entryId, sectionId);
+  const prevContent = pending?.prevContent ?? change.prevContent ?? current;
+  const newContent = change.newContent ?? pending?.newContent ?? current;
   let addedMedia = asMediaRefs(pending?.addedMedia ?? null);
   let removedMedia = asMediaRefs(pending?.removedMedia ?? null);
 
@@ -153,6 +178,7 @@ async function trackRevision(
   await prisma.wikiRevision.create({
     data: {
       entryId,
+      sectionId,
       authorId: user.id,
       authorName: user.name,
       authorRole: user.role ?? null,
@@ -209,37 +235,54 @@ export const wikiService = {
         updatedAt: true, updatedByName: true,
         _count: { select: { media: true } },
         content: true,
+        sections: { select: { content: true } },
       },
     });
     return entries
-      .filter(e => e.content.trim() || e._count.media > 0)
-      .map(({ content, _count, ...e }) => ({ ...e, mediaCount: _count.media, hasText: !!content.trim() }));
+      .map(({ content, sections, _count, ...e }) => ({
+        ...e,
+        mediaCount: _count.media,
+        hasText: !!content.trim() || sections.some(s => s.content.trim()),
+      }))
+      .filter(e => e.hasText || e.mediaCount > 0);
   },
 
-  saveContent(key: WikiKey, content: string, user: AuthPayload) {
-    return serialized(() => this.saveContentUnsafe(key, content, user));
+  saveContent(key: WikiKey, sectionId: SectionId, content: string, user: AuthPayload) {
+    return serialized(() => this.saveContentUnsafe(key, sectionId, content, user));
   },
 
-  async saveContentUnsafe(key: WikiKey, content: string, user: AuthPayload) {
+  async saveContentUnsafe(key: WikiKey, sectionId: SectionId, content: string, user: AuthPayload) {
+    await assertSection(sectionId);
     const entry = await getOrCreateEntry(key);
     const normalized = content.replace(/\r\n/g, '\n');
-    if (normalized !== entry.content) {
-      await prisma.wikiEntry.update({
-        where: { id: entry.id },
-        data: { content: normalized, updatedByName: user.name },
+    const prev = await readContent(entry.id, sectionId);
+    if (normalized !== prev) {
+      await prisma.$transaction(async tx => {
+        if (sectionId) {
+          await tx.wikiEntrySection.upsert({
+            where: { entryId_sectionId: { entryId: entry.id, sectionId } },
+            create: { entryId: entry.id, sectionId, content: normalized, updatedByName: user.name },
+            update: { content: normalized, updatedByName: user.name },
+          });
+        }
+        await tx.wikiEntry.update({
+          where: { id: entry.id },
+          data: { ...(sectionId ? {} : { content: normalized }), updatedByName: user.name },
+        });
       });
-      await trackRevision(entry.id, user, { prevContent: entry.content, newContent: normalized });
+      await trackRevision(entry.id, sectionId, user, { prevContent: prev, newContent: normalized });
     }
     return this.getEntry(key);
   },
 
-  addMedia(key: WikiKey, file: UploadedFile, user: AuthPayload) {
-    return serialized(() => this.addMediaUnsafe(key, file, user));
+  addMedia(key: WikiKey, sectionId: SectionId, file: UploadedFile, user: AuthPayload) {
+    return serialized(() => this.addMediaUnsafe(key, sectionId, file, user));
   },
 
-  async addMediaUnsafe(key: WikiKey, file: UploadedFile, user: AuthPayload) {
+  async addMediaUnsafe(key: WikiKey, sectionId: SectionId, file: UploadedFile, user: AuthPayload) {
     let entry;
     try {
+      await assertSection(sectionId);
       entry = await getOrCreateEntry(key);
     } catch (e) {
       removeFile(file.filename);
@@ -247,10 +290,10 @@ export const wikiService = {
     }
     const { variants, ...fileData } = file;
     const media = await prisma.wikiMedia.create({
-      data: { entryId: entry.id, ...fileData, ...variants, uploadedByName: user.name },
+      data: { entryId: entry.id, sectionId, ...fileData, ...variants, uploadedByName: user.name },
     });
     await prisma.wikiEntry.update({ where: { id: entry.id }, data: { updatedByName: user.name } });
-    await trackRevision(entry.id, user, { added: toRef(media) });
+    await trackRevision(entry.id, sectionId, user, { added: toRef(media) });
     return mediaWithUrls(media);
   },
 
@@ -263,7 +306,7 @@ export const wikiService = {
     if (!media) throw new AppError('Файл не найден', 404);
     await prisma.wikiMedia.delete({ where: { id: mediaId } });
     await prisma.wikiEntry.update({ where: { id: media.entryId }, data: { updatedByName: user.name } });
-    await trackRevision(media.entryId, user, { removed: toRef(media) });
+    await trackRevision(media.entryId, media.sectionId, user, { removed: toRef(media) });
     // Файл с диска не удаляем, если на него ссылается правка на проверке — проверяющий должен его увидеть
     const referenced = await prisma.wikiRevision.count({
       where: { entryId: media.entryId, status: 'PENDING', removedMedia: { array_contains: [{ id: media.id }] } },
@@ -289,6 +332,7 @@ export const wikiService = {
             markName: true, modelName: true, generationName: true,
           },
         },
+        section: { select: { name: true } },
       },
     });
 
@@ -311,8 +355,9 @@ export const wikiService = {
       };
     };
 
-    return revisions.map(r => ({
+    return revisions.map(({ section, ...r }) => ({
       ...r,
+      sectionName: section?.name ?? null,
       addedMedia: asMediaRefs(r.addedMedia).map(refWithUrls),
       removedMedia: asMediaRefs(r.removedMedia).map(m => ({ ...m, url: `${WIKI_MEDIA_URL}/${m.filename}` })),
     }));
@@ -334,7 +379,7 @@ export const wikiService = {
    * передан — проверяющий решил оплатить иначе (обычно частично, если правка неполная).
    */
   async reward(id: string, reviewer: AuthPayload, amount?: number) {
-    const revision = await prisma.wikiRevision.findUnique({ where: { id }, include: { entry: true } });
+    const revision = await prisma.wikiRevision.findUnique({ where: { id }, include: { entry: true, section: true } });
     if (!revision) throw new AppError('Правка не найдена', 404);
     if (revision.status === 'REWARDED') throw new AppError('Премия за эту правку уже назначена', 400);
 
@@ -349,7 +394,8 @@ export const wikiService = {
 
     const { year, month } = currentSalaryMonth();
     const { entry } = revision;
-    const car = [entry.markName, entry.modelName, entry.generationName].filter(Boolean).join(' ');
+    const car = [entry.markName, entry.modelName, entry.generationName].filter(Boolean).join(' ')
+      + (revision.section ? ` · ${revision.section.name}` : '');
 
     await prisma.$transaction(async tx => {
       const adjustment = await tx.salaryAdjustment.create({
@@ -386,6 +432,58 @@ export const wikiService = {
       const stillUsed = await prisma.wikiMedia.count({ where: { filename: m.filename } });
       if (!stillUsed) removeFile(m.filename);
     }
+  },
+
+  // --- Разделы ---
+
+  async listSections() {
+    const sections = await prisma.wikiSection.findMany({
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+      include: { services: { select: { id: true } } },
+    });
+    return sections.map(({ services, ...s }) => ({ ...s, serviceIds: services.map(x => x.id) }));
+  },
+
+  /** Услуга относится к одному разделу: выбранная здесь уходит из другого раздела */
+  async createSection(data: { name: string; serviceIds: string[] }) {
+    await prisma.$transaction(async tx => {
+      const last = await tx.wikiSection.aggregate({ _max: { sortOrder: true } });
+      const section = await tx.wikiSection.create({
+        data: { name: data.name, sortOrder: (last._max.sortOrder ?? 0) + 1 },
+      });
+      await tx.service.updateMany({ where: { id: { in: data.serviceIds } }, data: { wikiSectionId: section.id } });
+    });
+    return this.listSections();
+  },
+
+  async updateSection(id: string, data: { name?: string; serviceIds?: string[] }) {
+    await prisma.$transaction(async tx => {
+      const section = await tx.wikiSection.findUnique({ where: { id } });
+      if (!section) throw new AppError('Раздел вики не найден', 404);
+      if (data.name !== undefined) await tx.wikiSection.update({ where: { id }, data: { name: data.name } });
+      if (data.serviceIds) {
+        await tx.service.updateMany({
+          where: { wikiSectionId: id, id: { notIn: data.serviceIds } },
+          data: { wikiSectionId: null },
+        });
+        await tx.service.updateMany({ where: { id: { in: data.serviceIds } }, data: { wikiSectionId: id } });
+      }
+    });
+    return this.listSections();
+  },
+
+  /** Раздел, в котором уже что-то описано, не удаляется — иначе пропадут описания */
+  async deleteSection(id: string) {
+    await prisma.$transaction(async tx => {
+      await tx.wikiEntrySection.deleteMany({ where: { sectionId: id, content: '' } });
+      const used = await tx.wikiEntrySection.count({ where: { sectionId: id } })
+        + await tx.wikiMedia.count({ where: { sectionId: id } });
+      if (used > 0) {
+        throw new AppError('В разделе уже есть описания или файлы — удалить его нельзя, только переименовать', 400);
+      }
+      await tx.wikiSection.delete({ where: { id } });
+    });
+    return this.listSections();
   },
 
   // --- Настройки ---

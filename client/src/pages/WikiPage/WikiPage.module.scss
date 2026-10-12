@@ -540,3 +540,39 @@
   border-color: var(--color-accent);
   background: var(--color-accent-bg);
 }
+
+.missedChipSection {
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+// ─── Разделы карточки: «Общее» и виды работ ─────
+
+.sectionTabs {
+  margin-top: var(--spacing-md);
+}
+
+.sectionTab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sectionTabMissed {
+  color: var(--color-error);
+}
+
+// Раздел пуст; красная — по нему упущена премия
+.sectionDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+}
+
+.sectionDotMissed {
+  width: 8px;
+  height: 8px;
+  background: var(--color-error);
+  box-shadow: 0 0 0 3px var(--color-error-bg);
+}

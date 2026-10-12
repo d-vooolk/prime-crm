@@ -434,6 +434,8 @@ export interface WikiMedia {
   originalName: string;
   size: number;
   uploadedByName?: string | null;
+  /** Раздел карточки; null — «Общее» */
+  sectionId?: string | null;
   createdAt: string;
   url: string;
   /** Сжатые варианты фото. null — вариантов нет (видео, HEIC, ещё не сжато), показываем оригинал. */
@@ -454,6 +456,23 @@ export interface WikiEntry extends WikiKey {
   updatedByName?: string | null;
   updatedAt: string;
   media: WikiMedia[];
+  /** Тексты разделов; «Общее» — content */
+  sections: WikiEntrySectionContent[];
+}
+
+export interface WikiEntrySectionContent {
+  sectionId: string;
+  content: string;
+  updatedByName?: string | null;
+  updatedAt: string;
+}
+
+/** Раздел карточки вики по виду работ. serviceIds — услуги, после которых раздел нужно заполнить */
+export interface WikiSection {
+  id: string;
+  name: string;
+  sortOrder: number;
+  serviceIds: string[];
 }
 
 export interface WikiEntrySummary extends WikiKey {
@@ -489,6 +508,9 @@ export interface WikiRevision {
   authorId: string;
   authorName: string;
   authorRole?: string | null;
+  /** Раздел карточки; null — «Общее» */
+  sectionId?: string | null;
+  sectionName?: string | null;
   prevContent: string;
   newContent: string;
   addedMedia: WikiMediaRef[];

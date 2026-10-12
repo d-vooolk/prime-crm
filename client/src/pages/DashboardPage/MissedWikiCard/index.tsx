@@ -11,12 +11,14 @@ interface Props {
   items: MissedWikiItem[];
 }
 
-export const wikiHref = (i: Pick<MissedWikiItem, 'brandId' | 'modelId' | 'generationId'>) =>
-  `/wiki?${new URLSearchParams({ mark: i.brandId, model: i.modelId, generation: i.generationId })}`;
+/** Ссылка сразу на незаполненный раздел карточки */
+export const wikiHref = (i: Pick<MissedWikiItem, 'brandId' | 'modelId' | 'generationId' | 'sectionId'>) =>
+  `/wiki?${new URLSearchParams({ mark: i.brandId, model: i.modelId, generation: i.generationId, section: i.sectionId })}`;
 
 /**
- * Упущенная прибыль за вики: сделки периода, после которых главный сотрудник не заполнил
- * карточку авто в вики. Каждая — ссылка на карточку: заполнить ещё не поздно.
+ * Упущенная прибыль за вики: сделки периода с работами из настроек «Упущенная прибыль», после
+ * которых главный сотрудник не заполнил раздел карточки авто. Каждая — ссылка на этот раздел:
+ * заполнить ещё не поздно.
  */
 export const MissedWikiCard: React.FC<Props> = ({ amount, bonus, items }) => (
   <section className={styles.card}>
@@ -28,17 +30,20 @@ export const MissedWikiCard: React.FC<Props> = ({ amount, bonus, items }) => (
       </div>
     </div>
     {items.length === 0 ? (
-      <div className={styles.muted}>Все авто периода описаны в вики — так держать</div>
+      <div className={styles.muted}>Все работы периода описаны в вики — так держать</div>
     ) : (
       <>
         <div className={styles.muted}>
-          {bonus > 0 ? `${formatPrice(bonus)} за каждое авто` : 'Премия за вики не задана в настройках'} · заполните — и премия ваша
+          {bonus > 0 ? `${formatPrice(bonus)} за каждый раздел` : 'Премия за вики не задана в настройках'} · заполните — и премия ваша
         </div>
         <ul className={styles.list}>
           {items.map(i => (
-            <li key={i.recordId}>
+            <li key={`${i.recordId}-${i.sectionId}`}>
               <Link to={wikiHref(i)} className={styles.item}>
-                <span className={styles.car}>{i.car}</span>
+                <span className={styles.car}>
+                  {i.car}
+                  <span className={styles.section}>{i.sectionName}</span>
+                </span>
                 <span className={styles.date}>{formatDate(i.closedAt)}</span>
                 <RightOutlined className={styles.arrow} />
               </Link>
