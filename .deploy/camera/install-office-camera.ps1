@@ -27,6 +27,13 @@ if (-not ((& $ffPath -hide_banner -protocols 2>$null) -match '^\s*srt\s*$')) {
   throw "В этой сборке ffmpeg нет SRT ($ffPath). Нужна сборка Gyan.FFmpeg"
 }
 
+# Обновление: работающая трансляция держит ffmpeg.exe — сначала останавливаем её
+Stop-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+Get-CimInstance Win32_Process -Filter "Name='ffmpeg.exe'" |
+  Where-Object { $_.ExecutablePath -like "$target*" } |
+  ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+Start-Sleep -Seconds 1
+
 New-Item -ItemType Directory -Force $target | Out-Null
 Copy-Item (Join-Path $src 'office-camera.ps1') $target -Force
 Copy-Item $ffPath (Join-Path $target 'ffmpeg.exe') -Force
@@ -52,10 +59,6 @@ Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Pr
 
 $filled = (Get-Content $conf -Encoding UTF8) -match '^\s*SRT_PASSPHRASE\s*=\s*\S+'
 if ($filled) {
-  Stop-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
-  Get-CimInstance Win32_Process -Filter "Name='ffmpeg.exe'" |
-    Where-Object { $_.ExecutablePath -like "$target*" } |
-    ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
   Start-ScheduledTask -TaskName $taskName
   Write-Host "Готово: трансляция запущена. Журнал — $target\camera.log" -ForegroundColor Green
 } else {
