@@ -2,7 +2,7 @@
 #
 # Компьютер в офисе отправляет видео по SRT на порт 8890/udp — единственный порт наружу.
 # Поток зашифрован паролем CAMERA_SRT_PASSPHRASE из .env (docker-compose передаёт его
-# переменными MTX_PATHS_OFFICE_SRT*PASSPHRASE): без него ни отправить, ни забрать видео по SRT нельзя.
+# переменными MTX_PATHDEFAULTS_SRT*PASSPHRASE): без него ни отправить, ни забрать видео по SRT нельзя.
 # HLS (8888) и API (9997) доступны только внутри docker-сети — их читает сервер CRM,
 # который сам проверяет вход и роль (server/src/routes/cameraStream.routes.ts).
 

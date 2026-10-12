@@ -69,9 +69,11 @@ services:
   mediamtx:
     image: bluenviron/mediamtx:1.9.3
     restart: unless-stopped
+    # Пароль — через pathDefaults: переопределение внутри paths (MTX_PATHS_OFFICE_…) роняет MediaMTX 1.9.3.
+    # Путь в .deploy/mediamtx.yml один (office), так что пароль действует именно на него
     environment:
-      MTX_PATHS_OFFICE_SRTPUBLISHPASSPHRASE: ${CAMERA_SRT_PASSPHRASE:?задайте CAMERA_SRT_PASSPHRASE в .env}
-      MTX_PATHS_OFFICE_SRTREADPASSPHRASE: ${CAMERA_SRT_PASSPHRASE}
+      MTX_PATHDEFAULTS_SRTPUBLISHPASSPHRASE: ${CAMERA_SRT_PASSPHRASE:?задайте CAMERA_SRT_PASSPHRASE в .env}
+      MTX_PATHDEFAULTS_SRTREADPASSPHRASE: ${CAMERA_SRT_PASSPHRASE}
     volumes:
       - ./.deploy/mediamtx.yml:/mediamtx.yml:ro
     ports:
