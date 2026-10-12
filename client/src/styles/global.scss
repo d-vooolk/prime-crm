@@ -183,6 +183,21 @@ h1, h2, h3, h4 {
   font-weight: 600;
 }
 
+// Красные бейджи-напоминания (почта, вики, VDF и т.д.) — яркие со свечением,
+// как счётчик «Не завершены» в расписании. Бейджи со своим цветом (склад) antd
+// красит inline-стилем — их не трогаем
+.ant-badge .ant-badge-count:not([style*='background']),
+.ant-badge .ant-badge-dot:not([style*='background']) {
+  background: var(--color-alert);
+  color: var(--color-on-error);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-alert) 25%, transparent), 0 0 12px var(--color-alert-glow);
+}
+
+.ant-badge .ant-badge-count:not([style*='background']) {
+  font-family: var(--font-display);
+  font-weight: 800;
+}
+
 // Таблицы: шапка — как метки разделов
 .ant-table-thead > tr > th {
   font-family: var(--font-display);

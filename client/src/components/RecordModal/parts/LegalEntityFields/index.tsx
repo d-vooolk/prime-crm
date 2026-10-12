@@ -73,6 +73,14 @@ export const LegalEntityFields: React.FC<Props> = ({ data, onChange }) => {
   const [postalSameAsLegal, setPostalSameAsLegal] = useState(false);
   const [companySuggestions, setCompanySuggestions] = useState<CompanySuggestion[]>([]);
   const [signatoryKey, setSignatoryKey] = useState<string | undefined>(undefined);
+  // ФИО не склоняется — в договор идёт именительный падеж (хранится копией в поле «в склонении»)
+  const sameRepresentativeName = !!data.legalRepresentative
+    && data.legalRepresentative === data.legalRepresentativeGenitive;
+  const [keepNominative, setKeepNominative] = useState(sameRepresentativeName);
+  // Запись или организация подгрузились позже — узнаём галочку по сохранённым ФИО
+  useEffect(() => {
+    if (sameRepresentativeName) setKeepNominative(true);
+  }, [sameRepresentativeName]);
   const searchSeq = useRef(0);
 
   const handleCompanySearch = useCallback(async (value: string) => {
@@ -94,7 +102,10 @@ export const LegalEntityFields: React.FC<Props> = ({ data, onChange }) => {
 
   const handleSelectCompany = (value: string) => {
     const company = companySuggestions.find(c => c.legalCompanyName === value);
-    if (company) onChange(companyFields(company));
+    if (!company) return;
+    setKeepNominative(!!company.legalRepresentative
+      && company.legalRepresentative === company.legalRepresentativeGenitive);
+    onChange(companyFields(company));
   };
 
   const applySignatory = useCallback((key: string, settings: CompanySettings) => {
@@ -252,15 +263,37 @@ export const LegalEntityFields: React.FC<Props> = ({ data, onChange }) => {
       <Row gutter={16}>
         <Col xs={24} sm={12}>
           <Form.Item label="ФИО (именительный падеж)">
-            <Input {...field('legalRepresentative')} placeholder="Иванов Иван Иванович" />
+            <Input
+              value={data.legalRepresentative}
+              onChange={e => onChange(keepNominative
+                ? { legalRepresentative: e.target.value, legalRepresentativeGenitive: e.target.value }
+                : { legalRepresentative: e.target.value })}
+              placeholder="Иванов Иван Иванович"
+            />
           </Form.Item>
         </Col>
         <Col xs={24} sm={12}>
           <Form.Item label="ФИО (в склонении)">
-            <Input {...field('legalRepresentativeGenitive')} placeholder="Иванова Ивана Ивановича" />
+            <Input
+              {...field('legalRepresentativeGenitive')}
+              disabled={keepNominative}
+              placeholder="Иванова Ивана Ивановича"
+            />
           </Form.Item>
         </Col>
       </Row>
+
+      <Form.Item>
+        <Checkbox
+          checked={keepNominative}
+          onChange={e => {
+            setKeepNominative(e.target.checked);
+            onChange({ legalRepresentativeGenitive: e.target.checked ? data.legalRepresentative : '' });
+          }}
+        >
+          Не склонять ФИО в документах
+        </Checkbox>
+      </Form.Item>
 
       <Row gutter={16}>
         <Col xs={24} sm={12}>

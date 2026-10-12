@@ -140,18 +140,24 @@ export const NotesPage: React.FC = () => {
           {notes.length === 0 && !loading ? (
             <Empty description={showArchive ? 'Архив пуст' : 'Заметок нет'} className={styles.empty} />
           ) : (
-            <div className={styles.list}>
-              {notes.map(note => (
-                <NoteCard
-                  key={note.id}
-                  note={note}
-                  canManage={canEditNote(user, note.servicemanId)}
-                  onToggleDone={handleToggleDone}
-                  onEdit={openEdit}
-                  onDelete={handleDelete}
-                />
-              ))}
-            </div>
+            <>
+              <div className={styles.sectionLabel}>
+                {showArchive ? 'Архив' : 'Активные'}
+                <span className={styles.sectionCount}>{notes.length}</span>
+              </div>
+              <div className={styles.list}>
+                {notes.map(note => (
+                  <NoteCard
+                    key={note.id}
+                    note={note}
+                    canManage={canEditNote(user, note.servicemanId)}
+                    onToggleDone={handleToggleDone}
+                    onEdit={openEdit}
+                    onDelete={handleDelete}
+                  />
+                ))}
+              </div>
+            </>
           )}
         </Spin>
       )}

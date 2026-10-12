@@ -1,10 +1,10 @@
 @use '@/styles/variables' as *;
 
 .page {
-  padding: 24px;
+  padding: var(--spacing-lg) var(--spacing-xl);
 
   @include mobile {
-    padding: 16px;
+    padding: var(--spacing-md);
   }
 }
 
@@ -12,16 +12,48 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-lg);
   flex-wrap: wrap;
 }
 
+// Заголовок как на странице расписания
 .title {
-  font-size: 22px;
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: var(--font-size-2xl);
+  font-weight: 800;
+  letter-spacing: -0.02em;
   margin: 0;
   color: var(--color-text-primary);
   flex: 1;
+
+  @include mobile {
+    font-size: var(--font-size-xl);
+  }
+}
+
+// Метка раздела — салатовая, капслоком, со счётчиком
+.sectionLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+.sectionCount {
+  background: var(--color-brand);
+  color: var(--color-on-accent);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  letter-spacing: 0;
+  padding: 1px 8px;
+  border-radius: 10px;
+  box-shadow: 0 0 10px var(--color-brand-glow);
 }
 
 .headerActions {
@@ -31,7 +63,7 @@
 }
 
 .employeeRow {
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-md);
 }
 
 .employeeSelect {
@@ -42,8 +74,15 @@
   margin-top: 60px;
 }
 
+// Плитки заметок: на широком экране в несколько колонок, на телефоне — одна
 .list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  align-items: start;
+  gap: var(--spacing-md);
+
+  @include mobile {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
 }

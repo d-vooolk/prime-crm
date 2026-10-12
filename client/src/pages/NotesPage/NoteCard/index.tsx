@@ -1,7 +1,7 @@
 import React from 'react';
-import { Button, Popconfirm, Space, Tag } from 'antd';
+import { Button, Popconfirm } from 'antd';
 import {
-  EditOutlined, DeleteOutlined, CheckCircleOutlined, CheckCircleFilled,
+  EditOutlined, DeleteOutlined, CheckOutlined, UndoOutlined,
   CalendarOutlined, ClockCircleOutlined, RetweetOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -18,68 +18,79 @@ interface Props {
   onDelete: (id: string) => void;
 }
 
-export const NoteCard: React.FC<Props> = ({ note, canManage, onToggleDone, onEdit, onDelete }) => (
-  <div
-    className={cn(styles.card, {
-      [styles.priorityLow]: note.priority === 'LOW',
-      [styles.priorityMedium]: note.priority === 'MEDIUM',
-      [styles.priorityHigh]: note.priority === 'HIGH',
-      [styles.done]: note.isDone,
-    })}
-  >
-    <button
-      className={cn(styles.checkBtn, { [styles.checkBtnDone]: note.isDone })}
-      onClick={() => onToggleDone(note)}
-      title={note.isDone ? 'Восстановить' : 'Отметить выполненным'}
+export const NoteCard: React.FC<Props> = ({ note, canManage, onToggleDone, onEdit, onDelete }) => {
+  const hasMeta = !!(note.date || note.time);
+
+  return (
+    <div
+      className={cn(styles.card, {
+        [styles.priorityLow]: note.priority === 'LOW',
+        [styles.priorityMedium]: note.priority === 'MEDIUM',
+        [styles.priorityHigh]: note.priority === 'HIGH',
+        [styles.done]: note.isDone,
+      })}
     >
-      {note.isDone ? <CheckCircleFilled className={styles.doneIcon} /> : <CheckCircleOutlined />}
-    </button>
+      <span className={styles.priorityBar} />
 
-    <div className={styles.cardBody}>
-      <div className={styles.cardText}>{note.text}</div>
-      {(note.date || note.time) && (
-        <div className={styles.cardMeta}>
-          {note.date && (
-            <span className={styles.metaItem}>
-              <CalendarOutlined />
-              {dayjs(note.date).format('DD.MM.YYYY')}
-            </span>
-          )}
-          {note.allDay && note.date && (
-            <span className={styles.metaItem}>Весь день</span>
-          )}
-          {!note.allDay && note.time && (
-            <span className={styles.metaItem}>
-              <ClockCircleOutlined />
-              {note.time}
-            </span>
-          )}
-          {note.repeat && (
-            <span className={styles.metaItem}>
-              <RetweetOutlined />
-              {REPEAT_LABEL[note.repeat as NoteRepeat]}
-            </span>
-          )}
-        </div>
-      )}
-    </div>
+      <div className={styles.head}>
+        <span className={styles.priorityPill}>
+          <span className={styles.priorityDot} />
+          {PRIORITY_LABEL[note.priority]}
+        </span>
+        {canManage && (
+          <div className={styles.actions}>
+            <Button type="text" size="small" icon={<EditOutlined />} onClick={() => onEdit(note)} title="Изменить" />
+            <Popconfirm
+              title="Удалить заметку?"
+              onConfirm={() => onDelete(note.id)}
+              okText="Да"
+              cancelText="Нет"
+              okButtonProps={{ danger: true }}
+            >
+              <Button type="text" size="small" danger icon={<DeleteOutlined />} title="Удалить" />
+            </Popconfirm>
+          </div>
+        )}
+      </div>
 
-    <div className={styles.cardRight}>
-      <Tag className={styles.priorityTag}>{PRIORITY_LABEL[note.priority]}</Tag>
-      {canManage && (
-        <Space size={2} className={styles.cardActions}>
-          <Button type="text" size="small" icon={<EditOutlined />} onClick={() => onEdit(note)} />
-          <Popconfirm
-            title="Удалить заметку?"
-            onConfirm={() => onDelete(note.id)}
-            okText="Да"
-            cancelText="Нет"
-            okButtonProps={{ danger: true }}
-          >
-            <Button type="text" size="small" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
-        </Space>
-      )}
+      {/* Переносы строк из формы сохраняются (white-space: pre-wrap) */}
+      <div className={styles.text}>{note.text}</div>
+
+      <div className={styles.footer}>
+        {hasMeta && (
+          <div className={styles.meta}>
+            {note.date && (
+              <span className={styles.chip}>
+                <CalendarOutlined />
+                {dayjs(note.date).format('DD.MM.YYYY')}
+              </span>
+            )}
+            {note.allDay && note.date && (
+              <span className={styles.chip}>Весь день</span>
+            )}
+            {!note.allDay && note.time && (
+              <span className={styles.chip}>
+                <ClockCircleOutlined />
+                {note.time}
+              </span>
+            )}
+            {note.repeat && (
+              <span className={styles.chip}>
+                <RetweetOutlined />
+                {REPEAT_LABEL[note.repeat as NoteRepeat]}
+              </span>
+            )}
+          </div>
+        )}
+
+        <button
+          type="button"
+          className={cn(styles.checkBtn, { [styles.checkBtnDone]: note.isDone })}
+          onClick={() => onToggleDone(note)}
+        >
+          {note.isDone ? <><UndoOutlined /> Вернуть</> : <><CheckOutlined /> Выполнено</>}
+        </button>
+      </div>
     </div>
-  </div>
-);
+  );
+};

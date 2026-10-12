@@ -1,18 +1,27 @@
 @use '@/styles/variables' as *;
 
+// Карточка в стиле карточек записи: поверхность, скругление, светящаяся полоса приоритета слева
 .card {
-  // Цвет приоритета задаёт рамку, подложку и тег
+  // Цвет приоритета задаёт полосу, точку и подложку
   --note-priority: var(--color-priority-low);
 
+  position: relative;
+  overflow: hidden;
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 12px 14px;
-  border-radius: 10px;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-md) var(--spacing-md) calc(var(--spacing-md) + 6px);
+  border-radius: var(--border-radius);
   border: 1px solid var(--color-border);
-  border-left: 4px solid var(--note-priority);
-  background: color-mix(in srgb, var(--note-priority) 4%, transparent);
-  transition: opacity 0.2s;
+  background:
+    radial-gradient(260px 120px at 100% 0%, color-mix(in srgb, var(--note-priority) 9%, transparent), transparent 70%),
+    var(--color-surface);
+  transition: var(--transition);
+
+  &:hover {
+    border-color: color-mix(in srgb, var(--note-priority) 40%, var(--color-border));
+    box-shadow: var(--shadow-md);
+  }
 
   &.priorityMedium {
     --note-priority: var(--color-priority-medium);
@@ -20,92 +29,142 @@
 
   &.priorityHigh {
     --note-priority: var(--color-priority-high);
-    background: color-mix(in srgb, var(--note-priority) 6%, transparent);
   }
 
   &.done {
-    opacity: 0.55;
+    opacity: 0.6;
 
-    .cardText {
+    .text {
       text-decoration: line-through;
       color: var(--color-text-secondary);
     }
+
+    .priorityBar {
+      box-shadow: none;
+    }
+  }
+
+  @include mobile {
+    padding: 12px 12px 12px 18px;
   }
 }
 
-.priorityTag {
-  flex-shrink: 0;
-  border-color: var(--note-priority);
+.priorityBar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--note-priority);
+  box-shadow: 0 0 10px var(--note-priority);
+}
+
+// ─── Шапка: приоритет и действия ────────────────────
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  min-height: 24px;
+}
+
+.priorityPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-display);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: var(--note-priority);
 }
 
-.checkBtn {
-  flex-shrink: 0;
-  width: 28px;
-  height: 28px;
+.priorityDot {
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  border: none;
-  background: none;
-  cursor: pointer;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  color: var(--color-text-secondary);
-  transition: color 0.2s, transform 0.15s;
-  margin-top: 1px;
-
-  &:hover {
-    color: var(--color-success);
-    transform: scale(1.1);
-  }
-
-  &.checkBtnDone {
-    color: var(--color-success);
-  }
+  background: var(--note-priority);
+  box-shadow: 0 0 8px var(--note-priority);
 }
 
-.doneIcon {
-  color: var(--color-success);
-}
-
-.cardBody {
-  flex: 1;
-  min-width: 0;
-}
-
-.cardText {
-  font-size: 14px;
-  color: var(--color-text-primary);
-  line-height: 1.5;
-  word-break: break-word;
-}
-
-.cardMeta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 6px;
-}
-
-.metaItem {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  color: var(--color-text-secondary);
-}
-
-.cardRight {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.cardActions {
+.actions {
   display: flex;
   gap: 2px;
+  margin-right: -6px;
+}
+
+// ─── Текст ───────────────────────────────────────────
+
+.text {
+  flex: 1;
+  font-size: var(--font-size-md);
+  line-height: 1.55;
+  color: var(--color-text-primary);
+  // Переносы строк, набранные в заметке, остаются после сохранения
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+// ─── Низ: дата/время и отметка ──────────────────────
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--color-border-light);
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+}
+
+.checkBtn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  transition: var(--transition);
+
+  &:hover {
+    color: var(--color-on-accent);
+    background: var(--color-brand);
+    border-color: var(--color-brand);
+    box-shadow: 0 0 12px var(--color-brand-glow);
+  }
+
+  &.checkBtnDone:hover {
+    color: var(--color-text-primary);
+    background: var(--color-surface-2);
+    border-color: var(--color-border);
+    box-shadow: none;
+  }
 }

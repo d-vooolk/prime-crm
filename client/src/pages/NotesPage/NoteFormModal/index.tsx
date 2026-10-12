@@ -74,7 +74,7 @@ export const NoteFormModal: React.FC<Props> = ({ open, note, saving, onCancel, o
           label="Текст заметки"
           rules={[{ required: true, message: 'Введите текст заметки' }]}
         >
-          <Input.TextArea rows={3} placeholder="Введите заметку..." />
+          <Input.TextArea autoSize={{ minRows: 4, maxRows: 14 }} placeholder="Введите заметку..." />
         </Form.Item>
 
         <Form.Item name="date" label="Дата (необязательно)">

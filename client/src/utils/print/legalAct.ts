@@ -8,6 +8,8 @@ import { buildCustomerBlock, buildExecutorBlock, legalDocStyles, servicesTableRo
 
 export function printLegalAct(record: Record, settings?: CompanySettings): void {
   const date = record.deal ? formatDate(record.deal.closedAt) : formatDate(record.scheduledAt);
+  // Договор оформляется на дату записи (см. printServiceContract), акт — на дату закрытия
+  const contractDate = formatDate(record.scheduledAt);
   const docNum = record.documentNumber || record.id.slice(-8).toUpperCase();
   const execName = record.executorSignatoryName || settings?.directorName || '';
   const repPosition = record.legalRepresentativePosition || '';
@@ -44,7 +46,7 @@ export function printLegalAct(record: Record, settings?: CompanySettings): void 
     </div>
 
     <p style="font-size:11px;margin-bottom:8px">
-      Настоящий акт составлен к Договору № ${docNum} на оказание услуг от ${date}г.
+      Настоящий акт составлен к Договору № ${docNum} на оказание услуг от ${contractDate}г.
     </p>
 
     <table>

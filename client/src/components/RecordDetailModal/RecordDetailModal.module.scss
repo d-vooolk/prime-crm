@@ -33,8 +33,9 @@
 .modalBody {
   @include mobile {
     // Боковые отступы — у тела, а не у окна: тело обрезает всё за своими краями (overflow),
-    // и шапка с фото авто упиралась бы в отступы окна полосами слева и справа
-    padding: 0 24px;
+    // и шапка с фото авто упиралась бы в отступы окна полосами слева и справа.
+    // !important: у antd «.ant-modal .ant-modal-body { padding: 0 }» специфичнее
+    padding: 0 16px !important;
     flex: 1;
     min-height: 0;
     overflow-y: auto;
@@ -48,7 +49,7 @@
 // На телефоне отступы окна убраны (см. .modalContent) — кнопкам внизу возвращаем свои
 .modalFooter {
   @include mobile {
-    padding: 0 24px;
+    padding: 0 16px !important;
   }
 }
 

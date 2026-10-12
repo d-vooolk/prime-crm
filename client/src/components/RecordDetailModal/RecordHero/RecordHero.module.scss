@@ -19,7 +19,8 @@
 
   @include mobile {
     min-height: 190px;
-    margin: 0 -24px var(--spacing-sm);
+    // Тело модалки на телефоне с отступами 16px (RecordDetailModal.module.scss) — фото выходит за них
+    margin: 0 -16px var(--spacing-sm);
     padding: 14px 60px 16px 16px;
   }
 
