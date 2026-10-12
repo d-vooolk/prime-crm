@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Modal, Form, Input, Select, Button, Divider, Empty, Grid } from 'antd';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNotify } from '@/hooks/useNotify';
-import { useAllServicemen } from '@/hooks/useReferenceData';
+import { useAllServicemen, useClientSources } from '@/hooks/useReferenceData';
 import { Record, CompanySettings, CurrencyPart } from '@/types';
 import { recordsApi } from '@/api/records.api';
 import { currencyPartsByn, currencyPartsValid } from '@/components/CurrencyConverter';
@@ -69,6 +69,16 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
   const [currencyParts, setCurrencyParts] = useState<CurrencyPart[]>([]);
   const [currencyOpen, setCurrencyOpen] = useState(false);
 
+  // Источник клиента — обязателен для закрытия; повторяет поле из записи, чтобы не возвращаться в неё
+  const { data: clientSources } = useClientSources();
+  const sourceOptions = useMemo(() => {
+    const options = (clientSources ?? []).map(s => ({ value: s.id, label: s.name }));
+    // Сохранённый в записи, но скрытый из списка в настройках — тоже показываем
+    const saved = record.clientSource;
+    if (saved && !options.some(o => o.value === saved.id)) options.push({ value: saved.id, label: saved.name });
+    return options;
+  }, [clientSources, record.clientSource]);
+
   const notify = useNotify();
   const [form] = Form.useForm();
 
@@ -82,6 +92,7 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
         recommendations: record.deal.recommendations || '',
         warranty: record.deal.warranty || '',
         isPaidByBankTransfer: record.deal.isPaidByBankTransfer || false,
+        clientSourceId: record.clientSourceId ?? undefined,
       });
       setPaymentSplitCard(record.deal.splitCardAmount ?? null);
       setCurrencyParts(record.deal.currencyPayments ?? []);
@@ -89,7 +100,7 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
     } else {
       form.resetFields();
       // Недостатки могли записать в карточке до закрытия
-      form.setFieldsValue({ defects: record.defects || '' });
+      form.setFieldsValue({ defects: record.defects || '', clientSourceId: record.clientSourceId ?? undefined });
       setPaymentSplitCard(null);
       setCurrencyParts([]);
       setCurrencyOpen(false);
@@ -136,6 +147,8 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
     setLoading(true);
     try {
       await recordsApi.update(record.id, {
+        // Старые закрытые сделки могли быть без источника — пустое поле их не трогает
+        ...(values.clientSourceId ? { clientSourceId: values.clientSourceId } : {}),
         items: items.map(i => ({
           serviceId: i.serviceId,
           price: i.price,
@@ -259,6 +272,17 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
               onCancelSplit={cancelSplit}
             />
           )}
+
+          <Divider orientation="left" className={styles.divider}>Источник клиента</Divider>
+
+          {/* Обязателен для новой сделки (проверяет и сервер); у старых закрытых его может не быть */}
+          <Form.Item
+            label="Откуда клиент узнал о нас"
+            name="clientSourceId"
+            rules={record.deal ? [] : [{ required: true, message: 'Укажите источник клиента' }]}
+          >
+            <Select placeholder="Выберите источник" options={sourceOptions} showSearch optionFilterProp="label" />
+          </Form.Item>
 
           <Divider orientation="left" className={styles.divider}>Дефекты и рекомендации</Divider>
 

@@ -493,6 +493,10 @@ export const recordsService = {
       return recordsService.findById(id);
     }
 
+    // Источник клиента нужен для статистики каналов привлечения: без него сделку не закрыть.
+    // Модалка закрытия сохраняет его в запись перед закрытием
+    if (!record.clientSourceId) throw new AppError('Укажите источник клиента', 400);
+
     // Для услуг с оборудованием оборудование должно быть выбрано
     const missingEquipment = record.items.filter(item => item.service.hasEquipment && !item.equipmentId);
     if (missingEquipment.length > 0) {
