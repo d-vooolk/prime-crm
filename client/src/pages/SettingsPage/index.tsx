@@ -1,6 +1,12 @@
 import React from 'react';
-import { Card, Tabs } from 'antd';
-import { useSearchParams } from 'react-router-dom';
+import { Button, Card, Grid } from 'antd';
+import {
+  AlertOutlined, ArrowLeftOutlined, AppstoreOutlined, BankOutlined, CarOutlined, FallOutlined,
+  FileTextOutlined, MessageOutlined, RightOutlined, RiseOutlined, SettingOutlined, ShareAltOutlined,
+  WalletOutlined,
+} from '@ant-design/icons';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import cn from 'classnames';
 import { useAuthStore } from '@/store/authStore';
 import { isEmployee, isManagerOrAbove } from '@/utils/roles';
 import { CarCatalogEditor } from '@/components/CarCatalogEditor';
@@ -16,21 +22,39 @@ import { OpportunitiesTab } from './OpportunitiesTab';
 import { MissedProfitTab } from './MissedProfitTab';
 import styles from './SettingsPage.module.scss';
 
+interface SettingsSection {
+  key: string;
+  label: string;
+  icon: React.ReactNode;
+  group: string;
+  children: React.ReactNode;
+}
+
+/**
+ * Настройки: слева вертикальное меню разделов, справа выбранный раздел.
+ * На телефоне — сначала список разделов на весь экран, выбранный раздел тоже на весь экран
+ * с кнопкой «Назад». Раздел — в адресе (?tab=): на «Справочник» ведут старые ссылки /services и /clients.
+ */
 export const SettingsPage: React.FC = () => {
   const { user } = useAuthStore();
   const isSotrudnik = isEmployee(user);
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isMobile = !Grid.useBreakpoint().md;
 
-  const tabItems = [
-    { key: 'basic', label: 'Базовые', children: <BasicTab /> },
-    { key: 'company', label: 'Компания', children: <CompanyTab /> },
-    { key: 'sms', label: 'SMS', children: <SmsTab /> },
-    { key: 'templates', label: 'Шаблоны документов', children: <TemplatesTab /> },
+  const sections: SettingsSection[] = [
+    { key: 'basic', label: 'Базовые', icon: <SettingOutlined />, group: 'Общие', children: <BasicTab /> },
+    { key: 'company', label: 'Компания', icon: <BankOutlined />, group: 'Общие', children: <CompanyTab /> },
+    { key: 'sms', label: 'SMS', icon: <MessageOutlined />, group: 'Общие', children: <SmsTab /> },
+    { key: 'templates', label: 'Шаблоны документов', icon: <FileTextOutlined />, group: 'Общие', children: <TemplatesTab /> },
     // Бывшая страница «Справочник» со всеми её вкладками
-    { key: 'directory', label: 'Справочник', children: <ServicesPage embedded /> },
+    { key: 'directory', label: 'Справочник', icon: <AppstoreOutlined />, group: 'Справочники', children: <ServicesPage embedded /> },
     {
       key: 'expenseCategories',
       label: 'Категории расходов',
+      icon: <WalletOutlined />,
+      group: 'Справочники',
       children: (
         <Card title="Категории расходов">
           <ExpenseCategoriesEditor readOnly={isSotrudnik} />
@@ -40,6 +64,8 @@ export const SettingsPage: React.FC = () => {
     {
       key: 'clientSources',
       label: 'Источники клиентов',
+      icon: <ShareAltOutlined />,
+      group: 'Справочники',
       children: (
         <Card title="Источники клиентов">
           <ClientSourcesEditor readOnly={isSotrudnik} />
@@ -49,6 +75,8 @@ export const SettingsPage: React.FC = () => {
     {
       key: 'carCatalog',
       label: 'Справочник авто',
+      icon: <CarOutlined />,
+      group: 'Справочники',
       children: (
         <Card title="Марки, модели и поколения">
           <CarCatalogEditor />
@@ -59,27 +87,88 @@ export const SettingsPage: React.FC = () => {
     // только руководителям (сервер проверяет роль сам)
     ...(isManagerOrAbove(user)
       ? [
-        { key: 'opportunities', label: 'Открытые возможности', children: <OpportunitiesTab /> },
-        { key: 'missedProfit', label: 'Упущенная прибыль', children: <MissedProfitTab /> },
-        { key: 'aid', label: 'Протокол AID', children: <AidProtocolTab /> },
+        { key: 'opportunities', label: 'Открытые возможности', icon: <RiseOutlined />, group: 'Руководителям', children: <OpportunitiesTab /> },
+        { key: 'missedProfit', label: 'Упущенная прибыль', icon: <FallOutlined />, group: 'Руководителям', children: <MissedProfitTab /> },
+        { key: 'aid', label: 'Протокол AID', icon: <AlertOutlined />, group: 'Руководителям', children: <AidProtocolTab /> },
       ]
       : []),
   ];
 
-  const visibleTabItems = isSotrudnik ? tabItems.filter(t => t.key === 'basic') : tabItems;
-  // Вкладка — в адресе: на «Справочник» ведут старые ссылки /services и /clients
-  const requestedTab = searchParams.get('tab');
-  const activeTab = visibleTabItems.find(t => t.key === requestedTab)?.key ?? visibleTabItems[0].key;
+  const visible = isSotrudnik ? sections.filter(s => s.key === 'basic') : sections;
+  const groups = [...new Set(visible.map(s => s.group))];
+  // Один раздел (сотрудник) — меню не нужно
+  const withMenu = visible.length > 1;
+  const requested = visible.find(s => s.key === searchParams.get('tab'));
+  // Телефон без выбранного раздела — меню; компьютер — первый раздел
+  const active = requested ?? (isMobile && withMenu ? null : visible[0]);
+
+  const open = (key: string) => {
+    if (isMobile) {
+      // Переход на телефоне — в историю: системная кнопка «Назад» тоже возвращает к меню
+      setSearchParams({ tab: key }, { state: { fromMenu: true } });
+    } else {
+      setSearchParams(key === visible[0].key ? {} : { tab: key }, { replace: true });
+    }
+  };
+
+  const back = () => {
+    if ((location.state as { fromMenu?: boolean } | null)?.fromMenu) navigate(-1);
+    else setSearchParams({}, { replace: true });
+  };
+
+  const menu = (
+    <nav className={styles.menu}>
+      {groups.map(group => (
+        <div key={group} className={styles.group}>
+          <div className={styles.groupTitle}>{group}</div>
+          {visible.filter(s => s.group === group).map(s => (
+            <button
+              key={s.key}
+              type="button"
+              className={cn(styles.item, { [styles.itemActive]: !isMobile && s.key === active?.key })}
+              onClick={() => open(s.key)}
+            >
+              <span className={styles.itemIcon}>{s.icon}</span>
+              <span className={styles.itemLabel}>{s.label}</span>
+              {isMobile && <RightOutlined className={styles.itemArrow} />}
+            </button>
+          ))}
+        </div>
+      ))}
+    </nav>
+  );
+
+  if (isMobile) {
+    if (!active) {
+      return (
+        <div className={styles.page}>
+          <h1 className={styles.title}>Настройки</h1>
+          {menu}
+        </div>
+      );
+    }
+    return (
+      <div className={styles.page}>
+        {withMenu ? (
+          <div className={styles.mobileHeader}>
+            <Button type="text" icon={<ArrowLeftOutlined />} onClick={back} aria-label="Назад к настройкам" />
+            <h1 className={styles.mobileTitle}>{active.label}</h1>
+          </div>
+        ) : (
+          <h1 className={styles.title}>Настройки</h1>
+        )}
+        {active.children}
+      </div>
+    );
+  }
 
   return (
     <div className={styles.page}>
       <h1 className={styles.title}>Настройки</h1>
-
-      <Tabs
-        items={visibleTabItems}
-        activeKey={activeTab}
-        onChange={key => setSearchParams(key === visibleTabItems[0].key ? {} : { tab: key }, { replace: true })}
-      />
+      <div className={cn(styles.layout, { [styles.layoutWithMenu]: withMenu })}>
+        {withMenu && <aside className={styles.aside}>{menu}</aside>}
+        <div className={styles.content}>{active?.children}</div>
+      </div>
     </div>
   );
 };

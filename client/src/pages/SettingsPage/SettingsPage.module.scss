@@ -1,3 +1,134 @@
 @use '@/styles/variables' as *;
-.page { padding: var(--spacing-xl); display: flex; flex-direction: column; gap: var(--spacing-lg); @include mobile { padding: var(--spacing-md); } }
+.page { padding: var(--spacing-xl); display: flex; flex-direction: column; gap: var(--spacing-lg); @include mobile { padding: var(--spacing-md); gap: var(--spacing-md); } }
 .title { font-size: var(--font-size-xl); font-weight: 700; color: var(--color-text-primary); margin-bottom: var(--spacing-sm); }
+
+// ─── Компьютер: меню слева, раздел справа ─────
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--spacing-lg);
+  align-items: start;
+}
+
+.layoutWithMenu {
+  grid-template-columns: 240px minmax(0, 1fr);
+
+  @include tablet { grid-template-columns: 210px minmax(0, 1fr); }
+}
+
+// Меню остаётся на месте, пока прокручивается длинный раздел
+.aside {
+  position: sticky;
+  top: 0;
+}
+
+.content {
+  min-width: 0;
+}
+
+// ─── Меню ─────
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  @include mobile { gap: 6px; }
+}
+
+.groupTitle {
+  padding: 0 12px 4px;
+  font-family: var(--font-display);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--border-radius-sm);
+  background: transparent;
+  color: var(--color-text-primary);
+  font-family: var(--font-display);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: var(--transition);
+
+  &:hover { background: var(--color-surface-2); }
+
+  // Телефон: крупные строки-карточки на всю ширину
+  @include mobile {
+    min-height: 52px;
+    padding: 12px 14px;
+    border-color: var(--color-border);
+    border-radius: var(--border-radius);
+    background: var(--color-surface);
+    font-size: var(--font-size-md);
+  }
+}
+
+.itemActive {
+  border-color: var(--color-accent-border);
+  background: var(--color-accent-bg);
+  color: var(--color-accent);
+
+  &:hover { background: var(--color-accent-bg); }
+}
+
+.itemIcon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  font-size: 16px;
+  color: var(--color-text-secondary);
+
+  .itemActive & { color: var(--color-accent); }
+}
+
+.itemLabel {
+  flex: 1;
+  min-width: 0;
+}
+
+.itemArrow {
+  flex: none;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+// ─── Телефон: раздел на весь экран ─────
+
+.mobileHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-left: -8px;
+}
+
+.mobileTitle {
+  margin: 0;
+  min-width: 0;
+  font-family: var(--font-display);
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+}
