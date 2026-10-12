@@ -67,9 +67,9 @@ services:
 
   # Приёмник видео с камеры офиса (.deploy/README-camera.md). Наружу — только SRT 8890/udp
   mediamtx:
-    image: bluenviron/mediamtx:1.9.3
+    image: bluenviron/mediamtx:1.21.2
     restart: unless-stopped
-    # Пароль — через pathDefaults: переопределение внутри paths (MTX_PATHS_OFFICE_…) роняет MediaMTX 1.9.3.
+    # Пароль — через pathDefaults: переопределение внутри paths (MTX_PATHS_OFFICE_…) роняло MediaMTX 1.9.3.
     # Путь в .deploy/mediamtx.yml один (office), так что пароль действует именно на него
     environment:
       MTX_PATHDEFAULTS_SRTPUBLISHPASSPHRASE: ${CAMERA_SRT_PASSPHRASE:?задайте CAMERA_SRT_PASSPHRASE в .env}

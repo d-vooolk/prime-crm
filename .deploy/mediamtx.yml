@@ -30,6 +30,7 @@ playback: no
 rtsp: no
 rtmp: no
 webrtc: no
+moq: no
 
 hls: yes
 hlsAddress: :8888
