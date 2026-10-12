@@ -48,6 +48,9 @@ services:
       MAIL_USER: ${MAIL_USER:-}
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       BACKUPS_DIR: /app/backups
+      # Архив камеры офиса (.deploy/README-camera.md): сверх лимита удаляются самые старые записи
+      CAMERA_RECORDINGS_DIR: /app/camera
+      CAMERA_ARCHIVE_MAX_GB: ${CAMERA_ARCHIVE_MAX_GB:-10}
     # Фото и видео вики лежат на хосте: пересборка контейнера их не трогает,
     # а git reset в deploy.sh не удаляет неотслеживаемую папку data/.
     volumes:
@@ -55,6 +58,8 @@ services:
       # Зашифрованные архивы тревожной кнопки и бэкапы хоста (кнопка их удаляет)
       - ./data/panic:/app/panic
       - /root/backups/prime-crm:/app/backups
+      # Архив камеры (пишет mediamtx, чистит сервер). В бэкапы не входит
+      - ./data/camera:/app/camera
     depends_on:
       postgres:
         condition: service_healthy
@@ -76,6 +81,7 @@ services:
       MTX_PATHDEFAULTS_SRTREADPASSPHRASE: ${CAMERA_SRT_PASSPHRASE}
     volumes:
       - ./.deploy/mediamtx.yml:/mediamtx.yml:ro
+      - ./data/camera:/recordings
     ports:
       - "8890:8890/udp"
 

@@ -8,5 +8,6 @@ const router = Router();
 router.use(requireRole(ROLES.MANAGER));
 
 router.get('/session', cameraController.session);
+router.get('/archive', cameraController.archive);
 
 export default router;

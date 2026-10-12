@@ -20,6 +20,7 @@ import { linkFounderSalariesToCash } from './bootstrap/founderSalaryLinks';
 import { backfillServicemanPerformers } from './bootstrap/servicemanPerformers';
 import { seedExpenseCategoriesIfEmpty } from './bootstrap/expenseCategories';
 import { recordMediaService } from './services/recordMedia.service';
+import { cameraArchiveService } from './services/cameraArchive.service';
 import { sendDueNoteReminders } from './services/noteReminders';
 import { UPLOADS_DIR, ensureUploadDirs, isMailAttachmentPath } from './utils/uploads';
 import { mailService } from './services/mail.service';
@@ -123,6 +124,8 @@ setInterval(() => void runSafely('SMS-напоминания', () => smsService.
 setInterval(() => void runSafely('напоминания заметок', () => sendDueNoteReminders()), 60 * 1000);
 // Фото и видео записей хранятся год — раз в сутки удаляем просроченные
 setInterval(() => void runSafely('очистка старых медиа записей', () => recordMediaService.deleteExpired()), 24 * 60 * 60 * 1000);
+// Архив камеры — не больше CAMERA_ARCHIVE_MAX_GB: самые старые записи удаляются
+setInterval(() => void runSafely('очистка архива камеры', () => cameraArchiveService.enforceLimit()), 5 * 60 * 1000);
 
 process.on('unhandledRejection', (reason) => logger.error('unhandledRejection', { err: reason }));
 process.on('uncaughtException', (err) => {

@@ -23,8 +23,8 @@ router.use('/auth', authRouter);
 router.use('/cars', carsRouter);
 // Другие наши сайты — по общему ключу, без входа пользователя
 router.use('/integrations', integrationsRouter);
-// Видео камеры — по токену просмотра в пути (routes/cameraStream.routes.ts)
-router.use('/camera/live', cameraStreamRouter);
+// Видео и архив камеры — по токену просмотра в пути (routes/cameraStream.routes.ts)
+router.use('/camera', cameraStreamRouter);
 
 router.use(authMiddleware);
 

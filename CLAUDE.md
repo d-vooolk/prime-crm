@@ -400,6 +400,7 @@ GET    /api/analytics/revenue?from=&to=
 - Компьютер в офисе (`.deploy/camera/office-camera.ps1`, задача планировщика при включении) перекодирует RTSP камеры в H.264 и шлёт по SRT с паролем `CAMERA_SRT_PASSPHRASE` в контейнер `mediamtx` (`.deploy/mediamtx.yml`, наружу только 8890/udp)
 - Сервер отдаёт HLS из MediaMTX через `/api/camera/live/<токен>/…` (`services/camera.service.ts`): токен просмотра — `utils/cameraToken.ts` (только для камеры, 12 ч), роль и увольнение проверяются по базе. Маршрут подключён до `authMiddleware`. Service worker `/api/camera/` не кеширует
 - Офис выключен на ночь — «Камера выключена — офис закрыт», страница сама проверяет раз в 15 секунд
+- Архив — запись MediaMTX в `data/camera` (не в бэкапах), лимит `CAMERA_ARCHIVE_MAX_GB` держит `services/cameraArchive.service.ts` (удаляет самые старые). Выгрузка промежутка до 4 часов — `/api/camera/archive-file/<токен>/camera.mp4`
 
 ### Бэкапы
 - `.deploy/backup.sh` по cron на сервере каждый день в 03:30 UTC и перед каждым `deploy.sh`: дамп базы и снимок `data/uploads` в `/root/backups/prime-crm`

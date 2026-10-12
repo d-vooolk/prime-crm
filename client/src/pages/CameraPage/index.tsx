@@ -1,14 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Alert, Button, Spin } from 'antd';
-import { ReloadOutlined, VideoCameraOutlined } from '@ant-design/icons';
+import { HistoryOutlined, ReloadOutlined, VideoCameraOutlined } from '@ant-design/icons';
 import cn from 'classnames';
 import { useCameraPlayer } from './useCameraPlayer';
+import { ArchiveModal } from './ArchiveModal';
 import styles from './CameraPage.module.scss';
 
 /** Камера офиса: живое видео (оба объектива — одним кадром) или «офис закрыт» */
 export const CameraPage: React.FC = () => {
   const { videoRef, state, error, retry } = useCameraPlayer();
   const isLive = state === 'live';
+  const [archiveOpen, setArchiveOpen] = useState(false);
 
   return (
     <div className={styles.page}>
@@ -18,6 +20,9 @@ export const CameraPage: React.FC = () => {
           <span className={styles.statusDot} />
           {isLive ? 'В эфире' : 'Не в сети'}
         </span>
+        <Button className={styles.archiveBtn} icon={<HistoryOutlined />} onClick={() => setArchiveOpen(true)}>
+          Архив
+        </Button>
       </div>
 
       {state === 'error' && (
@@ -55,6 +60,8 @@ export const CameraPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      <ArchiveModal open={archiveOpen} onClose={() => setArchiveOpen(false)} />
     </div>
   );
 };

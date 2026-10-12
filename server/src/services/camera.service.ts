@@ -20,7 +20,7 @@ const VIEWER_CACHE_MS = 30_000;
 
 const viewerCache = new Map<string, number>();
 
-async function canWatch(token: string): Promise<boolean> {
+export async function canWatch(token: string): Promise<boolean> {
   const cachedUntil = viewerCache.get(token);
   if (cachedUntil && cachedUntil > Date.now()) return true;
 

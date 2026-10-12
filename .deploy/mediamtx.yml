@@ -3,7 +3,7 @@
 # Компьютер в офисе отправляет видео по SRT на порт 8890/udp — единственный порт наружу.
 # Поток зашифрован паролем CAMERA_SRT_PASSPHRASE из .env (docker-compose передаёт его
 # переменными MTX_PATHDEFAULTS_SRT*PASSPHRASE): без него ни отправить, ни забрать видео по SRT нельзя.
-# HLS (8888) и API (9997) доступны только внутри docker-сети — их читает сервер CRM,
+# HLS (8888), API (9997) и выгрузка архива (9996) доступны только внутри docker-сети — их читает сервер CRM,
 # который сам проверяет вход и роль (server/src/routes/cameraStream.routes.ts).
 
 logLevel: info
@@ -19,13 +19,17 @@ authInternalUsers:
         path: office
       - action: read
         path: office
+      - action: playback
+        path: office
       - action: api
 
 api: yes
 apiAddress: :9997
 metrics: no
 pprof: no
-playback: no
+# Выгрузка архива: список записей и промежуток одним MP4 (services/cameraArchive.service.ts)
+playback: yes
+playbackAddress: :9996
 
 rtsp: no
 rtmp: no
@@ -46,3 +50,11 @@ srtAddress: :8890
 paths:
   # Камера офиса. Других путей нет — чужие потоки не принимаются
   office:
+    # Архив: куски по 10 минут в data/camera на хосте. Сам MediaMTX ничего не удаляет —
+    # лимит по объёму (CAMERA_ARCHIVE_MAX_GB) держит сервер CRM
+    record: yes
+    recordPath: /recordings/%path/%Y-%m-%d_%H-%M-%S-%f
+    recordFormat: fmp4
+    recordPartDuration: 1s
+    recordSegmentDuration: 10m
+    recordDeleteAfter: 0s
