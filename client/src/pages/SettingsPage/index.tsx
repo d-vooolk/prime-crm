@@ -1,18 +1,26 @@
 import React from 'react';
-import { Button, Card, Grid } from 'antd';
+import { Badge, Button, Card, Grid } from 'antd';
 import {
-  AlertOutlined, ArrowLeftOutlined, AppstoreOutlined, BankOutlined, CarOutlined, FallOutlined,
-  FileTextOutlined, MessageOutlined, RightOutlined, RiseOutlined, SettingOutlined, ShareAltOutlined,
+  AlertOutlined, AppstoreOutlined, ArrowLeftOutlined, BankOutlined, BulbOutlined, CarOutlined,
+  ContactsOutlined, FallOutlined, FileTextOutlined, InboxOutlined, MessageOutlined, RightOutlined,
+  RiseOutlined, SettingOutlined, ShareAltOutlined, SolutionOutlined, TeamOutlined, ToolOutlined,
   WalletOutlined,
 } from '@ant-design/icons';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import cn from 'classnames';
 import { useAuthStore } from '@/store/authStore';
 import { isEmployee, isManagerOrAbove } from '@/utils/roles';
+import { useStockLowCount } from '@/hooks/useStock';
 import { CarCatalogEditor } from '@/components/CarCatalogEditor';
 import { ExpenseCategoriesEditor } from '@/components/ExpenseCategoriesEditor';
 import { ClientSourcesEditor } from '@/components/ClientSourcesEditor';
-import { ServicesPage } from '@/pages/ServicesPage';
+import { ClientsPage } from '@/pages/ClientsPage';
+import { ServicesTab } from '@/pages/ServicesPage/ServicesTab';
+import { RepairTypesTab } from '@/pages/ServicesPage/RepairTypesTab';
+import { EquipmentTab } from '@/pages/ServicesPage/EquipmentTab';
+import { StockTab } from '@/pages/ServicesPage/StockTab';
+import { EmployeesTab } from '@/pages/ServicesPage/EmployeesTab';
+import { ReceptionistsTab } from '@/pages/ServicesPage/ReceptionistsTab';
 import { BasicTab } from './BasicTab';
 import { CompanyTab } from './CompanyTab';
 import { AidProtocolTab } from './AidProtocolTab';
@@ -27,13 +35,23 @@ interface SettingsSection {
   label: string;
   icon: React.ReactNode;
   group: string;
+  /** Счётчик у пункта меню (товары склада на исходе) */
+  badge?: number;
   children: React.ReactNode;
 }
 
 /**
- * Настройки: слева вертикальное меню разделов, справа выбранный раздел.
+ * Старые адреса: справочник был одной вкладкой со своими подвкладками (?tab=directory&sub=stock)
+ */
+function sectionKeyFromParams(params: URLSearchParams) {
+  const tab = params.get('tab');
+  return tab === 'directory' ? params.get('sub') || 'services' : tab;
+}
+
+/**
+ * Настройки: слева вертикальное меню разделов (справочник — его пунктами), справа выбранный раздел.
  * На телефоне — сначала список разделов на весь экран, выбранный раздел тоже на весь экран
- * с кнопкой «Назад». Раздел — в адресе (?tab=): на «Справочник» ведут старые ссылки /services и /clients.
+ * с кнопкой «Назад». Раздел — в адресе (?tab=): туда ведут старые ссылки /services и /clients.
  */
 export const SettingsPage: React.FC = () => {
   const { user } = useAuthStore();
@@ -42,44 +60,61 @@ export const SettingsPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = !Grid.useBreakpoint().md;
+  const { data: lowStockCount = 0 } = useStockLowCount();
 
   const sections: SettingsSection[] = [
     { key: 'basic', label: 'Базовые', icon: <SettingOutlined />, group: 'Общие', children: <BasicTab /> },
     { key: 'company', label: 'Компания', icon: <BankOutlined />, group: 'Общие', children: <CompanyTab /> },
     { key: 'sms', label: 'SMS', icon: <MessageOutlined />, group: 'Общие', children: <SmsTab /> },
     { key: 'templates', label: 'Шаблоны документов', icon: <FileTextOutlined />, group: 'Общие', children: <TemplatesTab /> },
-    // Бывшая страница «Справочник» со всеми её вкладками
-    { key: 'directory', label: 'Справочник', icon: <AppstoreOutlined />, group: 'Справочники', children: <ServicesPage embedded /> },
+    // Справочник
+    { key: 'services', label: 'Услуги', icon: <ToolOutlined />, group: 'Справочник', children: <ServicesTab /> },
+    // Блоки страницы записи для клиента (zapis.prime-auto.by)
+    { key: 'repairTypes', label: 'Типы ремонта', icon: <AppstoreOutlined />, group: 'Справочник', children: <RepairTypesTab /> },
+    { key: 'equipment', label: 'Bi-Led модули', icon: <BulbOutlined />, group: 'Справочник', children: <EquipmentTab /> },
+    {
+      key: 'stock', label: 'Склад', icon: <InboxOutlined />, group: 'Справочник', badge: lowStockCount, children: <StockTab />,
+    },
+    {
+      key: 'carCatalog',
+      label: 'Справочник авто',
+      icon: <CarOutlined />,
+      group: 'Справочник',
+      children: (
+        <Card title="Марки, модели и поколения">
+          <CarCatalogEditor />
+        </Card>
+      ),
+    },
     {
       key: 'expenseCategories',
       label: 'Категории расходов',
       icon: <WalletOutlined />,
-      group: 'Справочники',
+      group: 'Справочник',
       children: (
         <Card title="Категории расходов">
           <ExpenseCategoriesEditor readOnly={isSotrudnik} />
         </Card>
       ),
     },
+    // Люди. Все профили — в «Сотрудниках»; мастера приёмщики — те, у кого включён свитч в карточке
+    { key: 'employees', label: 'Сотрудники', icon: <TeamOutlined />, group: 'Люди', children: <EmployeesTab isMobile={isMobile} /> },
+    {
+      key: 'receptionists',
+      label: 'Мастера приёмщики',
+      icon: <SolutionOutlined />,
+      group: 'Люди',
+      children: <ReceptionistsTab isMobile={isMobile} />,
+    },
+    { key: 'clients', label: 'Клиенты', icon: <ContactsOutlined />, group: 'Люди', children: <ClientsPage /> },
     {
       key: 'clientSources',
       label: 'Источники клиентов',
       icon: <ShareAltOutlined />,
-      group: 'Справочники',
+      group: 'Люди',
       children: (
         <Card title="Источники клиентов">
           <ClientSourcesEditor readOnly={isSotrudnik} />
-        </Card>
-      ),
-    },
-    {
-      key: 'carCatalog',
-      label: 'Справочник авто',
-      icon: <CarOutlined />,
-      group: 'Справочники',
-      children: (
-        <Card title="Марки, модели и поколения">
-          <CarCatalogEditor />
         </Card>
       ),
     },
@@ -98,7 +133,8 @@ export const SettingsPage: React.FC = () => {
   const groups = [...new Set(visible.map(s => s.group))];
   // Один раздел (сотрудник) — меню не нужно
   const withMenu = visible.length > 1;
-  const requested = visible.find(s => s.key === searchParams.get('tab'));
+  const requestedKey = sectionKeyFromParams(searchParams);
+  const requested = visible.find(s => s.key === requestedKey);
   // Телефон без выбранного раздела — меню; компьютер — первый раздел
   const active = requested ?? (isMobile && withMenu ? null : visible[0]);
 
@@ -130,6 +166,7 @@ export const SettingsPage: React.FC = () => {
             >
               <span className={styles.itemIcon}>{s.icon}</span>
               <span className={styles.itemLabel}>{s.label}</span>
+              {!!s.badge && <Badge count={s.badge} size="small" color="var(--color-warning)" />}
               {isMobile && <RightOutlined className={styles.itemArrow} />}
             </button>
           ))}

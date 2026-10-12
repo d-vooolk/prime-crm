@@ -35,7 +35,7 @@ export const LowStockBanner: React.FC = () => {
       className={styles.banner}
       message={`На складе заканчивается: ${count} ${plural(count)}`}
       action={(
-        <Button size="small" onClick={() => navigate('/settings?tab=directory&sub=stock')}>
+        <Button size="small" onClick={() => navigate('/settings?tab=stock')}>
           Открыть склад
         </Button>
       )}

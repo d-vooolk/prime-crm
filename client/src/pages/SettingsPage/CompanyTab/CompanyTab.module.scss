@@ -57,3 +57,43 @@
 .addPerson {
   margin-bottom: var(--spacing-lg);
 }
+
+// ─── Просмотр: поля текстом ─────
+
+.fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--spacing-md) var(--spacing-lg);
+}
+
+.field {
+  min-width: 0;
+}
+
+.fieldWide {
+  grid-column: 1 / -1;
+}
+
+.fieldLabel {
+  margin-bottom: 2px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.fieldValue {
+  color: var(--color-text-primary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.fieldEmpty {
+  color: var(--color-text-muted);
+}
+
+.editActions {
+  display: flex;
+  gap: var(--spacing-sm);
+}

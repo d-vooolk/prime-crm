@@ -73,9 +73,9 @@ const App: React.FC = () => {
                     <Route index element={<Navigate to="/schedule" replace />} />
                     <Route path="schedule" element={<SchedulePage />} />
                     <Route path="dashboard" element={<DashboardPage />} />
-                    {/* Справочник переехал во вкладку настроек */}
-                    <Route path="clients" element={<Navigate to="/settings?tab=directory" replace />} />
-                    <Route path="services" element={<Navigate to="/settings?tab=directory" replace />} />
+                    {/* Справочник переехал в настройки */}
+                    <Route path="clients" element={<Navigate to="/settings?tab=clients" replace />} />
+                    <Route path="services" element={<Navigate to="/settings?tab=services" replace />} />
                     <Route path="wiki" element={<WikiPage />} />
                     <Route path="accounting" element={<AccountingPage />} />
                     <Route path="notes" element={<NotesPage />} />
