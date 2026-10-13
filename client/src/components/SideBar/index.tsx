@@ -12,6 +12,7 @@ import {
   MailOutlined,
   AppstoreOutlined,
   VideoCameraOutlined,
+  InboxOutlined,
 } from '@ant-design/icons';
 import { Calendar, ConfigProvider, Button, Badge } from 'antd';
 import type { Dayjs } from 'dayjs';
@@ -22,9 +23,10 @@ import { useAuthStore } from '@/store/authStore';
 import { useWikiStore } from '@/store/wikiStore';
 import { Logo } from '@/components/Logo';
 import { recordsApi } from '@/api/records.api';
-import { canSeeMail, canSeePath, isManagerOrAbove } from '@/utils/roles';
+import { canSeeMail, canSeePath, canSeeSiteLeads, isManagerOrAbove } from '@/utils/roles';
 import { useStockLowCount } from '@/hooks/useStock';
 import { useMailUnreadCount } from '@/hooks/useMail';
+import { useSiteLeadsNewCount } from '@/hooks/useSiteLeads';
 import { useOnAppResume } from '@/hooks/useAppResume';
 import styles from './SideBar.module.scss';
 import cn from 'classnames';
@@ -33,6 +35,7 @@ dayjs.locale('ru');
 
 const NAV_ITEMS = [
   { path: '/schedule', label: 'Расписание', icon: <CalendarOutlined /> },
+  { path: '/leads', label: 'Заявки', icon: <InboxOutlined /> },
   { path: '/dashboard', label: 'Дашборд', icon: <DashboardOutlined /> },
   { path: '/wiki', label: 'Wiki', icon: <BookOutlined /> },
   { path: '/accounting', label: 'Бухгалтерия', icon: <AccountBookOutlined /> },
@@ -43,7 +46,7 @@ const NAV_ITEMS = [
 ];
 
 /** На телефоне эти пункты — в меню «Ещё» (крайний правый пункт нижней навигации) */
-const MORE_PATHS = ['/mail', '/camera', '/settings'];
+const MORE_PATHS = ['/leads', '/mail', '/camera', '/settings'];
 
 export const SideBar: React.FC = () => {
   const { selectedDate, setSelectedDate } = useUiStore();
@@ -55,9 +58,12 @@ export const SideBar: React.FC = () => {
   const { data: lowStockCount = 0 } = useStockLowCount(isManagerOrAbove(user));
   // Непрочитанные письма — только у создателя
   const { data: mailUnreadCount = 0 } = useMailUnreadCount(canSeeMail(user));
+  // Новые заявки с сайта — менеджерам и выше
+  const { data: leadsNewCount = 0 } = useSiteLeadsNewCount(canSeeSiteLeads(user));
   const navIcon = (item: typeof NAV_ITEMS[number]) => {
     if (item.path === '/wiki') return <Badge count={wikiPendingCount} size="small">{item.icon}</Badge>;
     if (item.path === '/mail') return <Badge count={mailUnreadCount} size="small">{item.icon}</Badge>;
+    if (item.path === '/leads') return <Badge count={leadsNewCount} size="small">{item.icon}</Badge>;
     if (item.path === '/settings') return <Badge count={lowStockCount} size="small" color="var(--color-warning)">{item.icon}</Badge>;
     return item.icon;
   };
@@ -79,9 +85,10 @@ export const SideBar: React.FC = () => {
   }, [location.pathname]);
 
   const moreActive = moreItems.some(item => location.pathname.startsWith(item.path));
-  // Бейджи пунктов меню «Ещё» видны и на самой кнопке: письма важнее склада
-  const moreIcon = mailUnreadCount > 0
-    ? <Badge count={mailUnreadCount} size="small"><AppstoreOutlined /></Badge>
+  // Бейджи пунктов меню «Ещё» видны и на самой кнопке: заявки и письма важнее склада
+  const moreUrgentCount = leadsNewCount + mailUnreadCount;
+  const moreIcon = moreUrgentCount > 0
+    ? <Badge count={moreUrgentCount} size="small"><AppstoreOutlined /></Badge>
     : <Badge count={lowStockCount} size="small" color="var(--color-warning)"><AppstoreOutlined /></Badge>;
 
   const calendarYear = calendarValue.year();
@@ -206,7 +213,7 @@ export const SideBar: React.FC = () => {
             onClick={() => setMoreOpen(o => !o)}
             aria-expanded={moreOpen}
           >
-            <span className={cn(styles.icon, { [styles.pulse]: mailUnreadCount > 0 && !moreOpen })}>{moreIcon}</span>
+            <span className={cn(styles.icon, { [styles.pulse]: moreUrgentCount > 0 && !moreOpen })}>{moreIcon}</span>
             <span>Ещё</span>
           </button>
         )}
@@ -230,6 +237,9 @@ export const SideBar: React.FC = () => {
             <span className={styles.moreItemLabel}>{item.label}</span>
             {item.path === '/mail' && mailUnreadCount > 0 && (
               <span className={styles.moreItemHint}>{mailUnreadCount} новых</span>
+            )}
+            {item.path === '/leads' && leadsNewCount > 0 && (
+              <span className={styles.moreItemHint}>{leadsNewCount} новых</span>
             )}
           </NavLink>
         ))}

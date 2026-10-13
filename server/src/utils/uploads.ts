@@ -18,6 +18,10 @@ export const RECORD_MEDIA_URL = '/api/uploads/records';
 export const REPAIR_TYPE_MEDIA_DIR = path.join(UPLOADS_DIR, 'repair-types');
 export const REPAIR_TYPE_MEDIA_URL = '/api/uploads/repair-types';
 
+// Фото из заявок с сайта prime-auto.by (раздел «Заявки»)
+export const SITE_LEAD_MEDIA_DIR = path.join(UPLOADS_DIR, 'site-leads');
+export const SITE_LEAD_MEDIA_URL = '/api/uploads/site-leads';
+
 // Вложения писем. Лежат рядом с остальными загрузками (попадают в бэкап), но статикой
 // не раздаются: только через /api/mail с входом (см. index.ts)
 export const MAIL_ATTACHMENTS_DIR = path.join(UPLOADS_DIR, 'mail');
@@ -42,6 +46,7 @@ export function ensureUploadDirs() {
   fs.mkdirSync(RECORD_MEDIA_DIR, { recursive: true });
   fs.mkdirSync(REPAIR_TYPE_MEDIA_DIR, { recursive: true });
   fs.mkdirSync(MAIL_ATTACHMENTS_DIR, { recursive: true });
+  fs.mkdirSync(SITE_LEAD_MEDIA_DIR, { recursive: true });
 }
 
 /** Браузеры шлют имя файла в UTF-8, а busboy читает его как latin1 — возвращаем кириллицу. */

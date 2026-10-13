@@ -47,6 +47,19 @@
   width: 160px;
 }
 
+// На телефоне выбор месяца — отдельной строкой под плитками
+.monthSelectWide {
+  @include mobile {
+    width: 100%;
+  }
+}
+
+.statNote {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
 .tablesGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -92,6 +105,11 @@
 // Значение Statistic: цвет по знаку/смыслу (вместо valueStyle)
 .stat :global(.ant-statistic-content) {
   font-size: 22px;
+
+  // Две плитки в ряд на узком экране
+  @include mobile {
+    font-size: 18px;
+  }
 }
 
 .statSuccess :global(.ant-statistic-content) { color: var(--color-success); }

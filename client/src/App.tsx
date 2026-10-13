@@ -16,7 +16,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useAuthSync } from '@/hooks/useAuthSync';
 import { PwaUpdateNotice } from '@/components/PwaUpdateNotice';
 import { queryClient } from '@/lib/queryClient';
-import { canSeeCamera, canSeeMail } from '@/utils/roles';
+import { canSeeCamera, canSeeMail, canSeeSiteLeads } from '@/utils/roles';
 import { lightTheme, darkTheme } from '@/config/antdTheme';
 
 dayjs.locale('ru');
@@ -29,6 +29,7 @@ const SettingsPage = lazy(() => import('@/pages/SettingsPage').then(m => ({ defa
 const AccountingPage = lazy(() => import('@/pages/AccountingPage').then(m => ({ default: m.AccountingPage })));
 const NotesPage = lazy(() => import('@/pages/NotesPage').then(m => ({ default: m.NotesPage })));
 const CameraPage = lazy(() => import('@/pages/CameraPage').then(m => ({ default: m.CameraPage })));
+const LeadsPage = lazy(() => import('@/pages/LeadsPage').then(m => ({ default: m.LeadsPage })));
 const MailPage = lazy(() => import('@/pages/MailPage').then(m => ({ default: m.MailPage })));
 
 const App: React.FC = () => {
@@ -79,6 +80,7 @@ const App: React.FC = () => {
                     <Route path="wiki" element={<WikiPage />} />
                     <Route path="accounting" element={<AccountingPage />} />
                     <Route path="notes" element={<NotesPage />} />
+                    <Route path="leads" element={canSeeSiteLeads(user) ? <LeadsPage /> : <Navigate to="/schedule" replace />} />
                     <Route path="mail" element={canSeeMail(user) ? <MailPage /> : <Navigate to="/schedule" replace />} />
                     <Route path="camera" element={canSeeCamera(user) ? <CameraPage /> : <Navigate to="/schedule" replace />} />
                     <Route path="settings" element={<SettingsPage />} />

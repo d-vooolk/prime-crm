@@ -86,6 +86,7 @@ model Record {
   items              RecordItem[]
   deal               Deal?
   media              RecordMedia[]
+  siteLeads          SiteLead[]
   servicemanRef      Serviceman?  @relation("RecordServiceman", fields: [serviceman], references: [name], onUpdate: Cascade, onDelete: Restrict)
   receptionistRef    Serviceman?  @relation("RecordReceptionist", fields: [receptionist], references: [name], onUpdate: Cascade, onDelete: Restrict)
   clientSource       ClientSource? @relation(fields: [clientSourceId], references: [id], onDelete: SetNull)
@@ -115,6 +116,33 @@ enum RecordMediaType {
 
 // Фото и видео нюансов авто в записи. Хранятся год (expiresAt), потом файл и строка
 // удаляются фоновой очисткой (services/recordMedia.service.ts)
+// Заявка с сайта prime-auto.by (форма «Оставить заявку»), приходит по ключу SITE_LEADS_KEY
+model SiteLead {
+  id            String         @id @default(cuid())
+  name          String
+  phone         String
+  message       String?
+  // Страница сайта, с которой отправили, и откуда человек пришёл на сайт
+  page          String?
+  source        String?
+  // Фото фары — имена файлов в UPLOADS_DIR/site-leads; при записи копируются в фото записи
+  photos        String[]
+  status        SiteLeadStatus @default(NEW)
+  handledAt     DateTime?
+  handledByName String?
+  recordId      String?
+  record        Record?        @relation(fields: [recordId], references: [id], onDelete: SetNull)
+  createdAt     DateTime       @default(now())
+
+  @@index([status, createdAt])
+}
+
+enum SiteLeadStatus {
+  NEW // ждёт ответа
+  DONE // обработана без записи (перезвонили, подсказали)
+  RECORDED // по заявке создана запись
+}
+
 model RecordMedia {
   id             String          @id @default(cuid())
   recordId       String

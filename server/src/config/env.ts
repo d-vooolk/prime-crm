@@ -25,6 +25,8 @@ export const env = {
   get backupsDir() { return process.env.BACKUPS_DIR || ''; },
   /** Общий ключ с магазином vdf.by (routes/integrations.routes.ts); пусто — приём заказов выключен */
   get vdfIntegrationKey() { return process.env.VDF_INTEGRATION_KEY || ''; },
+  /** Общий ключ с сайтом prime-auto.by (заявки из формы); пусто — приём заявок выключен */
+  get siteLeadsKey() { return process.env.SITE_LEADS_KEY || ''; },
   /** Адрес страниц записи для клиента: ссылка в SMS — <адрес>/<код записи> */
   get publicRecordUrl() { return (process.env.PUBLIC_RECORD_URL || 'https://zapis.prime-auto.by').replace(/\/+$/, ''); },
   // Почтовый ящик (services/mail.service.ts). Нет логина или пароля — приём почты выключен

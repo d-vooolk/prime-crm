@@ -76,6 +76,10 @@ export const canSeeMail = isCreatorOrAbove;
 /** Видео с камеры в офисе — менеджер и выше (на сервере — routes/camera.routes.ts) */
 export const canSeeCamera = isManagerOrAbove;
 
+// ─── Заявки с сайта ────────────────────────────────
+/** Заявки из формы prime-auto.by разбирают те, кто создаёт записи (на сервере — routes/siteLeads.routes.ts) */
+export const canSeeSiteLeads = isManagerOrAbove;
+
 // ─── Навигация ─────────────────────────────────────
 /** Сотруднику доступны только эти разделы */
 // Дашборд сотруднику — только пьедестал, своя карточка и упущенная прибыль (DashboardPage)
@@ -83,6 +87,7 @@ export const EMPLOYEE_ALLOWED_PATHS = ['/schedule', '/dashboard', '/wiki', '/acc
 export const canSeePath = (u: Subject, path: string) => {
   if (path === '/mail') return canSeeMail(u);
   if (path === '/camera') return canSeeCamera(u);
+  if (path === '/leads') return canSeeSiteLeads(u);
   return !isEmployee(u) || EMPLOYEE_ALLOWED_PATHS.includes(path);
 };
 

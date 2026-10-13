@@ -5,7 +5,7 @@ import cn from 'classnames';
 import { Dayjs } from 'dayjs';
 import { CashTransaction } from '@/types';
 import { formatPrice } from '@/utils/formatters';
-import { useCashBalance, useCashMonth } from '../../hooks/useAccountingData';
+import { useCashBalance, useCashMonth, useSalaryFund } from '../../hooks/useAccountingData';
 import { useTransactionActions } from '../../hooks/useTransactionActions';
 import { usePersons } from '../../hooks/usePersons';
 import { expenseColumns, incomeColumns } from '../../columns/cashColumns';
@@ -25,6 +25,7 @@ interface Props {
 export const CashflowTab: React.FC<Props> = ({ month, onMonthChange, canEditTransactions }) => {
   const cash = useCashMonth(month, true);
   const balanceQuery = useCashBalance(true);
+  const fundQuery = useSalaryFund(true);
   const { actionColumns, editModal } = useTransactionActions(canEditTransactions);
   const { defaultPerson, managerServicemen } = usePersons();
   const [expenseOpen, setExpenseOpen] = useState(false);
@@ -34,26 +35,43 @@ export const CashflowTab: React.FC<Props> = ({ month, onMonthChange, canEditTran
   const income = cash.data?.income ?? [];
   const expenses = cash.data?.expenses ?? [];
   const balance = balanceQuery.data ?? 0;
+  const fund = fundQuery.data;
   const incomeTotal = income.reduce((s, r) => s + r.amount, 0);
 
   return (
     <div className={shared.tabContent}>
       <LoadErrorAlert
-        errors={[cash.error, balanceQuery.error]}
+        errors={[cash.error, balanceQuery.error, fundQuery.error]}
         title="Не удалось загрузить кассу"
-        onRetry={() => { cash.refetch(); balanceQuery.refetch(); }}
+        onRetry={() => { cash.refetch(); balanceQuery.refetch(); fundQuery.refetch(); }}
       />
 
       <div className={shared.topBar}>
-        <Card size="small" className={shared.balanceCard}>
-          <Statistic
-            title="Баланс (наличные)"
-            value={balance}
-            precision={2}
-            suffix="р."
-            className={cn(shared.stat, balance >= 0 ? shared.statSuccess : shared.statError)}
-          />
-        </Card>
+        <div className={shared.balanceCards}>
+          <Card size="small" className={shared.balanceCard}>
+            <Statistic
+              title="Баланс (наличные)"
+              value={balance}
+              precision={2}
+              suffix="р."
+              className={cn(shared.stat, balance >= 0 ? shared.statSuccess : shared.statError)}
+            />
+          </Card>
+
+          <Card size="small" className={shared.balanceCard}>
+            <Statistic
+              title="Зарплатный фонд"
+              value={fund?.accrued ?? 0}
+              precision={2}
+              suffix="р."
+              loading={fundQuery.isLoading}
+              className={cn(shared.stat, shared.statWarning)}
+            />
+            {fund && fund.remaining !== fund.accrued && (
+              <div className={shared.statNote}>не выплачено {formatPrice(fund.remaining)}</div>
+            )}
+          </Card>
+        </div>
 
         <DatePicker
           picker="month"
@@ -61,7 +79,7 @@ export const CashflowTab: React.FC<Props> = ({ month, onMonthChange, canEditTran
           onChange={v => v && onMonthChange(v)}
           format="MMMM YYYY"
           allowClear={false}
-          className={shared.monthSelect}
+          className={cn(shared.monthSelect, shared.monthSelectWide)}
         />
 
         <div className={shared.actions}>

@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { Router, Request, Response, NextFunction } from 'express';
 import { vdfOrdersController } from '../controllers/vdfOrders.controller';
+import { siteLeadsController } from '../controllers/siteLeads.controller';
 import { AppError } from '../middleware/errorHandler';
 import { env } from '../config/env';
 
@@ -38,5 +39,8 @@ const vdfKey = requireIntegrationKey(() => env.vdfIntegrationKey);
 router.post('/vdf/orders', vdfKey, vdfOrdersController.receive);
 // Оплаченные и отменённые заказы — для бухгалтерии магазина
 router.get('/vdf/states', vdfKey, vdfOrdersController.states);
+
+// Сайт prime-auto.by: заявки из формы — в раздел «Заявки»
+router.post('/site/leads', requireIntegrationKey(() => env.siteLeadsKey), siteLeadsController.receive);
 
 export default router;

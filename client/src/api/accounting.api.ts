@@ -66,12 +66,23 @@ export interface SalaryData {
   remaining: number;
 }
 
+// Зарплатный фонд текущего расчётного периода: начислено всем сотрудникам и сколько ещё не выплачено
+export interface SalaryFund {
+  year: number;
+  month: number;
+  accrued: number;
+  remaining: number;
+}
+
 export const accountingApi = {
   getCash: (year: number, month: number) =>
     http.get<{ data: CashMonthData }>('/accounting/cash', { params: { year, month } }).then(r => r.data.data),
 
   getBalance: () =>
     http.get<{ data: { balance: number } }>('/accounting/balance').then(r => r.data.data.balance),
+
+  getSalaryFund: () =>
+    http.get<{ data: SalaryFund }>('/accounting/salary/fund').then(r => r.data.data),
 
   createExpense: (data: {
     date: string;

@@ -178,6 +178,20 @@ export const salaryService = {
     };
   },
 
+  /**
+   * Зарплатный фонд текущего расчётного периода: начислено всем сотрудникам на сейчас
+   * (работы, оклад, премии и штрафы) и сколько из этого ещё не выплачено.
+   * Уволенные учитываются, если им что-то начислено или выплачено в периоде
+   */
+  async getSalaryFund() {
+    const { year, month } = effectiveSalaryMonth();
+    const servicemen = await prisma.serviceman.findMany({ select: { name: true } });
+    const all = await Promise.all(servicemen.map(s => salaryService.getSalaryData(s.name, year, month)));
+    const accrued = roundMoney(all.reduce((s, d) => s + Math.max(0, d.adjustedTotal), 0));
+    const remaining = roundMoney(all.reduce((s, d) => s + Math.max(0, d.remaining), 0));
+    return { year, month, accrued, remaining };
+  },
+
   async createSalaryPayment(data: {
     servicemanName: string;
     year: number;

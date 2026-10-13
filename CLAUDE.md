@@ -388,6 +388,11 @@ GET    /api/analytics/revenue?from=&to=
 - Блоки страницы — типы ремонта (Справочник → «Типы ремонта»: описание, фото, вопросы-ответы, ссылки), тип назначается услуге. Фото сжимаются в WebP 1280px (`UPLOADS_DIR/repair-types`)
 - Nginx поддомена — `.deploy/nginx-zapis.conf`: наружу только `/<код>`, `/api/cars/photo/` и `/api/uploads/repair-types/`. Адрес — `PUBLIC_RECORD_URL`
 
+### Заявки с сайта
+- Форма prime-auto.by шлёт заявку и боту в Telegram, и в CRM: браузер → `/api/lead` сайта → `POST /api/integrations/site/leads` с `x-integration-key` (`SITE_LEADS_KEY` здесь = `CRM_LEADS_KEY` в `.env.local` сайта). Пусто — приём выключен
+- Раздел «Заявки» (`/leads`, менеджер и выше, на телефоне — в «Ещё»), пуш менеджерам о новой заявке. «Выполнено» — обработана без записи; «Записать» — окно новой записи с именем и телефоном (`RecordModal.initialClient`), после сохранения `POST /api/site-leads/:id/record` копирует фото заявки в «Фото и видео» записи
+- Фото — `UPLOADS_DIR/site-leads`, приходят data URL, формат проверяется по содержимому (`siteLeads.logic.ts`). Тело запроса до 12 МБ только на `/api/integrations/site`
+
 ### Почта
 - Ящик на beget по IMAP (`services/mail.service.ts`, imapflow + mailparser): постоянное соединение с IDLE, переподключение через минуту, контрольная проверка раз в 5 минут. Только «Входящие»: «прочитано» и удаление — только в CRM; ящик меняет лишь «В спам»
 - Раздел «Почта» — только роль «Создатель» (и мастер-доступ), `requireRole(ROLES.CREATOR)`. Пуш о новом письме — только сотрудникам с ролью «Создатель» (`pushService.sendToCreators`), мастер-доступу не приходит
@@ -417,7 +422,7 @@ GET    /api/analytics/revenue?from=&to=
 
 ## Переменные окружения
 
-- **Продакшен:** `.env` рядом с `docker-compose.yml`, не в git, образец — `/.env.example`. В нём `POSTGRES_PASSWORD`, `JWT_SECRET`, `MASTER_EMAIL`, `MASTER_PASSWORD`, `CLIENT_URL`, `BACKUP_RCLONE_REMOTE`, `PANIC_PUBLIC_KEY`, `PANIC_PIN_HASH`, `VDF_INTEGRATION_KEY` (приём заказов сотрудников из магазина vdf.by: `POST /api/integrations/vdf/orders` с заголовком `x-integration-key`, вкладка «VDF» в бухгалтерии), `PUBLIC_RECORD_URL` (страница записи для клиента), `MAIL_IMAP_HOST`, `MAIL_IMAP_PORT`, `MAIL_USER`, `MAIL_PASSWORD` (почта beget), `CAMERA_SRT_PASSPHRASE` (видео камеры офиса, обязательна). Compose подставляет их в контейнеры; без обязательных переменных сервер не стартует.
+- **Продакшен:** `.env` рядом с `docker-compose.yml`, не в git, образец — `/.env.example`. В нём `POSTGRES_PASSWORD`, `JWT_SECRET`, `MASTER_EMAIL`, `MASTER_PASSWORD`, `CLIENT_URL`, `BACKUP_RCLONE_REMOTE`, `PANIC_PUBLIC_KEY`, `PANIC_PIN_HASH`, `VDF_INTEGRATION_KEY` (приём заказов сотрудников из магазина vdf.by: `POST /api/integrations/vdf/orders` с заголовком `x-integration-key`, вкладка «VDF» в бухгалтерии), `PUBLIC_RECORD_URL` (страница записи для клиента), `MAIL_IMAP_HOST`, `MAIL_IMAP_PORT`, `MAIL_USER`, `MAIL_PASSWORD` (почта beget), `CAMERA_SRT_PASSPHRASE` (видео камеры офиса, обязательна), `SITE_LEADS_KEY` (заявки с сайта prime-auto.by). Compose подставляет их в контейнеры; без обязательных переменных сервер не стартует.
 - **Разработка:** `server/.env.development`, образец — `server/.env.example`.
 
 ---

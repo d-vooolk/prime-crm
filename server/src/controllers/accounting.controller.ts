@@ -194,6 +194,10 @@ export const accountingController = {
     res.json({ data: await salaryService.getSalaryData(servicemanName, year, month) });
   },
 
+  async getSalaryFund(_req: Request, res: Response) {
+    res.json({ data: await salaryService.getSalaryFund() });
+  },
+
   /** Пьедестал лидеров периода — видят все роли, суммы заработка — только менеджеры и выше */
   async getLeaders(req: Request, res: Response) {
     const current = effectiveSalaryMonth();

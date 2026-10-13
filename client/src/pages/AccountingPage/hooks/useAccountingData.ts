@@ -41,6 +41,14 @@ export const useCashBalance = (enabled: boolean) => useQuery({
   ...FRESH,
 });
 
+// В группе salary: выплаты, премии и штрафы инвалидируют его вместе с расчётом
+export const useSalaryFund = (enabled: boolean) => useQuery({
+  queryKey: [...accountingKeys.salary, 'fund'],
+  queryFn: accountingApi.getSalaryFund,
+  enabled,
+  ...FRESH,
+});
+
 export const useCapital = (enabled: boolean) => useQuery({
   queryKey: [...accountingKeys.capital, 'list'],
   queryFn: accountingApi.getCapital,

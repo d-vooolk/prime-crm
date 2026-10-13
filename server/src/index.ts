@@ -39,6 +39,8 @@ app.set('trust proxy', 'loopback, linklocal, uniquelocal');
 
 app.use(helmet());
 app.use(cors({ origin: env.clientUrl, credentials: true }));
+// Заявка с сайта несёт до трёх фото в base64 — ей лимит больше (уже разобранное тело общий парсер пропустит)
+app.use('/api/integrations/site', express.json({ limit: '12mb' }));
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 

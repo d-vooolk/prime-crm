@@ -43,6 +43,8 @@ router.post('/monthly-record-count', director, accountingController.setMonthlyRe
 // Зарплата
 router.get('/salary', accountingController.getSalary);
 router.get('/salary/history', accountingController.getSalaryHistory);
+// Зарплатный фонд — сумма начислений всех сотрудников, рядом с балансом кассы
+router.get('/salary/fund', manager, accountingController.getSalaryFund);
 // Дашборд «Сотрудники»: пьедестал — всем ролям, упущенная премия за вики — своя (сотрудник) или всех (менеджер)
 router.get('/leaders', accountingController.getLeaders);
 router.get('/missed-wiki', accountingController.getMissedWiki);

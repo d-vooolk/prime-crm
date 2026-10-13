@@ -21,6 +21,10 @@ interface Props {
   initialDate?: string;
   editRecord?: CrmRecord;
   onSavedClosed?: () => void;
+  /** Новая запись с уже известным клиентом (заявка с сайта): имя и телефон */
+  initialClient?: { name: string; phone: string };
+  /** Новая запись сохранена — например, чтобы привязать её к заявке */
+  onCreated?: (record: CrmRecord) => void;
 }
 
 const STEPS = [
@@ -29,22 +33,24 @@ const STEPS = [
   { title: 'Итог' },
 ];
 
-export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initialDate, editRecord, onSavedClosed }) => {
+export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initialDate, editRecord, onSavedClosed, initialClient, onCreated }) => {
   const screens = useBreakpoint();
   const isMobile = !screens.md;
   const notify = useNotify();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<RecordFormData>({
+  const blankData = (): RecordFormData => ({
     ...emptyFormData,
     date: initialDate || '',
+    ...(initialClient && { clientName: initialClient.name, clientPhone: initialClient.phone }),
   });
+  const [data, setData] = useState<RecordFormData>(blankData);
 
   useEffect(() => {
     if (open) {
       // Экран мог остаться сдвинутым после клавиатуры — тогда крестик уехал бы под статус-бар
       resetViewportShift();
-      setData(editRecord ? recordToFormData(editRecord) : { ...emptyFormData, date: initialDate || '' });
+      setData(editRecord ? recordToFormData(editRecord) : blankData());
       setStep(0);
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -54,7 +60,7 @@ export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initial
   };
 
   const handleClose = () => {
-    setData(editRecord ? recordToFormData(editRecord) : { ...emptyFormData, date: initialDate || '' });
+    setData(editRecord ? recordToFormData(editRecord) : blankData());
     setStep(0);
     onClose();
   };
@@ -113,8 +119,9 @@ export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initial
             clientId = created.id;
           }
         }
-        await recordsApi.create(buildPayload(clientId));
+        const created = await recordsApi.create(buildPayload(clientId));
         notify.success('Запись создана');
+        onCreated?.(created);
       }
       onSuccess();
       handleClose();

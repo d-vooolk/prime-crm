@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { clientsApi } from '@/api/clients.api';
 import { Car, Client } from '@/types';
 import { RecordFormData } from '../../types';
 import { SectionDivider } from '../../parts/SectionDivider';
@@ -26,6 +27,21 @@ export const Step1Client: React.FC<Props> = ({ data, onChange }) => {
     });
     setSelectedClientCars(client.cars || []);
   };
+
+  // Окно открыли с готовым номером (заявка с сайта): клиент с таким номером уже есть —
+  // выбираем его, чтобы были видны его машины и не завёлся дубль. Молча: это подсказка
+  useEffect(() => {
+    const digits = data.clientPhone.replace(/\D/g, '');
+    if (data.clientId || digits.length < 12) return;
+    let cancelled = false;
+    clientsApi.searchByPhone(data.clientPhone)
+      .then(found => {
+        const match = found.find(c => c.phone.replace(/\D/g, '') === digits);
+        if (match && !cancelled) handleSelectClient(match);
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Модели и поколения подгрузит CarFields по выбранным id
   const handleSelectExistingCar = (car: Car) => {

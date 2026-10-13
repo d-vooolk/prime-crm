@@ -15,6 +15,7 @@ import integrationsRouter from './integrations.routes';
 import mailRouter from './mail.routes';
 import cameraRouter from './camera.routes';
 import cameraStreamRouter from './cameraStream.routes';
+import siteLeadsRouter from './siteLeads.routes';
 import { authMiddleware } from '../middleware/auth.middleware';
 
 const router = Router();
@@ -40,5 +41,6 @@ router.use('/push', pushRouter);
 router.use('/security', securityRouter);
 router.use('/mail', mailRouter);
 router.use('/camera', cameraRouter);
+router.use('/site-leads', siteLeadsRouter);
 
 export default router;

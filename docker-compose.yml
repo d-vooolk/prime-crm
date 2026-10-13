@@ -40,6 +40,8 @@ services:
       PANIC_DIR: /app/panic
       # Приём заказов сотрудников из магазина vdf.by; пусто — приём выключен
       VDF_INTEGRATION_KEY: ${VDF_INTEGRATION_KEY:-}
+      # Заявки из формы сайта prime-auto.by; пусто — приём выключен
+      SITE_LEADS_KEY: ${SITE_LEADS_KEY:-}
       # Страница записи для клиента: ссылка {{link}} в SMS — <адрес>/<код записи>
       PUBLIC_RECORD_URL: ${PUBLIC_RECORD_URL:-https://zapis.prime-auto.by}
       # Почтовый ящик на beget (раздел «Почта»); пусто — приём почты выключен

@@ -37,6 +37,8 @@ export const PANIC_WIPE_TABLES = [
   'AuditLog', 'Note', 'PushSubscription',
   // Почта (письма клиентов и вложения; файлы вложений — в uploads, они шифруются вместе с ним)
   'MailMessage', 'MailAttachment',
+  // Заявки с сайта (имя, телефон; фото — в uploads)
+  'SiteLead',
 ] as const;
 
 const guard = new PanicPinGuard();
