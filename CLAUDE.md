@@ -391,7 +391,7 @@ GET    /api/analytics/revenue?from=&to=
 - Nginx поддомена — `.deploy/nginx-zapis.conf`: наружу только `/<код>`, `/api/cars/photo/` и `/api/uploads/repair-types/`. Адрес — `PUBLIC_RECORD_URL`
 
 ### Заявки с сайта
-- Форма prime-auto.by шлёт заявку и боту в Telegram, и в CRM: браузер → `/api/lead` сайта → `POST /api/integrations/site/leads` с `x-integration-key` (`SITE_LEADS_KEY` здесь = `CRM_LEADS_KEY` в `.env.local` сайта). Пусто — приём выключен
+- Форма prime-auto.by шлёт заявку только в CRM (в Telegram — нет): браузер → `/api/lead` сайта → `POST /api/integrations/site/leads` с `x-integration-key` (`SITE_LEADS_KEY` здесь = `CRM_LEADS_KEY` в `.env.local` сайта). Пусто — приём выключен
 - Раздел «Заявки» (`/leads`, менеджер и выше, на телефоне — в «Ещё»), пуш менеджерам о новой заявке. «Выполнено» — обработана без записи; «Записать» — окно новой записи с именем и телефоном (`RecordModal.initialClient`), после сохранения `POST /api/site-leads/:id/record` копирует фото заявки в «Фото и видео» записи
 - Фото — `UPLOADS_DIR/site-leads`, приходят data URL, формат проверяется по содержимому (`siteLeads.logic.ts`). Тело запроса до 12 МБ только на `/api/integrations/site`
 
