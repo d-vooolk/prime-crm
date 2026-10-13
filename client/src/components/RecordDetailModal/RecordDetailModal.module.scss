@@ -16,7 +16,7 @@
   @include mobile {
     padding-left: 0 !important;
     padding-right: 0 !important;
-    height: 100dvh;
+    height: calc(100dvh / var(--app-zoom, 1));
     // Установленное приложение (PWA) рисуется под статус-баром и полоской «домой» —
     // прозрачные рамки сдвигают содержимое, не трогая отступы antd (фон тянется под рамку)
     // !important: у antd «.ant-modal .ant-modal-content { border: 0 }» специфичнее,

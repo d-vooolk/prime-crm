@@ -65,7 +65,8 @@ body {
 }
 
 #root {
-  height: 100dvh;
+  // Делим на масштаб (utils/uiScale.ts): под zoom 100dvh занимал бы только часть экрана
+  height: calc(100dvh / var(--app-zoom, 1));
   overflow: hidden;
 }
 

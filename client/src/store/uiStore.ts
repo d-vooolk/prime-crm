@@ -1,11 +1,15 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import dayjs from 'dayjs';
+import { applyUiScale, UiScale } from '@/utils/uiScale';
 
 interface UiState {
   theme: 'light' | 'dark';
   selectedDate: string; // ISO date string YYYY-MM-DD
   sidebarCollapsed: boolean;
+  /** Масштаб интерфейса на компьютере (utils/uiScale.ts), у каждого устройства свой */
+  uiScale: UiScale;
+  setUiScale: (scale: UiScale) => void;
   setTheme: (theme: 'light' | 'dark') => void;
   toggleTheme: () => void;
   setSelectedDate: (date: string) => void;
@@ -20,6 +24,11 @@ export const useUiStore = create<UiState>()(
       theme: 'dark',
       selectedDate: dayjs().format('YYYY-MM-DD'),
       sidebarCollapsed: false,
+      uiScale: 'auto',
+      setUiScale: (uiScale) => {
+        applyUiScale(uiScale);
+        set({ uiScale });
+      },
       // Атрибут ставим до обновления стора: компоненты, читающие CSS-переменные (useCssVars),
       // при перерисовке должны уже видеть значения новой темы
       setTheme: (theme) => {
@@ -43,7 +52,7 @@ export const useUiStore = create<UiState>()(
         const state = (persisted ?? {}) as Pick<UiState, 'theme' | 'sidebarCollapsed'>;
         return version < 1 ? { ...state, theme: 'dark' as const } : state;
       },
-      partialize: (s) => ({ theme: s.theme, sidebarCollapsed: s.sidebarCollapsed }),
+      partialize: (s) => ({ theme: s.theme, sidebarCollapsed: s.sidebarCollapsed, uiScale: s.uiScale }),
     }
   )
 );

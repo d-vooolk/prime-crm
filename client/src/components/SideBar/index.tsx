@@ -1,19 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
-import {
-  CalendarOutlined,
-  DashboardOutlined,
-  BookOutlined,
-  SettingOutlined,
-  AccountBookOutlined,
-  FileTextOutlined,
-  LeftOutlined,
-  RightOutlined,
-  MailOutlined,
-  AppstoreOutlined,
-  VideoCameraOutlined,
-  InboxOutlined,
-} from '@ant-design/icons';
+import { LeftOutlined, RightOutlined, AppstoreOutlined } from '@ant-design/icons';
 import { Calendar, ConfigProvider, Button, Badge } from 'antd';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
@@ -28,25 +15,13 @@ import { useStockLowCount } from '@/hooks/useStock';
 import { useMailUnreadCount } from '@/hooks/useMail';
 import { useSiteLeadsNewCount } from '@/hooks/useSiteLeads';
 import { useOnAppResume } from '@/hooks/useAppResume';
+import { NAV_ITEMS, NavItem } from './navItems';
+import { useNavPrefsStore } from '@/store/navPrefsStore';
+import { bottomNavPaths } from '@/utils/bottomNav';
 import styles from './SideBar.module.scss';
 import cn from 'classnames';
 
 dayjs.locale('ru');
-
-const NAV_ITEMS = [
-  { path: '/schedule', label: 'Расписание', icon: <CalendarOutlined /> },
-  { path: '/leads', label: 'Заявки', icon: <InboxOutlined /> },
-  { path: '/dashboard', label: 'Дашборд', icon: <DashboardOutlined /> },
-  { path: '/wiki', label: 'Wiki', icon: <BookOutlined /> },
-  { path: '/accounting', label: 'Бухгалтерия', icon: <AccountBookOutlined /> },
-  { path: '/notes', label: 'Заметки', icon: <FileTextOutlined /> },
-  { path: '/mail', label: 'Почта', icon: <MailOutlined /> },
-  { path: '/camera', label: 'Камера', icon: <VideoCameraOutlined /> },
-  { path: '/settings', label: 'Настройки', icon: <SettingOutlined /> },
-];
-
-/** На телефоне эти пункты — в меню «Ещё» (крайний правый пункт нижней навигации) */
-const MORE_PATHS = ['/leads', '/mail', '/camera', '/settings'];
 
 export const SideBar: React.FC = () => {
   const { selectedDate, setSelectedDate } = useUiStore();
@@ -60,15 +35,18 @@ export const SideBar: React.FC = () => {
   const { data: mailUnreadCount = 0 } = useMailUnreadCount(canSeeMail(user));
   // Новые заявки с сайта — менеджерам и выше
   const { data: leadsNewCount = 0 } = useSiteLeadsNewCount(canSeeSiteLeads(user));
-  const navIcon = (item: typeof NAV_ITEMS[number]) => {
+  const navIcon = (item: NavItem) => {
     if (item.path === '/wiki') return <Badge count={wikiPendingCount} size="small">{item.icon}</Badge>;
     if (item.path === '/mail') return <Badge count={mailUnreadCount} size="small">{item.icon}</Badge>;
     if (item.path === '/leads') return <Badge count={leadsNewCount} size="small">{item.icon}</Badge>;
     if (item.path === '/settings') return <Badge count={lowStockCount} size="small" color="var(--color-warning)">{item.icon}</Badge>;
     return item.icon;
   };
-  const bottomNavItems = visibleNavItems.filter(item => !MORE_PATHS.includes(item.path));
-  const moreItems = visibleNavItems.filter(item => MORE_PATHS.includes(item.path));
+  // Нижняя панель телефона — свой набор из настроек (до пяти), остальное — в «Ещё»
+  const chosenBottomNav = useNavPrefsStore(s => (user ? s.bottomNav[user.id] : undefined));
+  const bottomPaths = bottomNavPaths(visibleNavItems.map(i => i.path), chosenBottomNav);
+  const bottomNavItems = visibleNavItems.filter(item => bottomPaths.includes(item.path));
+  const moreItems = visibleNavItems.filter(item => !bottomPaths.includes(item.path));
   const [moreOpen, setMoreOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -86,10 +64,12 @@ export const SideBar: React.FC = () => {
 
   const moreActive = moreItems.some(item => location.pathname.startsWith(item.path));
   // Бейджи пунктов меню «Ещё» видны и на самой кнопке: заявки и письма важнее склада
-  const moreUrgentCount = leadsNewCount + mailUnreadCount;
+  const inMore = (path: string) => moreItems.some(item => item.path === path);
+  const moreUrgentCount = (inMore('/leads') ? leadsNewCount : 0) + (inMore('/mail') ? mailUnreadCount : 0);
+  const moreWarnCount = inMore('/settings') ? lowStockCount : 0;
   const moreIcon = moreUrgentCount > 0
     ? <Badge count={moreUrgentCount} size="small"><AppstoreOutlined /></Badge>
-    : <Badge count={lowStockCount} size="small" color="var(--color-warning)"><AppstoreOutlined /></Badge>;
+    : <Badge count={moreWarnCount} size="small" color="var(--color-warning)"><AppstoreOutlined /></Badge>;
 
   const calendarYear = calendarValue.year();
   const calendarMonth = calendarValue.month() + 1;

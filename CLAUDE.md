@@ -347,6 +347,8 @@ GET    /api/analytics/revenue?from=&to=
 - «Открытые возможности» (BETA) в карточке записи — `services/opportunities.logic.ts`: попутные работы из прошлых визитов той же модели/поколения, без причины визита и не дороже текущего заказа; только менеджер и выше
 - Графики дашборда — неоновые серии `--color-chart-1..6` (тон `Tone` в `useChartColors.ts`), сила свечения — `--chart-glow-opacity`; игровая панель считается в `DashboardPage/gamification.ts`
 - Брейкпоинты: mobile < 768px, tablet 768–1199px, desktop ≥ 1200px
+- Масштаб на компьютере — CSS `zoom` на `<html>` (`utils/uiScale.ts`, Настройки → «Основные»): «Авто» на мониторе уже 2560 px сжимает интерфейс (1920 → 75%). Под zoom `vh` тоже сжимается — полноэкранная высота пишется `calc(100dvh / var(--app-zoom, 1))`
+- Нижняя панель телефона — до 5 разделов на выбор пользователя (`utils/bottomNav.ts`, `store/navPrefsStore.ts`, хранится на устройстве), остальные — в «Ещё». Список разделов — `components/SideBar/navItems.tsx`
 
 ### Компоненты
 - Один компонент = одна папка с файлами: `index.tsx`, `*.module.scss`
