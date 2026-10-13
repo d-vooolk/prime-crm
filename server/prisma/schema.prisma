@@ -315,6 +315,8 @@ model Serviceman {
   isPerformer    Boolean?
   // Участвует в дашборде (карточки, пьедестал, упущенная прибыль); лишних скрывают в настройках
   showInDashboard Boolean  @default(true)
+  // Начисления учитываются в «Зарплатном фонде» бухгалтерии; снимают, например, у учредителей
+  inSalaryFund   Boolean   @default(true)
   profitPercent  Float     @default(0)
   birthday       DateTime?
   createdAt      DateTime  @default(now())

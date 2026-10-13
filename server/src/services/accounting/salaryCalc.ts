@@ -86,6 +86,24 @@ export function adjustedTotal(
   return workPayment + baseSalary + bonus - fine;
 }
 
+/**
+ * Зарплатный фонд по расчётам сотрудников за период: начислено, уже выдано (авансы и расчёты)
+ * и сколько ещё выдать. Переплата одному (аванс больше начисленного) не уменьшает долг другим
+ */
+export function salaryFundTotals(list: { adjustedTotal: number; paidTotal: number }[]) {
+  const cents = (v: number) => Math.round(v * 100);
+  let accrued = 0;
+  let paid = 0;
+  let remaining = 0;
+  for (const s of list) {
+    const total = Math.max(0, cents(s.adjustedTotal));
+    accrued += total;
+    paid += cents(s.paidTotal);
+    remaining += Math.max(0, total - cents(s.paidTotal));
+  }
+  return { accrued: accrued / 100, paid: paid / 100, remaining: remaining / 100 };
+}
+
 /** Выплата целиком закрывает остаток — расчёт, иначе аванс */
 export const paymentType = (amount: number, remaining: number): 'ADVANCE' | 'FINAL' =>
   amount >= remaining ? 'FINAL' : 'ADVANCE';

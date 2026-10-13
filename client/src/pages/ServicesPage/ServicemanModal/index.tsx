@@ -114,6 +114,12 @@ export const ServicemanModal: React.FC<Props> = ({ open, item, allowedRoles, onC
           <span>Участвует в дашборде — карточка, пьедестал и упущенная прибыль</span>
         </div>
         <div className={styles.switchRow}>
+          <Form.Item name="inSalaryFund" valuePropName="checked" initialValue noStyle>
+            <Switch />
+          </Form.Item>
+          <span>Учитывать в зарплатном фонде — сумма рядом с балансом в бухгалтерии</span>
+        </div>
+        <div className={styles.switchRow}>
           <Form.Item name="isReceptionist" valuePropName="checked" noStyle>
             <Switch />
           </Form.Item>

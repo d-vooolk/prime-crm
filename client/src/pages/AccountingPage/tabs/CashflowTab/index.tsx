@@ -58,18 +58,16 @@ export const CashflowTab: React.FC<Props> = ({ month, onMonthChange, canEditTran
             />
           </Card>
 
+          {/* Сколько ещё выдать сотрудникам за текущий период: начислено минус уже выданное */}
           <Card size="small" className={shared.balanceCard}>
             <Statistic
               title="Зарплатный фонд"
-              value={fund?.accrued ?? 0}
+              value={fund?.remaining ?? 0}
               precision={2}
               suffix="р."
               loading={fundQuery.isLoading}
               className={cn(shared.stat, shared.statWarning)}
             />
-            {fund && fund.remaining !== fund.accrued && (
-              <div className={shared.statNote}>не выплачено {formatPrice(fund.remaining)}</div>
-            )}
           </Card>
         </div>
 

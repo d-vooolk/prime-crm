@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  salaryPeriod, servicemanShare, effectivePercent, paymentFor, adjustedTotal, paymentType, dealPayments,
+  salaryPeriod, servicemanShare, effectivePercent, paymentFor, adjustedTotal, paymentType, dealPayments, salaryFundTotals,
 } from '../services/accounting/salaryCalc';
 import { effectiveSalaryMonth, baseSalaryFor, monthsWithBaseSalary } from '../services/salaryRates';
 
@@ -131,5 +131,33 @@ describe('dealPayments', () => {
   it('сотрудник без процента получает 0', () => {
     const items = [{ servicemanName: 'Иван', servicemanSplit: null, netProfit: 1000, service: service() }];
     expect(dealPayments(items, new Map()).get('Иван')).toBe(0);
+  });
+});
+
+describe('salaryFundTotals', () => {
+  it('из начисленного вычитаются уже выданные авансы', () => {
+    expect(salaryFundTotals([
+      { adjustedTotal: 1500, paidTotal: 500 },
+      { adjustedTotal: 800.5, paidTotal: 0 },
+    ])).toEqual({ accrued: 2300.5, paid: 500, remaining: 1800.5 });
+  });
+
+  it('переплата одному не уменьшает долг другим', () => {
+    expect(salaryFundTotals([
+      { adjustedTotal: 300, paidTotal: 500 },
+      { adjustedTotal: 1000, paidTotal: 0 },
+    ]).remaining).toBe(1000);
+  });
+
+  it('отрицательный итог (штрафы больше начисленного) не уходит в минус', () => {
+    expect(salaryFundTotals([{ adjustedTotal: -200, paidTotal: 0 }, { adjustedTotal: 100, paidTotal: 0 }]))
+      .toEqual({ accrued: 100, paid: 0, remaining: 100 });
+  });
+
+  it('копейки без ошибок округления', () => {
+    expect(salaryFundTotals([
+      { adjustedTotal: 0.1, paidTotal: 0 },
+      { adjustedTotal: 0.2, paidTotal: 0 },
+    ]).remaining).toBe(0.3);
   });
 });

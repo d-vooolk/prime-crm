@@ -23,12 +23,13 @@ interface Props {
   onSetDefault?: (id: string) => void;
 }
 
-/** Отметки в списке сотрудников: исполнитель работ, мастер приёмщик, скрыт из дашборда */
+/** Отметки в списке сотрудников: исполнитель работ, мастер приёмщик, скрыт из дашборда и зарплатного фонда */
 const ServicemanFlags: React.FC<{ row: Serviceman }> = ({ row }) => (
   <>
     {row.isPerformer && <Tag color="purple" className={styles.tag}>Исполнитель</Tag>}
     {row.isReceptionist && <Tag color="cyan" className={styles.tag}>Приёмщик</Tag>}
     {row.isPerformer && row.showInDashboard === false && <Tag className={styles.tag}>Не в дашборде</Tag>}
+    {row.inSalaryFund === false && <Tag className={styles.tag}>Не в зарплатном фонде</Tag>}
   </>
 );
 

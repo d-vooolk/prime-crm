@@ -21,6 +21,7 @@ const fields = {
   isReceptionist: z.boolean().optional(),
   isPerformer: z.boolean().optional(),
   showInDashboard: z.boolean().optional(),
+  inSalaryFund: z.boolean().optional(),
   birthday: z.preprocess(v => (v === '' ? null : v), dateString('Некорректная дата рождения').nullable().optional()),
   profitPercent: percent.optional(),
   baseSalary: z.preprocess(v => (v === '' || v === null ? undefined : v), money('Некорректный оклад').optional()),

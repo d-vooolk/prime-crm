@@ -304,6 +304,8 @@ export interface Serviceman {
   isPerformer?: boolean | null;
   /** Участвует в дашборде; лишних скрывают в настройках */
   showInDashboard?: boolean;
+  /** Учитывать в «Зарплатном фонде» бухгалтерии */
+  inSalaryFund?: boolean;
   profitPercent: number;
   /** Оклад текущего расчётного периода */
   baseSalary?: number;

@@ -66,11 +66,12 @@ export interface SalaryData {
   remaining: number;
 }
 
-// Зарплатный фонд текущего расчётного периода: начислено всем сотрудникам и сколько ещё не выплачено
+// Зарплатный фонд текущего расчётного периода: начислено, уже выдано (авансы, расчёты) и сколько ещё выдать
 export interface SalaryFund {
   year: number;
   month: number;
   accrued: number;
+  paid: number;
   remaining: number;
 }
 

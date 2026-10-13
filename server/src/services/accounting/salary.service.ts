@@ -2,7 +2,7 @@ import { prisma } from '../../prisma/client';
 import { AppError } from '../../middleware/errorHandler';
 import { baseSalaryFor, effectiveSalaryMonth, monthsWithBaseSalary } from '../salaryRates';
 import { EMPLOYEE_SALARY_PREFIX, MONTH_NAMES_SHORT, roundMoney } from './shared';
-import { adjustedTotal, effectivePercent, paymentFor, paymentType, salaryPeriod, servicemanShare } from './salaryCalc';
+import { adjustedTotal, effectivePercent, paymentFor, paymentType, salaryFundTotals, salaryPeriod, servicemanShare } from './salaryCalc';
 
 export interface SalaryRecordItem {
   serviceName: string;
@@ -180,16 +180,15 @@ export const salaryService = {
 
   /**
    * Зарплатный фонд текущего расчётного периода: начислено всем сотрудникам на сейчас
-   * (работы, оклад, премии и штрафы) и сколько из этого ещё не выплачено.
-   * Уволенные учитываются, если им что-то начислено или выплачено в периоде
+   * (работы, оклад, премии и штрафы), сколько уже выдано авансами и расчётами и сколько ещё выдать.
+   * Уволенные учитываются, если им что-то начислено или выплачено в периоде. Сотрудники
+   * со снятой галочкой «Учитывать в зарплатном фонде» (справочник сотрудников) — нет
    */
   async getSalaryFund() {
     const { year, month } = effectiveSalaryMonth();
-    const servicemen = await prisma.serviceman.findMany({ select: { name: true } });
+    const servicemen = await prisma.serviceman.findMany({ where: { inSalaryFund: true }, select: { name: true } });
     const all = await Promise.all(servicemen.map(s => salaryService.getSalaryData(s.name, year, month)));
-    const accrued = roundMoney(all.reduce((s, d) => s + Math.max(0, d.adjustedTotal), 0));
-    const remaining = roundMoney(all.reduce((s, d) => s + Math.max(0, d.remaining), 0));
-    return { year, month, accrued, remaining };
+    return { year, month, ...salaryFundTotals(all) };
   },
 
   async createSalaryPayment(data: {

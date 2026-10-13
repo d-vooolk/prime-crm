@@ -23,6 +23,7 @@ export interface ServicemanFormValues {
   isReceptionist?: boolean;
   isPerformer?: boolean;
   showInDashboard?: boolean;
+  inSalaryFund?: boolean;
   birthday?: Dayjs | null;
   profitPercent?: number | null;
   baseSalary?: number | null;
@@ -42,6 +43,7 @@ export function buildServicemanPayload(values: ServicemanFormValues): Serviceman
     isReceptionist: !!values.isReceptionist,
     isPerformer: !!values.isPerformer,
     showInDashboard: values.showInDashboard ?? true,
+    inSalaryFund: values.inSalaryFund ?? true,
     birthday: values.birthday ? values.birthday.toISOString() : null,
     profitPercent: values.profitPercent ?? 0,
     baseSalary: values.baseSalary ?? 0,
@@ -61,6 +63,7 @@ export function servicemanToFormValues(row: Serviceman): ServicemanFormValues {
     isReceptionist: row.isReceptionist,
     isPerformer: !!row.isPerformer,
     showInDashboard: row.showInDashboard ?? true,
+    inSalaryFund: row.inSalaryFund ?? true,
     birthday: row.birthday ? dayjs(row.birthday) : null,
   };
 }

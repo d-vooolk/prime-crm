@@ -11,6 +11,7 @@ export interface ServicemanPayload {
   isPerformer?: boolean;
   /** Участвует в дашборде (карточки, пьедестал, упущенная прибыль) */
   showInDashboard?: boolean;
+  inSalaryFund?: boolean;
   birthday?: string | null;
   profitPercent?: number;
   /** Оклад: меняется с текущего расчётного периода, прошлые месяцы не пересчитываются */
