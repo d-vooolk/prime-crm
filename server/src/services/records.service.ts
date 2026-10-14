@@ -144,6 +144,14 @@ export interface CloseDealDto {
   currencyPayments?: unknown;
 }
 
+/**
+ * Запись, перенесённая из старой программы, — только история: у неё нет сделки и кассы,
+ * поэтому правка, закрытие и отмена пересчитали бы то, чего нет. Удалить её можно.
+ */
+function assertNotImported(record: { importKey: string | null }) {
+  if (record.importKey) throw new AppError('Запись перенесена из старой программы и не изменяется', 400);
+}
+
 export const recordsService = {
   async findByDate(date: string) {
     const d = new Date(date);
@@ -322,6 +330,7 @@ export const recordsService = {
 
   async update(id: string, data: Partial<CreateRecordDto>) {
     const record = await recordsService.findById(id);
+    assertNotImported(record);
 
     const updateData: Record<string, unknown> = {};
     if (data.scheduledAt) updateData.scheduledAt = new Date(data.scheduledAt);
@@ -466,6 +475,7 @@ export const recordsService = {
 
   async close(id: string, data: CloseDealDto) {
     const record = await recordsService.findById(id);
+    assertNotImported(record);
 
     const { finalPrice, defects, recommendations, warranty, isPaidByBankTransfer = false, splitCashAmount, splitCardAmount } = data;
     const isSplit = splitCashAmount != null && splitCardAmount != null;
@@ -583,6 +593,7 @@ export const recordsService = {
 
   async cancel(id: string, data?: { retainedCashAmount?: number; retainedCardAmount?: number }) {
     const record = await recordsService.findById(id);
+    assertNotImported(record);
 
     // Получаем текущие рублёвые prepayment-транзакции. Валютная предоплата уже в капитале —
     // при отмене она остаётся как есть (вернуть её можно выдачей из капитала)

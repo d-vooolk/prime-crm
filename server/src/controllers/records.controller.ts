@@ -126,7 +126,8 @@ export const recordsController = {
       const from = new Date(year, month - 1, 1);
       const to = new Date(year, month, 1);
       const records = await prisma.record.findMany({
-        where: { scheduledAt: { gte: from, lt: to }, status: { not: 'CANCELLED' } },
+        // Перенесённые из старой программы — не отмечаются в календаре расписания
+        where: { scheduledAt: { gte: from, lt: to }, status: { not: 'CANCELLED' }, importKey: null },
         select: { scheduledAt: true },
       });
       const dates = [...new Set(records.map(r => {

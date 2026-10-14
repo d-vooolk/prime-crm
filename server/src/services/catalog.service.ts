@@ -12,7 +12,7 @@ export const catalogService = {
       // Популярность услуги — сколько раз её добавляли в неотменённые записи
       prisma.recordItem.groupBy({
         by: ['serviceId'],
-        where: { record: { status: { not: 'CANCELLED' } } },
+        where: { record: { status: { not: 'CANCELLED' }, importKey: null } },
         _count: { _all: true },
       }),
     ]);

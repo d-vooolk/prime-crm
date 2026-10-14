@@ -55,6 +55,9 @@ model Record {
   // открывается, только пока запись активна (services/publicRecord.service.ts)
   publicToken        String?      @unique
   status             RecordStatus @default(ACTIVE)
+  // Запись перенесена из старой программы (имя файла заявки): только история клиента — без сделки,
+  // не правится и не входит в статистику (дашборд, источники, календарь). bootstrap/legacyVisitsImport.ts
+  importKey          String?      @unique
   smsLogs            SmsLog[]
   isLegalEntity                Boolean      @default(false)
   legalCompanyName             String?

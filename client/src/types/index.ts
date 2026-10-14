@@ -215,6 +215,8 @@ export interface Record {
   notes?: string;
   /** Обнаруженные недостатки — пишет любая роль в карточке записи, печатаются в акте */
   defects?: string | null;
+  /** Задан — запись перенесена из старой программы: только история, без сделки, не правится */
+  importKey?: string | null;
   clientSourceId?: string | null;
   clientSource?: { id: string; name: string } | null;
   /** Сколько фото/видео прикреплено к записи */

@@ -71,7 +71,8 @@ export const analyticsService = {
     const countOverrides = await prisma.monthlyRecordCount.findMany();
     const countOverrideMap = new Map(countOverrides.map(o => [`${o.year}-${String(o.month).padStart(2, '0')}`, o.count]));
     const closedRecords = await prisma.record.findMany({
-      where: { status: 'CLOSED', scheduledAt: { gte: from, lte: to } },
+      // Перенесённые из старой программы (importKey) — только история клиента, не статистика
+      where: { status: 'CLOSED', scheduledAt: { gte: from, lte: to }, importKey: null },
       select: { scheduledAt: true },
     });
     let closedCount = 0;
@@ -125,6 +126,7 @@ export const analyticsService = {
         record: {
           scheduledAt: { gte: from, lte: to },
           status: 'CLOSED',
+          importKey: null,
         },
       },
       _count: { serviceId: true },
@@ -156,7 +158,7 @@ export const analyticsService = {
     const to = nextDay(parseDay(toStr));
 
     const records = await prisma.record.findMany({
-      where: { scheduledAt: { gte: from, lt: to } },
+      where: { scheduledAt: { gte: from, lt: to }, importKey: null },
       select: {
         id: true, clientId: true, clientSourceId: true, status: true, scheduledAt: true,
         deal: { select: { finalPrice: true } },
@@ -166,7 +168,7 @@ export const analyticsService = {
     // Первая запись каждого клиента из периода — по всей истории, а не только внутри периода
     const clientIds = [...new Set(records.map(r => r.clientId))];
     const firstRecords = clientIds.length
-      ? await prisma.record.groupBy({ by: ['clientId'], where: { clientId: { in: clientIds } }, _min: { scheduledAt: true } })
+      ? await prisma.record.groupBy({ by: ['clientId'], where: { clientId: { in: clientIds }, importKey: null }, _min: { scheduledAt: true } })
       : [];
     const firstVisit = new Map(firstRecords.map(f => [f.clientId, f._min.scheduledAt?.getTime()]));
 

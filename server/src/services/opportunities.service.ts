@@ -37,6 +37,8 @@ export const opportunitiesService = {
       where: {
         id: { not: recordId },
         status: 'CLOSED',
+        // Цены перенесённых из старой программы записей — оценочные, подсказки на них не строим
+        importKey: null,
         car: { brandId: car.brandId, modelId: car.modelId },
       },
       orderBy: { scheduledAt: 'desc' },

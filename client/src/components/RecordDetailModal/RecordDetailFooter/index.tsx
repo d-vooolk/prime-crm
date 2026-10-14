@@ -49,6 +49,15 @@ export const RecordDetailFooter: React.FC<Props> = ({
     </Popconfirm>
   );
 
+  // Запись из старой программы — только история: без правки, печати и SMS, удалить можно
+  if (r.importKey) {
+    return (
+      <div className={isMobile ? styles.footerMobile : styles.footer}>
+        {canDelete && !isEmployee && deleteConfirm(<Button danger icon={<DeleteOutlined />}>Удалить</Button>)}
+      </div>
+    );
+  }
+
   // На десктопе — иконка с подсказкой, на телефоне подсказка мешает нажатию, поэтому кнопка с текстом
   const carReadyButton = (withTooltip: boolean) => {
     const button = withTooltip

@@ -47,7 +47,8 @@ export const statsService = {
 
   async getMonthlyRecordCount() {
     const closedRecords = await prisma.record.findMany({
-      where: { status: 'CLOSED' },
+      // Перенесённые из старой программы (importKey) в статистику не входят
+      where: { status: 'CLOSED', importKey: null },
       select: { scheduledAt: true },
     });
 

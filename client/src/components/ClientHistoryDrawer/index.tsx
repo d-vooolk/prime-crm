@@ -111,6 +111,7 @@ const VisitSummary: React.FC<{ record: CrmRecord; isCurrent: boolean }> = ({ rec
           {formatDate(record.scheduledAt)}
           <span className={styles.visitTime}>{formatTime(record.scheduledAt)}</span>
           {isCurrent && <Tag className={styles.currentTag}>текущая</Tag>}
+          {record.importKey && <Tag className={styles.currentTag}>старая программа</Tag>}
         </div>
         <div className={styles.visitMeta}>
           {record.car.brand} {record.car.model}

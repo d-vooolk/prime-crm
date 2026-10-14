@@ -15,6 +15,7 @@ import { errorHandler } from './middleware/errorHandler';
 import { smsService } from './services/sms.service';
 import { syncCarCatalogIfNeeded } from './bootstrap/carCatalog';
 import { importLegacyWikiIfPresent } from './bootstrap/wikiLegacyImport';
+import { importLegacyVisitsIfPresent } from './bootstrap/legacyVisitsImport';
 import { generateMissingWikiVariants } from './bootstrap/wikiImageVariants';
 import { linkFounderSalariesToCash } from './bootstrap/founderSalaryLinks';
 import { backfillServicemanPerformers } from './bootstrap/servicemanPerformers';
@@ -107,6 +108,8 @@ app.listen(env.port, async () => {
   await runSafely('справочник авто', syncCarCatalogIfNeeded);
   // После справочника: импорт сверяет карточки старой вики с марками и поколениями
   await runSafely('импорт старой вики', importLegacyWikiIfPresent);
+  // Тоже после справочника: названия авто из старых заявок сопоставляются с марками и моделями
+  await runSafely('визиты из старой программы', importLegacyVisitsIfPresent);
   // Сжатие старых фото вики — в фоне и по одному, старт не ждёт
   void runSafely('сжатие фото вики', generateMissingWikiVariants);
   await runSafely('привязка ЗП учредителей', linkFounderSalariesToCash);
