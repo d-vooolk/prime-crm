@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { DatePicker, Form, Input, InputNumber, Modal, Select } from 'antd';
 import dayjs from 'dayjs';
 import { accountingApi } from '@/api/accounting.api';
@@ -11,6 +11,14 @@ import { useInvalidateAccounting } from '../../hooks/useAccountingData';
 import { personOptions, usePersons } from '../../hooks/usePersons';
 import { founderDescriptionRule, isLinkedSalaryDescription, parseAmount } from '../../utils';
 import shared from '../../shared.module.scss';
+
+const formValues = (tx: CashTransaction) => ({
+  date: dayjs(tx.date),
+  amount: tx.amount,
+  description: tx.description || '',
+  person: tx.person || '',
+  expenseCategory: tx.expenseCategory?.name || '',
+});
 
 interface Props {
   /** Редактируемая проводка; null — модалка закрыта */
@@ -26,6 +34,12 @@ export const EditTransactionModal: React.FC<Props> = ({ tx, onClose }) => {
   const { managerServicemen } = usePersons();
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
+
+  // Экземпляр формы живёт дольше модалки и хранит значения прошлой проводки,
+  // а initialValues при повторном открытии их не перезаписывают — подставляем явно
+  useEffect(() => {
+    if (tx) form.setFieldsValue(formValues(tx));
+  }, [tx, form]);
 
   const handleSubmit = async () => {
     if (!tx) return;
@@ -72,13 +86,7 @@ export const EditTransactionModal: React.FC<Props> = ({ tx, onClose }) => {
           form={form}
           layout="vertical"
           className={shared.form}
-          initialValues={{
-            date: dayjs(tx.date),
-            amount: tx.amount,
-            description: tx.description || '',
-            person: tx.person || '',
-            expenseCategory: tx.expenseCategory?.name || '',
-          }}
+          initialValues={formValues(tx)}
         >
           <Form.Item label="Дата" name="date" rules={[{ required: true }]}>
             <DatePicker className={shared.fullWidth} format="DD.MM.YYYY" />
