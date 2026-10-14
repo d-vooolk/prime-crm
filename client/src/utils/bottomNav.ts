@@ -2,7 +2,7 @@
 export const BOTTOM_NAV_MAX = 5;
 
 /** Без своего выбора эти разделы уходят в «Ещё» (как было до настройки) */
-export const DEFAULT_MORE_PATHS = ['/leads', '/mail', '/camera', '/settings'];
+export const DEFAULT_MORE_PATHS = ['/leads', '/mail', '/settings'];
 
 /**
  * Какие разделы показать в нижней панели. visible — доступные пользователю (порядок меню),

@@ -13,8 +13,6 @@ import pushRouter from './push.routes';
 import securityRouter from './security.routes';
 import integrationsRouter from './integrations.routes';
 import mailRouter from './mail.routes';
-import cameraRouter from './camera.routes';
-import cameraStreamRouter from './cameraStream.routes';
 import siteLeadsRouter from './siteLeads.routes';
 import { authMiddleware } from '../middleware/auth.middleware';
 
@@ -24,8 +22,6 @@ router.use('/auth', authRouter);
 router.use('/cars', carsRouter);
 // Другие наши сайты — по общему ключу, без входа пользователя
 router.use('/integrations', integrationsRouter);
-// Видео и архив камеры — по токену просмотра в пути (routes/cameraStream.routes.ts)
-router.use('/camera', cameraStreamRouter);
 
 router.use(authMiddleware);
 
@@ -40,7 +36,6 @@ router.use('/stock', stockRouter);
 router.use('/push', pushRouter);
 router.use('/security', securityRouter);
 router.use('/mail', mailRouter);
-router.use('/camera', cameraRouter);
 router.use('/site-leads', siteLeadsRouter);
 
 export default router;

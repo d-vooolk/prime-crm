@@ -7,7 +7,6 @@ import {
   AccountBookOutlined,
   FileTextOutlined,
   MailOutlined,
-  VideoCameraOutlined,
   InboxOutlined,
 } from '@ant-design/icons';
 
@@ -29,6 +28,5 @@ export const NAV_ITEMS: NavItem[] = [
   { path: '/accounting', label: 'Бухгалтерия', icon: <AccountBookOutlined /> },
   { path: '/notes', label: 'Заметки', icon: <FileTextOutlined /> },
   { path: '/mail', label: 'Почта', icon: <MailOutlined /> },
-  { path: '/camera', label: 'Камера', icon: <VideoCameraOutlined /> },
   { path: '/settings', label: 'Настройки', icon: <SettingOutlined /> },
 ];

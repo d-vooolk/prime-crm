@@ -34,14 +34,6 @@ export const env = {
   get mailImapPort() { return Number(process.env.MAIL_IMAP_PORT) || 993; },
   get mailUser() { return process.env.MAIL_USER || ''; },
   get mailPassword() { return process.env.MAIL_PASSWORD || ''; },
-  // Камера офиса: приёмник видео MediaMTX в docker-сети (.deploy/README-camera.md)
-  get cameraHlsUrl() { return (process.env.CAMERA_HLS_URL || 'http://mediamtx:8888').replace(/\/+$/, ''); },
-  get cameraApiUrl() { return (process.env.CAMERA_API_URL || 'http://mediamtx:9997').replace(/\/+$/, ''); },
-  get cameraPlaybackUrl() { return (process.env.CAMERA_PLAYBACK_URL || 'http://mediamtx:9996').replace(/\/+$/, ''); },
-  /** Записи архива MediaMTX (в проде — data/camera на хосте); пусто — архив не чистим */
-  get cameraRecordingsDir() { return process.env.CAMERA_RECORDINGS_DIR || ''; },
-  /** Лимит архива камеры: сверх него удаляются самые старые записи */
-  get cameraArchiveMaxBytes() { return (Number(process.env.CAMERA_ARCHIVE_MAX_GB) || 10) * 1024 ** 3; },
 };
 
 /** Проверка при старте — падаем сразу, а не на первом входе пользователя. */

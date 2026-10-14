@@ -19,7 +19,6 @@
     "classnames": "^2.5.1",
     "dayjs": "^1.11.13",
     "diff": "^8.0.4",
-    "hls.js": "^1.7.3",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router-dom": "^6.28.0",

@@ -72,10 +72,6 @@ export const isWikiReviewer = (u: Subject) => !!u && isManagerOrAbove(u);
 /** Почту компании (ящик на beget) видит только создатель */
 export const canSeeMail = isCreatorOrAbove;
 
-// ─── Камера офиса ──────────────────────────────────
-/** Видео с камеры в офисе — менеджер и выше (на сервере — routes/camera.routes.ts) */
-export const canSeeCamera = isManagerOrAbove;
-
 // ─── Заявки с сайта ────────────────────────────────
 /** Заявки из формы prime-auto.by разбирают те, кто создаёт записи (на сервере — routes/siteLeads.routes.ts) */
 export const canSeeSiteLeads = isManagerOrAbove;
@@ -86,7 +82,6 @@ export const canSeeSiteLeads = isManagerOrAbove;
 export const EMPLOYEE_ALLOWED_PATHS = ['/schedule', '/dashboard', '/wiki', '/accounting', '/settings'];
 export const canSeePath = (u: Subject, path: string) => {
   if (path === '/mail') return canSeeMail(u);
-  if (path === '/camera') return canSeeCamera(u);
   if (path === '/leads') return canSeeSiteLeads(u);
   return !isEmployee(u) || EMPLOYEE_ALLOWED_PATHS.includes(path);
 };

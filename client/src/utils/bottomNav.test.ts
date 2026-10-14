@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { bottomNavPaths } from './bottomNav';
 
-const all = ['/schedule', '/leads', '/dashboard', '/wiki', '/accounting', '/notes', '/mail', '/camera', '/settings'];
+const all = ['/schedule', '/leads', '/dashboard', '/wiki', '/accounting', '/notes', '/mail', '/settings'];
 
 describe('bottomNavPaths', () => {
   it('без выбора — всё, кроме разделов «Ещё» по умолчанию', () => {
@@ -14,7 +14,7 @@ describe('bottomNavPaths', () => {
 
   it('недоступные разделы из выбора пропускаются', () => {
     const employee = ['/schedule', '/dashboard', '/wiki', '/accounting', '/settings'];
-    expect(bottomNavPaths(employee, ['/mail', '/wiki', '/camera'])).toEqual(['/wiki']);
+    expect(bottomNavPaths(employee, ['/mail', '/wiki', '/leads'])).toEqual(['/wiki']);
   });
 
   it('если из выбора ничего не доступно — набор по умолчанию', () => {

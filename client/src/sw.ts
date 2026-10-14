@@ -51,9 +51,7 @@ registerRoute(
     && request.method === 'GET'
     && !url.pathname.startsWith('/api/uploads/')
     && !url.pathname.startsWith('/api/auth/')
-    && !url.pathname.startsWith('/api/push/')
-    // Живое видео камеры и его токен — только из сети
-    && !url.pathname.startsWith('/api/camera/'),
+    && !url.pathname.startsWith('/api/push/'),
   new NetworkFirst({
     cacheName: API_CACHE,
     // Без таймаута: сохранённое показываем только когда сети нет совсем, а не когда сервер
