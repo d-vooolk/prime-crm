@@ -197,7 +197,8 @@ async function syncInbox() {
       const since = new Date(Date.now() - INITIAL_DAYS * 24 * 60 * 60 * 1000);
       candidates = (await imap.search({ since }, { uid: true })) || [];
     } else {
-      if (box.uidNext && box.uidNext <= state.lastUid + 1) { lastSyncAt = new Date(); return; }
+      // Без раннего выхода по box.uidNext: imapflow не обновляет его по уведомлению о новом
+      // письме (EXISTS), и устаревшее значение говорило «новых нет», пока не переподключимся
       candidates = (await imap.search({ uid: `${state.lastUid + 1}:*` }, { uid: true })) || [];
     }
     const lastUid = fresh ? 0 : state.lastUid;
