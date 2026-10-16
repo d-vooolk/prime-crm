@@ -19,6 +19,8 @@ declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: str
 /** Кеш ответов API: очищается при выходе из аккаунта (сообщение CLEAR_USER_CACHE) */
 const API_CACHE = 'prime-api';
 const UPLOADS_CACHE = 'prime-uploads';
+/** Сообщение открытому окну: перейти по ссылке из уведомления (hooks/useNotificationNavigation.ts) */
+const NAVIGATE_MESSAGE = 'NAVIGATE';
 
 cleanupOutdatedCaches();
 precacheAndRoute(self.__WB_MANIFEST);
@@ -103,12 +105,15 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const url = (event.notification.data as { url?: string } | undefined)?.url || '/schedule';
   event.waitUntil((async () => {
-    // Уже открытое окно приложения — переводим его на нужную страницу, иначе открываем новое
+    // Уже открытое окно приложения — переводим его на нужную страницу, иначе открываем новое.
+    // Переход делает само приложение по сообщению (useNotificationNavigation): WindowClient.navigate()
+    // не работает в окне, которым этот service worker не управляет, и на iOS, а заодно перезагружал бы страницу
     const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    const existing = windows.find(w => new URL(w.url).origin === self.location.origin);
+    const sameOrigin = windows.filter(w => new URL(w.url).origin === self.location.origin);
+    const existing = sameOrigin.find(w => w.focused) ?? sameOrigin.find(w => w.visibilityState === 'visible') ?? sameOrigin[0];
     if (existing) {
-      await existing.focus();
-      await existing.navigate(url).catch(() => undefined);
+      await existing.focus().catch(() => undefined);
+      existing.postMessage({ type: NAVIGATE_MESSAGE, url });
       return;
     }
     await self.clients.openWindow(url);

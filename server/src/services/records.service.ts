@@ -322,7 +322,7 @@ export const recordsService = {
     pushInBackground(() => pushService.sendNewRecord(newRecord.serviceman, authorId, {
       title: 'Новая запись',
       body: `${formatWhen(newRecord.scheduledAt)} · ${carInfoOf(newRecord.car)}${newRecord.serviceman ? ` · ${newRecord.serviceman}` : ''}`,
-      url: '/schedule',
+      url: `/schedule?record=${newRecord.id}`,
       tag: `record-${newRecord.id}`,
     }));
     return newRecord;

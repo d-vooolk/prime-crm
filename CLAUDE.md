@@ -381,6 +381,7 @@ GET    /api/analytics/revenue?from=&to=
 - Регистрация, обновление версии, установка и пуш-подписка — `client/src/pwa/index.ts`; настройки устройства — `components/AppDeviceSettings`
 - Кеш: оболочка приложения — precache; `/api/uploads` — CacheFirst; GET `/api/*` — NetworkFirst (кеш только как запасной вариант без сети). При выходе из аккаунта кеш данных и пуш-подписка удаляются
 - Пуши — `server/src/services/push.service.ts` (web-push, ключи VAPID в `.env`). Триггеры: новая запись → менеджерам, директорам, создателю и мастеру записи (кроме автора), сделка закрыта → каждому сотруднику его заработок с неё (`dealPayments` в `salaryCalc.ts`, кроме закрывшего), товар дошёл до порога → менеджерам, новое письмо → сотрудникам с ролью «Создатель» (`mail.service.ts`), напоминания заметок (`noteReminders.ts`, раз в минуту)
+- Нажатие на пуш ведёт по его `url`: открытому окну service worker шлёт сообщение `NAVIGATE`, переход делает приложение (`hooks/useNotificationNavigation.ts`). Новая запись — `/schedule?record=<id>` (открывается карточка), заявка — `/leads`
 - `client/nginx.conf`: `sw.js`, `index.html` и манифест отдаются с `no-cache`, иначе телефоны застрянут на старой версии
 
 ### Страница записи для клиента

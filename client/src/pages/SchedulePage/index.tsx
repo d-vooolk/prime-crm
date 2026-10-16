@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Alert, Button, DatePicker } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
+import { useSearchParams } from 'react-router-dom';
 import 'dayjs/locale/ru';
 import { recordsApi } from '@/api/records.api';
 import { Record } from '@/types';
@@ -16,6 +17,7 @@ import { RecordDetailModal } from '@/components/RecordDetailModal';
 import { useUiStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/authStore';
 import { useOnAppResume } from '@/hooks/useAppResume';
+import { useNotify } from '@/hooks/useNotify';
 import styles from './SchedulePage.module.scss';
 
 dayjs.locale('ru');
@@ -24,6 +26,7 @@ export const SchedulePage: React.FC = () => {
   const { selectedDate, setSelectedDate } = useUiStore();
   const { user } = useAuthStore();
   const isEmployee = isEmployeeRole(user);
+  const notify = useNotify();
   const [todayRecords, setTodayRecords] = useState<Record[]>([]);
   const [incompleteRecords, setIncompleteRecords] = useState<Record[]>([]);
   const [loading, setLoading] = useState(false);
@@ -74,6 +77,33 @@ export const SchedulePage: React.FC = () => {
 
   // Отменяем незавершённый запрос при уходе со страницы
   useEffect(() => () => fetchControllerRef.current?.abort(), []);
+
+  // Ссылка из пуша о новой записи (/schedule?record=<id>) — сразу открываем её карточку
+  const [searchParams, setSearchParams] = useSearchParams();
+  const linkedRecordId = searchParams.get('record');
+  useEffect(() => {
+    if (!linkedRecordId) return;
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      next.delete('record');
+      return next;
+    }, { replace: true });
+    recordsApi.getById(linkedRecordId)
+      .then(setSelectedRecord)
+      .catch(e => notify.error(e, 'Не удалось открыть запись'));
+  }, [linkedRecordId, setSearchParams, notify]);
+
+  // Карточка может быть открыта по ссылке на запись другого дня — её нет в списках, перечитываем отдельно
+  const refreshSelected = () => {
+    fetchRecords();
+    const id = selectedRecord?.id;
+    if (!id || [...todayRecords, ...incompleteRecords].some(r => r.id === id)) return;
+    recordsApi.getById(id)
+      .then(fresh => setSelectedRecord(prev => (prev?.id === id ? fresh : prev)))
+      .catch(() => {
+        // Намеренно молча: карточка остаётся с прежними данными
+      });
+  };
 
   const datesControllerRef = useRef<AbortController | null>(null);
   const fetchDatesWithRecords = useCallback(() => {
@@ -258,7 +288,7 @@ export const SchedulePage: React.FC = () => {
         record={selectedRecord}
         open={!!selectedRecord}
         onClose={() => setSelectedRecord(null)}
-        onRefresh={() => fetchRecords()}
+        onRefresh={refreshSelected}
       />
     </div>
   );

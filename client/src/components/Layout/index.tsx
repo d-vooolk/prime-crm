@@ -8,6 +8,7 @@ import { useNotesNotifications } from '@/hooks/useNotesNotifications';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { useWikiPendingCount } from '@/hooks/useWikiPendingCount';
 import { useAppResumeRefresh } from '@/hooks/useAppResume';
+import { useNotificationNavigation } from '@/hooks/useNotificationNavigation';
 import { PushPrompt } from '@/components/PushPrompt';
 import { autoEnablePush } from '@/pwa';
 import { useAuthStore } from '@/store/authStore';
@@ -35,6 +36,7 @@ export const Layout: React.FC = () => {
   useWikiPendingCount();
   useResetDocumentScroll();
   useAppResumeRefresh();
+  useNotificationNavigation();
 
   // Разрешение на уведомления уже есть — подписываем устройство на пуши вошедшего пользователя
   const userId = useAuthStore(s => s.user?.id);
