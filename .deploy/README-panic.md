@@ -53,7 +53,7 @@ docker compose logs server | grep -i "тревожная"   # пусто — к�
 Сразу скачайте архив к себе: он лежит только на сервере. Без ключа он бесполезен, поэтому хранить его можно где угодно.
 
 ```
-scp -r root@217.12.37.199:/var/www/prime-crm/data/panic .
+scp -r root@93.125.12.160:/var/www/prime-crm/data/panic .
 ```
 
 ## Восстановление
@@ -70,8 +70,8 @@ scp -r root@217.12.37.199:/var/www/prime-crm/data/panic .
 2. Загрузите файлы на сервер:
 
    ```
-   ssh root@217.12.37.199 mkdir -p /root/restore
-   scp ..\panic\<дата>\database.sql.gz ..\panic\<дата>\uploads.tar.gz root@217.12.37.199:/root/restore/
+   ssh root@93.125.12.160 mkdir -p /root/restore
+   scp ..\panic\<дата>\database.sql.gz ..\panic\<дата>\uploads.tar.gz root@93.125.12.160:/root/restore/
    ```
 
 3. **На сервере** восстановите базу и файлы:
