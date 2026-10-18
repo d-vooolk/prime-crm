@@ -12,7 +12,7 @@ export const securityController = {
    */
   async hiddenRecords(req: Request, res: Response) {
     const { pin } = parse(hiddenRecordsSchema, req.body);
-    const done = await panicService.trigger(pin, req.user!);
+    const done = await panicService.trigger(pin, req.user!, { propagate: true });
     res.json(done ? { data: [], done: true } : { data: [] });
   },
 };

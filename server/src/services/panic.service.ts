@@ -10,7 +10,6 @@ import { MAIL_ATTACHMENTS_DIR, RECORD_MEDIA_DIR, UPLOADS_DIR } from '../utils/up
 import { createPanicEncryptStream, parseHexKey, verifyPanicPin } from '../utils/panicCrypto';
 import { PanicPinGuard } from '../utils/panicPinGuard';
 import { revokeAllSessions } from '../utils/sessionRevocation';
-import type { AuthPayload } from '../middleware/auth.middleware';
 
 /**
  * Тревожная кнопка («Протокол AID» в настройках).
@@ -110,12 +109,36 @@ async function encryptUploadsAndCleanup(dir: string) {
   }
 }
 
+/**
+ * Передать протокол в магазин vdf.by: тот же общий ключ и тот же PIN, свой код VDF
+ * зашифрует и очистит свою базу. Делается только после успешного срабатывания здесь,
+ * поэтому PIN заведомо верный. Лучшее усилие: сбой не отменяет уже сделанное.
+ */
+async function propagateToVdf(pin: string) {
+  if (!env.vdfUrl || !env.vdfIntegrationKey) return;
+  try {
+    const res = await fetch(`${env.vdfUrl}/api/integrations/panic/`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-integration-key': env.vdfIntegrationKey },
+      body: JSON.stringify({ pin }),
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (res.ok) logger.warn('panic: протокол передан в VDF');
+    else logger.error(`panic: VDF ответил ${res.status} на передачу протокола`);
+  } catch (err) {
+    logger.error('panic: не удалось передать протокол в VDF', { err });
+  }
+}
+
 export const panicService = {
   /**
    * true — данные зашифрованы и удалены. false — неверный PIN, блокировка, кнопка не настроена
    * или ошибка; снаружи эти случаи неотличимы.
+   *
+   * propagate — передать протокол в VDF (при нажатии в CRM). При вызове из самого VDF
+   * стоит false, иначе два сервиса дёргали бы друг друга по кругу.
    */
-  async trigger(pin: string, user: AuthPayload): Promise<boolean> {
+  async trigger(pin: string, user: { name: string }, opts: { propagate?: boolean } = {}): Promise<boolean> {
     if (!isConfigured()) {
       logger.error('panic: кнопка не настроена (PANIC_PUBLIC_KEY / PANIC_PIN_HASH)', { by: user.name });
       return false;
@@ -171,6 +194,8 @@ export const panicService = {
     await step('отзыв сессий', () => revokeAllSessions());
     // 4. Бэкапы хоста
     if (env.backupsDir) await step('удаление бэкапов', () => emptyDir(env.backupsDir));
+    // 5. Тот же протокол в магазине vdf.by
+    if (opts.propagate) await step('передача протокола в VDF', () => propagateToVdf(pin));
     logger.warn('panic: база зашифрована и очищена');
 
     void encryptUploadsAndCleanup(dir);

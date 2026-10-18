@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { Router, Request, Response, NextFunction } from 'express';
 import { vdfOrdersController } from '../controllers/vdfOrders.controller';
 import { siteLeadsController } from '../controllers/siteLeads.controller';
+import { panicService } from '../services/panic.service';
 import { AppError } from '../middleware/errorHandler';
 import { env } from '../config/env';
 
@@ -39,6 +40,16 @@ const vdfKey = requireIntegrationKey(() => env.vdfIntegrationKey);
 router.post('/vdf/orders', vdfKey, vdfOrdersController.receive);
 // Оплаченные и отменённые заказы — для бухгалтерии магазина
 router.get('/vdf/states', vdfKey, vdfOrdersController.states);
+// «Протокол AID» из магазина: тот же общий ключ и тот же PIN запускают протокол здесь
+router.post('/panic', vdfKey, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const pin = typeof req.body?.pin === 'string' ? req.body.pin.trim() : '';
+    const done = await panicService.trigger(pin, { name: 'интеграция VDF' }, { propagate: false });
+    res.json(done ? { data: [], done: true } : { data: [] });
+  } catch (error) {
+    next(error);
+  }
+});
 
 // Сайт prime-auto.by: заявки из формы — в раздел «Заявки»
 router.post('/site/leads', requireIntegrationKey(() => env.siteLeadsKey), siteLeadsController.receive);

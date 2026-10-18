@@ -419,6 +419,7 @@ GET    /api/analytics/revenue?from=&to=
 - Сначала `pg_dump` и `data/uploads` шифруются открытым ключом владельца (`utils/panicCrypto.ts`, X25519 + AES-256-GCM) в `data/panic`, затем `TRUNCATE` таблиц из `PANIC_WIPE_TABLES`, отзыв всех сессий (`SecurityState`, `utils/sessionRevocation.ts`) и удаление бэкапов. Не удалось зашифровать — ничего не удаляется
 - **Новая таблица с клиентскими или денежными данными добавляется в `PANIC_WIPE_TABLES`.** TRUNCATE идёт без CASCADE: забытая таблица со ссылкой на очищаемую уронит очистку, а не удалит лишнее
 - Приватного ключа на сервере нет. Ключ и хеш PIN создаются у владельца: `npm run panic:keygen`, `npm run panic:pin`; расшифровка — `npm run panic:decrypt`
+- Нажатие запускает протокол и в магазине vdf.by: `trigger(pin, user, { propagate })` при нажатии в CRM шлёт `VDF_URL/api/integrations/panic/` (общий `VDF_INTEGRATION_KEY` + тот же PIN). Приём из VDF (`routes/integrations.routes.ts` `/panic`) идёт с `propagate:false`, чтобы сервисы не дёргали друг друга по кругу. Ключ восстановления и PIN общие на оба сервиса
 
 ---
 

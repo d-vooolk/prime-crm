@@ -40,6 +40,8 @@ services:
       PANIC_DIR: /app/panic
       # Приём заказов сотрудников из магазина vdf.by; пусто — приём выключен
       VDF_INTEGRATION_KEY: ${VDF_INTEGRATION_KEY:-}
+      # Адрес магазина vdf.by — передача «Протокола AID» в VDF; пусто — не передаём
+      VDF_URL: ${VDF_URL:-https://vdf.by}
       # Заявки из формы сайта prime-auto.by; пусто — приём выключен
       SITE_LEADS_KEY: ${SITE_LEADS_KEY:-}
       # Страница записи для клиента: ссылка {{link}} в SMS — <адрес>/<код записи>
