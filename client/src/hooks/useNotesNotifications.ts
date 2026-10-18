@@ -65,10 +65,11 @@ function shouldFireNow(note: Note): boolean {
   return Math.abs(now.diff(target, 'minute')) <= 1;
 }
 
-export function useNotesNotifications() {
+export function useNotesNotifications(enabled: boolean) {
   const notesRef = useRef<Note[]>([]);
 
   useEffect(() => {
+    if (!enabled) return;
     if ('Notification' in window && Notification.permission === 'default') {
       // Намеренно молча: отказ в разрешении — выбор пользователя, напоминания просто не придут
       Notification.requestPermission().catch(() => {});
@@ -111,6 +112,6 @@ export function useNotesNotifications() {
       clearInterval(fetchInterval);
       clearInterval(checkInterval);
     };
-  }, []);
+  }, [enabled]);
 }
 

@@ -2,6 +2,8 @@ import type { Dayjs } from 'dayjs';
 import type { NotePayload } from '@/api/notes.api';
 import type { NoteProject, NoteRepeat } from '@/types';
 
+export const NOTE_PROJECTS: NoteProject[] = ['CRM', 'PRIME', 'VDF'];
+
 export const PROJECT_LABEL: Record<NoteProject, string> = {
   CRM: 'CRM',
   PRIME: 'PRIME',

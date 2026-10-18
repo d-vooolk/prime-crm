@@ -5,6 +5,7 @@ import { BirthdayBanner } from '@/components/BirthdayBanner';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { PageLoader } from '@/components/PageLoader';
 import { useNotesNotifications } from '@/hooks/useNotesNotifications';
+import { canSeeNotes } from '@/utils/roles';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { useWikiPendingCount } from '@/hooks/useWikiPendingCount';
 import { useAppResumeRefresh } from '@/hooks/useAppResume';
@@ -32,7 +33,8 @@ function useResetDocumentScroll() {
 
 export const Layout: React.FC = () => {
   const { pathname } = useLocation();
-  useNotesNotifications();
+  const user = useAuthStore(s => s.user);
+  useNotesNotifications(canSeeNotes(user));
   useWikiPendingCount();
   useResetDocumentScroll();
   useAppResumeRefresh();

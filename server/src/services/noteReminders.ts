@@ -1,5 +1,6 @@
 import { prisma } from '../prisma/client';
 import { pushService } from './push.service';
+import { ROLES } from '../utils/roles';
 
 /**
  * Напоминания заметок пушем — приходят, даже когда CRM закрыта. Проверка раз в минуту.
@@ -46,7 +47,7 @@ const sent = new Set<string>();
 export async function sendDueNoteReminders(now = new Date()) {
   const minuteKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}-${now.getMinutes()}`;
   const notes = await prisma.note.findMany({
-    where: { isDone: false, date: { not: null } },
+    where: { isDone: false, date: { not: null }, serviceman: { role: ROLES.CREATOR } },
     select: { id: true, text: true, date: true, allDay: true, time: true, repeat: true, servicemanId: true },
   });
   for (const note of notes) {

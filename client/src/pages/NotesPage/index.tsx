@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Alert, Button, Select, Empty, Spin } from 'antd';
 import { PlusOutlined, InboxOutlined, UnorderedListOutlined } from '@ant-design/icons';
-import { Note } from '@/types';
+import { Note, NoteProject } from '@/types';
 import { notesApi } from '@/api/notes.api';
 import { useAuthStore } from '@/store/authStore';
 import { useAllServicemen } from '@/hooks/useReferenceData';
@@ -9,10 +9,17 @@ import { useNotify } from '@/hooks/useNotify';
 import { useOnAppResume } from '@/hooks/useAppResume';
 import { getErrorMessage } from '@/utils/errors';
 import { canEditNote, isNotesCreator } from '@/utils/roles';
-import { buildNotePayload, NoteFormValues } from './notesHelpers';
+import cn from 'classnames';
+import { buildNotePayload, NOTE_PROJECTS, NoteFormValues, PROJECT_LABEL } from './notesHelpers';
 import { NoteCard } from './NoteCard';
 import { NoteFormModal } from './NoteFormModal';
 import styles from './NotesPage.module.scss';
+
+const PROJECT_COLUMN_CLASS: Record<NoteProject, string> = {
+  CRM: styles.columnCrm,
+  PRIME: styles.columnPrime,
+  VDF: styles.columnVdf,
+};
 
 export const NotesPage: React.FC = () => {
   const { user } = useAuthStore();
@@ -145,17 +152,35 @@ export const NotesPage: React.FC = () => {
                 {showArchive ? 'Архив' : 'Активные'}
                 <span className={styles.sectionCount}>{notes.length}</span>
               </div>
-              <div className={styles.list}>
-                {notes.map(note => (
-                  <NoteCard
-                    key={note.id}
-                    note={note}
-                    canManage={canEditNote(user, note.servicemanId)}
-                    onToggleDone={handleToggleDone}
-                    onEdit={openEdit}
-                    onDelete={handleDelete}
-                  />
-                ))}
+              <div className={styles.board}>
+                {NOTE_PROJECTS.map(project => {
+                  const projectNotes = notes.filter(note => note.project === project);
+                  return (
+                    <section key={project} className={cn(styles.column, PROJECT_COLUMN_CLASS[project])}>
+                      <div className={styles.columnHead}>
+                        <span className={styles.columnDot} />
+                        {PROJECT_LABEL[project]}
+                        <span className={styles.columnCount}>{projectNotes.length}</span>
+                      </div>
+                      {projectNotes.length === 0 ? (
+                        <div className={styles.columnEmpty}>Нет заметок</div>
+                      ) : (
+                        <div className={styles.columnList}>
+                          {projectNotes.map(note => (
+                            <NoteCard
+                              key={note.id}
+                              note={note}
+                              canManage={canEditNote(user, note.servicemanId)}
+                              onToggleDone={handleToggleDone}
+                              onEdit={openEdit}
+                              onDelete={handleDelete}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </section>
+                  );
+                })}
               </div>
             </>
           )}

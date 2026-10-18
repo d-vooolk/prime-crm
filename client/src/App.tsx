@@ -16,7 +16,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useAuthSync } from '@/hooks/useAuthSync';
 import { PwaUpdateNotice } from '@/components/PwaUpdateNotice';
 import { queryClient } from '@/lib/queryClient';
-import { canSeeMail, canSeeSiteLeads } from '@/utils/roles';
+import { canSeeMail, canSeeNotes, canSeeSiteLeads } from '@/utils/roles';
 import { lightTheme, darkTheme } from '@/config/antdTheme';
 
 dayjs.locale('ru');
@@ -78,7 +78,7 @@ const App: React.FC = () => {
                     <Route path="services" element={<Navigate to="/settings?tab=services" replace />} />
                     <Route path="wiki" element={<WikiPage />} />
                     <Route path="accounting" element={<AccountingPage />} />
-                    <Route path="notes" element={<NotesPage />} />
+                    <Route path="notes" element={canSeeNotes(user) ? <NotesPage /> : <Navigate to="/schedule" replace />} />
                     <Route path="leads" element={canSeeSiteLeads(user) ? <LeadsPage /> : <Navigate to="/schedule" replace />} />
                     <Route path="mail" element={canSeeMail(user) ? <MailPage /> : <Navigate to="/schedule" replace />} />
                     <Route path="settings" element={<SettingsPage />} />

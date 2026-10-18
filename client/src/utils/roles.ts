@@ -60,6 +60,7 @@ export const canDeleteRecord = (u: Subject) => !!u?.isMaster || u?.role === ROLE
 
 // ─── Заметки ───────────────────────────────────────
 export const isNotesCreator = isCreatorOrAbove;
+export const canSeeNotes = isCreatorOrAbove;
 /** Править заметку: Создатель/мастер, автор заметки или любой руководитель */
 export const canEditNote = (u: (RoleSubject & { id?: string }) | null | undefined, authorId?: string | null) =>
   isCreatorOrAbove(u) || (!!authorId && authorId === u?.id) || hasRole(u, MANAGER_ROLES);
@@ -82,6 +83,7 @@ export const canSeeSiteLeads = isManagerOrAbove;
 export const EMPLOYEE_ALLOWED_PATHS = ['/schedule', '/dashboard', '/wiki', '/accounting', '/settings'];
 export const canSeePath = (u: Subject, path: string) => {
   if (path === '/mail') return canSeeMail(u);
+  if (path === '/notes') return canSeeNotes(u);
   if (path === '/leads') return canSeeSiteLeads(u);
   return !isEmployee(u) || EMPLOYEE_ALLOWED_PATHS.includes(path);
 };

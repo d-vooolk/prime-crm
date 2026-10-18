@@ -74,15 +74,77 @@
   margin-top: 60px;
 }
 
-// Плитки заметок: на широком экране в несколько колонок, на телефоне — одна
-.list {
+.board {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: start;
   gap: var(--spacing-md);
 
   @include mobile {
     grid-template-columns: 1fr;
-    gap: 10px;
+    gap: var(--spacing-lg);
   }
+}
+
+.column {
+  --column-color: var(--color-project-crm);
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  min-width: 0;
+  padding: var(--spacing-sm);
+  border-radius: var(--border-radius);
+  border-top: 2px solid var(--column-color);
+  background: color-mix(in srgb, var(--column-color) 4%, transparent);
+
+  &.columnPrime {
+    --column-color: var(--color-project-prime);
+  }
+
+  &.columnVdf {
+    --column-color: var(--color-project-vdf);
+  }
+}
+
+.columnHead {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 4px 4px 2px;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--column-color);
+}
+
+.columnDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--column-color);
+  box-shadow: 0 0 8px var(--column-color);
+}
+
+.columnCount {
+  margin-left: auto;
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  letter-spacing: 0;
+  color: var(--color-text-secondary);
+}
+
+.columnList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.columnEmpty {
+  padding: var(--spacing-md) 4px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  text-align: center;
 }
