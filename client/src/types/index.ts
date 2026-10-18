@@ -372,7 +372,7 @@ export interface DocumentTemplate {
   updatedAt: string;
 }
 
-export type NotePriority = 'LOW' | 'MEDIUM' | 'HIGH';
+export type NoteProject = 'CRM' | 'PRIME' | 'VDF';
 export type NoteRepeat = 'DAILY' | 'WEEKLY' | 'MONTHLY';
 
 export interface Note {
@@ -383,7 +383,7 @@ export interface Note {
   allDay: boolean;
   time?: string | null;
   repeat?: NoteRepeat | null;
-  priority: NotePriority;
+  project: NoteProject;
   isDone: boolean;
   doneAt?: string | null;
   createdAt: string;

@@ -5,15 +5,15 @@ import { buildNotePayload } from './notesHelpers';
 describe('buildNotePayload', () => {
   it('без даты сбрасывает время и повтор', () => {
     const p = buildNotePayload({ text: 'a', allDay: false, time: dayjs('2026-01-01T10:30'), hasRepeat: true, repeat: 'DAILY' });
-    expect(p).toEqual({ text: 'a', date: null, allDay: false, time: null, repeat: null, priority: 'LOW' });
+    expect(p).toEqual({ text: 'a', date: null, allDay: false, time: null, repeat: null, project: 'CRM' });
   });
 
   it('с датой и не на весь день сохраняет время HH:mm', () => {
     const date = dayjs('2026-03-05T00:00');
-    const p = buildNotePayload({ text: 'b', date, allDay: false, time: dayjs('2026-01-01T09:05'), priority: 'HIGH' });
+    const p = buildNotePayload({ text: 'b', date, allDay: false, time: dayjs('2026-01-01T09:05'), project: 'VDF' });
     expect(p.date).toBe(date.toISOString());
     expect(p.time).toBe('09:05');
-    expect(p.priority).toBe('HIGH');
+    expect(p.project).toBe('VDF');
   });
 
   it('на весь день время не отправляет, по умолчанию allDay = true', () => {

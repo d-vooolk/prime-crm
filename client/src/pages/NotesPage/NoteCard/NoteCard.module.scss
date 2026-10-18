@@ -1,9 +1,9 @@
 @use '@/styles/variables' as *;
 
-// Карточка в стиле карточек записи: поверхность, скругление, светящаяся полоса приоритета слева
+// Карточка в стиле карточек записи: поверхность, скругление, светящаяся полоса проекта слева
 .card {
-  // Цвет приоритета задаёт полосу, точку и подложку
-  --note-priority: var(--color-priority-low);
+  // Цвет проекта задаёт полосу, точку и подложку
+  --note-project: var(--color-project-crm);
 
   position: relative;
   overflow: hidden;
@@ -14,21 +14,21 @@
   border-radius: var(--border-radius);
   border: 1px solid var(--color-border);
   background:
-    radial-gradient(260px 120px at 100% 0%, color-mix(in srgb, var(--note-priority) 9%, transparent), transparent 70%),
+    radial-gradient(260px 120px at 100% 0%, color-mix(in srgb, var(--note-project) 9%, transparent), transparent 70%),
     var(--color-surface);
   transition: var(--transition);
 
   &:hover {
-    border-color: color-mix(in srgb, var(--note-priority) 40%, var(--color-border));
+    border-color: color-mix(in srgb, var(--note-project) 40%, var(--color-border));
     box-shadow: var(--shadow-md);
   }
 
-  &.priorityMedium {
-    --note-priority: var(--color-priority-medium);
+  &.projectPrime {
+    --note-project: var(--color-project-prime);
   }
 
-  &.priorityHigh {
-    --note-priority: var(--color-priority-high);
+  &.projectVdf {
+    --note-project: var(--color-project-vdf);
   }
 
   &.done {
@@ -39,7 +39,7 @@
       color: var(--color-text-secondary);
     }
 
-    .priorityBar {
+    .projectBar {
       box-shadow: none;
     }
   }
@@ -49,17 +49,17 @@
   }
 }
 
-.priorityBar {
+.projectBar {
   position: absolute;
   left: 0;
   top: 0;
   bottom: 0;
   width: 3px;
-  background: var(--note-priority);
-  box-shadow: 0 0 10px var(--note-priority);
+  background: var(--note-project);
+  box-shadow: 0 0 10px var(--note-project);
 }
 
-// ─── Шапка: приоритет и действия ────────────────────
+// ─── Шапка: проект и действия ────────────────────
 
 .head {
   display: flex;
@@ -69,7 +69,7 @@
   min-height: 24px;
 }
 
-.priorityPill {
+.projectPill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -78,15 +78,15 @@
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--note-priority);
+  color: var(--note-project);
 }
 
-.priorityDot {
+.projectDot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--note-priority);
-  box-shadow: 0 0 8px var(--note-priority);
+  background: var(--note-project);
+  box-shadow: 0 0 8px var(--note-project);
 }
 
 .actions {

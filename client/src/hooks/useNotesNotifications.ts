@@ -96,8 +96,8 @@ export function useNotesNotifications() {
         if (wasNotified(key)) continue;
         markNotified(key);
         try {
-          const priorityEmoji = { LOW: '🔵', MEDIUM: '🟡', HIGH: '🔴' }[note.priority] || '';
-          new Notification(`${priorityEmoji} Напоминание`, {
+          const projectEmoji = { CRM: '🔵', PRIME: '🟡', VDF: '🔴' }[note.project] || '';
+          new Notification(`${projectEmoji} Напоминание`, {
             body: note.text,
             icon: '/icons/icon-192.png',
           });

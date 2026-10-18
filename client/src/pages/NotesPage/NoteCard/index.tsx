@@ -7,7 +7,7 @@ import {
 import dayjs from 'dayjs';
 import cn from 'classnames';
 import type { Note, NoteRepeat } from '@/types';
-import { PRIORITY_LABEL, REPEAT_LABEL } from '../notesHelpers';
+import { PROJECT_LABEL, REPEAT_LABEL } from '../notesHelpers';
 import styles from './NoteCard.module.scss';
 
 interface Props {
@@ -24,18 +24,18 @@ export const NoteCard: React.FC<Props> = ({ note, canManage, onToggleDone, onEdi
   return (
     <div
       className={cn(styles.card, {
-        [styles.priorityLow]: note.priority === 'LOW',
-        [styles.priorityMedium]: note.priority === 'MEDIUM',
-        [styles.priorityHigh]: note.priority === 'HIGH',
+        [styles.projectCrm]: note.project === 'CRM',
+        [styles.projectPrime]: note.project === 'PRIME',
+        [styles.projectVdf]: note.project === 'VDF',
         [styles.done]: note.isDone,
       })}
     >
-      <span className={styles.priorityBar} />
+      <span className={styles.projectBar} />
 
       <div className={styles.head}>
-        <span className={styles.priorityPill}>
-          <span className={styles.priorityDot} />
-          {PRIORITY_LABEL[note.priority]}
+        <span className={styles.projectPill}>
+          <span className={styles.projectDot} />
+          {PROJECT_LABEL[note.project]}
         </span>
         {canManage && (
           <div className={styles.actions}>

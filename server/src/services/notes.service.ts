@@ -1,6 +1,6 @@
 import { prisma } from '../prisma/client';
 
-type NotePriority = 'LOW' | 'MEDIUM' | 'HIGH';
+type NoteProject = 'CRM' | 'PRIME' | 'VDF';
 
 interface NoteCreateData {
   text: string;
@@ -8,7 +8,7 @@ interface NoteCreateData {
   allDay: boolean;
   time?: string | null;
   repeat?: string | null;
-  priority: NotePriority;
+  project: NoteProject;
 }
 
 interface NoteUpdateData {
@@ -17,7 +17,7 @@ interface NoteUpdateData {
   allDay?: boolean;
   time?: string | null;
   repeat?: string | null;
-  priority?: NotePriority;
+  project?: NoteProject;
   isDone?: boolean;
 }
 
@@ -41,7 +41,7 @@ export const notesService = {
         allDay: data.allDay,
         time: data.time ?? null,
         repeat: data.repeat ?? null,
-        priority: data.priority,
+        project: data.project,
       },
     });
   },
@@ -67,7 +67,7 @@ export const notesService = {
     if (data.allDay !== undefined) updateData.allDay = data.allDay;
     if ('time' in data) updateData.time = data.time ?? null;
     if ('repeat' in data) updateData.repeat = data.repeat ?? null;
-    if (data.priority !== undefined) updateData.priority = data.priority;
+    if (data.project !== undefined) updateData.project = data.project;
     if (data.isDone !== undefined) {
       updateData.isDone = data.isDone;
       updateData.doneAt = data.isDone ? new Date() : null;

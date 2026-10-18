@@ -650,10 +650,10 @@ model DebtPayment {
   capitalTransaction CapitalTransaction? @relation(fields: [capitalTransactionId], references: [id], onDelete: SetNull)
 }
 
-enum NotePriority {
-  LOW
-  MEDIUM
-  HIGH
+enum NoteProject {
+  CRM
+  PRIME
+  VDF
 }
 
 model MonthlyRevenue {
@@ -686,7 +686,7 @@ model Note {
   allDay       Boolean      @default(true)
   time         String?
   repeat       String?
-  priority     NotePriority @default(MEDIUM)
+  project      NoteProject  @default(CRM)
   isDone       Boolean      @default(false)
   doneAt       DateTime?
   createdAt    DateTime     @default(now())

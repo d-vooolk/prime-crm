@@ -20,10 +20,10 @@ const REPEAT_OPTIONS = [
   { value: 'MONTHLY', label: 'Каждый месяц' },
 ];
 
-const PRIORITY_OPTIONS = [
-  { value: 'LOW', label: 'Низкий' },
-  { value: 'MEDIUM', label: 'Средний' },
-  { value: 'HIGH', label: 'Высокий' },
+const PROJECT_OPTIONS = [
+  { value: 'CRM', label: 'CRM' },
+  { value: 'PRIME', label: 'PRIME' },
+  { value: 'VDF', label: 'VDF' },
 ];
 
 export const NoteFormModal: React.FC<Props> = ({ open, note, saving, onCancel, onSubmit }) => {
@@ -43,11 +43,11 @@ export const NoteFormModal: React.FC<Props> = ({ open, note, saving, onCancel, o
         time: note.time ? dayjs(note.time, 'HH:mm') : null,
         hasRepeat: !!note.repeat,
         repeat: note.repeat ?? 'DAILY',
-        priority: note.priority,
+        project: note.project,
       });
     } else {
       form.resetFields();
-      form.setFieldsValue({ allDay: true, priority: 'LOW', hasRepeat: false });
+      form.setFieldsValue({ allDay: true, project: 'CRM', hasRepeat: false });
     }
   }, [open, note, form]);
 
@@ -105,8 +105,8 @@ export const NoteFormModal: React.FC<Props> = ({ open, note, saving, onCancel, o
           </Form.Item>
         )}
 
-        <Form.Item name="priority" label="Приоритет">
-          <Select options={PRIORITY_OPTIONS} />
+        <Form.Item name="project" label="Проект">
+          <Select options={PROJECT_OPTIONS} />
         </Form.Item>
       </Form>
     </Modal>

@@ -73,10 +73,10 @@
   --color-accent-border: rgba(94, 140, 0, 0.3);
   --color-purple: #9333ea;
 
-  // Приоритеты заметок
-  --color-priority-low: #0284c7;
-  --color-priority-medium: #ea8a0c;
-  --color-priority-high: #e5484d;
+  // Проекты заметок
+  --color-project-crm: #0284c7;
+  --color-project-prime: #ea8a0c;
+  --color-project-vdf: #e5484d;
 
   // Серии графиков (recharts читает их через useCssVars)
   --color-chart-1: #6e9e00;
@@ -192,9 +192,9 @@
   --color-accent-border: rgba(162, 219, 0, 0.35);
   --color-purple: #c084fc;
 
-  --color-priority-low: #38bdf8;
-  --color-priority-medium: #fbbf24;
-  --color-priority-high: #f87171;
+  --color-project-crm: #38bdf8;
+  --color-project-prime: #fbbf24;
+  --color-project-vdf: #f87171;
 
   --color-chart-1: #a2db00;
   --color-chart-2: #22d3ee;

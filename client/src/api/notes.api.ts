@@ -1,5 +1,5 @@
 import http from './http';
-import { Note, NotePriority, NoteRepeat } from '@/types';
+import { Note, NoteProject, NoteRepeat } from '@/types';
 
 export interface NotePayload {
   text: string;
@@ -7,7 +7,7 @@ export interface NotePayload {
   allDay: boolean;
   time?: string | null;
   repeat?: NoteRepeat | null;
-  priority: NotePriority;
+  project: NoteProject;
   servicemanId?: string;
 }
 

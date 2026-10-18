@@ -1,0 +1,7 @@
+ALTER TYPE "NotePriority" RENAME VALUE 'LOW' TO 'CRM';
+ALTER TYPE "NotePriority" RENAME VALUE 'MEDIUM' TO 'PRIME';
+ALTER TYPE "NotePriority" RENAME VALUE 'HIGH' TO 'VDF';
+ALTER TYPE "NotePriority" RENAME TO "NoteProject";
+
+ALTER TABLE "Note" RENAME COLUMN "priority" TO "project";
+ALTER TABLE "Note" ALTER COLUMN "project" SET DEFAULT 'CRM';

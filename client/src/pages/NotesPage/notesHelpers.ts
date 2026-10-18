@@ -1,11 +1,11 @@
 import type { Dayjs } from 'dayjs';
 import type { NotePayload } from '@/api/notes.api';
-import type { NotePriority, NoteRepeat } from '@/types';
+import type { NoteProject, NoteRepeat } from '@/types';
 
-export const PRIORITY_LABEL: Record<NotePriority, string> = {
-  LOW: 'Низкий',
-  MEDIUM: 'Средний',
-  HIGH: 'Высокий',
+export const PROJECT_LABEL: Record<NoteProject, string> = {
+  CRM: 'CRM',
+  PRIME: 'PRIME',
+  VDF: 'VDF',
 };
 
 export const REPEAT_LABEL: Record<NoteRepeat, string> = {
@@ -22,7 +22,7 @@ export interface NoteFormValues {
   time?: Dayjs | null;
   hasRepeat?: boolean;
   repeat?: NoteRepeat;
-  priority?: NotePriority;
+  project?: NoteProject;
 }
 
 /**
@@ -39,7 +39,7 @@ export function buildNotePayload(values: NoteFormValues, servicemanId?: string |
     allDay: isAllDay,
     time: hasDate && !isAllDay && values.time ? values.time.format('HH:mm') : null,
     repeat: hasDate && values.hasRepeat && values.repeat ? values.repeat : null,
-    priority: values.priority ?? 'LOW',
+    project: values.project ?? 'CRM',
     ...(servicemanId ? { servicemanId } : {}),
   };
 }

@@ -22,7 +22,7 @@ export const notesController = {
   async create(req: Request, res: Response) {
     const requesterId = req.user!.id;
     const creator = isCreator(req);
-    const { text, date, allDay, time, repeat, priority, servicemanId } = req.body;
+    const { text, date, allDay, time, repeat, project, servicemanId } = req.body;
     const targetServicemanId = (creator && servicemanId) ? servicemanId : requesterId;
     const note = await notesService.create(targetServicemanId, {
       text,
@@ -30,7 +30,7 @@ export const notesController = {
       allDay: allDay ?? true,
       time: time ?? null,
       repeat: repeat ?? null,
-      priority: priority ?? 'MEDIUM',
+      project: project ?? 'CRM',
     });
     res.status(201).json({ data: note });
   },
