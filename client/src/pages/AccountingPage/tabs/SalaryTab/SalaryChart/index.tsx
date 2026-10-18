@@ -3,6 +3,7 @@ import { Card } from 'antd';
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { SalaryHistoryItem } from '@/api/accounting.api';
 import { formatPrice } from '@/utils/formatters';
+import { chartTooltipTrigger } from '@/utils/chartTooltip';
 import { useCssVars } from '@/hooks/useCssVars';
 import styles from './SalaryChart.module.scss';
 
@@ -25,6 +26,7 @@ export const SalaryChart: React.FC<Props> = ({ history, loading }) => {
           <XAxis dataKey="label" tick={{ fontSize: 11 }} />
           <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `${(v / 1000).toFixed(0)}к`} width={40} />
           <Tooltip
+            trigger={chartTooltipTrigger}
             content={({ active, payload, label }) => {
               if (!active || !payload?.length) return null;
               const item = payload[0].payload as SalaryHistoryItem;

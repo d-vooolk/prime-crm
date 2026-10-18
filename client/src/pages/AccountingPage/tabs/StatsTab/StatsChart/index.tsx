@@ -1,6 +1,7 @@
 import React from 'react';
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { formatPrice } from '@/utils/formatters';
+import { chartTooltipTrigger } from '@/utils/chartTooltip';
 import { useCssVars } from '@/hooks/useCssVars';
 import { StatsChartPoint } from '../../../utils';
 import styles from './StatsChart.module.scss';
@@ -24,6 +25,7 @@ export const StatsChart: React.FC<Props> = ({ data }) => {
         <YAxis yAxisId="revenue" tick={{ fontSize: 11 }} tickFormatter={v => `${(v / 1000).toFixed(0)}к`} width={44} />
         <YAxis yAxisId="count" orientation="right" tick={{ fontSize: 11 }} width={32} />
         <Tooltip
+          trigger={chartTooltipTrigger}
           content={({ active, payload, label }) => {
             if (!active || !payload?.length) return null;
             return (

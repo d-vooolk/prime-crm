@@ -74,9 +74,11 @@
 .tableBlock {
   overflow-x: auto;
 
+  // Без собственной вертикальной прокрутки: вложенный скролл внутри прокручиваемой страницы
+  // на телефоне перехватывал свайп и «подвисал» на границе таблицы. Таблицы идут в общем потоке,
+  // а горизонтальный свайп по ним не передаётся странице
   @media (max-width: 768px) {
-    max-height: 320px;
-    overflow-y: auto;
+    overscroll-behavior-x: contain;
     border: 1px solid var(--color-border);
     border-radius: 0 0 8px 8px;
   }
