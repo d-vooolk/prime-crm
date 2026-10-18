@@ -21,3 +21,4 @@ server/prisma/data/.cache/
 # Загруженные файлы (фото/видео вики): в проде — data/uploads, в разработке — server/uploads
 data/
 server/uploads/
+bash.exe.stackdump
