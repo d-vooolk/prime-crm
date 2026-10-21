@@ -64,6 +64,7 @@ router.post('/debts/:id/payments', manager, accountingController.payDebt);
 // Заказы сотрудников из магазина vdf.by: исполнение создаёт расход в кассе
 router.get('/vdf-orders', manager, vdfOrdersController.list);
 router.get('/vdf-orders/pending-count', manager, vdfOrdersController.pendingCount);
+router.post('/vdf-orders/pay', manager, vdfOrdersController.payAll);
 router.patch('/vdf-orders/:id', manager, vdfOrdersController.updateAmount);
 router.post('/vdf-orders/:id/execute', manager, vdfOrdersController.execute);
 router.post('/vdf-orders/:id/cancel', manager, vdfOrdersController.cancel);

@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import dayjs from 'dayjs';
-import type { FounderSalaryRecord, MonthlyRecordCountItem, MonthlyRevenueItem, SalaryHistoryItem } from '@/api/accounting.api';
+import type { FounderSalaryRecord, MonthlyRecordCountItem, MonthlyRevenueItem, SalaryHistoryItem, VdfOrder } from '@/api/accounting.api';
 import {
   buildAvgCheckRows, buildStatsChartData, cashAfterCardChange, debtPaidTotal, founderDescriptionRule,
   isEmployeeSalaryDescription, isFounderSalaryDescription, isLinkedSalaryDescription, monthKey,
   overallAvgCheck, parseAmount, pickDefaultPerson, salaryRecord, summarizeFounderSalaries, vdfPaid, vdfRemaining,
-  vdfTotals,
+  vdfBulkPreview, vdfUnpaidTotal,
 } from './utils';
 
 const rev = (key: string, amount: number): MonthlyRevenueItem => {
@@ -175,34 +175,29 @@ describe('vdfPaid / vdfRemaining', () => {
   });
 });
 
-describe('vdfTotals', () => {
+describe('vdfUnpaidTotal / vdfBulkPreview', () => {
   const payment = (amount: number) => ({
     id: String(amount), paidByName: null, createdAt: '', cashTransaction: { id: '', amount, date: '', person: null },
   });
+  const order = (id: string, amount: number, paid = 0) => ({
+    id, amount, payments: paid ? [payment(paid)] : [],
+  }) as unknown as VdfOrder;
+  const orders = [order('a', 40), order('b', 50.35, 0.35), order('c', 10.35)];
 
-  it('сумма, оплачено и остаток по всем заказам', () => {
-    const totals = vdfTotals([
-      { employeeName: 'Иван', amount: 100.1, payments: [payment(40)] },
-      { employeeName: 'Пётр', amount: 50.2 },
-      { employeeName: 'Иван', amount: 20 },
-    ]);
-    expect(totals.count).toBe(3);
-    expect(totals.amount).toBe(170.3);
-    expect(totals.paid).toBe(40);
-    expect(totals.remaining).toBe(130.3);
+  it('невыплачено — сумма остатков', () => {
+    expect(vdfUnpaidTotal(orders)).toBe(100.35);
+    expect(vdfUnpaidTotal([])).toBe(0);
   });
 
-  it('остаток по сотрудникам — от большего к меньшему, полностью оплатившие не показываются', () => {
-    const totals = vdfTotals([
-      { employeeName: 'Пётр', amount: 30 },
-      { employeeName: 'Иван', amount: 50 },
-      { employeeName: 'Иван', amount: 25 },
-      { employeeName: 'Анна', amount: 10, payments: [payment(10)] },
-    ]);
-    expect(totals.byEmployee).toEqual([{ name: 'Иван', remaining: 75 }, { name: 'Пётр', remaining: 30 }]);
+  it('вся сумма — все заказы полностью', () => {
+    const preview = vdfBulkPreview(orders, 100.35);
+    expect(preview.full.map(o => o.id)).toEqual(['a', 'b', 'c']);
+    expect(preview.partial).toBeNull();
   });
 
-  it('пустой список', () => {
-    expect(vdfTotals([])).toEqual({ count: 0, amount: 0, paid: 0, remaining: 0, byEmployee: [] });
+  it('100 из 100.35 — последний заказ частично, остаток 0.35', () => {
+    const preview = vdfBulkPreview(orders, 100);
+    expect(preview.full.map(o => o.id)).toEqual(['a', 'b']);
+    expect(preview.partial).toEqual({ order: orders[2], pay: 10, left: 0.35 });
   });
 });

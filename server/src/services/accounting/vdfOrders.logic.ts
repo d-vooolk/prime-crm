@@ -73,6 +73,39 @@ export function planVdfPayment(amount: number, paid: number, requested?: number)
   return { ok: true, amount: pay / 100, full: pay === remaining };
 }
 
+export interface VdfBulkOrder {
+  id: string;
+  amount: number;
+  paid: number;
+}
+
+export type VdfBulkPlan =
+  | { ok: true; payments: Array<{ id: string; amount: number; full: boolean }> }
+  | { ok: false; message: string };
+
+/**
+ * Выплата одной суммой по всем ожидающим заказам: заказы оплачиваются по порядку (старые первыми),
+ * на последнем сумма может кончиться — он оплачивается частично и остаётся с остатком
+ */
+export function planVdfBulkPayment(orders: VdfBulkOrder[], requested: number): VdfBulkPlan {
+  const owed = orders.map(o => ({ id: o.id, remaining: toCents(vdfRemaining(o.amount, o.paid)) }))
+    .filter(o => o.remaining > 0);
+  const total = owed.reduce((sum, o) => sum + o.remaining, 0);
+  if (total <= 0) return { ok: false, message: 'Невыплаченных заказов нет' };
+  let left = toCents(requested);
+  if (left <= 0) return { ok: false, message: 'Сумма должна быть больше нуля' };
+  if (left > total) return { ok: false, message: `Сумма больше невыплаченного (${total / 100} р.)` };
+
+  const payments: Array<{ id: string; amount: number; full: boolean }> = [];
+  for (const o of owed) {
+    if (left <= 0) break;
+    const pay = Math.min(o.remaining, left);
+    payments.push({ id: o.id, amount: pay / 100, full: pay === o.remaining });
+    left -= pay;
+  }
+  return { ok: true, payments };
+}
+
 export interface VdfPaidOrder {
   shopOrderId: number;
   status: VdfOrderStatus;

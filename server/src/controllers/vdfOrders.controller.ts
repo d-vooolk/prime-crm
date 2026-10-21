@@ -35,6 +35,10 @@ const executeSchema = z.object({
   amount: positiveMoney().optional(),
 });
 const cancelSchema = z.object({ reason: optionalText(300) });
+const payAllSchema = z.object({
+  person: requiredText(150, 'Выберите изымателя'),
+  amount: positiveMoney(),
+});
 
 export const vdfOrdersController = {
   /** Магазин присылает состояние заказа сотрудника (вход по ключу, а не по токену пользователя) */
@@ -69,6 +73,11 @@ export const vdfOrdersController = {
 
   async restore(req: Request, res: Response) {
     res.json({ data: await vdfOrdersService.restore(parse(id, req.params.id)) });
+  },
+
+  async payAll(req: Request, res: Response) {
+    const { person, amount } = parse(payAllSchema, req.body);
+    res.json({ data: await vdfOrdersService.payAll(person, amount, req.user!) });
   },
 
   async execute(req: Request, res: Response) {

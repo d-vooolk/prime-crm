@@ -5,9 +5,10 @@
   color: var(--color-text-secondary);
 }
 
-.byEmployee {
-  margin-top: 4px;
-  font-size: 13px;
-  font-weight: 400;
-  color: var(--color-text-secondary);
+.unpaid {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
 }

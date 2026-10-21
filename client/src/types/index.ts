@@ -487,6 +487,8 @@ export interface VdfCatalogProduct {
   price: number;
   inStock: boolean;
   category: string;
+  /** Машина переходной рамки — в списке рамок одного типа */
+  car?: string;
 }
 
 export interface VdfCatalogCategory {
@@ -494,6 +496,15 @@ export interface VdfCatalogCategory {
   name: string;
   parentId: string | null;
   count: number;
+  /** Раздел переходных рамок: выбор через тип рамки и машину */
+  frameTypes: boolean;
+}
+
+export interface VdfFrameType {
+  type: string;
+  count: number;
+  /** Несколько марок для подсказки, какие машины у типа */
+  marks: string[];
 }
 
 export interface VdfCatalogList {

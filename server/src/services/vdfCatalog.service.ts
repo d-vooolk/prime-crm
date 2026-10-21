@@ -11,6 +11,8 @@ export interface VdfCatalogProduct {
   price: number;
   inStock: boolean;
   category: string;
+  /** Машина переходной рамки — в списке рамок одного типа */
+  car?: string;
 }
 
 export interface VdfCatalogCategory {
@@ -18,6 +20,14 @@ export interface VdfCatalogCategory {
   name: string;
   parentId: string | null;
   count: number;
+  /** Раздел переходных рамок: товары разложены по типам рамок */
+  frameTypes: boolean;
+}
+
+export interface VdfFrameType {
+  type: string;
+  count: number;
+  marks: string[];
 }
 
 export interface VdfCatalogList {
@@ -59,12 +69,21 @@ export const vdfCatalogService = {
     return categories;
   },
 
-  search(query: string) {
-    return request<VdfCatalogList>({ q: query });
+  search(query: string, offset = 0) {
+    return request<VdfCatalogList>({ q: query, offset: String(offset) });
   },
 
-  byCategory(categoryId: string) {
-    return request<VdfCatalogList>({ category: categoryId });
+  byCategory(categoryId: string, offset = 0) {
+    return request<VdfCatalogList>({ category: categoryId, offset: String(offset) });
+  },
+
+  async frameTypes(categoryId: string) {
+    const { types } = await request<{ types: VdfFrameType[] }>({ category: categoryId, types: '1' });
+    return types;
+  },
+
+  byFrameType(categoryId: string, type: string) {
+    return request<VdfCatalogList>({ category: categoryId, type });
   },
 
   async byId(productId: string) {

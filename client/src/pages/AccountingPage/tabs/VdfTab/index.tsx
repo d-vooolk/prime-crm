@@ -1,35 +1,23 @@
 import React, { useState } from 'react';
-import { Segmented, Table } from 'antd';
+import { Button, Segmented, Table } from 'antd';
 import { VdfOrder, vdfOrdersApi, VdfOrderStatus } from '@/api/accounting.api';
 import { useNotify } from '@/hooks/useNotify';
-import { formatMoney, plural } from '@/utils/formatters';
+import { formatMoney } from '@/utils/formatters';
 import { useInvalidateAccounting, useVdfOrders } from '../../hooks/useAccountingData';
 import { vdfColumns, VdfOrderItems } from '../../columns/vdfColumns';
 import { LoadErrorAlert } from '../../parts/LoadErrorAlert';
-import { vdfTotals } from '../../utils';
+import { vdfUnpaidTotal } from '../../utils';
 import { VdfOrderModal, VdfOrderModalMode } from '../../modals/VdfOrderModal';
+import { VdfPayAllModal } from '../../modals/VdfPayAllModal';
 import shared from '../../shared.module.scss';
 import styles from './VdfTab.module.scss';
 
-const LIST_LIMIT = 200;
-
-const VdfTotalsFooter: React.FC<{ orders: VdfOrder[]; view: VdfOrderStatus }> = ({ orders, view }) => {
-  const totals = vdfTotals(orders);
-  const pending = view === 'PENDING';
+const VdfUnpaidFooter: React.FC<{ orders: VdfOrder[]; onPay: () => void }> = ({ orders, onPay }) => {
+  const unpaid = vdfUnpaidTotal(orders);
   return (
-    <div className={shared.tableTotal}>
-      <div>
-        Итого: {totals.count} {plural(totals.count, ['заказ', 'заказа', 'заказов'])} на {formatMoney(totals.amount)}
-        {!pending && totals.count >= LIST_LIMIT && ` (последние ${LIST_LIMIT})`}
-        {pending && totals.paid > 0 && (
-          <> · оплачено {formatMoney(totals.paid)} · осталось {formatMoney(totals.remaining)}</>
-        )}
-      </div>
-      {pending && totals.byEmployee.length > 1 && (
-        <div className={styles.byEmployee}>
-          {totals.byEmployee.map(e => `${e.name} — ${formatMoney(e.remaining)}`).join(' · ')}
-        </div>
-      )}
+    <div className={styles.unpaid}>
+      <span>Не выплачено: <strong>{formatMoney(unpaid)}</strong></span>
+      <Button type="primary" danger size="small" onClick={onPay} disabled={unpaid <= 0}>Выплатить</Button>
     </div>
   );
 };
@@ -53,6 +41,7 @@ export const VdfTab: React.FC = () => {
   const cancelled = useVdfOrders('CANCELLED', view === 'CANCELLED');
   const current = view === 'EXECUTED' ? executed : view === 'CANCELLED' ? cancelled : pending;
   const [target, setTarget] = useState<{ order: VdfOrder; mode: VdfOrderModalMode } | null>(null);
+  const [payAllOpen, setPayAllOpen] = useState(false);
 
   const restore = async (order: VdfOrder) => {
     try {
@@ -92,7 +81,9 @@ export const VdfTab: React.FC = () => {
         locale={{ emptyText: EMPTY_TEXT[view] }}
         scroll={{ x: 900 }}
         expandable={{ expandedRowRender: order => <VdfOrderItems order={order} /> }}
-        footer={current.data?.length ? () => <VdfTotalsFooter orders={current.data ?? []} view={view} /> : undefined}
+        footer={view === 'PENDING' && pending.data?.length
+          ? () => <VdfUnpaidFooter orders={pending.data ?? []} onPay={() => setPayAllOpen(true)} />
+          : undefined}
         columns={vdfColumns({
           view,
           onEditAmount: order => setTarget({ order, mode: 'amount' }),
@@ -102,6 +93,7 @@ export const VdfTab: React.FC = () => {
         })}
       />
 
+      <VdfPayAllModal open={payAllOpen} orders={pending.data ?? []} onClose={() => setPayAllOpen(false)} />
       <VdfOrderModal order={target?.order ?? null} mode={target?.mode ?? 'execute'} onClose={() => setTarget(null)} />
     </div>
   );

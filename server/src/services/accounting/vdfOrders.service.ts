@@ -1,10 +1,10 @@
 import { Prisma } from '@prisma/client';
-import { prisma } from '../../prisma/client';
+import { prisma, DbClient } from '../../prisma/client';
 import { AppError } from '../../middleware/errorHandler';
 import type { AuthPayload } from '../../middleware/auth.middleware';
 import { expensesService } from '../expenses.service';
 import {
-  planVdfOrder, planVdfPayment, vdfCancellation, vdfExpenseDescription, vdfNotPendingMessage, vdfPaidTotal,
+  planVdfBulkPayment, planVdfOrder, planVdfPayment, vdfCancellation, vdfExpenseDescription, vdfNotPendingMessage, vdfPaidTotal,
   vdfPayments, VdfOrderStatus,
 } from './vdfOrders.logic';
 
@@ -211,33 +211,70 @@ export const vdfOrdersService = {
       if (order.status !== 'PENDING') throw new AppError(vdfNotPendingMessage(order.status), 400);
       const plan = planVdfPayment(order.amount, vdfPaidTotal(order.payments), amount);
       if (!plan.ok) throw new AppError(plan.message, 400);
-
       const expenseCategoryId = await expensesService.resolveCategoryId(VDF_EXPENSE_CATEGORY, tx);
-      const expense = await tx.cashTransaction.create({
-        data: {
-          type: 'EXPENSE',
-          date: new Date(),
-          description: vdfExpenseDescription(order.shopOrderId, order.employeeName),
-          amount: plan.amount,
-          person,
-          expenseCategoryId,
-        },
-      });
-      await tx.vdfOrderPayment.create({
-        data: { orderId: id, cashTransactionId: expense.id, paidByName: executor.name },
-      });
-      // Условие по статусу и времени изменения — защита от двойного нажатия: второй расход не пройдёт
-      const updated = await tx.vdfOrder.updateMany({
-        where: { id, status: 'PENDING', updatedAt: order.updatedAt },
-        data: plan.full
-          ? { status: 'EXECUTED', executedAt: new Date(), executedByName: executor.name }
-          : { updatedAt: new Date() },
-      });
-      if (!updated.count) throw new AppError('Заказ изменился, обновите список', 400);
+      await payOrder(tx, order, plan, { person, expenseCategoryId, executor });
       return tx.vdfOrder.findUniqueOrThrow({ where: { id }, include: paymentsInclude });
     });
   },
+
+  /**
+   * Выплатить одной суммой по всем ожидающим: старые заказы первыми, на каждый — свой расход в кассе.
+   * Не хватило на последний — он оплачивается частично и остаётся в ожидающих с остатком
+   */
+  async payAll(person: string, amount: number, executor: AuthPayload) {
+    return prisma.$transaction(async tx => {
+      const orders = await tx.vdfOrder.findMany({
+        where: { status: 'PENDING' },
+        orderBy: { completedAt: 'asc' },
+        include: paymentsInclude,
+      });
+      const plan = planVdfBulkPayment(
+        orders.map(o => ({ id: o.id, amount: o.amount, paid: vdfPaidTotal(o.payments) })),
+        amount,
+      );
+      if (!plan.ok) throw new AppError(plan.message, 400);
+      const expenseCategoryId = await expensesService.resolveCategoryId(VDF_EXPENSE_CATEGORY, tx);
+      const byId = new Map(orders.map(o => [o.id, o]));
+      for (const payment of plan.payments) {
+        await payOrder(tx, byId.get(payment.id)!, payment, { person, expenseCategoryId, executor });
+      }
+      return {
+        executed: plan.payments.filter(p => p.full).length,
+        partial: plan.payments.find(p => !p.full) ?? null,
+      };
+    });
+  },
 };
+
+/** Расход в кассе сегодняшним днём и оплата заказа; полная оплата исполняет заказ */
+async function payOrder(
+  tx: DbClient,
+  order: { id: string; shopOrderId: number; employeeName: string; updatedAt: Date },
+  plan: { amount: number; full: boolean },
+  ctx: { person: string; expenseCategoryId: string | null | undefined; executor: AuthPayload },
+) {
+  const expense = await tx.cashTransaction.create({
+    data: {
+      type: 'EXPENSE',
+      date: new Date(),
+      description: vdfExpenseDescription(order.shopOrderId, order.employeeName),
+      amount: plan.amount,
+      person: ctx.person,
+      expenseCategoryId: ctx.expenseCategoryId,
+    },
+  });
+  await tx.vdfOrderPayment.create({
+    data: { orderId: order.id, cashTransactionId: expense.id, paidByName: ctx.executor.name },
+  });
+  // Условие по статусу и времени изменения — защита от двойного нажатия: второй расход не пройдёт
+  const updated = await tx.vdfOrder.updateMany({
+    where: { id: order.id, status: 'PENDING', updatedAt: order.updatedAt },
+    data: plan.full
+      ? { status: 'EXECUTED', executedAt: new Date(), executedByName: ctx.executor.name }
+      : { updatedAt: new Date() },
+  });
+  if (!updated.count) throw new AppError('Заказ изменился, обновите список', 400);
+}
 
 async function notPendingError(id: string) {
   const order = await prisma.vdfOrder.findUnique({ where: { id }, select: { status: true } });

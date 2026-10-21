@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  planVdfOrder, planVdfPayment, vdfCancellation, vdfExpenseDescription, vdfNotPendingMessage, vdfPaidTotal, vdfPayments,
+  planVdfBulkPayment, planVdfOrder, planVdfPayment, vdfCancellation, vdfExpenseDescription, vdfNotPendingMessage, vdfPaidTotal, vdfPayments,
 } from '../services/accounting/vdfOrders.logic';
 
 const pending = { status: 'PENDING' as const, amountEdited: false, shopCancelled: false, paid: false };
@@ -145,5 +145,55 @@ describe('vdfNotPendingMessage', () => {
   it('по статусу', () => {
     expect(vdfNotPendingMessage('CANCELLED')).toBe('Заказ отменён');
     expect(vdfNotPendingMessage('EXECUTED')).toBe('Заказ уже исполнен');
+  });
+});
+
+describe('planVdfBulkPayment', () => {
+  const orders = [
+    { id: 'a', amount: 40, paid: 0 },
+    { id: 'b', amount: 50.35, paid: 0 },
+    { id: 'c', amount: 10, paid: 0 },
+  ];
+
+  it('вся сумма — все заказы исполнены', () => {
+    expect(planVdfBulkPayment(orders, 100.35)).toEqual({
+      ok: true,
+      payments: [
+        { id: 'a', amount: 40, full: true },
+        { id: 'b', amount: 50.35, full: true },
+        { id: 'c', amount: 10, full: true },
+      ],
+    });
+  });
+
+  it('не хватает 0.35 — последний заказ оплачен частично с остатком 0.35', () => {
+    expect(planVdfBulkPayment(orders, 100)).toEqual({
+      ok: true,
+      payments: [
+        { id: 'a', amount: 40, full: true },
+        { id: 'b', amount: 50.35, full: true },
+        { id: 'c', amount: 9.65, full: false },
+      ],
+    });
+  });
+
+  it('сумма кончилась на середине — дальше заказы не трогаются', () => {
+    expect(planVdfBulkPayment(orders, 45)).toEqual({
+      ok: true,
+      payments: [{ id: 'a', amount: 40, full: true }, { id: 'b', amount: 5, full: false }],
+    });
+  });
+
+  it('уже частично оплаченный считается по остатку', () => {
+    expect(planVdfBulkPayment([{ id: 'a', amount: 40, paid: 39.9 }, { id: 'b', amount: 5, paid: 0 }], 0.1)).toEqual({
+      ok: true,
+      payments: [{ id: 'a', amount: 0.1, full: true }],
+    });
+  });
+
+  it('больше невыплаченного и ноль — нельзя', () => {
+    expect(planVdfBulkPayment(orders, 100.36)).toEqual({ ok: false, message: 'Сумма больше невыплаченного (100.35 р.)' });
+    expect(planVdfBulkPayment(orders, 0)).toEqual({ ok: false, message: 'Сумма должна быть больше нуля' });
+    expect(planVdfBulkPayment([], 10)).toEqual({ ok: false, message: 'Невыплаченных заказов нет' });
   });
 });

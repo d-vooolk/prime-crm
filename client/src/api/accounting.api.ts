@@ -246,6 +246,12 @@ export const vdfOrdersApi = {
   cancel: (id: string, reason?: string) =>
     http.post<{ data: VdfOrder }>(`/accounting/vdf-orders/${id}/cancel`, { reason }).then(r => r.data.data),
 
+  /** Одной суммой по всем ожидающим: старые первыми, последний — возможно частично */
+  payAll: (person: string, amount: number) =>
+    http.post<{ data: { executed: number; partial: { id: string; amount: number } | null } }>(
+      '/accounting/vdf-orders/pay', { person, amount },
+    ).then(r => r.data.data),
+
   restore: (id: string) =>
     http.post<{ data: VdfOrder }>(`/accounting/vdf-orders/${id}/restore`).then(r => r.data.data),
 };

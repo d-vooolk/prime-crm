@@ -39,6 +39,9 @@ const sectionSchema = z.object({
 const catalogQuerySchema = z.object({
   q: z.string().trim().max(80).optional(),
   category: z.string().trim().min(1).max(50).optional(),
+  type: z.string().trim().min(1).max(20).optional(),
+  types: z.literal('1').optional(),
+  offset: z.coerce.number().int().min(0).max(10_000).optional(),
 });
 
 const productSchema = z.object({ productId: z.string().trim().min(1).max(50) });
@@ -94,13 +97,21 @@ export const wikiController = {
   },
 
   async catalog(req: Request, res: Response) {
-    const { q, category } = parse(catalogQuerySchema, req.query);
+    const { q, category, type, types, offset } = parse(catalogQuerySchema, req.query);
     if (q && q.length >= 2) {
-      res.json({ data: await vdfCatalogService.search(q) });
+      res.json({ data: await vdfCatalogService.search(q, offset) });
+      return;
+    }
+    if (category && type) {
+      res.json({ data: await vdfCatalogService.byFrameType(category, type) });
+      return;
+    }
+    if (category && types) {
+      res.json({ data: { types: await vdfCatalogService.frameTypes(category) } });
       return;
     }
     if (category) {
-      res.json({ data: await vdfCatalogService.byCategory(category) });
+      res.json({ data: await vdfCatalogService.byCategory(category, offset) });
       return;
     }
     res.json({ data: { categories: await vdfCatalogService.categories() } });

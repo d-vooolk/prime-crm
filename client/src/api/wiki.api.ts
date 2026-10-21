@@ -1,6 +1,6 @@
 import http from './http';
 import {
-  VdfCatalogCategory, VdfCatalogList, WikiEntry, WikiEntrySummary, WikiKey, WikiMedia, WikiRevision, WikiSection, WikiSettings,
+  VdfCatalogCategory, VdfCatalogList, VdfFrameType, WikiEntry, WikiEntrySummary, WikiKey, WikiMedia, WikiRevision, WikiSection, WikiSettings,
 } from '@/types';
 
 export const wikiApi = {
@@ -37,11 +37,18 @@ export const wikiApi = {
   getCatalogCategories: () =>
     http.get<{ data: { categories: VdfCatalogCategory[] } }>('/wiki/catalog').then(r => r.data.data.categories),
 
-  searchCatalog: (q: string) =>
-    http.get<{ data: VdfCatalogList }>('/wiki/catalog', { params: { q } }).then(r => r.data.data),
+  searchCatalog: (q: string, offset = 0) =>
+    http.get<{ data: VdfCatalogList }>('/wiki/catalog', { params: { q, offset } }).then(r => r.data.data),
 
-  getCatalogCategory: (category: string) =>
-    http.get<{ data: VdfCatalogList }>('/wiki/catalog', { params: { category } }).then(r => r.data.data),
+  getCatalogCategory: (category: string, offset = 0) =>
+    http.get<{ data: VdfCatalogList }>('/wiki/catalog', { params: { category, offset } }).then(r => r.data.data),
+
+  getFrameTypes: (category: string) =>
+    http.get<{ data: { types: VdfFrameType[] } }>('/wiki/catalog', { params: { category, types: '1' } })
+      .then(r => r.data.data.types),
+
+  getFrameTypeProducts: (category: string, type: string) =>
+    http.get<{ data: VdfCatalogList }>('/wiki/catalog', { params: { category, type } }).then(r => r.data.data),
 
   /** sectionId: null — «Общее» */
   addProduct: (key: WikiKey, sectionId: string | null, productId: string) =>

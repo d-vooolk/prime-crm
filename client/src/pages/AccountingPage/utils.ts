@@ -65,34 +65,31 @@ export const vdfPaid = (o: Pick<VdfOrder, 'payments'>) =>
 /** Сколько осталось оплатить */
 export const vdfRemaining = (o: Pick<VdfOrder, 'amount' | 'payments'>) => Math.max(0, roundMoney(o.amount - vdfPaid(o)));
 
-export interface VdfTotals {
-  count: number;
-  amount: number;
-  paid: number;
-  remaining: number;
-  byEmployee: Array<{ name: string; remaining: number }>;
+/** Сколько всего не выплачено по ожидающим заказам */
+export const vdfUnpaidTotal = (orders: Array<Pick<VdfOrder, 'amount' | 'payments'>>) =>
+  roundMoney(orders.reduce((s, o) => s + vdfRemaining(o), 0));
+
+export interface VdfBulkPreview {
+  full: VdfOrder[];
+  partial: { order: VdfOrder; pay: number; left: number } | null;
 }
 
-/** Итог под таблицей заказов: сумма, оплачено, остаток и остаток по каждому сотруднику */
-export function vdfTotals(orders: Array<Pick<VdfOrder, 'amount' | 'payments' | 'employeeName'>>): VdfTotals {
-  const byEmployee = new Map<string, number>();
-  let amount = 0;
-  let paid = 0;
-  for (const o of orders) {
-    amount += o.amount;
-    paid += vdfPaid(o);
-    byEmployee.set(o.employeeName, (byEmployee.get(o.employeeName) ?? 0) + vdfRemaining(o));
+/** Что оплатит выплата одной суммой: заказы по порядку списка (старые первыми), последний — возможно частично. Как planVdfBulkPayment на сервере */
+export function vdfBulkPreview(orders: VdfOrder[], amount: number): VdfBulkPreview {
+  const full: VdfOrder[] = [];
+  let left = Math.round(amount * 100);
+  for (const order of orders) {
+    const remaining = Math.round(vdfRemaining(order) * 100);
+    if (remaining <= 0) continue;
+    if (left <= 0) break;
+    if (left >= remaining) {
+      full.push(order);
+      left -= remaining;
+    } else {
+      return { full, partial: { order, pay: left / 100, left: (remaining - left) / 100 } };
+    }
   }
-  return {
-    count: orders.length,
-    amount: roundMoney(amount),
-    paid: roundMoney(paid),
-    remaining: roundMoney(orders.reduce((s, o) => s + vdfRemaining(o), 0)),
-    byEmployee: [...byEmployee]
-      .map(([name, remaining]) => ({ name, remaining: roundMoney(remaining) }))
-      .filter(e => e.remaining > 0)
-      .sort((a, b) => b.remaining - a.remaining || a.name.localeCompare(b.name, 'ru')),
-  };
+  return { full, partial: null };
 }
 
 // ─── Выплата ЗП ──────────────────────────────────────
