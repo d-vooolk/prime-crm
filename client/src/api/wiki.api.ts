@@ -1,6 +1,6 @@
 import http from './http';
 import {
-  WikiEntry, WikiEntrySummary, WikiKey, WikiMedia, WikiRevision, WikiSection, WikiSettings,
+  VdfCatalogCategory, VdfCatalogList, WikiEntry, WikiEntrySummary, WikiKey, WikiMedia, WikiRevision, WikiSection, WikiSettings,
 } from '@/types';
 
 export const wikiApi = {
@@ -33,6 +33,22 @@ export const wikiApi = {
 
   deleteMedia: (id: string) =>
     http.delete(`/wiki/media/${id}`),
+
+  getCatalogCategories: () =>
+    http.get<{ data: { categories: VdfCatalogCategory[] } }>('/wiki/catalog').then(r => r.data.data.categories),
+
+  searchCatalog: (q: string) =>
+    http.get<{ data: VdfCatalogList }>('/wiki/catalog', { params: { q } }).then(r => r.data.data),
+
+  getCatalogCategory: (category: string) =>
+    http.get<{ data: VdfCatalogList }>('/wiki/catalog', { params: { category } }).then(r => r.data.data),
+
+  /** sectionId: null — «Общее» */
+  addProduct: (key: WikiKey, sectionId: string | null, productId: string) =>
+    http.post<{ data: WikiEntry }>('/wiki/products', { ...key, sectionId, productId }).then(r => r.data.data),
+
+  removeProduct: (id: string) =>
+    http.delete(`/wiki/products/${id}`),
 
   getRevisions: (status: 'PENDING' | 'DONE') =>
     http.get<{ data: WikiRevision[] }>('/wiki/revisions', { params: { status } }).then(r => r.data.data),

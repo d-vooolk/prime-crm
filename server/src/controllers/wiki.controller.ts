@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { AppError } from '../middleware/errorHandler';
 import { parse } from '../middleware/validate';
 import { wikiService, isWikiReviewer, WikiKey } from '../services/wiki.service';
+import { vdfCatalogService } from '../services/vdfCatalog.service';
 import { decodeOriginalName, WIKI_MEDIA_DIR } from '../utils/uploads';
 import type { UploadedMedia } from '../utils/mediaUpload';
 import { createImageVariants } from '../utils/wikiImages';
@@ -34,6 +35,13 @@ const sectionSchema = z.object({
   name: z.string().trim().min(1, 'Укажите название раздела').max(100),
   serviceIds: z.array(z.string().min(1).max(50)).max(1000),
 });
+
+const catalogQuerySchema = z.object({
+  q: z.string().trim().max(80).optional(),
+  category: z.string().trim().min(1).max(50).optional(),
+});
+
+const productSchema = z.object({ productId: z.string().trim().min(1).max(50) });
 
 function requireReviewer(req: Request) {
   if (!isWikiReviewer(req.user!)) throw new AppError('Недостаточно прав', 403);
@@ -82,6 +90,35 @@ export const wikiController = {
 
   async deleteMedia(req: Request, res: Response) {
     await wikiService.deleteMedia(String(req.params.id), req.user!);
+    res.json({ data: { ok: true } });
+  },
+
+  async catalog(req: Request, res: Response) {
+    const { q, category } = parse(catalogQuerySchema, req.query);
+    if (q && q.length >= 2) {
+      res.json({ data: await vdfCatalogService.search(q) });
+      return;
+    }
+    if (category) {
+      res.json({ data: await vdfCatalogService.byCategory(category) });
+      return;
+    }
+    res.json({ data: { categories: await vdfCatalogService.categories() } });
+  },
+
+  async addProduct(req: Request, res: Response) {
+    const { productId, sectionId, ...key } = req.body as Record<string, unknown>;
+    const entry = await wikiService.addProduct(
+      parseKey(key),
+      parse(sectionIdSchema, sectionId),
+      parse(productSchema, { productId }).productId,
+      req.user!,
+    );
+    res.status(201).json({ data: entry });
+  },
+
+  async removeProduct(req: Request, res: Response) {
+    await wikiService.removeProduct(String(req.params.id));
     res.json({ data: { ok: true } });
   },
 

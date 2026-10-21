@@ -17,6 +17,11 @@ router.put('/entry', wikiController.saveContent);
 router.post('/media', uploadMedia, wikiController.uploadMedia);
 router.delete('/media/:id', wikiController.deleteMedia);
 
+// Товары магазина vdf.by в разделах карточки
+router.get('/catalog', wikiController.catalog);
+router.post('/products', wikiController.addProduct);
+router.delete('/products/:id', wikiController.removeProduct);
+
 router.get('/revisions', wikiController.listRevisions);
 router.get('/revisions/pending-count', wikiController.pendingCount);
 router.post('/revisions/:id/review', wikiController.markReviewed);

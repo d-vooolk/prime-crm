@@ -65,6 +65,36 @@ export const vdfPaid = (o: Pick<VdfOrder, 'payments'>) =>
 /** Сколько осталось оплатить */
 export const vdfRemaining = (o: Pick<VdfOrder, 'amount' | 'payments'>) => Math.max(0, roundMoney(o.amount - vdfPaid(o)));
 
+export interface VdfTotals {
+  count: number;
+  amount: number;
+  paid: number;
+  remaining: number;
+  byEmployee: Array<{ name: string; remaining: number }>;
+}
+
+/** Итог под таблицей заказов: сумма, оплачено, остаток и остаток по каждому сотруднику */
+export function vdfTotals(orders: Array<Pick<VdfOrder, 'amount' | 'payments' | 'employeeName'>>): VdfTotals {
+  const byEmployee = new Map<string, number>();
+  let amount = 0;
+  let paid = 0;
+  for (const o of orders) {
+    amount += o.amount;
+    paid += vdfPaid(o);
+    byEmployee.set(o.employeeName, (byEmployee.get(o.employeeName) ?? 0) + vdfRemaining(o));
+  }
+  return {
+    count: orders.length,
+    amount: roundMoney(amount),
+    paid: roundMoney(paid),
+    remaining: roundMoney(orders.reduce((s, o) => s + vdfRemaining(o), 0)),
+    byEmployee: [...byEmployee]
+      .map(([name, remaining]) => ({ name, remaining: roundMoney(remaining) }))
+      .filter(e => e.remaining > 0)
+      .sort((a, b) => b.remaining - a.remaining || a.name.localeCompare(b.name, 'ru')),
+  };
+}
+
 // ─── Выплата ЗП ──────────────────────────────────────
 
 /**

@@ -772,6 +772,7 @@ model WikiEntry {
   media          WikiMedia[]
   revisions      WikiRevision[]
   sections       WikiEntrySection[]
+  products       WikiProduct[]
 
   @@unique([markId, modelId, generationId])
 }
@@ -789,6 +790,7 @@ model WikiSection {
   contents  WikiEntrySection[]
   media     WikiMedia[]
   revisions WikiRevision[]
+  products  WikiProduct[]
 }
 
 // Текст раздела в карточке. Раздел с текстом или файлами удалить нельзя (Restrict)
@@ -834,6 +836,26 @@ model WikiMedia {
   variantsVersion Int           @default(0) // версия параметров сжатия, 0 — ещё не обрабатывали
   entry           WikiEntry     @relation(fields: [entryId], references: [id], onDelete: Cascade)
   section         WikiSection?  @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+
+  @@index([entryId])
+  @@index([sectionId])
+}
+
+// Товар магазина vdf.by, прикреплённый к разделу карточки (ссылка на сайт).
+// Название и картинка — снимок на момент прикрепления, цену смотрят на сайте
+model WikiProduct {
+  id          String       @id @default(cuid())
+  entryId     String
+  // Раздел карточки; null — «Общее»
+  sectionId   String?
+  productId   String // id товара в vdf.by
+  title       String
+  url         String
+  imageUrl    String?
+  addedByName String?
+  createdAt   DateTime     @default(now())
+  entry       WikiEntry    @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  section     WikiSection? @relation(fields: [sectionId], references: [id], onDelete: Restrict)
 
   @@index([entryId])
   @@index([sectionId])

@@ -6,6 +6,7 @@ import { AppError } from '../middleware/errorHandler';
 import type { AuthPayload } from '../middleware/auth.middleware';
 import { WIKI_MEDIA_DIR, WIKI_MEDIA_URL } from '../utils/uploads';
 import { ImageVariants, removeVariants, variantUrl } from '../utils/wikiImages';
+import { vdfCatalogService } from './vdfCatalog.service';
 
 /** Кто проверяет правки вики и назначает за них премию. Их собственные правки на проверку не попадают. */
 const REVIEWER_ROLES = ['Создатель', 'Директор', 'Менеджер'];
@@ -41,6 +42,7 @@ export interface UploadedFile {
 const entryInclude = {
   media: { orderBy: { createdAt: 'asc' } },
   sections: { select: { sectionId: true, content: true, updatedByName: true, updatedAt: true } },
+  products: { orderBy: { createdAt: 'asc' } },
 } satisfies Prisma.WikiEntryInclude;
 
 type EntryWithMedia = Prisma.WikiEntryGetPayload<{ include: typeof entryInclude }>;
@@ -314,6 +316,37 @@ export const wikiService = {
     if (!referenced) removeFile(media.filename);
   },
 
+  // --- Товары vdf.by ---
+
+  /** Название, ссылку и картинку берём у магазина по id: клиент присылает только id товара */
+  async addProduct(key: WikiKey, sectionId: SectionId, productId: string, user: AuthPayload) {
+    await assertSection(sectionId);
+    const product = await vdfCatalogService.byId(productId);
+    if (!product) throw new AppError('Товар не найден в каталоге vdf.by', 404);
+    const entry = await getOrCreateEntry(key);
+    const existing = await prisma.wikiProduct.findFirst({ where: { entryId: entry.id, sectionId, productId } });
+    if (!existing) {
+      await prisma.wikiProduct.create({
+        data: {
+          entryId: entry.id,
+          sectionId,
+          productId,
+          title: product.title,
+          url: product.url,
+          imageUrl: product.image,
+          addedByName: user.name,
+        },
+      });
+    }
+    return this.getEntry(key);
+  },
+
+  async removeProduct(id: string) {
+    const product = await prisma.wikiProduct.findUnique({ where: { id } });
+    if (!product) throw new AppError('Товар уже откреплён', 404);
+    await prisma.wikiProduct.delete({ where: { id } });
+  },
+
   // --- Проверка правок ---
 
   async pendingCount() {
@@ -477,9 +510,10 @@ export const wikiService = {
     await prisma.$transaction(async tx => {
       await tx.wikiEntrySection.deleteMany({ where: { sectionId: id, content: '' } });
       const used = await tx.wikiEntrySection.count({ where: { sectionId: id } })
-        + await tx.wikiMedia.count({ where: { sectionId: id } });
+        + await tx.wikiMedia.count({ where: { sectionId: id } })
+        + await tx.wikiProduct.count({ where: { sectionId: id } });
       if (used > 0) {
-        throw new AppError('В разделе уже есть описания или файлы — удалить его нельзя, только переименовать', 400);
+        throw new AppError('В разделе уже есть описания, файлы или товары — удалить его нельзя, только переименовать', 400);
       }
       await tx.wikiSection.delete({ where: { id } });
     });

@@ -5,6 +5,7 @@ import {
   buildAvgCheckRows, buildStatsChartData, cashAfterCardChange, debtPaidTotal, founderDescriptionRule,
   isEmployeeSalaryDescription, isFounderSalaryDescription, isLinkedSalaryDescription, monthKey,
   overallAvgCheck, parseAmount, pickDefaultPerson, salaryRecord, summarizeFounderSalaries, vdfPaid, vdfRemaining,
+  vdfTotals,
 } from './utils';
 
 const rev = (key: string, amount: number): MonthlyRevenueItem => {
@@ -171,5 +172,37 @@ describe('vdfPaid / vdfRemaining', () => {
   it('без оплат остаток — вся сумма, переплата — ноль', () => {
     expect(vdfRemaining({ amount: 80 })).toBe(80);
     expect(vdfRemaining({ amount: 80, payments: [payment(90)] })).toBe(0);
+  });
+});
+
+describe('vdfTotals', () => {
+  const payment = (amount: number) => ({
+    id: String(amount), paidByName: null, createdAt: '', cashTransaction: { id: '', amount, date: '', person: null },
+  });
+
+  it('сумма, оплачено и остаток по всем заказам', () => {
+    const totals = vdfTotals([
+      { employeeName: 'Иван', amount: 100.1, payments: [payment(40)] },
+      { employeeName: 'Пётр', amount: 50.2 },
+      { employeeName: 'Иван', amount: 20 },
+    ]);
+    expect(totals.count).toBe(3);
+    expect(totals.amount).toBe(170.3);
+    expect(totals.paid).toBe(40);
+    expect(totals.remaining).toBe(130.3);
+  });
+
+  it('остаток по сотрудникам — от большего к меньшему, полностью оплатившие не показываются', () => {
+    const totals = vdfTotals([
+      { employeeName: 'Пётр', amount: 30 },
+      { employeeName: 'Иван', amount: 50 },
+      { employeeName: 'Иван', amount: 25 },
+      { employeeName: 'Анна', amount: 10, payments: [payment(10)] },
+    ]);
+    expect(totals.byEmployee).toEqual([{ name: 'Иван', remaining: 75 }, { name: 'Пётр', remaining: 30 }]);
+  });
+
+  it('пустой список', () => {
+    expect(vdfTotals([])).toEqual({ count: 0, amount: 0, paid: 0, remaining: 0, byEmployee: [] });
   });
 });

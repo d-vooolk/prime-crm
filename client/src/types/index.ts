@@ -462,6 +462,43 @@ export interface WikiEntry extends WikiKey {
   media: WikiMedia[];
   /** Тексты разделов; «Общее» — content */
   sections: WikiEntrySectionContent[];
+  /** Товары vdf.by по разделам */
+  products: WikiProduct[];
+}
+
+/** Товар магазина vdf.by в разделе карточки; sectionId null — «Общее» */
+export interface WikiProduct {
+  id: string;
+  sectionId: string | null;
+  productId: string;
+  title: string;
+  url: string;
+  imageUrl: string | null;
+  addedByName: string | null;
+  createdAt: string;
+}
+
+export interface VdfCatalogProduct {
+  id: string;
+  slug: string;
+  title: string;
+  url: string;
+  image: string | null;
+  price: number;
+  inStock: boolean;
+  category: string;
+}
+
+export interface VdfCatalogCategory {
+  id: string;
+  name: string;
+  parentId: string | null;
+  count: number;
+}
+
+export interface VdfCatalogList {
+  total: number;
+  items: VdfCatalogProduct[];
 }
 
 export interface WikiEntrySectionContent {

@@ -9,6 +9,7 @@ import { wikiApi } from '@/api/wiki.api';
 import { WikiEntry, WikiKey, WikiMedia } from '@/types';
 import { useNotify } from '@/hooks/useNotify';
 import { WikiPhotoGallery, GalleryPhoto } from './WikiPhotoGallery';
+import { WikiProducts } from './WikiProducts';
 import styles from './WikiPage.module.scss';
 
 interface Props {
@@ -225,6 +226,10 @@ export const WikiSectionPanel: React.FC<Props> = ({
           </div>
         </>
       )}
+
+      <Divider orientation="left" className={styles.cardDivider}>Товары</Divider>
+
+      <WikiProducts carKey={carKey} sectionId={sectionId} entry={entry} setEntry={setEntry} onChanged={onChanged} />
 
       <Divider orientation="left" className={styles.cardDivider}>Фото и видео</Divider>
 
