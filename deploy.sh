@@ -20,6 +20,8 @@ SHELL=/bin/bash
 30 3 * * * root bash $SCRIPT_DIR/.deploy/backup.sh >> /var/log/prime-crm-backup.log 2>&1
 CRON
 chmod 644 /etc/cron.d/prime-crm-backup
+# Раньше бэкап стоял в crontab root — убираем, чтобы не запускался дважды
+crontab -l 2>/dev/null | grep -v '.deploy/backup.sh' | crontab - || true
 
 echo "→ Rebuilding and restarting containers..."
 docker compose up --build -d
