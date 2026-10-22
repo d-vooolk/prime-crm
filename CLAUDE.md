@@ -412,7 +412,7 @@ GET    /api/analytics/revenue?from=&to=
 - `MAIL_USER` / `MAIL_PASSWORD` в `.env`; пусто — приём выключен
 
 ### Бэкапы
-- `.deploy/backup.sh` по cron на сервере каждый день в 03:30 UTC и перед каждым `deploy.sh`: дамп базы и снимок `data/uploads` в `/root/backups/prime-crm`
+- `.deploy/backup.sh` каждую ночь в 03:30 UTC (cron `/etc/cron.d/prime-crm-backup` ставит `deploy.sh`, перед деплоем копия не делается): дамп базы и снимок `data/uploads` в `/root/backups/prime-crm`
 - Хранится 7 ежедневных, 5 еженедельных и 12 ежемесячных копий базы, файлы — 7 снимков на жёстких ссылках
 - Внешнее хранилище подключается переменной `BACKUP_RCLONE_REMOTE` в `.env`
 

@@ -44,7 +44,8 @@ const catalogQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).max(10_000).optional(),
 });
 
-const productSchema = z.object({ productId: z.string().trim().min(1).max(50) });
+// id товара vdf.by — slug, у рамок в нём название машины, поэтому длиннее обычных id
+const productSchema = z.object({ productId: z.string().trim().min(1).max(200) });
 
 function requireReviewer(req: Request) {
   if (!isWikiReviewer(req.user!)) throw new AppError('Недостаточно прав', 403);

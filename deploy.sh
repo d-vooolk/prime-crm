@@ -8,9 +8,13 @@ echo "→ Pulling latest changes..."
 git fetch origin main
 git reset --hard origin/main
 
-# Бэкап перед каждым деплоем: если миграция пойдёт не так, есть свежий дамп
-echo "→ Backup before deploy..."
-bash .deploy/backup.sh
+# Бэкап не перед деплоем, а каждую ночь в 03:30 UTC (база + data/uploads)
+echo "→ Nightly backup cron..."
+cat > /etc/cron.d/prime-crm-backup <<CRON
+SHELL=/bin/bash
+30 3 * * * root bash $SCRIPT_DIR/.deploy/backup.sh >> /var/log/prime-crm-backup.log 2>&1
+CRON
+chmod 644 /etc/cron.d/prime-crm-backup
 
 echo "→ Rebuilding and restarting containers..."
 docker compose up --build -d
