@@ -4,9 +4,14 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
-echo "→ Pulling latest changes..."
-git fetch origin main
-git reset --hard origin/main
+# После обновления скрипт перезапускает сам себя: иначе bash доиграет старую версию,
+# уже открытую до git reset, и изменения в deploy.sh сработают только со следующего деплоя
+if [ -z "${DEPLOY_UPDATED:-}" ]; then
+  echo "→ Pulling latest changes..."
+  git fetch origin main
+  git reset --hard origin/main
+  DEPLOY_UPDATED=1 exec bash "$SCRIPT_DIR/deploy.sh" "$@"
+fi
 
 # Бэкап не перед деплоем, а каждую ночь в 03:30 UTC (база + data/uploads)
 echo "→ Nightly backup cron..."
