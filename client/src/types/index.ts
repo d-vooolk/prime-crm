@@ -699,6 +699,8 @@ export interface RepairType {
 
 export interface MailListItem {
   id: string;
+  /** Адрес ящика, в который пришло письмо */
+  account: string;
   fromName: string | null;
   fromAddress: string | null;
   subject: string | null;
@@ -719,6 +721,7 @@ export interface MailAttachment {
 
 export interface MailMessage {
   id: string;
+  account: string;
   fromName: string | null;
   fromAddress: string | null;
   to: string | null;
@@ -730,10 +733,15 @@ export interface MailMessage {
   attachments: MailAttachment[];
 }
 
-export interface MailStatus {
-  configured: boolean;
+export interface MailAccountStatus {
+  user: string;
   connected: boolean;
-  user: string | null;
   lastError: string | null;
   lastSyncAt: string | null;
+  unread: number;
+}
+
+export interface MailStatus {
+  configured: boolean;
+  accounts: MailAccountStatus[];
 }

@@ -2,6 +2,8 @@ import http from './http';
 import { MailListItem, MailMessage, MailStatus } from '@/types';
 
 export interface MailListParams {
+  /** Адрес ящика; не задан — все ящики */
+  account?: string;
   page: number;
   pageSize: number;
   q?: string;
@@ -11,7 +13,7 @@ export interface MailListParams {
 export const mailApi = {
   getList: (params: MailListParams, signal?: AbortSignal) =>
     http.get<{ data: { items: MailListItem[]; total: number } }>('/mail', {
-      params: { page: params.page, pageSize: params.pageSize, q: params.q || undefined, unread: params.unread ? '1' : undefined },
+      params: { account: params.account || undefined, page: params.page, pageSize: params.pageSize, q: params.q || undefined, unread: params.unread ? '1' : undefined },
       signal,
     }).then(r => r.data.data),
 
@@ -31,8 +33,8 @@ export const mailApi = {
   setRead: (id: string, isRead: boolean) =>
     http.patch(`/mail/${id}`, { isRead }),
 
-  markAllRead: () =>
-    http.post('/mail/read-all'),
+  markAllRead: (account?: string) =>
+    http.post('/mail/read-all', { account }),
 
   /** Перенести в папку «Спам» в ящике и убрать из CRM */
   moveToSpam: (id: string) =>

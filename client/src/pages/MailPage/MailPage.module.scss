@@ -44,6 +44,44 @@
   margin-bottom: 12px;
 }
 
+.boxes {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.box {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+
+  &:hover {
+    color: var(--color-text-primary);
+  }
+}
+
+.boxActive {
+  border-color: var(--color-brand);
+  color: var(--color-text-primary);
+}
+
+.boxName {
+  white-space: nowrap;
+}
+
 .filters {
   display: flex;
   gap: 8px;

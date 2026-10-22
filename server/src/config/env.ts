@@ -31,12 +31,31 @@ export const env = {
   get siteLeadsKey() { return process.env.SITE_LEADS_KEY || ''; },
   /** Адрес страниц записи для клиента: ссылка в SMS — <адрес>/<код записи> */
   get publicRecordUrl() { return (process.env.PUBLIC_RECORD_URL || 'https://zapis.prime-auto.by').replace(/\/+$/, ''); },
-  // Почтовый ящик (services/mail.service.ts). Нет логина или пароля — приём почты выключен
-  get mailImapHost() { return process.env.MAIL_IMAP_HOST || 'imap.beget.com'; },
-  get mailImapPort() { return Number(process.env.MAIL_IMAP_PORT) || 993; },
-  get mailUser() { return process.env.MAIL_USER || ''; },
-  get mailPassword() { return process.env.MAIL_PASSWORD || ''; },
+  /**
+   * Почтовые ящики (services/mail.service.ts): MAIL_* — первый, MAIL2_* — второй.
+   * Ящик без логина или пароля не подключается; сервер у второго по умолчанию тот же, что у первого
+   */
+  get mailAccounts(): MailAccountConfig[] {
+    const host = process.env.MAIL_IMAP_HOST || 'imap.beget.com';
+    const port = Number(process.env.MAIL_IMAP_PORT) || 993;
+    return [
+      { user: process.env.MAIL_USER || '', password: process.env.MAIL_PASSWORD || '', host, port },
+      {
+        user: process.env.MAIL2_USER || '',
+        password: process.env.MAIL2_PASSWORD || '',
+        host: process.env.MAIL2_IMAP_HOST || host,
+        port: Number(process.env.MAIL2_IMAP_PORT) || port,
+      },
+    ].filter(a => a.user && a.password);
+  },
 };
+
+export interface MailAccountConfig {
+  user: string;
+  password: string;
+  host: string;
+  port: number;
+}
 
 /** Проверка при старте — падаем сразу, а не на первом входе пользователя. */
 export function assertEnv() {

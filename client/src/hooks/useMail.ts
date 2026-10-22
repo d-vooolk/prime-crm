@@ -10,9 +10,11 @@ export const mailKeys = {
   status: ['mail', 'status'] as const,
 };
 
-export const useMailList = (params: MailListParams) => useQuery({
+/** enabled: false — пока не известны ящики (иначе сначала загрузятся письма всех ящиков) */
+export const useMailList = (params: MailListParams, enabled = true) => useQuery({
   queryKey: mailKeys.list(params),
   queryFn: ({ signal }) => mailApi.getList(params, signal),
+  enabled,
   placeholderData: keepPreviousData,
   // Новые письма приходят сами — список на открытой странице обновляется
   refetchInterval: 60 * 1000,
@@ -36,9 +38,11 @@ export const useMailUnreadCount = (enabled = true) => useQuery({
   meta: { silent: true },
 });
 
+/** Ящики и их непрочитанные — обновляются вместе со списком писем */
 export const useMailStatus = () => useQuery({
   queryKey: mailKeys.status,
   queryFn: mailApi.getStatus,
+  refetchInterval: 60 * 1000,
   meta: { silent: true },
 });
 

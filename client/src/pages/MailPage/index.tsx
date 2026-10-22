@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Button, Empty, Input, Pagination, Segmented, Spin, Tooltip } from 'antd';
+import { useSearchParams } from 'react-router-dom';
+import { Alert, Badge, Button, Empty, Input, Pagination, Segmented, Spin, Tooltip } from 'antd';
 import { CheckOutlined, PaperClipOutlined, ReloadOutlined } from '@ant-design/icons';
 import cn from 'classnames';
 import { mailApi } from '@/api/mail.api';
@@ -12,8 +13,12 @@ import styles from './MailPage.module.scss';
 
 const PAGE_SIZE = 30;
 
-/** Почта компании из ящика на beget (только создатель). Письма приходят сами через IMAP */
+/**
+ * Почта компании (только создатель). Письма приходят сами через IMAP.
+ * Ящиков несколько — сверху выбор ящика с числом новых писем; выбранный — в адресе (?box=, туда ведёт пуш)
+ */
 export const MailPage: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
@@ -23,7 +28,19 @@ export const MailPage: React.FC = () => {
   const notify = useNotify();
   const invalidate = useInvalidateMail();
   const { data: status } = useMailStatus();
-  const { data, isLoading, isFetching, isError, error, refetch } = useMailList({ page, pageSize: PAGE_SIZE, q: query, unread: unreadOnly });
+  const accounts = status?.accounts ?? [];
+  const boxParam = searchParams.get('box');
+  const current = accounts.find(a => a.user === boxParam) ?? accounts[0];
+  const { data, isLoading, isFetching, isError, error, refetch } = useMailList(
+    { account: current?.user, page, pageSize: PAGE_SIZE, q: query, unread: unreadOnly },
+    !!status,
+  );
+
+  const selectBox = (user: string) => {
+    setSearchParams(prev => { const next = new URLSearchParams(prev); next.set('box', user); return next; }, { replace: true });
+    setPage(1);
+    setOpenId(null);
+  };
 
   // Поиск — после паузы в наборе, с первой страницы
   useEffect(() => {
@@ -45,7 +62,7 @@ export const MailPage: React.FC = () => {
 
   const handleReadAll = async () => {
     try {
-      await mailApi.markAllRead();
+      await mailApi.markAllRead(current?.user);
       await invalidate();
     } catch (e) {
       notify.error(e, 'Не удалось отметить письма');
@@ -58,9 +75,9 @@ export const MailPage: React.FC = () => {
     <div className={styles.page}>
       <div className={styles.header}>
         <h1 className={styles.title}>Почта</h1>
-        {status?.user && <span className={styles.account}>{status.user}</span>}
+        {accounts.length === 1 && <span className={styles.account}>{accounts[0].user}</span>}
         <div className={styles.headerActions}>
-          <Tooltip title="Отметить все прочитанными">
+          <Tooltip title={accounts.length > 1 ? 'Отметить все в этом ящике прочитанными' : 'Отметить все прочитанными'}>
             <Button icon={<CheckOutlined />} onClick={handleReadAll} />
           </Tooltip>
           <Tooltip title="Проверить почту">
@@ -75,16 +92,34 @@ export const MailPage: React.FC = () => {
           showIcon
           className={styles.alert}
           message="Почта не подключена"
-          description="Добавьте MAIL_USER и MAIL_PASSWORD (ящик на beget) в .env на сервере и перезапустите CRM."
+          description="Добавьте MAIL_USER и MAIL_PASSWORD (второй ящик — MAIL2_USER и MAIL2_PASSWORD) в .env на сервере и перезапустите CRM."
         />
       )}
-      {status?.configured && !status.connected && status.lastError && (
+      {accounts.length > 1 && (
+        <div className={styles.boxes} role="tablist" aria-label="Почтовый ящик">
+          {accounts.map(a => (
+            <button
+              key={a.user}
+              type="button"
+              role="tab"
+              aria-selected={a.user === current?.user}
+              className={cn(styles.box, { [styles.boxActive]: a.user === current?.user })}
+              onClick={() => selectBox(a.user)}
+            >
+              <span className={styles.boxName}>{a.user}</span>
+              <Badge count={a.unread} size="small" overflowCount={99} />
+            </button>
+          ))}
+        </div>
+      )}
+
+      {current && !current.connected && current.lastError && (
         <Alert
           type="warning"
           showIcon
           className={styles.alert}
           message="Нет связи с почтовым сервером"
-          description={`${status.lastError}. CRM переподключится сама через минуту.`}
+          description={`${accounts.length > 1 ? `${current.user}: ` : ''}${current.lastError}. CRM переподключится сама через минуту.`}
         />
       )}
 

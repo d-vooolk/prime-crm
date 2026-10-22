@@ -1004,10 +1004,11 @@ model SecurityState {
   sessionsRevokedAt DateTime?
 }
 
-// --- Почта (ящик на beget.ru, приём по IMAP: services/mail.service.ts) ---
+// --- Почта (ящики компании, приём по IMAP: services/mail.service.ts) ---
 // Письмо из папки «Входящие». Удаление в CRM не трогает ящик: письмо пропадает только из CRM
 model MailMessage {
   id          String           @id @default(cuid())
+  account     String           @default("") // адрес ящика (MAIL_USER, MAIL2_USER)
   mailbox     String           // папка в ящике (INBOX)
   uidValidity BigInt
   uid         Int
@@ -1024,9 +1025,9 @@ model MailMessage {
   createdAt   DateTime         @default(now())
   attachments MailAttachment[]
 
-  @@unique([mailbox, uidValidity, uid])
+  @@unique([account, mailbox, uidValidity, uid])
   @@index([date])
-  @@index([isRead])
+  @@index([account, isRead])
 }
 
 // Вложение письма. Файл — в UPLOADS_DIR/mail, наружу отдаётся только через API с входом
@@ -1044,8 +1045,11 @@ model MailAttachment {
 
 // До какого UID письма уже забраны. Сменился UIDVALIDITY папки — забираем заново за последние дни
 model MailSyncState {
-  mailbox     String   @id
+  account     String   @default("")
+  mailbox     String
   uidValidity BigInt
   lastUid     Int
   updatedAt   DateTime @updatedAt
+
+  @@id([account, mailbox])
 }

@@ -3,7 +3,11 @@ import { z } from 'zod';
 import { mailService } from '../services/mail.service';
 import { parse } from '../middleware/validate';
 
+/** Адрес ящика; пусто — все ящики */
+const accountSchema = z.string().trim().max(300).optional();
+
 const listQuery = z.object({
+  account: accountSchema,
   page: z.coerce.number().int().min(1).max(100000).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(30),
   q: z.string().trim().max(200).optional(),
@@ -11,25 +15,28 @@ const listQuery = z.object({
 });
 
 const readBody = z.object({ isRead: z.boolean() });
+const readAllBody = z.object({ account: accountSchema });
 
-/** Почта из ящика на beget (services/mail.service.ts) — только создатель (routes/mail.routes.ts) */
+/** Почта из ящиков компании (services/mail.service.ts) — только создатель (routes/mail.routes.ts) */
 export const mailController = {
   async list(req: Request, res: Response) {
     const q = parse(listQuery, req.query);
-    res.json({ data: await mailService.list({ page: q.page, pageSize: q.pageSize, q: q.q || undefined, unread: !!q.unread }) });
+    res.json({ data: await mailService.list({
+      account: q.account || undefined, page: q.page, pageSize: q.pageSize, q: q.q || undefined, unread: !!q.unread,
+    }) });
   },
 
   async unreadCount(_req: Request, res: Response) {
     res.json({ data: await mailService.unreadCount() });
   },
 
-  status(_req: Request, res: Response) {
-    res.json({ data: mailService.status() });
+  async status(_req: Request, res: Response) {
+    res.json({ data: await mailService.status() });
   },
 
   async sync(_req: Request, res: Response) {
     await mailService.syncNow();
-    res.json({ data: mailService.status() });
+    res.json({ data: await mailService.status() });
   },
 
   async get(req: Request, res: Response) {
@@ -42,8 +49,9 @@ export const mailController = {
     res.json({ success: true });
   },
 
-  async markAllRead(_req: Request, res: Response) {
-    await mailService.markAllRead();
+  async markAllRead(req: Request, res: Response) {
+    const { account } = parse(readAllBody, req.body ?? {});
+    await mailService.markAllRead(account || undefined);
     res.json({ success: true });
   },
 

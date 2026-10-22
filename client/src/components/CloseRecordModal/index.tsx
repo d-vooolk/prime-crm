@@ -99,8 +99,12 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
       setCurrencyOpen(!!record.deal.currencyPayments?.length);
     } else {
       form.resetFields();
-      // Недостатки могли записать в карточке до закрытия
-      form.setFieldsValue({ defects: record.defects || '', clientSourceId: record.clientSourceId ?? undefined });
+      // Недостатки могли записать в карточке до закрытия. Юрлицо платит по расчётному счёту
+      form.setFieldsValue({
+        defects: record.defects || '',
+        clientSourceId: record.clientSourceId ?? undefined,
+        isPaidByBankTransfer: !!record.isLegalEntity,
+      });
       setPaymentSplitCard(null);
       setCurrencyParts([]);
       setCurrencyOpen(false);
