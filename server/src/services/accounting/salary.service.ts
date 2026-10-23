@@ -1,8 +1,11 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from '../../prisma/client';
 import { AppError } from '../../middleware/errorHandler';
-import { baseSalaryFor, effectiveSalaryMonth, monthsWithBaseSalary } from '../salaryRates';
+import { baseSalaryFor, effectiveSalaryMonth, monthsWithBaseSalary, SalaryMonth } from '../salaryRates';
 import { EMPLOYEE_SALARY_PREFIX, MONTH_NAMES_SHORT, roundMoney } from './shared';
-import { adjustedTotal, effectivePercent, paymentFor, paymentType, salaryFundTotals, salaryPeriod, servicemanShare } from './salaryCalc';
+import {
+  adjustedTotal, effectivePercent, paymentFor, paymentType, salaryFundTotals, salaryMonthFor, salaryPeriod, servicemanShare,
+} from './salaryCalc';
 
 export interface SalaryRecordItem {
   serviceName: string;
@@ -16,7 +19,8 @@ export interface SalaryRecord {
   carInfo: string;
   scheduledAt: string;
   closedAt: string;
-  salaryDate: string | null;
+  // Работы этого сотрудника перенесены в расчёт другого месяца
+  transferredTo: SalaryMonth | null;
   items: SalaryRecordItem[];
   totalNetProfit: number;
   totalPayment: number;
@@ -62,8 +66,28 @@ export interface SalaryData {
   remaining: number;
 }
 
+const transferredTo = (t: SalaryMonth | undefined): SalaryMonth | null => (t ? { year: t.year, month: t.month } : null);
+
 const carInfo = (car: { brand: string; model: string; year: string; plateNumber: string | null }) =>
   `${car.brand} ${car.model} ${car.year}${car.plateNumber ? ' ' + car.plateNumber : ''}`;
+
+/**
+ * Сделки, работы сотрудника в которых относятся к расчётному месяцу: его доля перенесена
+ * в этот месяц или не переносилась и сделка закрыта в его периоде. Перенос у каждого сотрудника свой
+ */
+export function dealInSalaryMonth(servicemanName: string, year: number, month: number): Prisma.DealWhereInput {
+  const period = salaryPeriod(year, month);
+  return {
+    OR: [
+      { salaryTransfers: { some: { servicemanName, year, month } } },
+      { salaryTransfers: { none: { servicemanName } }, closedAt: { gte: period.from, lt: period.to } },
+    ],
+  };
+}
+
+/** Перенос доли этого сотрудника — для salaryMonthFor */
+const transfersOf = (servicemanName: string) =>
+  ({ where: { servicemanName }, select: { servicemanName: true, year: true, month: true } }) as const;
 
 /** Зарплата сотрудников: расчёт за период, выплаты, премии/штрафы, история по месяцам */
 export const salaryService = {
@@ -77,21 +101,18 @@ export const salaryService = {
     const profitPercent = serviceman?.profitPercent ?? 0;
     const baseSalary = baseSalaryFor(serviceman?.salaryRates ?? [], { year, month });
 
-    // Работы попадают в период по дате зарплаты сделки (если её перенесли) или по дате закрытия
+    // Работы попадают в месяц, куда перенесена доля этого сотрудника, или в месяц закрытия
     const allItems = await prisma.recordItem.findMany({
-      where: {
-        record: {
-          deal: {
-            OR: [
-              { salaryDate: { gte: period.from, lt: period.to } },
-              { salaryDate: null, closedAt: { gte: period.from, lt: period.to } },
-            ],
-          },
-        },
-      },
+      where: { record: { deal: dealInSalaryMonth(servicemanName, year, month) } },
       include: {
         service: { include: { category: true } },
-        record: { include: { client: true, car: true, deal: { select: { salaryDate: true, closedAt: true } } } },
+        record: {
+          include: {
+            client: true,
+            car: true,
+            deal: { select: { closedAt: true, salaryTransfers: transfersOf(servicemanName) } },
+          },
+        },
       },
     });
 
@@ -111,7 +132,7 @@ export const salaryService = {
           scheduledAt: record.scheduledAt.toISOString(),
           // Работа попадает в зарплату по дате завершения, её же и показываем
           closedAt: (record.deal?.closedAt ?? record.scheduledAt).toISOString(),
-          salaryDate: record.deal?.salaryDate?.toISOString() ?? null,
+          transferredTo: transferredTo(record.deal?.salaryTransfers[0]),
           items: [],
           totalNetProfit: 0,
           totalPayment: 0,
@@ -259,7 +280,11 @@ export const salaryService = {
       where: { record: { deal: { isNot: null } } },
       include: {
         service: { include: { category: true } },
-        record: { include: { deal: { select: { salaryDate: true, closedAt: true } } } },
+        record: {
+          include: {
+            deal: { select: { closedAt: true, salaryTransfers: transfersOf(servicemanName) } },
+          },
+        },
       },
     });
 
@@ -270,7 +295,7 @@ export const salaryService = {
       const share = servicemanShare(item, servicemanName);
       if (share === null || !item.record.deal) continue;
 
-      const m = effectiveSalaryMonth(item.record.deal.salaryDate ?? item.record.deal.closedAt);
+      const m = salaryMonthFor(item.record.deal, servicemanName);
       const key = keyOf(m);
       if (!monthMap.has(key)) monthMap.set(key, { ...m, totalPayment: 0, recordIds: new Set() });
       const entry = monthMap.get(key)!;

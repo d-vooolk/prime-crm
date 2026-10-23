@@ -11,6 +11,7 @@ import { recordMediaService } from './recordMedia.service';
 import { clientSourcesService } from './clientSources.service';
 import { pushService, pushInBackground } from './push.service';
 import { toByn, roundMoney } from './currency.service';
+import { effectiveSalaryMonth, SalaryMonth } from './salaryRates';
 import {
   CurrencyPart, currencyAccountingService, currencyPartsByn, parseCurrencyParts,
 } from './currencyAccounting.service';
@@ -581,13 +582,27 @@ export const recordsService = {
     return recordsService.findById(id);
   },
 
-  async setSalaryDate(id: string, salaryDate: string | null) {
+  /**
+   * Перенос работ сотрудника в сделке в расчёт ЗП другого месяца (null — сбросить перенос).
+   * Только его доля: расчёт остальных участников сделки не меняется.
+   * Перенос в месяц закрытия сделки — то же, что сброс
+   */
+  async setSalaryMonth(id: string, servicemanName: string, target: SalaryMonth | null) {
     const record = await recordsService.findById(id);
     if (!record.deal) throw new AppError('Запись не закрыта', 400);
-    await prisma.deal.update({
-      where: { recordId: id },
-      data: { salaryDate: salaryDate ? new Date(salaryDate) : null },
-    });
+    const dealId = record.deal.id;
+    const natural = effectiveSalaryMonth(record.deal.closedAt);
+    if (target && (target.year !== natural.year || target.month !== natural.month)) {
+      const serviceman = await prisma.serviceman.findUnique({ where: { name: servicemanName }, select: { id: true } });
+      if (!serviceman) throw new AppError('Сотрудник не найден', 404);
+      await prisma.dealSalaryTransfer.upsert({
+        where: { dealId_servicemanName: { dealId, servicemanName } },
+        create: { dealId, servicemanName, ...target },
+        update: target,
+      });
+    } else {
+      await prisma.dealSalaryTransfer.deleteMany({ where: { dealId, servicemanName } });
+    }
     return recordsService.findById(id);
   },
 

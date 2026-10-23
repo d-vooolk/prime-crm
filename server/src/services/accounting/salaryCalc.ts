@@ -1,3 +1,5 @@
+import { effectiveSalaryMonth, SalaryMonth } from '../salaryRates';
+
 /**
  * Чистые расчёты зарплаты — без базы, чтобы их можно было проверить тестами.
  * Расчётный период месяца M: с 25-го числа месяца M−1 по 24-е число месяца M.
@@ -36,6 +38,15 @@ export function effectivePercent(
   profitPercent: number,
 ): number {
   return service.customPercent ?? service.category?.customPercent ?? profitPercent;
+}
+
+/** Расчётный месяц, в который работы сотрудника в сделке попадают в ЗП: его перенос или месяц закрытия */
+export function salaryMonthFor(
+  deal: { closedAt: Date; salaryTransfers: (SalaryMonth & { servicemanName: string })[] },
+  servicemanName: string,
+): SalaryMonth {
+  const transfer = deal.salaryTransfers.find(t => t.servicemanName === servicemanName);
+  return transfer ? { year: transfer.year, month: transfer.month } : effectiveSalaryMonth(deal.closedAt);
 }
 
 /** Выплата с доли по проценту, с округлением до копейки */

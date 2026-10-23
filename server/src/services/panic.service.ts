@@ -27,7 +27,7 @@ import { revokeAllSessions } from '../utils/sessionRevocation';
  */
 export const PANIC_WIPE_TABLES = [
   // Клиенты и записи
-  'Client', 'Car', 'Record', 'RecordItem', 'RecordMedia', 'Deal', 'DealEquipment', 'SmsLog',
+  'Client', 'Car', 'Record', 'RecordItem', 'RecordMedia', 'Deal', 'DealEquipment', 'DealSalaryTransfer', 'SmsLog',
   // Деньги
   'CashTransaction', 'CapitalTransaction', 'Debt', 'DebtPayment',
   'FounderSalary', 'EmployeeSalaryPayment', 'SalaryAdjustment', 'SalaryRate',

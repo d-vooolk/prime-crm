@@ -117,7 +117,6 @@ export interface Deal {
   splitCardAmount?: number | null;
   currencyPayments?: CurrencyPart[] | null;
   closedAt: string;
-  salaryDate?: string | null;
   equipment: Array<{ equipment: Equipment }>;
 }
 

@@ -276,11 +276,27 @@ model Deal {
   // Часть оплаты в валюте: [{ currency, amount, rate }], сумма в BYN = amount × rate
   currencyPayments    Json?
   closedAt            DateTime        @default(now())
-  salaryDate          DateTime?
   record              Record          @relation(fields: [recordId], references: [id])
   equipment           DealEquipment[]
+  salaryTransfers     DealSalaryTransfer[]
 
   @@index([closedAt])
+}
+
+// Перенос доли сотрудника в сделке в расчёт ЗП другого месяца (по умолчанию — месяц по дате закрытия).
+// У каждого сотрудника свой: перенос одному не трогает расчёт остальных участников сделки
+model DealSalaryTransfer {
+  id             String     @id @default(cuid())
+  dealId         String
+  servicemanName String
+  // Расчётный месяц ЗП (с 25-го прошлого по 24-е этого)
+  year           Int
+  month          Int
+  deal           Deal       @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  serviceman     Serviceman @relation(fields: [servicemanName], references: [name], onUpdate: Cascade, onDelete: Restrict)
+
+  @@unique([dealId, servicemanName])
+  @@index([servicemanName, year, month])
 }
 
 model DealEquipment {
@@ -332,6 +348,7 @@ model Serviceman {
   salaryPayments        EmployeeSalaryPayment[]
   salaryAdjustments     SalaryAdjustment[]
   founderSalaries       FounderSalary[]
+  dealSalaryTransfers   DealSalaryTransfer[]
 }
 
 // История оклада: сумма действует с расчётного месяца year/month до следующей записи

@@ -19,7 +19,8 @@ export interface SalaryRecord {
   carInfo: string;
   scheduledAt: string;
   closedAt: string;
-  salaryDate?: string | null;
+  /** Работы сотрудника перенесены в расчёт этого месяца */
+  transferredTo: { year: number; month: number } | null;
   items: SalaryRecordItem[];
   totalNetProfit: number;
   totalPayment: number;

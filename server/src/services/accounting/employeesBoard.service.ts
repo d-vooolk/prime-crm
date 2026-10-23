@@ -1,5 +1,5 @@
 import { prisma } from '../../prisma/client';
-import { salaryPeriod } from './salaryCalc';
+import { salaryMonthFor, salaryPeriod } from './salaryCalc';
 import { salaryService } from './salary.service';
 import { missedWiki, wikiSectionKey, WikiContribution, WikiSectionState } from './missedWiki.logic';
 
@@ -56,30 +56,37 @@ export const employeesBoardService = {
     const settings = await prisma.wikiSettings.findFirst();
     const bonus = settings?.bonusAmount ?? 0;
 
-    // Период по дате закрытия — как в зарплате: перенесённая дата зарплаты важнее
-    const records = await prisma.record.findMany({
+    // Период по дате закрытия — как в зарплате: перенос доли главного сотрудника важнее
+    const found = await prisma.record.findMany({
       where: {
         status: 'CLOSED',
         serviceman: { in: names },
         // Только записи с работами, после которых есть что заполнить в вики
         items: { some: { service: { wikiSectionId: { not: null } } } },
+        // Кандидаты: закрыты в периоде или перенесены в него кому-то; точно — по переносу главного ниже
         deal: {
           OR: [
-            { salaryDate: { gte: period.from, lt: period.to } },
-            { salaryDate: null, closedAt: { gte: period.from, lt: period.to } },
+            { closedAt: { gte: period.from, lt: period.to } },
+            { salaryTransfers: { some: { year, month } } },
           ],
         },
       },
       select: {
         id: true,
         serviceman: true,
-        deal: { select: { closedAt: true } },
+        deal: { select: { closedAt: true, salaryTransfers: { select: { servicemanName: true, year: true, month: true } } } },
         car: { select: { brand: true, brandId: true, model: true, modelId: true, generationId: true, generationName: true } },
         items: { select: { service: { select: { wikiSection: { select: { id: true, name: true, sortOrder: true } } } } } },
       },
     });
 
-    const deals = records.filter(r => r.deal && r.serviceman).map(r => {
+    const records = found.flatMap(({ deal, serviceman, ...r }) => {
+      if (!deal || !serviceman) return [];
+      const m = salaryMonthFor(deal, serviceman);
+      return m.year === year && m.month === month ? [{ ...r, deal, serviceman }] : [];
+    });
+
+    const deals = records.map(r => {
       // Разделы вики по услугам записи, без повторов, в порядке настроек
       const sections = new Map<string, { id: string; name: string; sortOrder: number }>();
       for (const item of r.items) {
@@ -88,8 +95,8 @@ export const employeesBoardService = {
       }
       return {
         recordId: r.id,
-        closedAt: r.deal!.closedAt,
-        serviceman: r.serviceman!,
+        closedAt: r.deal.closedAt,
+        serviceman: r.serviceman,
         brandId: r.car.brandId,
         modelId: r.car.modelId,
         generationId: r.car.generationId,

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  salaryPeriod, servicemanShare, effectivePercent, paymentFor, adjustedTotal, paymentType, dealPayments, salaryFundTotals,
+  salaryPeriod, servicemanShare, effectivePercent, paymentFor, adjustedTotal, paymentType, dealPayments, salaryFundTotals, salaryMonthFor,
 } from '../services/accounting/salaryCalc';
 import { effectiveSalaryMonth, baseSalaryFor, monthsWithBaseSalary } from '../services/salaryRates';
 
@@ -159,5 +159,24 @@ describe('salaryFundTotals', () => {
       { adjustedTotal: 0.1, paidTotal: 0 },
       { adjustedTotal: 0.2, paidTotal: 0 },
     ]).remaining).toBe(0.3);
+  });
+});
+
+describe('salaryMonthFor', () => {
+  const deal = {
+    closedAt: new Date(2026, 9, 23),
+    salaryTransfers: [{ servicemanName: 'Герасимович', year: 2026, month: 11 }],
+  };
+
+  it('перенос сотрудника важнее месяца закрытия', () => {
+    expect(salaryMonthFor(deal, 'Герасимович')).toEqual({ year: 2026, month: 11 });
+  });
+
+  it('перенос одного не трогает других участников сделки', () => {
+    expect(salaryMonthFor(deal, 'Спичёнок')).toEqual({ year: 2026, month: 10 });
+  });
+
+  it('без переноса — месяц по дате закрытия, с 25-го уже следующий', () => {
+    expect(salaryMonthFor({ closedAt: new Date(2026, 11, 26), salaryTransfers: [] }, 'Спичёнок')).toEqual({ year: 2027, month: 1 });
   });
 });

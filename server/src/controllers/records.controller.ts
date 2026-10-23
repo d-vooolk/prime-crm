@@ -106,7 +106,14 @@ function forViewer<T extends { client: { id: string; name: string; phone: string
 
 const smsSchema = z.object({ type: z.enum(['CAR_READY', 'REVIEW_REQUEST'], { errorMap: () => ({ message: 'Неизвестный тип SMS' }) }) });
 const defectsSchema = z.object({ defects: z.string().max(10000).nullable() });
-const salaryDateSchema = z.object({ salaryDate: dateString().nullable().optional() });
+const salaryMonthSchema = z.object({
+  servicemanName: z.string().trim().min(1, 'Укажите сотрудника'),
+  // Расчётный месяц ЗП; null — сбросить перенос
+  salaryMonth: z.object({
+    year: z.number().int().min(2000).max(2100),
+    month: z.number().int().min(1).max(12),
+  }).nullable(),
+});
 
 export const recordsController = {
   async getByDate(req: Request, res: Response, next: NextFunction) {
@@ -226,10 +233,10 @@ export const recordsController = {
     } catch (e) { next(e); }
   },
 
-  async setSalaryDate(req: Request, res: Response, next: NextFunction) {
+  async setSalaryMonth(req: Request, res: Response, next: NextFunction) {
     try {
-      const { salaryDate } = parse(salaryDateSchema, req.body);
-      const record = await recordsService.setSalaryDate(String(req.params.id), salaryDate ?? null);
+      const { servicemanName, salaryMonth } = parse(salaryMonthSchema, req.body);
+      const record = await recordsService.setSalaryMonth(String(req.params.id), servicemanName, salaryMonth);
       res.json({ data: record });
     } catch (e) { next(e); }
   },

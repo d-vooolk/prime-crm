@@ -2,6 +2,7 @@ import React from 'react';
 import { Button, Tooltip } from 'antd';
 import { RetweetOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import dayjs from 'dayjs';
 import { SalaryRecord, SalaryRecordItem } from '@/api/accounting.api';
 import { formatPrice } from '@/utils/formatters';
 import { formatDate } from '../utils';
@@ -14,12 +15,13 @@ interface Options {
   onTransfer: (row: SalaryRecord) => void;
 }
 
-export const transferTitle = (row: SalaryRecord) =>
-  (row.salaryDate ? 'Период перенесён — изменить' : 'Перенести на другой период');
+export const transferTitle = (row: SalaryRecord) => (row.transferredTo
+  ? `Перенесено в ${dayjs().year(row.transferredTo.year).month(row.transferredTo.month - 1).format('MMMM YYYY')} — изменить`
+  : 'Перенести в другой месяц');
 
 /** Иконка переноса подсвечивается, если период уже перенесён */
 export const TransferIcon: React.FC<{ row: SalaryRecord }> = ({ row }) => (
-  <RetweetOutlined className={row.salaryDate ? styles.transferred : undefined} />
+  <RetweetOutlined className={row.transferredTo ? styles.transferred : undefined} />
 );
 
 export const salaryColumns = ({ canSeeClientName, canTransfer, onTransfer }: Options): ColumnsType<SalaryRecord> => [

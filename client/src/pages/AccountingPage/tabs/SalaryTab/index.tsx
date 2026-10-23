@@ -62,7 +62,9 @@ export const SalaryTab: React.FC<Props> = ({ user, isMobile, canSeeCashflow, can
 
   const openTransfer = (row: SalaryRecord) => setTransfer({
     recordId: row.recordId,
-    salaryDate: row.salaryDate ? dayjs(row.salaryDate) : null,
+    servicemanName: employee,
+    closedAt: row.closedAt,
+    transferredTo: row.transferredTo,
   });
 
   return (
@@ -170,7 +172,7 @@ export const SalaryTab: React.FC<Props> = ({ user, isMobile, canSeeCashflow, can
         periodLabel={periodLabel}
       />
       <AdjustmentModal type={adjustment} onClose={() => setAdjustment(null)} employee={employee} month={month} />
-      <SalaryTransferModal target={transfer} onChange={setTransfer} />
+      <SalaryTransferModal target={transfer} onClose={() => setTransfer(null)} />
     </div>
   );
 };

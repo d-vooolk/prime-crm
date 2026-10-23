@@ -26,7 +26,7 @@ router.post('/:id/close', manager, recordsController.close);
 router.post('/:id/cancel', manager, recordsController.cancel);
 router.post('/:id/restore', manager, recordsController.restore);
 router.post('/:id/send-sms', manager, recordsController.sendSms);
-router.patch('/:id/salary-date', manager, recordsController.setSalaryDate);
+router.patch('/:id/salary-month', manager, recordsController.setSalaryMonth);
 router.delete('/:id', requireRole(ROLES.CREATOR), recordsController.delete);
 
 // Обнаруженные недостатки, фото и видео нюансов авто — добавляет любая роль
