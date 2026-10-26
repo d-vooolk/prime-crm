@@ -101,7 +101,7 @@ export const vdfOrdersService = {
 
   async list(status: VdfOrderStatus) {
     const orderBy: Prisma.VdfOrderOrderByWithRelationInput = status === 'PENDING'
-      ? { completedAt: 'asc' }
+      ? { completedAt: 'desc' }
       : status === 'EXECUTED' ? { executedAt: 'desc' } : { cancelledAt: 'desc' };
     return prisma.vdfOrder.findMany({
       where: { status },

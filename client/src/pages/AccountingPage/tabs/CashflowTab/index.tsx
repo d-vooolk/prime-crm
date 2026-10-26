@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button, Card, DatePicker, Statistic, Table } from 'antd';
+import { Button, Card, DatePicker, Segmented, Statistic, Table } from 'antd';
 import { MinusOutlined, PlusOutlined } from '@ant-design/icons';
 import cn from 'classnames';
 import { Dayjs } from 'dayjs';
@@ -31,12 +31,15 @@ export const CashflowTab: React.FC<Props> = ({ month, onMonthChange, canEditTran
   const [expenseOpen, setExpenseOpen] = useState(false);
   const [manualIncomeOpen, setManualIncomeOpen] = useState(false);
   const [capitalTransferOpen, setCapitalTransferOpen] = useState(false);
+  // Приход и расход — по одной таблице на экран, переключателем
+  const [view, setView] = useState<'income' | 'expenses'>('income');
 
   const income = cash.data?.income ?? [];
   const expenses = cash.data?.expenses ?? [];
   const balance = balanceQuery.data ?? 0;
   const fund = fundQuery.data;
   const incomeTotal = income.reduce((s, r) => s + r.amount, 0);
+  const expensesTotal = expenses.reduce((s, r) => s + r.amount, 0);
 
   return (
     <div className={shared.tabContent}>
@@ -90,37 +93,42 @@ export const CashflowTab: React.FC<Props> = ({ month, onMonthChange, canEditTran
         </div>
       </div>
 
-      <div className={shared.tablesGrid}>
-        <div className={shared.tableSection}>
-          <div className={shared.tableTitle}>Приход (наличные)</div>
-          <div className={shared.tableBlock}>
-            <Table<CashTransaction>
-              dataSource={income}
-              columns={[...incomeColumns, ...actionColumns]}
-              rowKey="id"
-              size="small"
-              pagination={false}
-              loading={cash.isLoading}
-              scroll={{ x: 700 }}
-              footer={() => <div className={shared.tableTotal}>Итого: {formatPrice(incomeTotal)}</div>}
-            />
-          </div>
-        </div>
+      <Segmented<'income' | 'expenses'>
+        value={view}
+        onChange={setView}
+        className={shared.viewSwitch}
+        options={[
+          { value: 'income', label: `Приход (наличные) · ${income.length}` },
+          { value: 'expenses', label: `Расход · ${expenses.length}` },
+        ]}
+      />
 
-        <div className={shared.tableSection}>
-          <div className={shared.tableTitle}>Расход</div>
-          <div className={shared.tableBlock}>
-            <Table<CashTransaction>
-              dataSource={expenses}
-              columns={[...expenseColumns, ...actionColumns]}
-              rowKey="id"
-              size="small"
-              pagination={false}
-              loading={cash.isLoading}
-              scroll={{ x: 'max-content' }}
-            />
-          </div>
-        </div>
+      <div className={shared.tableBlock}>
+        {view === 'income' ? (
+          <Table<CashTransaction>
+            key="income"
+            dataSource={income}
+            columns={[...incomeColumns, ...actionColumns]}
+            rowKey="id"
+            size="small"
+            pagination={false}
+            loading={cash.isLoading}
+            scroll={{ x: 700 }}
+            footer={() => <div className={shared.tableTotal}>Итого: {formatPrice(incomeTotal)}</div>}
+          />
+        ) : (
+          <Table<CashTransaction>
+            key="expenses"
+            dataSource={expenses}
+            columns={[...expenseColumns, ...actionColumns]}
+            rowKey="id"
+            size="small"
+            pagination={false}
+            loading={cash.isLoading}
+            scroll={{ x: 'max-content' }}
+            footer={() => <div className={shared.tableTotal}>Итого: {formatPrice(expensesTotal)}</div>}
+          />
+        )}
       </div>
 
       {editModal}

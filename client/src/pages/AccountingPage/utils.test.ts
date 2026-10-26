@@ -99,8 +99,8 @@ describe('summarizeFounderSalaries', () => {
       founder(2025, 2, 'Чужой', 999),
     ], 'Дир', 'Созд');
     expect(s.rows).toEqual([
-      { key: '12.2024', year: 2024, month: 12, director: 0, creator: 300 },
       { key: '02.2025', year: 2025, month: 2, director: 120, creator: 50 },
+      { key: '12.2024', year: 2024, month: 12, director: 0, creator: 300 },
     ]);
     expect(s.directorTotal).toBe(120);
     expect(s.creatorTotal).toBe(350);

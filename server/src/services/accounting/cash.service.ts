@@ -13,7 +13,8 @@ export const cashService = {
     const to = new Date(year, month, 1);
     const rows = await prisma.cashTransaction.findMany({
       where: { date: { gte: from, lt: to } },
-      orderBy: { date: 'asc' },
+      // Новые сверху; у прихода и расхода одного дня — по порядку создания (cuid растёт со временем)
+      orderBy: [{ date: 'desc' }, { id: 'desc' }],
       include: CASH_TRANSACTION_INCLUDE,
     });
     return {

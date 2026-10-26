@@ -147,7 +147,8 @@ export function summarizeFounderSalaries(
     if (directorName && r.person === directorName) { row.director += r.amount; directorTotal += r.amount; }
     if (creatorName && r.person === creatorName) { row.creator += r.amount; creatorTotal += r.amount; }
   }
-  const rows = Array.from(map.values()).sort((a, b) => (a.year !== b.year ? a.year - b.year : a.month - b.month));
+  // Новые месяцы сверху
+  const rows = Array.from(map.values()).sort((a, b) => (a.year !== b.year ? b.year - a.year : b.month - a.month));
   return {
     rows,
     directorTotal,

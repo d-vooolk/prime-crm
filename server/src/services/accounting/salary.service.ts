@@ -151,7 +151,7 @@ export const salaryService = {
 
     const rawAdjustments = await prisma.salaryAdjustment.findMany({
       where: { servicemanName, year, month },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: 'desc' },
     });
     const adjustments: SalaryAdjustmentDto[] = rawAdjustments.map(a => ({
       id: a.id,
@@ -168,7 +168,7 @@ export const salaryService = {
     const rawPayments = await prisma.employeeSalaryPayment.findMany({
       where: { servicemanName, year, month },
       include: { cashTransaction: { select: { date: true, person: true } } },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: 'desc' },
     });
     const payments: SalaryPaymentDto[] = rawPayments.map(p => ({
       id: p.id,
@@ -334,6 +334,6 @@ export const salaryService = {
   },
 
   async getFounderSalaries() {
-    return prisma.founderSalary.findMany({ orderBy: [{ year: 'asc' }, { month: 'asc' }, { createdAt: 'asc' }] });
+    return prisma.founderSalary.findMany({ orderBy: [{ year: 'desc' }, { month: 'desc' }, { createdAt: 'desc' }] });
   },
 };

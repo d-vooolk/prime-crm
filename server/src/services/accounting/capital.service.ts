@@ -6,7 +6,7 @@ import { roundMoney } from './shared';
 /** Капитал: пополнения и выдачи в BYN/USD/EUR */
 export const capitalService = {
   async getCapital() {
-    const rows = await prisma.capitalTransaction.findMany({ orderBy: { date: 'asc' } });
+    const rows = await prisma.capitalTransaction.findMany({ orderBy: [{ date: 'desc' }, { createdAt: 'desc' }] });
     return {
       deposits: rows.filter(r => r.type === 'DEPOSIT'),
       withdrawals: rows.filter(r => r.type === 'WITHDRAWAL'),

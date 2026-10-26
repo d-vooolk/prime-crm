@@ -54,6 +54,12 @@
   }
 }
 
+// Переключатель «приход / расход» над таблицей
+.viewSwitch {
+  margin-bottom: 12px;
+  max-width: 100%;
+}
+
 .tablesGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;

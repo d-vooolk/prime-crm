@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button, Card, Statistic, Table } from 'antd';
+import { Button, Card, Segmented, Statistic, Table } from 'antd';
 import { MinusOutlined, PlusOutlined } from '@ant-design/icons';
 import cn from 'classnames';
 import { CapitalTransaction } from '@/types';
@@ -18,7 +18,11 @@ export const CapitalTab: React.FC = () => {
   const capital = useCapital(true);
   const balanceQuery = useCapitalBalance(true);
   const [operation, setOperation] = useState<CapitalOperation | null>(null);
+  // Пополнения и списания — по одной таблице на экран, переключателем
+  const [view, setView] = useState<'deposits' | 'withdrawals'>('deposits');
   const balance = balanceQuery.data ?? EMPTY_BALANCE;
+  const deposits = capital.data?.deposits ?? [];
+  const withdrawals = capital.data?.withdrawals ?? [];
 
   return (
     <div className={shared.tabContent}>
@@ -50,36 +54,41 @@ export const CapitalTab: React.FC = () => {
         </div>
       </div>
 
-      <div className={shared.tablesGrid}>
-        <div className={shared.tableSection}>
-          <div className={shared.tableTitle}>Пополнения</div>
-          <div className={shared.tableBlock}>
-            <Table<CapitalTransaction>
-              dataSource={capital.data?.deposits ?? []}
-              columns={depositColumns}
-              rowKey="id"
-              size="small"
-              pagination={false}
-              loading={capital.isLoading}
-              scroll={{ x: 350 }}
-            />
-          </div>
-        </div>
-        <div className={shared.tableSection}>
-          <div className={shared.tableTitle}>Списания</div>
-          <div className={shared.tableBlock}>
-            <Table<CapitalTransaction>
-              dataSource={capital.data?.withdrawals ?? []}
-              columns={withdrawalColumns}
-              rowKey="id"
-              size="small"
-              pagination={false}
-              loading={capital.isLoading}
-              // 350 было меньше суммы ширин колонок — «Цель» не помещалась
-              scroll={{ x: 'max-content' }}
-            />
-          </div>
-        </div>
+      <Segmented<'deposits' | 'withdrawals'>
+        value={view}
+        onChange={setView}
+        className={shared.viewSwitch}
+        options={[
+          { value: 'deposits', label: `Пополнения · ${deposits.length}` },
+          { value: 'withdrawals', label: `Списания · ${withdrawals.length}` },
+        ]}
+      />
+
+      <div className={shared.tableBlock}>
+        {view === 'deposits' ? (
+          <Table<CapitalTransaction>
+            key="deposits"
+            dataSource={deposits}
+            columns={depositColumns}
+            rowKey="id"
+            size="small"
+            pagination={false}
+            loading={capital.isLoading}
+            scroll={{ x: 350 }}
+          />
+        ) : (
+          <Table<CapitalTransaction>
+            key="withdrawals"
+            dataSource={withdrawals}
+            columns={withdrawalColumns}
+            rowKey="id"
+            size="small"
+            pagination={false}
+            loading={capital.isLoading}
+            // 350 было меньше суммы ширин колонок — «Цель» не помещалась
+            scroll={{ x: 'max-content' }}
+          />
+        )}
       </div>
 
       <CapitalOperationModal kind={operation} onClose={() => setOperation(null)} />
