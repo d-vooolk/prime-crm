@@ -15,6 +15,7 @@ import { effectiveSalaryMonth, SalaryMonth } from './salaryRates';
 import {
   CurrencyPart, currencyAccountingService, currencyPartsByn, parseCurrencyParts,
 } from './currencyAccounting.service';
+import { existingCarUpdate } from './recordCar.logic';
 
 const RECORD_INCLUDE = {
   client: true,
@@ -266,9 +267,7 @@ export const recordsService = {
           },
         });
       } else {
-        const updateData: { plateNumber?: string; mileage?: string } = {};
-        if (car.plateNumber) updateData.plateNumber = car.plateNumber;
-        if (car.mileage) updateData.mileage = car.mileage;
+        const updateData = existingCarUpdate(car);
         if (Object.keys(updateData).length > 0) {
           carRecord = await tx.car.update({ where: { id: carRecord.id }, data: updateData });
         }
@@ -383,18 +382,14 @@ export const recordsService = {
               },
             });
           } else {
-            const carUp: { plateNumber?: string; mileage?: string } = {};
-            if (car.plateNumber) carUp.plateNumber = car.plateNumber;
-            if (car.mileage) carUp.mileage = car.mileage;
+            const carUp = existingCarUpdate(car);
             if (Object.keys(carUp).length > 0) {
               await tx.car.update({ where: { id: carRecord.id }, data: carUp });
             }
           }
           updateData.carId = carRecord.id;
         } else {
-          const carUp: { plateNumber?: string | null; mileage?: string | null } = {};
-          if (car.plateNumber !== undefined) carUp.plateNumber = car.plateNumber || null;
-          if (car.mileage !== undefined) carUp.mileage = car.mileage || null;
+          const carUp = existingCarUpdate(car, { clearEmpty: true });
           if (Object.keys(carUp).length > 0) {
             await tx.car.update({ where: { id: existingCar.id }, data: carUp });
           }
