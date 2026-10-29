@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Alert, Button, DatePicker } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
@@ -135,7 +135,9 @@ export const SchedulePage: React.FC = () => {
     setPickerMonth(prev => (prev.isSame(value, 'month') ? prev : value));
   };
 
-  const displayDate = dayjs(selectedDate);
+  // Один объект на дату: пикер сравнивает value по ссылке и при новом объекте
+  // возвращает панель к выбранному месяцу — листать месяцы было бы нельзя
+  const displayDate = useMemo(() => dayjs(selectedDate), [selectedDate]);
   const dateLabel = displayDate.format('D MMMM YYYY');
 
   // Остаток к оплате считается так же, как в карточке записи (utils/records.ts)

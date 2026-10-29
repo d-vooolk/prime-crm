@@ -59,6 +59,13 @@ export const MailMessageDrawer: React.FC<Props> = ({ id, onClose }) => {
     }
   };
 
+  // Письма больше нет: сначала закрываем окно, иначе обновление перезапросит
+  // открытое письмо и покажет «Письмо не найдено»
+  const closeRemoved = () => {
+    onClose();
+    void invalidate();
+  };
+
   const [movingToSpam, setMovingToSpam] = useState(false);
   const toSpam = async () => {
     if (!msg) return;
@@ -66,8 +73,7 @@ export const MailMessageDrawer: React.FC<Props> = ({ id, onClose }) => {
     try {
       await mailApi.moveToSpam(msg.id);
       notify.toast.success('Письмо перенесено в спам');
-      await invalidate();
-      onClose();
+      closeRemoved();
     } catch (e) {
       notify.error(e, 'Не удалось перенести в спам');
     } finally {
@@ -79,8 +85,7 @@ export const MailMessageDrawer: React.FC<Props> = ({ id, onClose }) => {
     if (!msg) return;
     try {
       await mailApi.deleteMessage(msg.id);
-      await invalidate();
-      onClose();
+      closeRemoved();
     } catch (e) {
       notify.error(e, 'Не удалось удалить письмо');
     }
