@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { Router, Request, Response, NextFunction } from 'express';
 import { vdfOrdersController } from '../controllers/vdfOrders.controller';
+import { vdfCapitalController } from '../controllers/vdfCapital.controller';
 import { siteLeadsController } from '../controllers/siteLeads.controller';
 import { panicService } from '../services/panic.service';
 import { AppError } from '../middleware/errorHandler';
@@ -42,6 +43,9 @@ const vdfKey = requireIntegrationKey(() => env.vdfIntegrationKey);
 router.post('/vdf/orders', vdfKey, hiddenInLiteMode, vdfOrdersController.receive);
 // Оплаченные и отменённые заказы — для бухгалтерии магазина
 router.get('/vdf/states', vdfKey, hiddenInLiteMode, vdfOrdersController.states);
+// Валюта, полученная магазином по долгу, — в капитал (в облегчённом режиме капитала нет)
+router.post('/vdf/capital', vdfKey, hiddenInLiteMode, vdfCapitalController.receive);
+router.delete('/vdf/capital/:ref', vdfKey, hiddenInLiteMode, vdfCapitalController.revoke);
 // «Протокол AID» из магазина: тот же общий ключ и тот же PIN запускают протокол здесь
 router.post('/panic', vdfKey, async (req: Request, res: Response, next: NextFunction) => {
   try {

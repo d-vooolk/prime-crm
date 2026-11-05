@@ -619,6 +619,8 @@ model CapitalTransaction {
   cashTransactionId String?          @unique
   cashTransaction   CashTransaction? @relation(fields: [cashTransactionId], references: [id], onDelete: Cascade)
   debtPayment       DebtPayment?
+  // Пополнение из магазина vdf.by: валюта, которой вернули долг магазину. Ключ — номер погашения там
+  vdfRef            String?                @unique
 }
 
 enum DebtDirection {
