@@ -26,6 +26,7 @@ import { UPLOADS_DIR, ensureUploadDirs, isMailAttachmentPath } from './utils/upl
 import { mailService } from './services/mail.service';
 import { assertEnv, env } from './config/env';
 import { prisma } from './prisma/client';
+import { isLiteMode } from './utils/liteMode';
 import { logger } from './utils/logger';
 import { requestContext } from './utils/requestContext';
 
@@ -106,15 +107,20 @@ app.listen(env.port, async () => {
   // Справочник авто наполняется здесь, а не в deploy.sh: в прод-образе нет
   // ts-node, поэтому запустить скрипт из scripts/ внутри контейнера нельзя.
   await runSafely('справочник авто', syncCarCatalogIfNeeded);
-  // После справочника: импорт сверяет карточки старой вики с марками и поколениями
-  await runSafely('импорт старой вики', importLegacyWikiIfPresent);
-  // Тоже после справочника: названия авто из старых заявок сопоставляются с марками и моделями
-  await runSafely('визиты из старой программы', importLegacyVisitsIfPresent);
-  // Сжатие старых фото вики — в фоне и по одному, старт не ждёт
-  void runSafely('сжатие фото вики', generateMissingWikiVariants);
-  await runSafely('привязка ЗП учредителей', linkFounderSalariesToCash);
+  // Облегчённый режим (после тревожной кнопки): вики, визиты старой программы и категории
+  // расходов не возвращаются при перезапуске
+  const lite = await isLiteMode().catch(() => false);
+  if (!lite) {
+    // После справочника: импорт сверяет карточки старой вики с марками и поколениями
+    await runSafely('импорт старой вики', importLegacyWikiIfPresent);
+    // Тоже после справочника: названия авто из старых заявок сопоставляются с марками и моделями
+    await runSafely('визиты из старой программы', importLegacyVisitsIfPresent);
+    // Сжатие старых фото вики — в фоне и по одному, старт не ждёт
+    void runSafely('сжатие фото вики', generateMissingWikiVariants);
+    await runSafely('привязка ЗП учредителей', linkFounderSalariesToCash);
+  }
   await runSafely('исполнители работ', backfillServicemanPerformers);
-  await runSafely('категории расходов', seedExpenseCategoriesIfEmpty);
+  if (!lite) await runSafely('категории расходов', seedExpenseCategoriesIfEmpty);
   void runSafely('очистка старых медиа записей', () => recordMediaService.deleteExpired());
   // Сжатие фото/видео записей, загруженных раньше, и видео, прерванных перезапуском, — в фоне
   void runSafely('сжатие медиа записей', () => recordMediaService.resumeOptimization());

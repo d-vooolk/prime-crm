@@ -8,7 +8,7 @@ import { ClientHistoryDrawer } from '../ClientHistoryDrawer';
 import { recordsApi } from '@/api/records.api';
 import { useAuthStore } from '@/store/authStore';
 import { useNotify } from '@/hooks/useNotify';
-import { canDeleteRecord, isEmployee as isEmployeeRole, isManagerOrAbove } from '@/utils/roles';
+import { canDeleteRecord, canSeeOpportunities, isEmployee as isEmployeeRole } from '@/utils/roles';
 import { prepaidByMethod } from './documentTemplates';
 import { useRecordPrint } from './useRecordPrint';
 import { RecordDetailFooter, SmsKind } from './RecordDetailFooter';
@@ -214,7 +214,7 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
         />
         <RecordItems record={r} isEmployee={isEmployee} />
         {/* Допродажи — только руководителям и пока запись в работе */}
-        {isManagerOrAbove(user) && r.status === 'ACTIVE' && <RecordOpportunities record={r} />}
+        {canSeeOpportunities(user) && r.status === 'ACTIVE' && <RecordOpportunities record={r} />}
       </Modal>
 
       <RecordModal

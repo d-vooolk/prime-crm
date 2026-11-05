@@ -10,13 +10,15 @@ import { LoadErrorAlert } from '../../parts/LoadErrorAlert';
 import shared from '../../shared.module.scss';
 
 interface Props {
+  /** «Приход РС», в облегчённом режиме — «Приход» */
+  title: string;
   month: Dayjs;
   onMonthChange: (month: Dayjs) => void;
   canEditTransactions: boolean;
 }
 
 /** Приход по расчётному счёту за месяц (месяц общий с приходно-расходной вкладкой) */
-export const IncomeRsTab: React.FC<Props> = ({ month, onMonthChange, canEditTransactions }) => {
+export const IncomeRsTab: React.FC<Props> = ({ title, month, onMonthChange, canEditTransactions }) => {
   const cash = useCashMonth(month, true);
   const { actionColumns, editModal } = useTransactionActions(canEditTransactions);
 
@@ -25,7 +27,7 @@ export const IncomeRsTab: React.FC<Props> = ({ month, onMonthChange, canEditTran
 
   return (
     <div className={shared.tabContent}>
-      <LoadErrorAlert errors={[cash.error]} title="Не удалось загрузить приход РС" onRetry={() => cash.refetch()} />
+      <LoadErrorAlert errors={[cash.error]} title={`Не удалось загрузить: ${title.toLowerCase()}`} onRetry={() => cash.refetch()} />
 
       <div className={shared.topBar}>
         <DatePicker
@@ -40,7 +42,7 @@ export const IncomeRsTab: React.FC<Props> = ({ month, onMonthChange, canEditTran
 
       <div className={shared.tablesGrid}>
         <div className={shared.tableSection}>
-          <div className={shared.tableTitle}>Приход РС</div>
+          <div className={shared.tableTitle}>{title}</div>
           <div className={shared.tableBlock}>
             <Table<CashTransaction>
               dataSource={incomeRs}

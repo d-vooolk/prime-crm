@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Modal, Form, Input, Select, Button, Divider, Empty, Grid } from 'antd';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNotify } from '@/hooks/useNotify';
+import { useAuthStore } from '@/store/authStore';
+import { hasStaffAndCash } from '@/utils/roles';
 import { useAllServicemen, useClientSources } from '@/hooks/useReferenceData';
 import { Record, CompanySettings, CurrencyPart } from '@/types';
 import { recordsApi } from '@/api/records.api';
@@ -44,6 +46,8 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
   // Сумма и автомобиль для анимации закрытия; null — анимации нет
   const [celebration, setCelebration] = useState<{ amount: number; caption: string } | null>(null);
   const [items, setItems] = useState<ItemRow[]>([]);
+  // В облегчённом режиме (после тревожной кнопки) источников клиента нет, оплата — только по РС
+  const withCash = hasStaffAndCash(useAuthStore(s => s.user));
 
   // Исполнители — из общего кеша справочника, а не запросом при каждом открытии
   const { data: allServicemen } = useAllServicemen();
@@ -172,7 +176,7 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
         defects: values.defects ?? '',
         recommendations: values.recommendations || undefined,
         warranty: values.warranty || undefined,
-        isPaidByBankTransfer: values.isPaidByBankTransfer || false,
+        isPaidByBankTransfer: !withCash || values.isPaidByBankTransfer || false,
         ...splitPayment(totals.rubleRemaining, paymentSplitCard),
         currencyPayments: currencyParts,
       });
@@ -277,16 +281,20 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
             />
           )}
 
-          <Divider orientation="left" className={styles.divider}>Источник клиента</Divider>
+          {withCash && (
+            <>
+              <Divider orientation="left" className={styles.divider}>Источник клиента</Divider>
 
-          {/* Обязателен для новой сделки (проверяет и сервер); у старых закрытых его может не быть */}
-          <Form.Item
-            label="Откуда клиент узнал о нас"
-            name="clientSourceId"
-            rules={record.deal ? [] : [{ required: true, message: 'Укажите источник клиента' }]}
-          >
-            <Select placeholder="Выберите источник" options={sourceOptions} showSearch optionFilterProp="label" />
-          </Form.Item>
+              {/* Обязателен для новой сделки (проверяет и сервер); у старых закрытых его может не быть */}
+              <Form.Item
+                label="Откуда клиент узнал о нас"
+                name="clientSourceId"
+                rules={record.deal ? [] : [{ required: true, message: 'Укажите источник клиента' }]}
+              >
+                <Select placeholder="Выберите источник" options={sourceOptions} showSearch optionFilterProp="label" />
+              </Form.Item>
+            </>
+          )}
 
           <Divider orientation="left" className={styles.divider}>Дефекты и рекомендации</Divider>
 
@@ -308,17 +316,19 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
             />
           </Form.Item>
 
-          <PaymentSection
-            totals={totals}
-            currencyByn={currencyByn}
-            currencyParts={currencyParts}
-            currencyOpen={currencyOpen}
-            onOpenCurrency={() => setCurrencyOpen(true)}
-            onChangeCurrency={changeCurrencyParts}
-            paymentSplitCard={paymentSplitCard}
-            onOpenPaymentSplit={() => setPaymentSplitOpen(true)}
-            onCancelPaymentSplit={() => setPaymentSplitCard(null)}
-          />
+          {withCash && (
+            <PaymentSection
+              totals={totals}
+              currencyByn={currencyByn}
+              currencyParts={currencyParts}
+              currencyOpen={currencyOpen}
+              onOpenCurrency={() => setCurrencyOpen(true)}
+              onChangeCurrency={changeCurrencyParts}
+              paymentSplitCard={paymentSplitCard}
+              onOpenPaymentSplit={() => setPaymentSplitOpen(true)}
+              onCancelPaymentSplit={() => setPaymentSplitCard(null)}
+            />
+          )}
 
           <div className={styles.footer}>
             <Button onClick={onClose}>Отмена</Button>

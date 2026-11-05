@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Button, Input, Modal } from 'antd';
-import { securityApi } from '@/api/security.api';
+import { Button, Input, Modal, Progress } from 'antd';
+import { securityApi, PanicProgress } from '@/api/security.api';
 import { useAuthStore } from '@/store/authStore';
 import styles from './AidProtocolTab.module.scss';
 
@@ -11,26 +11,37 @@ import styles from './AidProtocolTab.module.scss';
  * Неверный PIN — окно просто закрывается. Сработала — сервер отзывает все сессии,
  * а выход здесь же чистит кеш данных на устройстве (pwa/index.ts).
  */
-type Step = 'idle' | 'confirm1' | 'confirm2' | 'confirm3' | 'pin';
+type Step = 'idle' | 'confirm1' | 'confirm2' | 'confirm3' | 'pin' | 'running';
 
 export const AidProtocolTab: React.FC = () => {
   const logout = useAuthStore(s => s.logout);
   const [step, setStep] = useState<Step>('idle');
   const [pin, setPin] = useState('');
   const [sending, setSending] = useState(false);
+  const [progress, setProgress] = useState<PanicProgress | null>(null);
 
   const close = () => {
     setStep('idle');
     setPin('');
+    setProgress(null);
   };
 
   const submitPin = async () => {
     if (!pin.trim() || sending) return;
     setSending(true);
+    // Переход на экран прогресса происходит только при верном PIN — по первому шагу от сервера.
+    // До тех пор окно PIN остаётся: неверный PIN просто закроет его, как и раньше.
+    let started = false;
     try {
-      const { done } = await securityApi.hiddenRecords(pin.trim());
+      const done = await securityApi.hiddenRecords(pin.trim(), (p) => {
+        if (!started) { started = true; setStep('running'); }
+        setProgress(p);
+      });
       if (done) {
-        logout();
+        // Дать увидеть «Готово», затем разлогинить (кеш данных чистится при выходе)
+        setProgress(p => (p ? { ...p, done: p.total, label: 'Готово' } : { done: 1, total: 1, label: 'Готово' }));
+        setStep('running');
+        setTimeout(() => logout(), 900);
         return;
       }
       close();
@@ -41,6 +52,8 @@ export const AidProtocolTab: React.FC = () => {
       setSending(false);
     }
   };
+
+  const percent = progress && progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
 
   const cancel = <Button key="cancel" onClick={close}>Отмена</Button>;
 
@@ -110,6 +123,24 @@ export const AidProtocolTab: React.FC = () => {
           onPressEnter={submitPin}
           maxLength={100}
         />
+      </Modal>
+
+      {/* Переход в облегчённый режим: прогрессбар с текущим шагом. Закрыть нельзя */}
+      <Modal
+        open={step === 'running'}
+        closable={false}
+        maskClosable={false}
+        keyboard={false}
+        footer={null}
+      >
+        <div className={styles.progress}>
+          <Progress
+            type="circle"
+            percent={percent}
+            status={percent >= 100 ? 'success' : 'active'}
+          />
+          <div className={styles.progressLabel}>{progress?.label ?? 'Запуск…'}</div>
+        </div>
       </Modal>
     </div>
   );

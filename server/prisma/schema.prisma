@@ -1016,9 +1016,12 @@ model PushSubscription {
 // --- Состояние безопасности (одна строка, id = 'singleton') ---
 // sessionsRevokedAt — токены, выданные раньше этого момента, недействительны:
 // так тревожная кнопка разлогинивает все устройства (src/utils/sessionRevocation.ts)
+// liteMode — CRM после тревожной кнопки: без клиентской базы, сотрудников, аналитики, вики
+// и наличной бухгалтерии, все приходы — по РС (src/utils/liteMode.ts)
 model SecurityState {
   id                String    @id
   sessionsRevokedAt DateTime?
+  liteMode          Boolean   @default(false)
 }
 
 // --- Почта (ящики компании, приём по IMAP: services/mail.service.ts) ---

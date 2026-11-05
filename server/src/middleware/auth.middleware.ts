@@ -4,6 +4,8 @@ import { prisma } from '../prisma/client';
 import { env } from '../config/env';
 import { currentContext } from '../utils/requestContext';
 import { isTokenRevoked } from '../utils/sessionRevocation';
+import { isLiteMode } from '../utils/liteMode';
+import { LITE_MODE_ROLES } from '../services/liteMode.logic';
 
 export interface AuthPayload {
   id: string;
@@ -49,7 +51,8 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
       req.user = payload;
     } else {
       const serviceman = await prisma.serviceman.findUnique({ where: { id: payload.id } });
-      if (!serviceman || serviceman.isDismissed) {
+      // В облегчённом режиме (после тревожной кнопки) входят только руководители
+      if (!serviceman || serviceman.isDismissed || (await isLiteMode() && !LITE_MODE_ROLES.includes(serviceman.role ?? ''))) {
         res.status(401).json({ message: 'Доступ закрыт' });
         return;
       }

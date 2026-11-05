@@ -9,6 +9,8 @@ import { env } from '../config/env';
 import { loginLimiter, LOCK_MINUTES } from '../utils/loginLimiter';
 import { logger } from '../utils/logger';
 import type { AuthPayload } from '../middleware/auth.middleware';
+import { isLiteMode } from '../utils/liteMode';
+import { LITE_MODE_ROLES } from '../services/liteMode.logic';
 
 // Срок жизни токена не ограничен намеренно: сотрудники не должны входить заново каждый день.
 // Роль и увольнение всё равно проверяются по базе на каждом запросе (auth.middleware).
@@ -56,7 +58,7 @@ export const authController = {
       if (!safeEqual(password, env.masterPassword)) failed();
       loginLimiter.success(email);
       const user = { ...MASTER_USER, email: env.masterEmail };
-      res.json({ data: { token: signToken(user), user } });
+      res.json({ data: { token: signToken(user), user: { ...user, lite: await isLiteMode() } } });
       return;
     }
 
@@ -78,6 +80,9 @@ export const authController = {
       }
     }
     if (!passwordMatch) failed();
+    // Облегчённый режим (после тревожной кнопки): остальные роли не входят — ответ как при неверном пароле
+    const lite = await isLiteMode();
+    if (lite && !LITE_MODE_ROLES.includes(serviceman.role ?? '')) failed();
 
     loginLimiter.success(email);
     const token = signToken({
@@ -86,20 +91,24 @@ export const authController = {
     res.json({
       data: {
         token,
-        user: { id: serviceman.id, name: serviceman.name, email: serviceman.email, role: serviceman.role, isMaster: false },
+        user: { id: serviceman.id, name: serviceman.name, email: serviceman.email, role: serviceman.role, isMaster: false, lite },
       },
     });
   },
 
-  /** Актуальные данные пользователя из базы — клиент обновляет по ним роль и имя */
+  /**
+   * Актуальные данные пользователя из базы — клиент обновляет по ним роль и имя.
+   * lite — облегчённый режим после тревожной кнопки: клиент прячет скрытые разделы
+   */
   async me(req: Request, res: Response) {
     const user = req.user!;
+    const lite = await isLiteMode();
     if (user.isMaster) {
-      res.json({ data: { ...MASTER_USER, email: user.email } });
+      res.json({ data: { ...MASTER_USER, email: user.email, lite } });
       return;
     }
     const s = await prisma.serviceman.findUnique({ where: { id: user.id } });
     if (!s) throw new AppError('Пользователь не найден', 401);
-    res.json({ data: { id: s.id, name: s.name, email: s.email, role: s.role, isMaster: false } });
+    res.json({ data: { id: s.id, name: s.name, email: s.email, role: s.role, isMaster: false, lite } });
   },
 };

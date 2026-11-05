@@ -3,6 +3,8 @@ import { InputNumber, Modal, Form, Input, Switch, Segmented } from 'antd';
 import { Currency } from '@/types';
 import { formatPrice } from '@/utils/formatters';
 import { useNotify } from '@/hooks/useNotify';
+import { useAuthStore } from '@/store/authStore';
+import { hasStaffAndCash } from '@/utils/roles';
 import { SelectedService } from '../../types';
 import { PrepaidFields, PrepayDraft, groupThousands, prepaidFromDraft, prepayDraftFromItem } from '../../calc';
 import { PrepayCurrencyFields } from './PrepayCurrencyFields';
@@ -20,6 +22,8 @@ const EMPTY_DRAFT: PrepayDraft = { currency: 'BYN', amount: 0, byCard: false, cu
 /** Предоплата по позиции: наличные/безнал в BYN или наличная валюта по курсу */
 export const PrepayModal: React.FC<Props> = ({ item, onSave, onCancel }) => {
   const notify = useNotify();
+  // В облегчённом режиме (после тревожной кнопки) предоплата только по РС, без валюты
+  const withCash = hasStaffAndCash(useAuthStore(s => s.user));
   const [draft, setDraft] = useState<PrepayDraft>(EMPTY_DRAFT);
   const [draftFor, setDraftFor] = useState<SelectedService | null>(null);
 
@@ -38,7 +42,7 @@ export const PrepayModal: React.FC<Props> = ({ item, onSave, onCancel }) => {
 
   const handleOk = () => {
     if (!item) return;
-    const prepaid = prepaidFromDraft(draft);
+    const prepaid = prepaidFromDraft(withCash ? draft : { ...draft, currency: 'BYN', byCard: true });
     if (!prepaid) {
       notify.warning('Укажите курс валюты');
       return;
@@ -63,15 +67,17 @@ export const PrepayModal: React.FC<Props> = ({ item, onSave, onCancel }) => {
         <Form.Item label="Полная сумма">
           <Input value={item ? formatPrice(maxByn) : ''} disabled />
         </Form.Item>
-        <Form.Item label="Валюта">
-          <Segmented
-            value={draft.currency}
-            // Курс другой валюты подставит PrepayCurrencyFields
-            onChange={v => patch({ currency: v as Currency, rate: null })}
-            options={['BYN', 'USD', 'EUR']}
-          />
-        </Form.Item>
-        {draft.currency === 'BYN' ? (
+        {withCash && (
+          <Form.Item label="Валюта">
+            <Segmented
+              value={draft.currency}
+              // Курс другой валюты подставит PrepayCurrencyFields
+              onChange={v => patch({ currency: v as Currency, rate: null })}
+              options={['BYN', 'USD', 'EUR']}
+            />
+          </Form.Item>
+        )}
+        {!withCash || draft.currency === 'BYN' ? (
           <>
             <Form.Item label="Сумма предоплаты">
               <InputNumber
@@ -84,14 +90,16 @@ export const PrepayModal: React.FC<Props> = ({ item, onSave, onCancel }) => {
                 suffix="р."
               />
             </Form.Item>
-            <Form.Item label="Способ оплаты">
-              <Switch
-                checked={draft.byCard}
-                onChange={byCard => patch({ byCard })}
-                checkedChildren="Безнал (РС)"
-                unCheckedChildren="Наличные"
-              />
-            </Form.Item>
+            {withCash && (
+              <Form.Item label="Способ оплаты">
+                <Switch
+                  checked={draft.byCard}
+                  onChange={byCard => patch({ byCard })}
+                  checkedChildren="Безнал (РС)"
+                  unCheckedChildren="Наличные"
+                />
+              </Form.Item>
+            )}
           </>
         ) : (
           <PrepayCurrencyFields

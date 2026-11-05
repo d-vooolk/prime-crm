@@ -21,4 +21,6 @@ server/prisma/data/.cache/
 # Загруженные файлы (фото/видео вики): в проде — data/uploads, в разработке — server/uploads
 data/
 server/uploads/
+# Зашифрованные архивы тревожной кнопки (локальные прогоны)
+server/panic/
 bash.exe.stackdump

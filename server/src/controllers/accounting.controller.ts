@@ -13,6 +13,7 @@ import { parse, positiveMoney, money, dateString, requiredText, optionalText } f
 import { currencyService } from '../services/currency.service';
 import { currencyAccountingService } from '../services/currencyAccounting.service';
 import { hasRole, ROLES } from '../utils/roles';
+import { isLiteMode } from '../utils/liteMode';
 
 const currencySchema = z.enum(['BYN', 'USD', 'EUR'], { errorMap: () => ({ message: 'Неизвестная валюта' }) });
 const yearSchema = z.coerce.number().int().min(2000).max(2100);
@@ -126,7 +127,9 @@ export const accountingController = {
     const { year = now.getFullYear(), month = now.getMonth() + 1 } = parse(
       z.object({ year: yearSchema.optional(), month: monthSchema.optional() }), req.query,
     );
-    res.json({ data: await cashService.getCashForMonth(year, month) });
+    const cash = await cashService.getCashForMonth(year, month);
+    // Облегчённый режим (после тревожной кнопки): наличной кассы нет, только «Приход» (РС)
+    res.json({ data: await isLiteMode() ? { income: [], incomeRs: cash.incomeRs, expenses: [] } : cash });
   },
 
   async getBalance(_req: Request, res: Response) {

@@ -5,6 +5,7 @@ import { siteLeadsController } from '../controllers/siteLeads.controller';
 import { panicService } from '../services/panic.service';
 import { AppError } from '../middleware/errorHandler';
 import { env } from '../config/env';
+import { hiddenInLiteMode } from '../utils/liteMode';
 
 const router = Router();
 
@@ -37,9 +38,10 @@ function requireIntegrationKey(key: () => string) {
 
 // Магазин vdf.by: заказы сотрудников для вкладки «VDF» в бухгалтерии
 const vdfKey = requireIntegrationKey(() => env.vdfIntegrationKey);
-router.post('/vdf/orders', vdfKey, vdfOrdersController.receive);
+// В облегчённом режиме (после тревожной кнопки) раздела VDF нет — заказы не принимаются
+router.post('/vdf/orders', vdfKey, hiddenInLiteMode, vdfOrdersController.receive);
 // Оплаченные и отменённые заказы — для бухгалтерии магазина
-router.get('/vdf/states', vdfKey, vdfOrdersController.states);
+router.get('/vdf/states', vdfKey, hiddenInLiteMode, vdfOrdersController.states);
 // «Протокол AID» из магазина: тот же общий ключ и тот же PIN запускают протокол здесь
 router.post('/panic', vdfKey, async (req: Request, res: Response, next: NextFunction) => {
   try {

@@ -18,6 +18,10 @@
     "panic:keygen": "ts-node scripts/panic-keygen.ts",
     "panic:pin": "ts-node scripts/panic-pin.ts",
     "panic:decrypt": "ts-node scripts/panic-decrypt.ts",
+    "panic:dryrun": "ts-node scripts/panic-dryrun.ts",
+    "panic:setup:keys": "ts-node scripts/panic-setup-keys.ts",
+    "panic:localtest": "bash scripts/local-panic-test.sh",
+    "db:seed:demo": "ts-node prisma/seed-demo.ts",
     "lint": "eslint \"src/**/*.ts\"",
     "format": "prettier --write \"src/**/*.ts\"",
     "test": "vitest run"

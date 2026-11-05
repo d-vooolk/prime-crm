@@ -16,7 +16,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useAuthSync } from '@/hooks/useAuthSync';
 import { PwaUpdateNotice } from '@/components/PwaUpdateNotice';
 import { queryClient } from '@/lib/queryClient';
-import { canSeeMail, canSeeNotes, canSeeSiteLeads } from '@/utils/roles';
+import { canSeeMail, canSeeNotes, canSeePath, canSeeSiteLeads } from '@/utils/roles';
 import { lightTheme, darkTheme } from '@/config/antdTheme';
 
 dayjs.locale('ru');
@@ -72,11 +72,12 @@ const App: React.FC = () => {
                   >
                     <Route index element={<Navigate to="/schedule" replace />} />
                     <Route path="schedule" element={<SchedulePage />} />
-                    <Route path="dashboard" element={<DashboardPage />} />
+                    {/* Дашборда и вики нет в облегчённом режиме (после тревожной кнопки) */}
+                    <Route path="dashboard" element={canSeePath(user, '/dashboard') ? <DashboardPage /> : <Navigate to="/schedule" replace />} />
                     {/* Справочник переехал в настройки */}
                     <Route path="clients" element={<Navigate to="/settings?tab=clients" replace />} />
                     <Route path="services" element={<Navigate to="/settings?tab=services" replace />} />
-                    <Route path="wiki" element={<WikiPage />} />
+                    <Route path="wiki" element={canSeePath(user, '/wiki') ? <WikiPage /> : <Navigate to="/schedule" replace />} />
                     <Route path="accounting" element={<AccountingPage />} />
                     <Route path="notes" element={canSeeNotes(user) ? <NotesPage /> : <Navigate to="/schedule" replace />} />
                     <Route path="leads" element={canSeeSiteLeads(user) ? <LeadsPage /> : <Navigate to="/schedule" replace />} />

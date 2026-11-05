@@ -9,7 +9,7 @@ import {
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import cn from 'classnames';
 import { useAuthStore } from '@/store/authStore';
-import { isEmployee, isManagerOrAbove } from '@/utils/roles';
+import { isEmployee, isLite, isManagerOrAbove } from '@/utils/roles';
 import { useStockLowCount } from '@/hooks/useStock';
 import { CarCatalogEditor } from '@/components/CarCatalogEditor';
 import { ExpenseCategoriesEditor } from '@/components/ExpenseCategoriesEditor';
@@ -39,6 +39,16 @@ interface SettingsSection {
   badge?: number;
   children: React.ReactNode;
 }
+
+/**
+ * Разделы, которых нет в облегчённом режиме (после тревожной кнопки): их данные удалены,
+ * а «Открытые возможности» и «Упущенная прибыль» строятся на истории визитов и вики
+ */
+const LITE_HIDDEN_SECTIONS = [
+  'expenseCategories', 'employees', 'receptionists', 'clients', 'clientSources', 'opportunities', 'missedProfit',
+  // Сам протокол AID после срабатывания тоже скрыт (повторный запуск сервер закрывает — 404)
+  'aid',
+];
 
 /**
  * Старые адреса: справочник был одной вкладкой со своими подвкладками (?tab=directory&sub=stock)
@@ -129,7 +139,9 @@ export const SettingsPage: React.FC = () => {
       : []),
   ];
 
-  const visible = isSotrudnik ? sections.filter(s => s.key === 'basic') : sections;
+  const visible = isSotrudnik
+    ? sections.filter(s => s.key === 'basic')
+    : sections.filter(s => !(isLite(user) && LITE_HIDDEN_SECTIONS.includes(s.key)));
   const groups = [...new Set(visible.map(s => s.group))];
   // Один раздел (сотрудник) — меню не нужно
   const withMenu = visible.length > 1;

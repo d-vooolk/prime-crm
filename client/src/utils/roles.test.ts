@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   ROLES, canDeleteRecord, canEditNote, canEditServicemanRole, canEditTransactions, canSeeCapital,
-  canSeeCashflow, canSeePath, getAssignableRoles, getRoleLevel, getUserLevel, isEmployee, isWikiReviewer,
+  canSeeCashflow, canSeeDebts, canSeeIncomeRs, canSeeOpportunities, canSeePath, canSeeSalary, getAssignableRoles,
+  getRoleLevel, getUserLevel, hasStaffAndCash, isEmployee, isWikiReviewer,
 } from './roles';
 
 const u = (role?: string, isMaster = false) => ({ role, isMaster });
@@ -89,5 +90,37 @@ describe('почта', () => {
     expect(canSeePath(u(ROLES.DIRECTOR), '/mail')).toBe(false);
     expect(canSeePath(u(ROLES.MANAGER), '/mail')).toBe(false);
     expect(canSeePath(u(ROLES.EMPLOYEE), '/mail')).toBe(false);
+  });
+});
+
+describe('облегчённый режим (после тревожной кнопки)', () => {
+  const lite = (role?: string, isMaster = false) => ({ role, isMaster, lite: true });
+
+  it('из бухгалтерии остаются только приход и долги', () => {
+    for (const user of [lite(ROLES.CREATOR), lite(undefined, true)]) {
+      expect(canSeeCashflow(user)).toBe(false);
+      expect(canSeeCapital(user)).toBe(false);
+      expect(canSeeSalary(user)).toBe(false);
+      expect(canSeeIncomeRs(user)).toBe(true);
+      expect(canSeeDebts(user)).toBe(true);
+    }
+  });
+
+  it('дашборда и вики нет, остальные разделы на месте', () => {
+    const user = lite(ROLES.DIRECTOR);
+    expect(canSeePath(user, '/dashboard')).toBe(false);
+    expect(canSeePath(user, '/wiki')).toBe(false);
+    expect(canSeePath(user, '/schedule')).toBe(true);
+    expect(canSeePath(user, '/accounting')).toBe(true);
+    expect(canSeePath(user, '/leads')).toBe(true);
+    expect(canSeePath(lite(ROLES.CREATOR), '/mail')).toBe(true);
+    expect(isWikiReviewer(user)).toBe(false);
+  });
+
+  it('нет сотрудников, источников, наличных и открытых возможностей', () => {
+    expect(hasStaffAndCash(lite(ROLES.MANAGER))).toBe(false);
+    expect(hasStaffAndCash(u(ROLES.MANAGER))).toBe(true);
+    expect(canSeeOpportunities(lite(ROLES.MANAGER))).toBe(false);
+    expect(canSeeOpportunities(u(ROLES.MANAGER))).toBe(true);
   });
 });

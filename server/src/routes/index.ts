@@ -15,6 +15,7 @@ import integrationsRouter from './integrations.routes';
 import mailRouter from './mail.routes';
 import siteLeadsRouter from './siteLeads.routes';
 import { authMiddleware } from '../middleware/auth.middleware';
+import { hiddenInLiteMode } from '../utils/liteMode';
 
 const router = Router();
 
@@ -30,7 +31,8 @@ router.use('/records', recordsRouter);
 router.use('/services', servicesRouter);
 router.use('/accounting', accountingRouter);
 router.use('/notes', notesRouter);
-router.use('/wiki', wikiRouter);
+// Облегчённый режим (после тревожной кнопки) — маршруты скрытых разделов отвечают 404
+router.use('/wiki', hiddenInLiteMode, wikiRouter);
 router.use('/expenses', expensesRouter);
 router.use('/stock', stockRouter);
 router.use('/push', pushRouter);

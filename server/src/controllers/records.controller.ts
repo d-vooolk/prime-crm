@@ -6,6 +6,8 @@ import { prisma } from '../prisma/client';
 import { hasRole, ROLES } from '../utils/roles';
 import { z } from 'zod';
 import { parse, money, dateString } from '../middleware/validate';
+import { isLiteMode } from '../utils/liteMode';
+import { cashlessCancel, cashlessClose, cashlessItems } from '../services/liteMode.logic';
 
 const text = (max: number) => z.string().max(max).nullable().optional();
 // null от клиента = поле не задано (иначе z.coerce превратил бы null в 0 или "null")
@@ -177,28 +179,35 @@ export const recordsController = {
 
   async create(req: Request, res: Response, next: NextFunction) {
     try {
-      const record = await recordsService.create(parse(createSchema, req.body));
+      const data = parse(createSchema, req.body);
+      // Облегчённый режим (после тревожной кнопки): все приходы — по РС
+      if (await isLiteMode()) data.items = cashlessItems(data.items);
+      const record = await recordsService.create(data);
       res.status(201).json({ data: record });
     } catch (e) { next(e); }
   },
 
   async update(req: Request, res: Response, next: NextFunction) {
     try {
-      const record = await recordsService.update(String(req.params.id), parse(updateSchema, req.body));
+      const data = parse(updateSchema, req.body);
+      if (data.items && await isLiteMode()) data.items = cashlessItems(data.items);
+      const record = await recordsService.update(String(req.params.id), data);
       res.json({ data: record });
     } catch (e) { next(e); }
   },
 
   async close(req: Request, res: Response, next: NextFunction) {
     try {
-      const record = await recordsService.close(String(req.params.id), parse(closeSchema, req.body));
+      const data = parse(closeSchema, req.body);
+      const record = await recordsService.close(String(req.params.id), await isLiteMode() ? cashlessClose(data) : data);
       res.json({ data: record });
     } catch (e) { next(e); }
   },
 
   async cancel(req: Request, res: Response, next: NextFunction) {
     try {
-      const record = await recordsService.cancel(String(req.params.id), parse(cancelSchema, req.body ?? {}));
+      const data = parse(cancelSchema, req.body ?? {});
+      const record = await recordsService.cancel(String(req.params.id), await isLiteMode() ? cashlessCancel(data) : data);
       res.json({ data: record });
     } catch (e) { next(e); }
   },

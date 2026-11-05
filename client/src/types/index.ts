@@ -5,6 +5,11 @@ export interface AuthUser {
   email: string;
   role?: string;
   isMaster: boolean;
+  /**
+   * Облегчённый режим после тревожной кнопки (сервер — utils/liteMode.ts): нет клиентской базы,
+   * сотрудников, аналитики, вики, наличной кассы, капитала, ЗП и VDF; все приходы — по РС
+   */
+  lite?: boolean;
 }
 
 export interface Client {

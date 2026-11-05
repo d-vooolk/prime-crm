@@ -3,6 +3,8 @@ import { Form, Select, DatePicker, Row, Col } from 'antd';
 import dayjs, { Dayjs } from 'dayjs';
 import { ClientSource, Serviceman } from '@/types';
 import { useClientSources, useServicemen } from '@/hooks/useReferenceData';
+import { useAuthStore } from '@/store/authStore';
+import { hasStaffAndCash } from '@/utils/roles';
 import { RecordFormData } from '../../types';
 import styles from './ScheduleFields.module.scss';
 
@@ -20,6 +22,8 @@ const MINUTE_OPTIONS = Array.from({ length: 12 }, (_, i) => i * 5).map(m => ({ v
 
 /** Дата и время записи, исполнитель, мастер приёмщик и источник клиента */
 export const ScheduleFields: React.FC<Props> = ({ data, onChange }) => {
+  // В облегчённом режиме (после тревожной кнопки) сотрудников и источников клиента нет
+  const withStaff = hasStaffAndCash(useAuthStore(s => s.user));
   const { data: servicemen = EMPTY_SERVICEMEN } = useServicemen();
   const { data: clientSources = EMPTY_SOURCES } = useClientSources();
 
@@ -74,43 +78,49 @@ export const ScheduleFields: React.FC<Props> = ({ data, onChange }) => {
             </div>
           </Form.Item>
         </Col>
-        <Col xs={24} sm={8}>
-          <Form.Item label="Сотрудник">
-            <Select
-              value={data.serviceman || undefined}
-              onChange={v => onChange({ serviceman: v ?? '' })}
-              placeholder="Выберите сотрудника"
-              allowClear
-              options={employees.map(s => ({ value: s.name, label: s.name }))}
-            />
-          </Form.Item>
-        </Col>
+        {withStaff && (
+          <Col xs={24} sm={8}>
+            <Form.Item label="Сотрудник">
+              <Select
+                value={data.serviceman || undefined}
+                onChange={v => onChange({ serviceman: v ?? '' })}
+                placeholder="Выберите сотрудника"
+                allowClear
+                options={employees.map(s => ({ value: s.name, label: s.name }))}
+              />
+            </Form.Item>
+          </Col>
+        )}
       </Row>
 
       <Row gutter={16}>
-        <Col xs={24} sm={8}>
-          <Form.Item label="Мастер приёмщик">
-            <Select
-              value={data.receptionist || undefined}
-              onChange={v => onChange({ receptionist: v ?? '' })}
-              placeholder="Выберите мастера"
-              allowClear
-              options={receptionists.map(s => ({ value: s.name, label: s.name }))}
-            />
-          </Form.Item>
-        </Col>
-        <Col xs={24} sm={8}>
-          {/* Для статистики каналов привлечения на дашборде */}
-          <Form.Item label="Источник клиента">
-            <Select
-              value={data.clientSourceId ?? undefined}
-              onChange={v => onChange({ clientSourceId: v ?? null })}
-              placeholder="Откуда узнал о нас"
-              allowClear
-              options={sourceOptions}
-            />
-          </Form.Item>
-        </Col>
+        {withStaff && (
+          <>
+            <Col xs={24} sm={8}>
+              <Form.Item label="Мастер приёмщик">
+                <Select
+                  value={data.receptionist || undefined}
+                  onChange={v => onChange({ receptionist: v ?? '' })}
+                  placeholder="Выберите мастера"
+                  allowClear
+                  options={receptionists.map(s => ({ value: s.name, label: s.name }))}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              {/* Для статистики каналов привлечения на дашборде */}
+              <Form.Item label="Источник клиента">
+                <Select
+                  value={data.clientSourceId ?? undefined}
+                  onChange={v => onChange({ clientSourceId: v ?? null })}
+                  placeholder="Откуда узнал о нас"
+                  allowClear
+                  options={sourceOptions}
+                />
+              </Form.Item>
+            </Col>
+          </>
+        )}
         {data.isLegalEntity && (
           <Col xs={24} sm={8}>
             <Form.Item label="Дата окончания работ">

@@ -26,11 +26,16 @@ export const UNDISMISSABLE_ROLE: string = ROLES.CREATOR;
 export interface RoleSubject {
   role?: string | null;
   isMaster?: boolean;
+  /** Облегчённый режим после тревожной кнопки (AuthUser.lite) */
+  lite?: boolean;
 }
 
 type Subject = RoleSubject | null | undefined;
 
 const hasRole = (u: Subject, roles: string[]) => roles.includes(u?.role || '');
+
+/** Облегчённый режим после тревожной кнопки: скрытые разделы не показываются никому */
+export const isLite = (u: Subject) => !!u?.lite;
 
 export const isEmployee = (u: Subject) => u?.role === ROLES.EMPLOYEE;
 export const isManagerRole = (role?: string | null) => MANAGER_ROLES.includes(role || '');
@@ -44,8 +49,13 @@ export const isDirectorOrAbove = (u: Subject) => !!u?.isMaster || hasRole(u, DIR
 export const isCreatorOrAbove = (u: Subject) => !!u?.isMaster || hasRole(u, CREATOR_ROLES);
 
 // ─── Бухгалтерия ───────────────────────────────────
-export const canSeeCashflow = isManagerOrAbove;
-export const canSeeCapital = isDirectorOrAbove;
+// В облегчённом режиме — только «Приход» (РС) и долги (canSeeIncomeRs, canSeeDebts)
+export const canSeeCashflow = (u: Subject) => !isLite(u) && isManagerOrAbove(u);
+export const canSeeCapital = (u: Subject) => !isLite(u) && isDirectorOrAbove(u);
+export const canSeeIncomeRs = isManagerOrAbove;
+export const canSeeDebts = isManagerOrAbove;
+/** Расчёт ЗП, ЗП учредителей, статистика, VDF */
+export const canSeeSalary = (u: Subject) => !isLite(u);
 export const canEditTransactions = isCreatorOrAbove;
 export const canSeeClientName = isManagerOrAbove;
 
@@ -55,6 +65,14 @@ export const canSeeExpenses = isCreatorOrAbove;
 export const canSeeAvgCard = isManagerOrAbove;
 
 // ─── Записи ────────────────────────────────────────
+/** «Открытые возможности» в карточке записи (BETA) */
+export const canSeeOpportunities = (u: Subject) => !isLite(u) && isManagerOrAbove(u);
+/**
+ * Сотрудник, мастер приёмщик и источник клиента в записи, наличные, раздельная и валютная оплата.
+ * В облегчённом режиме их нет: сотрудников и источников не осталось, все приходы — по РС
+ */
+export const hasStaffAndCash = (u: Subject) => !isLite(u);
+
 /** Удалять запись может только мастер или Создатель (не путать с canEditTransactions — совпадает случайно) */
 export const canDeleteRecord = (u: Subject) => !!u?.isMaster || u?.role === ROLES.CREATOR;
 
@@ -67,7 +85,8 @@ export const canEditNote = (u: (RoleSubject & { id?: string }) | null | undefine
 
 // ─── Вики ──────────────────────────────────────────
 export const WIKI_REVIEWER_ROLES = MANAGER_ROLES;
-export const isWikiReviewer = (u: Subject) => !!u && isManagerOrAbove(u);
+// В облегчённом режиме вики нет — и счётчика правок тоже
+export const isWikiReviewer = (u: Subject) => !!u && !isLite(u) && isManagerOrAbove(u);
 
 // ─── Почта ─────────────────────────────────────────
 /** Почту компании (ящик на beget) видит только создатель */
@@ -81,7 +100,10 @@ export const canSeeSiteLeads = isManagerOrAbove;
 /** Сотруднику доступны только эти разделы */
 // Дашборд сотруднику — только пьедестал, своя карточка и упущенная прибыль (DashboardPage)
 export const EMPLOYEE_ALLOWED_PATHS = ['/schedule', '/dashboard', '/wiki', '/accounting', '/settings'];
+/** Разделов дашборда и вики в облегчённом режиме нет */
+const LITE_HIDDEN_PATHS = ['/dashboard', '/wiki'];
 export const canSeePath = (u: Subject, path: string) => {
+  if (isLite(u) && LITE_HIDDEN_PATHS.includes(path)) return false;
   if (path === '/mail') return canSeeMail(u);
   if (path === '/notes') return canSeeNotes(u);
   if (path === '/leads') return canSeeSiteLeads(u);

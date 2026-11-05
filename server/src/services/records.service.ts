@@ -9,6 +9,7 @@ import { generatePublicToken } from '../utils/publicToken';
 import { cashService } from './accounting/cash.service';
 import { recordMediaService } from './recordMedia.service';
 import { clientSourcesService } from './clientSources.service';
+import { isLiteMode } from '../utils/liteMode';
 import { pushService, pushInBackground } from './push.service';
 import { toByn, roundMoney } from './currency.service';
 import { uniqueDocumentNumber } from '../utils/documentNumber';
@@ -505,8 +506,9 @@ export const recordsService = {
     }
 
     // Источник клиента нужен для статистики каналов привлечения: без него сделку не закрыть.
-    // Модалка закрытия сохраняет его в запись перед закрытием
-    if (!record.clientSourceId) throw new AppError('Укажите источник клиента', 400);
+    // Модалка закрытия сохраняет его в запись перед закрытием. В облегчённом режиме источников нет
+    const lite = await isLiteMode();
+    if (!record.clientSourceId && !lite) throw new AppError('Укажите источник клиента', 400);
 
     // Для услуг с оборудованием оборудование должно быть выбрано
     const missingEquipment = record.items.filter(item => item.service.hasEquipment && !item.equipmentId);
@@ -564,9 +566,9 @@ export const recordsService = {
     // Повторные закрытия отсекаются и веткой выше, и правилом «отзыв один раз на запись» в sms.service
     sendSmsInBackground(id, 'REVIEW_REQUEST');
     const closed = await recordsService.findById(id);
-    // Сотрудникам — сколько они заработали на сделке (только при первом закрытии)
+    // Сотрудникам — сколько они заработали на сделке (только при первом закрытии). В облегчённом режиме ЗП нет
     const authorId = currentContext()?.userId;
-    pushInBackground(() => pushService.sendDealPayments(closed.items, authorId, amount => ({
+    if (!lite) pushInBackground(() => pushService.sendDealPayments(closed.items, authorId, amount => ({
       title: 'Сделка закрыта',
       body: `${carInfoOf(closed.car)} · ваш заработок ${amount.toLocaleString('ru-RU', { maximumFractionDigits: 2 })} р.`,
       url: '/accounting?tab=salary',

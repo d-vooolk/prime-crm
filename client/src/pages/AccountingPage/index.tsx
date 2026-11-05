@@ -8,6 +8,11 @@ import {
   canSeeCapital as canSeeCapitalFor,
   canSeeCashflow as canSeeCashflowFor,
   canSeeClientName as canSeeClientNameFor,
+  canSeeDebts as canSeeDebtsFor,
+  canSeeIncomeRs as canSeeIncomeRsFor,
+  canSeeSalary as canSeeSalaryFor,
+  isDirectorOrAbove,
+  isLite,
 } from '@/utils/roles';
 import { CashflowTab } from './tabs/CashflowTab';
 import { IncomeRsTab } from './tabs/IncomeRsTab';
@@ -32,6 +37,9 @@ export const AccountingPage: React.FC = () => {
   const canSeeCashflow = canSeeCashflowFor(user);
   const canSeeCapital = canSeeCapitalFor(user);
   const canEditTransactions = canEditTransactionsFor(user);
+  const canSeeSalary = canSeeSalaryFor(user);
+  // В облегчённом режиме (после тревожной кнопки) все приходы — по РС, вкладка просто «Приход»
+  const incomeLabel = isLite(user) ? 'Приход' : 'Приход РС';
 
   // Месяц общий для приходно-расходной вкладки и прихода РС
   const [cashMonth, setCashMonth] = useState<Dayjs>(dayjs());
@@ -44,12 +52,24 @@ export const AccountingPage: React.FC = () => {
         label: 'Приходно-Расходный',
         children: <CashflowTab month={cashMonth} onMonthChange={setCashMonth} canEditTransactions={canEditTransactions} />,
       },
+    ] : []),
+    ...(canSeeIncomeRsFor(user) ? [
       {
         key: 'incomers',
-        label: 'Приход РС',
-        children: <IncomeRsTab month={cashMonth} onMonthChange={setCashMonth} canEditTransactions={canEditTransactions} />,
+        label: incomeLabel,
+        children: (
+          <IncomeRsTab
+            title={incomeLabel}
+            month={cashMonth}
+            onMonthChange={setCashMonth}
+            canEditTransactions={canEditTransactions}
+          />
+        ),
       },
-      { key: 'debts', label: 'Долги', children: <DebtsTab canManage={canSeeCapital} /> },
+    ] : []),
+    // Правят и удаляют долги директора; в облегчённом режиме капитала нет, но долги остаются
+    ...(canSeeDebtsFor(user) ? [{ key: 'debts', label: 'Долги', children: <DebtsTab canManage={isDirectorOrAbove(user)} /> }] : []),
+    ...(canSeeCashflow ? [
       {
         key: 'vdf',
         label: <Badge count={vdfPending} size="small" offset={[8, -2]}>VDF</Badge>,
@@ -57,7 +77,7 @@ export const AccountingPage: React.FC = () => {
       },
     ] : []),
     ...(canSeeCapital ? [{ key: 'capital', label: 'Капитал', children: <CapitalTab /> }] : []),
-    {
+    ...(canSeeSalary ? [{
       key: 'salary',
       label: 'Расчёт ЗП',
       children: (
@@ -68,7 +88,7 @@ export const AccountingPage: React.FC = () => {
           canSeeClientName={canSeeClientNameFor(user)}
         />
       ),
-    },
+    }] : []),
     ...(canSeeCapital ? [
       { key: 'founderSalary', label: 'ЗП Учредителей', children: <FounderSalaryTab /> },
       { key: 'stats', label: 'Статистика', children: <StatsTab /> },

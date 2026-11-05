@@ -5,6 +5,7 @@ import { requireRole } from '../middleware/requireRole';
 import { ROLES } from '../utils/roles';
 import { RECORD_MEDIA_DIR } from '../utils/uploads';
 import { mediaUpload } from '../utils/mediaUpload';
+import { hiddenInLiteMode } from '../utils/liteMode';
 
 const router = Router();
 // Расписание видят все; создают, правят и закрывают записи — от менеджера, удаляет — создатель
@@ -19,14 +20,14 @@ router.get('/companies', manager, recordsController.searchCompanies);
 router.get('/dates', recordsController.getDatesWithRecords);
 router.get('/:id', recordsController.getById);
 // Допродажи — только руководителям (менеджер, директор, создатель)
-router.get('/:id/opportunities', manager, recordsController.getOpportunities);
+router.get('/:id/opportunities', hiddenInLiteMode, manager, recordsController.getOpportunities);
 router.post('/', manager, recordsController.create);
 router.patch('/:id', manager, recordsController.update);
 router.post('/:id/close', manager, recordsController.close);
 router.post('/:id/cancel', manager, recordsController.cancel);
 router.post('/:id/restore', manager, recordsController.restore);
 router.post('/:id/send-sms', manager, recordsController.sendSms);
-router.patch('/:id/salary-month', manager, recordsController.setSalaryMonth);
+router.patch('/:id/salary-month', hiddenInLiteMode, manager, recordsController.setSalaryMonth);
 router.delete('/:id', requireRole(ROLES.CREATOR), recordsController.delete);
 
 // Обнаруженные недостатки, фото и видео нюансов авто — добавляет любая роль
