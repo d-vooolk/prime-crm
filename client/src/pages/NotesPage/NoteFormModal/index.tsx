@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
-import { DatePicker, Form, Input, Modal, Select, Switch, TimePicker } from 'antd';
+import { DatePicker, Form, Input, Modal, Segmented, Select, Switch, TimePicker } from 'antd';
 import dayjs from 'dayjs';
 import type { Note } from '@/types';
-import type { NoteFormValues } from '../notesHelpers';
+import { NOTE_PROJECTS, PROJECT_LABEL, type NoteFormValues } from '../notesHelpers';
 import styles from './NoteFormModal.module.scss';
 
 interface Props {
@@ -20,11 +20,7 @@ const REPEAT_OPTIONS = [
   { value: 'MONTHLY', label: 'Каждый месяц' },
 ];
 
-const PROJECT_OPTIONS = [
-  { value: 'CRM', label: 'CRM' },
-  { value: 'PRIME', label: 'PRIME' },
-  { value: 'VDF', label: 'VDF' },
-];
+const PROJECT_OPTIONS = NOTE_PROJECTS.map(value => ({ value, label: PROJECT_LABEL[value] }));
 
 export const NoteFormModal: React.FC<Props> = ({ open, note, saving, onCancel, onSubmit }) => {
   const [form] = Form.useForm<NoteFormValues>();
@@ -106,7 +102,7 @@ export const NoteFormModal: React.FC<Props> = ({ open, note, saving, onCancel, o
         )}
 
         <Form.Item name="project" label="Проект">
-          <Select options={PROJECT_OPTIONS} />
+          <Segmented block options={PROJECT_OPTIONS} />
         </Form.Item>
       </Form>
     </Modal>

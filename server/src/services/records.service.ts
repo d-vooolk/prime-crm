@@ -11,6 +11,7 @@ import { recordMediaService } from './recordMedia.service';
 import { clientSourcesService } from './clientSources.service';
 import { pushService, pushInBackground } from './push.service';
 import { toByn, roundMoney } from './currency.service';
+import { uniqueDocumentNumber } from '../utils/documentNumber';
 import { effectiveSalaryMonth, SalaryMonth } from './salaryRates';
 import {
   CurrencyPart, currencyAccountingService, currencyPartsByn, parseCurrencyParts,
@@ -232,18 +233,15 @@ export const recordsService = {
     if (clientSourceId) await clientSourcesService.assertExists(clientSourceId);
 
     const newRecord = await prisma.$transaction(async (tx) => {
-      // Генерация номера документа
+      // Номер заявки/акта — случайный и неповторяющийся
       let settings = await tx.companySettings.findFirst();
       if (!settings) {
         settings = await tx.companySettings.create({ data: { name: 'Компания' } });
       }
-      const prefix = settings.documentPrefix || 'ПА';
-      const n = settings.nextDocumentNumber;
-      const documentNumber = `${prefix}-${String(n).padStart(6, '0')}`;
-      await tx.companySettings.update({
-        where: { id: settings.id },
-        data: { nextDocumentNumber: n + 1 },
-      });
+      const documentNumber = await uniqueDocumentNumber(
+        settings.documentPrefix || 'ПА',
+        async n => (await tx.record.count({ where: { documentNumber: n } })) > 0,
+      );
 
       // Найти или создать авто для клиента
       let carRecord = await tx.car.findFirst({
@@ -453,13 +451,20 @@ export const recordsService = {
         }
 
         const newFinalPrice = data.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-        await tx.deal.update({ where: { recordId: id }, data: { finalPrice: newFinalPrice } });
+        // Разбивка нал/карта остаётся, пока сумма сделки та же (правили, например, только сотрудников
+        // или примечание). Сумма изменилась — прежняя разбивка не сходится, остаток идёт одним приходом
+        const keepSplit = record.deal != null && Math.abs(newFinalPrice - record.deal.finalPrice) < 0.01;
+        await tx.deal.update({
+          where: { recordId: id },
+          data: { finalPrice: newFinalPrice, ...(!keepSplit && { splitCashAmount: null, splitCardAmount: null }) },
+        });
 
-        // Пересчитываем только закрывающие транзакции (не предоплату). Валюта остаётся как была
-        // принята, остаток после неё — одним приходом (разбивка нал/карта при правке цены не сохраняется)
+        // Пересчитываем только закрывающие транзакции (не предоплату). Валюта остаётся как была принята
         await recordsService.syncClosingTransactions(tx, record, {
           finalPrice: newFinalPrice,
           isPaidByBankTransfer: record.deal?.isPaidByBankTransfer ?? false,
+          splitCashAmount: keepSplit ? record.deal?.splitCashAmount ?? undefined : undefined,
+          splitCardAmount: keepSplit ? record.deal?.splitCardAmount ?? undefined : undefined,
           currencyParts: parseCurrencyParts(record.deal?.currencyPayments),
           date: record.deal?.closedAt ?? new Date(),
         });

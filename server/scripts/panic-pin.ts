@@ -9,8 +9,8 @@ import { hashPanicPin, verifyPanicPin } from '../src/utils/panicCrypto';
 import { askHidden } from './askHidden';
 
 async function main() {
-  const pin = (await askHidden('PIN (минимум 6 символов): ')).trim();
-  if (pin.length < 6) throw new Error('PIN короче 6 символов');
+  const pin = (await askHidden('PIN (минимум 4 символа): ')).trim();
+  if (pin.length < 4) throw new Error('PIN короче 4 символов');
   if (pin.length > 100) throw new Error('PIN длиннее 100 символов');
   const again = (await askHidden('Повторите PIN: ')).trim();
   if (again !== pin) throw new Error('PIN не совпадают');
