@@ -5,6 +5,7 @@ import { TeamOutlined } from '@ant-design/icons';
 import { formatPrice } from '@/utils/formatters';
 import { SelectedService, ServiceRowContext } from '../../types';
 import { hasSplit } from '../../calc';
+import { renderServicemanOption, servicemanLabelRender } from '@/components/ServicemanBadge';
 import styles from './ItemServiceman.module.scss';
 
 interface Props {
@@ -59,6 +60,8 @@ export const ItemServiceman: React.FC<Props> = ({ row, ctx }) => {
       placeholder="Сотрудник"
       onChange={(v?: string) => ctx.update(row.serviceId, { servicemanName: v ?? null, servicemanSplit: null })}
       options={ctx.employeeOptions}
+      optionRender={renderServicemanOption}
+      labelRender={servicemanLabelRender(ctx.employeeOptions)}
       optionFilterProp="label"
       showSearch
       popupMatchSelectWidth={false}

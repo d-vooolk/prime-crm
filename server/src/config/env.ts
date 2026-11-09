@@ -33,28 +33,52 @@ export const env = {
   get publicRecordUrl() { return (process.env.PUBLIC_RECORD_URL || 'https://zapis.prime-auto.by').replace(/\/+$/, ''); },
   /**
    * Почтовые ящики (services/mail.service.ts): MAIL_* — первый, MAIL2_* — второй.
-   * Ящик без логина или пароля не подключается; сервер у второго по умолчанию тот же, что у первого
+   * Ящик без логина или пароля не подключается; сервер у второго по умолчанию тот же, что у первого.
+   * Отправка — по SMTP: сервер по умолчанию — IMAP-сервер с «smtp.» вместо «imap.», порт 465 (SSL)
    */
   get mailAccounts(): MailAccountConfig[] {
     const host = process.env.MAIL_IMAP_HOST || 'imap.beget.com';
     const port = Number(process.env.MAIL_IMAP_PORT) || 993;
+    const smtpHost = process.env.MAIL_SMTP_HOST || smtpHostFor(host);
+    const smtpPort = Number(process.env.MAIL_SMTP_PORT) || 465;
+    const host2 = process.env.MAIL2_IMAP_HOST || host;
     return [
-      { user: process.env.MAIL_USER || '', password: process.env.MAIL_PASSWORD || '', host, port },
+      {
+        user: process.env.MAIL_USER || '',
+        password: process.env.MAIL_PASSWORD || '',
+        host,
+        port,
+        smtpHost,
+        smtpPort,
+        fromName: process.env.MAIL_FROM_NAME || '',
+      },
       {
         user: process.env.MAIL2_USER || '',
         password: process.env.MAIL2_PASSWORD || '',
-        host: process.env.MAIL2_IMAP_HOST || host,
+        host: host2,
         port: Number(process.env.MAIL2_IMAP_PORT) || port,
+        smtpHost: process.env.MAIL2_SMTP_HOST || (process.env.MAIL2_IMAP_HOST ? smtpHostFor(host2) : smtpHost),
+        smtpPort: Number(process.env.MAIL2_SMTP_PORT) || smtpPort,
+        fromName: process.env.MAIL2_FROM_NAME || '',
       },
     ].filter(a => a.user && a.password);
   },
 };
+
+/** imap.hoster.by → smtp.hoster.by; сервер без «imap.» — тот же */
+function smtpHostFor(imapHost: string) {
+  return imapHost.replace(/^imap\./i, 'smtp.');
+}
 
 export interface MailAccountConfig {
   user: string;
   password: string;
   host: string;
   port: number;
+  smtpHost: string;
+  smtpPort: number;
+  /** Имя отправителя в письмах из CRM; пусто — только адрес */
+  fromName: string;
 }
 
 /** Проверка при старте — падаем сразу, а не на первом входе пользователя. */

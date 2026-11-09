@@ -136,6 +136,8 @@ export const RecordModal: React.FC<Props> = ({ open, onClose, onSuccess, initial
     <Modal
       open={open}
       onCancel={handleClose}
+      maskClosable={false}
+      keyboard={false}
       title={editRecord ? 'Редактировать запись' : 'Новая запись'}
       width={800}
       footer={null}

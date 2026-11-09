@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import dayjs from 'dayjs';
-import { buildMailSrcDoc, formatMailDate, formatSize, senderLabel } from './mail.utils';
+import { buildMailSrcDoc, buildReplyQuote, formatMailDate, formatSize, replySubject, senderLabel } from './mail.utils';
 
 describe('почта — форматирование', () => {
   const now = dayjs('2026-10-11T15:00:00');
@@ -28,5 +28,21 @@ describe('почта — форматирование', () => {
     expect(doc).toContain("default-src 'none'");
     expect(doc).not.toContain('script-src');
     expect(doc).toContain('<p>Привет</p>');
+  });
+});
+
+describe('почта — ответ', () => {
+  it('тема: Re: один раз', () => {
+    expect(replySubject('Счёт')).toBe('Re: Счёт');
+    expect(replySubject('re: Счёт')).toBe('re: Счёт');
+    expect(replySubject(null)).toBe('Re: ');
+  });
+
+  it('цитата: заголовок и строки с >', () => {
+    const quote = buildReplyQuote(
+      { fromName: 'Иван', fromAddress: 'a@b.by', date: '2026-10-12T14:05:00' },
+      'Привет\n\nКак дела?',
+    );
+    expect(quote).toBe('\n\n12.10.2026 14:05, Иван <a@b.by>:\n> Привет\n>\n> Как дела?');
   });
 });

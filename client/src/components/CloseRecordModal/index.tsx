@@ -17,6 +17,7 @@ import { ItemsTable } from './ItemsTable';
 import { PaymentSection } from './PaymentSection';
 import { ServicemanSplitModal } from './ServicemanSplitModal';
 import { PaymentSplitModal } from './PaymentSplitModal';
+import { toServicemanOption } from '@/components/ServicemanBadge';
 import styles from './CloseRecordModal.module.scss';
 
 const { useBreakpoint } = Grid;
@@ -129,7 +130,7 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
   };
 
   const hasEmployees = employees.length > 0;
-  const employeeOptions = employees.map(e => ({ value: e.name, label: e.name }));
+  const employeeOptions = employees.map(toServicemanOption);
   const missingServiceman = hasEmployees ? itemsMissingServiceman(items) : [];
 
   const currencyByn = currencyPartsByn(currencyParts);

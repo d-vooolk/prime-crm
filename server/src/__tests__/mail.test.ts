@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { makePreview, safeContentType, isViewableType, clip, pickNewUids } from '../utils/mail';
+import {
+  makePreview, safeContentType, isViewableType, clip, pickNewUids,
+  parseRecipients, isEmailAddress, replySubject, replyReferences, textToHtml,
+} from '../utils/mail';
 import { isMailAttachmentPath } from '../utils/uploads';
 
 describe('почта — превью письма', () => {
@@ -67,5 +70,43 @@ describe('вложения писем не раздаются статикой',
     expect(isMailAttachmentPath('/wiki/photo.jpg')).toBe(false);
     expect(isMailAttachmentPath('/repair-types/rt-1.webp')).toBe(false);
     expect(isMailAttachmentPath('/mailbox.jpg')).toBe(false);
+  });
+});
+
+describe('parseRecipients', () => {
+  it('адреса из строки с именами, разделителями и повторами', () => {
+    expect(parseRecipients('a@b.by, Иван <c@d.by>; A@B.by\n e@f.by')).toEqual(['a@b.by', 'c@d.by', 'e@f.by']);
+    expect(parseRecipients('')).toEqual([]);
+    expect(parseRecipients(null)).toEqual([]);
+  });
+});
+
+describe('isEmailAddress', () => {
+  it('проверяет формат адреса', () => {
+    expect(isEmailAddress('info@prime-auto.by')).toBe(true);
+    expect(isEmailAddress('info@prime-auto')).toBe(false);
+    expect(isEmailAddress('Иван <a@b.by>')).toBe(false);
+  });
+});
+
+describe('replySubject', () => {
+  it('добавляет Re: один раз', () => {
+    expect(replySubject('Счёт')).toBe('Re: Счёт');
+    expect(replySubject('RE: Счёт')).toBe('RE: Счёт');
+    expect(replySubject(null)).toBe('Re:');
+  });
+});
+
+describe('replyReferences', () => {
+  it('цепочка без повторов', () => {
+    expect(replyReferences('<b@x>', '<a@x> <b@x>')).toBe('<a@x> <b@x>');
+    expect(replyReferences('<a@x>')).toBe('<a@x>');
+    expect(replyReferences(null)).toBeUndefined();
+  });
+});
+
+describe('textToHtml', () => {
+  it('экранирует и переносит строки', () => {
+    expect(textToHtml('<b>\n&')).toContain('&lt;b&gt;<br>&amp;');
   });
 });

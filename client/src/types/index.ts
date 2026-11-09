@@ -296,6 +296,9 @@ export interface Equipment {
   isActive?: boolean;
 }
 
+/** Значок сотрудника в списках выбора исполнителя */
+export type ServicemanBadgeType = 'EMPLOYEE' | 'ADMIN' | 'OTHER';
+
 export interface Serviceman {
   id: string;
   name: string;
@@ -312,6 +315,8 @@ export interface Serviceman {
   showInDashboard?: boolean;
   /** Учитывать в «Зарплатном фонде» бухгалтерии */
   inSalaryFund?: boolean;
+  /** Значок рядом с ФИО в списках выбора исполнителя */
+  badge?: ServicemanBadgeType | null;
   profitPercent: number;
   /** Оклад текущего расчётного периода */
   baseSalary?: number;

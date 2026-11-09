@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs';
+import { ServicemanBadge } from '@prisma/client';
 import { prisma } from '../prisma/client';
 import { AppError } from '../middleware/errorHandler';
 import { baseSalaryFor, effectiveSalaryMonth, setBaseSalary } from './salaryRates';
@@ -18,6 +19,7 @@ export interface ServicemanInput {
   isPerformer?: boolean;
   showInDashboard?: boolean;
   inSalaryFund?: boolean;
+  badge?: ServicemanBadge | null;
   birthday?: string | null;
   profitPercent?: number;
   baseSalary?: number;
@@ -90,6 +92,7 @@ export const servicemenService = {
         isPerformer: !!input.isPerformer,
         showInDashboard: input.showInDashboard ?? true,
         inSalaryFund: input.inSalaryFund ?? true,
+        badge: input.badge ?? null,
         birthday: input.birthday ? new Date(input.birthday) : undefined,
         ...(input.profitPercent !== undefined && { profitPercent: input.profitPercent }),
       },
@@ -123,6 +126,7 @@ export const servicemenService = {
           ...(input.isPerformer !== undefined && { isPerformer: input.isPerformer }),
           ...(input.showInDashboard !== undefined && { showInDashboard: input.showInDashboard }),
           ...(input.inSalaryFund !== undefined && { inSalaryFund: input.inSalaryFund }),
+          ...(input.badge !== undefined && { badge: input.badge }),
           ...(input.profitPercent !== undefined && { profitPercent: input.profitPercent }),
           ...(input.birthday !== undefined && { birthday: input.birthday ? new Date(input.birthday) : null }),
           // Снятый с приёмщиков не может оставаться приёмщиком по умолчанию

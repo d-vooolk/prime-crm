@@ -6,6 +6,7 @@ import { useClientSources, useServicemen } from '@/hooks/useReferenceData';
 import { useAuthStore } from '@/store/authStore';
 import { hasStaffAndCash } from '@/utils/roles';
 import { RecordFormData } from '../../types';
+import { renderServicemanOption, servicemanLabelRender, toServicemanOption } from '@/components/ServicemanBadge';
 import styles from './ScheduleFields.module.scss';
 
 interface Props {
@@ -35,8 +36,8 @@ export const ScheduleFields: React.FC<Props> = ({ data, onChange }) => {
     }
   }, [servicemen]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const employees = servicemen.filter(s => s.isPerformer && !s.isDismissed);
-  const receptionists = servicemen.filter(s => s.isReceptionist && !s.isDismissed);
+  const employeeOptions = servicemen.filter(s => s.isPerformer && !s.isDismissed).map(toServicemanOption);
+  const receptionistOptions = servicemen.filter(s => s.isReceptionist && !s.isDismissed).map(toServicemanOption);
 
   // Источник из списка в настройках; уже сохранённый в записи, но скрытый оттуда — тоже показываем
   const sourceOptions = clientSources.map(s => ({ value: s.id, label: s.name }));
@@ -86,7 +87,9 @@ export const ScheduleFields: React.FC<Props> = ({ data, onChange }) => {
                 onChange={v => onChange({ serviceman: v ?? '' })}
                 placeholder="Выберите сотрудника"
                 allowClear
-                options={employees.map(s => ({ value: s.name, label: s.name }))}
+                options={employeeOptions}
+                optionRender={renderServicemanOption}
+                labelRender={servicemanLabelRender(employeeOptions)}
               />
             </Form.Item>
           </Col>
@@ -103,7 +106,9 @@ export const ScheduleFields: React.FC<Props> = ({ data, onChange }) => {
                   onChange={v => onChange({ receptionist: v ?? '' })}
                   placeholder="Выберите мастера"
                   allowClear
-                  options={receptionists.map(s => ({ value: s.name, label: s.name }))}
+                  options={receptionistOptions}
+                  optionRender={renderServicemanOption}
+                  labelRender={servicemanLabelRender(receptionistOptions)}
                 />
               </Form.Item>
             </Col>

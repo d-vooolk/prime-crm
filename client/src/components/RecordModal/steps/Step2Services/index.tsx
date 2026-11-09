@@ -9,6 +9,7 @@ import { ServicesTable } from '../../parts/ServicesTable';
 import { ServicesMobileList } from '../../parts/ServicesMobileList';
 import { SplitModal } from '../../parts/SplitModal';
 import { PrepayModal } from '../../parts/PrepayModal';
+import { toServicemanOption } from '@/components/ServicemanBadge';
 import styles from './Step2Services.module.scss';
 
 const { useBreakpoint } = Grid;
@@ -34,7 +35,7 @@ export const Step2Services: React.FC<Props> = ({ data, onChange, prepaymentLocke
   const [splitServiceId, setSplitServiceId] = useState<string | null>(null);
 
   const employeeOptions = useMemo(
-    () => allServicemen.filter(e => e.isPerformer && !e.isDismissed).map(e => ({ value: e.name, label: e.name })),
+    () => allServicemen.filter(e => e.isPerformer && !e.isDismissed).map(toServicemanOption),
     [allServicemen],
   );
 

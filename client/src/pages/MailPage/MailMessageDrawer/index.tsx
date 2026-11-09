@@ -1,22 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import { Button, Drawer, Grid, Popconfirm, Space, Spin, Tooltip } from 'antd';
-import { DeleteOutlined, EyeInvisibleOutlined, PaperClipOutlined, StopOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EyeInvisibleOutlined, PaperClipOutlined, RollbackOutlined, StopOutlined } from '@ant-design/icons';
 import { mailApi } from '@/api/mail.api';
 import { useInvalidateMail, useMailMessage } from '@/hooks/useMail';
 import { useNotify } from '@/hooks/useNotify';
 import { formatDateTime } from '@/utils/formatters';
 import { MailAttachment } from '@/types';
-import { buildMailSrcDoc, formatSize, senderLabel } from '../mail.utils';
+import { MailAttachmentViewer, LoadedAttachment } from '../MailAttachmentViewer';
+import { MailDraft } from '../MailComposeModal';
+import { buildMailSrcDoc, buildReplyQuote, formatSize, replySubject, senderLabel } from '../mail.utils';
 import styles from './MailMessageDrawer.module.scss';
 
 interface Props {
   /** Открытое письмо; null — закрыто */
   id: string | null;
   onClose: () => void;
+  /** «Ответить»: окно нового письма с адресом, темой и цитатой */
+  onReply: (draft: MailDraft) => void;
 }
 
 /** Письмо целиком. На телефоне — на весь экран */
-export const MailMessageDrawer: React.FC<Props> = ({ id, onClose }) => {
+export const MailMessageDrawer: React.FC<Props> = ({ id, onClose, onReply }) => {
   const isMobile = !Grid.useBreakpoint().md;
   const { data: msg, isLoading } = useMailMessage(id);
   const invalidate = useInvalidateMail();
@@ -29,23 +33,30 @@ export const MailMessageDrawer: React.FC<Props> = ({ id, onClose }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [msg?.id]);
 
-  const download = async (att: MailAttachment) => {
+  const [opened, setOpened] = useState<LoadedAttachment | null>(null);
+  const openAttachment = async (att: MailAttachment) => {
     setDownloading(att.id);
     try {
-      const blob = await mailApi.getAttachment(att.id);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = att.originalName;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 60 * 1000);
+      setOpened({ att, blob: await mailApi.getAttachment(att.id) });
     } catch (e) {
-      notify.error(e, 'Не удалось скачать вложение');
+      notify.error(e, 'Не удалось открыть вложение');
     } finally {
       setDownloading(null);
     }
+  };
+
+  const reply = () => {
+    if (!msg) return;
+    // Текста нет — берём его из HTML (DOMParser скрипты не выполняет)
+    const text = msg.text?.trim()
+      || (msg.html ? new DOMParser().parseFromString(msg.html, 'text/html').body.textContent?.trim() ?? '' : '');
+    onReply({
+      account: msg.account,
+      to: msg.fromAddress ?? '',
+      subject: replySubject(msg.subject),
+      text: buildReplyQuote(msg, text),
+      replyToId: msg.id,
+    });
   };
 
   const markUnread = async () => {
@@ -101,6 +112,11 @@ export const MailMessageDrawer: React.FC<Props> = ({ id, onClose }) => {
       classNames={{ body: styles.body }}
       extra={msg && (
         <Space size="small">
+          {msg.fromAddress && (
+            <Tooltip title="Ответить">
+              <Button type="primary" icon={<RollbackOutlined />} onClick={reply}>{!isMobile && 'Ответить'}</Button>
+            </Tooltip>
+          )}
           <Tooltip title="Отметить непрочитанным">
             <Button icon={<EyeInvisibleOutlined />} onClick={markUnread} />
           </Tooltip>
@@ -143,7 +159,7 @@ export const MailMessageDrawer: React.FC<Props> = ({ id, onClose }) => {
                   size="small"
                   icon={<PaperClipOutlined />}
                   loading={downloading === att.id}
-                  onClick={() => download(att)}
+                  onClick={() => openAttachment(att)}
                   className={styles.attachment}
                 >
                   <span className={styles.attachmentName}>{att.originalName}</span>
@@ -166,6 +182,7 @@ export const MailMessageDrawer: React.FC<Props> = ({ id, onClose }) => {
           )}
         </>
       )}
+      <MailAttachmentViewer file={opened} onClose={() => setOpened(null)} />
     </Drawer>
   );
 };

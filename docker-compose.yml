@@ -51,10 +51,16 @@ services:
       MAIL_IMAP_PORT: ${MAIL_IMAP_PORT:-993}
       MAIL_USER: ${MAIL_USER:-}
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_SMTP_HOST: ${MAIL_SMTP_HOST:-}
+      MAIL_SMTP_PORT: ${MAIL_SMTP_PORT:-}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-}
       MAIL2_IMAP_HOST: ${MAIL2_IMAP_HOST:-}
       MAIL2_IMAP_PORT: ${MAIL2_IMAP_PORT:-}
       MAIL2_USER: ${MAIL2_USER:-}
       MAIL2_PASSWORD: ${MAIL2_PASSWORD:-}
+      MAIL2_SMTP_HOST: ${MAIL2_SMTP_HOST:-}
+      MAIL2_SMTP_PORT: ${MAIL2_SMTP_PORT:-}
+      MAIL2_FROM_NAME: ${MAIL2_FROM_NAME:-}
       BACKUPS_DIR: /app/backups
     # Фото и видео вики лежат на хосте: пересборка контейнера их не трогает,
     # а git reset в deploy.sh не удаляет неотслеживаемую папку data/.

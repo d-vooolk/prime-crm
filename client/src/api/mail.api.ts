@@ -10,6 +10,19 @@ export interface MailListParams {
   unread?: boolean;
 }
 
+export interface SendMailPayload {
+  /** Ящик-отправитель */
+  account: string;
+  /** Получатели через запятую */
+  to: string;
+  cc?: string;
+  subject: string;
+  text: string;
+  /** Письмо, на которое отвечаем */
+  replyToId?: string;
+  files: File[];
+}
+
 export const mailApi = {
   getList: (params: MailListParams, signal?: AbortSignal) =>
     http.get<{ data: { items: MailListItem[]; total: number } }>('/mail', {
@@ -46,4 +59,19 @@ export const mailApi = {
   /** Вложение отдаётся только с токеном, поэтому качаем через http, а не ссылкой */
   getAttachment: (id: string) =>
     http.get<Blob>(`/mail/attachments/${id}`, { responseType: 'blob' }).then(r => r.data),
+
+  /** Отправить письмо по SMTP; копия — в «Отправленные» ящика (savedToSent) */
+  send: (payload: SendMailPayload) => {
+    const form = new FormData();
+    form.append('account', payload.account);
+    form.append('to', payload.to);
+    if (payload.cc) form.append('cc', payload.cc);
+    form.append('subject', payload.subject);
+    form.append('text', payload.text);
+    if (payload.replyToId) form.append('replyToId', payload.replyToId);
+    payload.files.forEach(f => form.append('files', f, f.name));
+    return http.post<{ data: { savedToSent: boolean } }>('/mail/send', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then(r => r.data.data);
+  },
 };

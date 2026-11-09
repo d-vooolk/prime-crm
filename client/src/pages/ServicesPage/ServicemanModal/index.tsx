@@ -4,7 +4,8 @@ import { UserOutlined } from '@ant-design/icons';
 import { servicesApi } from '@/api/services.api';
 import { useNotify } from '@/hooks/useNotify';
 import { useInvalidateReference } from '@/hooks/useReferenceData';
-import { Serviceman } from '@/types';
+import { Serviceman, ServicemanBadgeType } from '@/types';
+import { SERVICEMAN_BADGES, ServicemanBadge } from '@/components/ServicemanBadge';
 import { buildServicemanPayload, ServicemanFormValues, servicemanToFormValues } from '../servicesPage.utils';
 import styles from './ServicemanModal.module.scss';
 
@@ -67,6 +68,19 @@ export const ServicemanModal: React.FC<Props> = ({ open, item, allowedRoles, onC
             allowClear
             placeholder="Выберите роль"
             options={allowedRoles.map(r => ({ value: r, label: r }))}
+          />
+        </Form.Item>
+        <Form.Item label="Значок" name="badge" tooltip="Показывается рядом с ФИО в списке сотрудников при назначении на работу">
+          <Select
+            allowClear
+            placeholder="Без значка"
+            options={SERVICEMAN_BADGES.map(b => ({ value: b.value, label: b.label }))}
+            optionRender={o => (
+              <span className={styles.badgeOption}>
+                <ServicemanBadge badge={o.value as ServicemanBadgeType} />
+                {o.label}
+              </span>
+            )}
           />
         </Form.Item>
         <Form.Item label="Email" name="email">

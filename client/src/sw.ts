@@ -13,14 +13,13 @@ import { registerRoute, NavigationRoute } from 'workbox-routing';
 import { CacheFirst, NetworkFirst, StaleWhileRevalidate } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
+import { NAVIGATE_MESSAGE, PENDING_NAV_CACHE, PENDING_NAV_KEY, PendingNavigation } from './pwa/notificationNavigation';
 
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision: string | null }> };
 
 /** Кеш ответов API: очищается при выходе из аккаунта (сообщение CLEAR_USER_CACHE) */
 const API_CACHE = 'prime-api';
 const UPLOADS_CACHE = 'prime-uploads';
-/** Сообщение открытому окну: перейти по ссылке из уведомления (hooks/useNotificationNavigation.ts) */
-const NAVIGATE_MESSAGE = 'NAVIGATE';
 
 cleanupOutdatedCaches();
 precacheAndRoute(self.__WB_MANIFEST);
@@ -112,8 +111,17 @@ self.addEventListener('notificationclick', (event) => {
     const sameOrigin = windows.filter(w => new URL(w.url).origin === self.location.origin);
     const existing = sameOrigin.find(w => w.focused) ?? sameOrigin.find(w => w.visibilityState === 'visible') ?? sameOrigin[0];
     if (existing) {
-      await existing.focus().catch(() => undefined);
-      existing.postMessage({ type: NAVIGATE_MESSAGE, url });
+      // Сообщение — до focus(): на iOS focus() может не завершиться, и переход не случался.
+      // Окно в фоне «заморожено» и сообщение может потерять — ссылка ещё и ждёт в кеше,
+      // приложение заберёт её, когда снова станет видно
+      const pending: PendingNavigation = { id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, url, at: Date.now() };
+      existing.postMessage({ type: NAVIGATE_MESSAGE, url, id: pending.id });
+      await Promise.all([
+        caches.open(PENDING_NAV_CACHE)
+          .then(cache => cache.put(PENDING_NAV_KEY, new Response(JSON.stringify(pending), { headers: { 'Content-Type': 'application/json' } })))
+          .catch(() => undefined),
+        existing.focus().catch(() => undefined),
+      ]);
       return;
     }
     await self.clients.openWindow(url);

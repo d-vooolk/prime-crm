@@ -1,6 +1,6 @@
 import dayjs, { Dayjs } from 'dayjs';
 import type { ServicemanPayload } from '@/api/services.api';
-import type { Serviceman } from '@/types';
+import type { Serviceman, ServicemanBadgeType } from '@/types';
 
 /** День рождения для списка сотрудников: дата и признак «сегодня» (год не важен) */
 export function birthdayInfo(birthday: string | null | undefined, today: Dayjs = dayjs()) {
@@ -24,6 +24,7 @@ export interface ServicemanFormValues {
   isPerformer?: boolean;
   showInDashboard?: boolean;
   inSalaryFund?: boolean;
+  badge?: ServicemanBadgeType | null;
   birthday?: Dayjs | null;
   profitPercent?: number | null;
   baseSalary?: number | null;
@@ -44,6 +45,7 @@ export function buildServicemanPayload(values: ServicemanFormValues): Serviceman
     isPerformer: !!values.isPerformer,
     showInDashboard: values.showInDashboard ?? true,
     inSalaryFund: values.inSalaryFund ?? true,
+    badge: values.badge ?? null,
     birthday: values.birthday ? values.birthday.toISOString() : null,
     profitPercent: values.profitPercent ?? 0,
     baseSalary: values.baseSalary ?? 0,
@@ -64,6 +66,7 @@ export function servicemanToFormValues(row: Serviceman): ServicemanFormValues {
     isPerformer: !!row.isPerformer,
     showInDashboard: row.showInDashboard ?? true,
     inSalaryFund: row.inSalaryFund ?? true,
+    badge: row.badge ?? null,
     birthday: row.birthday ? dayjs(row.birthday) : null,
   };
 }

@@ -1,22 +1,83 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  NAVIGATE_MESSAGE, PENDING_NAV_CACHE, PENDING_NAV_KEY, isAppUrl, takePending,
+} from '@/pwa/notificationNavigation';
+
+/** Уже выполненные переходы: сообщение и кеш несут одну ссылку, переходим по ней один раз */
+const handled = new Set<string>();
+
+async function readPending(): Promise<unknown> {
+  if (!('caches' in window)) return null;
+  const cache = await caches.open(PENDING_NAV_CACHE);
+  const res = await cache.match(PENDING_NAV_KEY);
+  if (!res) return null;
+  await cache.delete(PENDING_NAV_KEY);
+  return res.json();
+}
 
 /**
  * Нажали на пуш-уведомление, а приложение уже открыто: service worker присылает ссылку
  * сообщением NAVIGATE (см. sw.ts, notificationclick), переходим по ней без перезагрузки.
- * Подключается в Layout.
+ * Окно в фоне сообщение может не получить — тогда ссылка забирается из кеша,
+ * когда приложение снова видно (pwa/notificationNavigation.ts). Подключается в Layout.
  */
 export function useNotificationNavigation() {
   const navigate = useNavigate();
+  const navigateRef = useRef(navigate);
+  useEffect(() => {
+    navigateRef.current = navigate;
+  });
 
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
-    const onMessage = (event: MessageEvent) => {
-      const data = event.data as { type?: string; url?: unknown } | null;
-      if (data?.type !== 'NAVIGATE' || typeof data.url !== 'string' || !data.url.startsWith('/')) return;
-      navigate(data.url);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const go = (url: string, id?: string) => {
+      if (id) {
+        if (handled.has(id)) return;
+        handled.add(id);
+      }
+      navigateRef.current(url);
     };
+
+    const checkPending = () => {
+      readPending()
+        .then(raw => {
+          const pending = takePending(raw, Date.now(), handled);
+          if (pending) go(pending.url, pending.id);
+        })
+        .catch(() => {
+          // Намеренно молча: без кеша остаётся переход по сообщению
+        });
+    };
+
+    const onMessage = (event: MessageEvent) => {
+      const data = event.data as { type?: string; url?: unknown; id?: unknown } | null;
+      if (data?.type !== NAVIGATE_MESSAGE || !isAppUrl(data.url)) return;
+      go(data.url, typeof data.id === 'string' ? data.id : undefined);
+    };
+
+    // Service worker кладёт ссылку в кеш чуть позже, чем окно становится видимым, — смотрим ещё раз через секунду
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      checkPending();
+      clearTimeout(timer);
+      timer = setTimeout(checkPending, 1000);
+    };
+
     navigator.serviceWorker.addEventListener('message', onMessage);
-    return () => navigator.serviceWorker.removeEventListener('message', onMessage);
-  }, [navigate]);
+    navigator.serviceWorker.startMessages();
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+    window.addEventListener('pageshow', onVisible);
+    onVisible();
+    return () => {
+      clearTimeout(timer);
+      navigator.serviceWorker.removeEventListener('message', onMessage);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+      window.removeEventListener('pageshow', onVisible);
+    };
+  }, []);
 }

@@ -2,17 +2,21 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { ImapFlow } from 'imapflow';
+import nodemailer from 'nodemailer';
+import MailComposer from 'nodemailer/lib/mail-composer';
 import { simpleParser, type ParsedMail, type AddressObject } from 'mailparser';
 import { prisma } from '../prisma/client';
 import { env, type MailAccountConfig } from '../config/env';
 import { logger } from '../utils/logger';
 import { AppError } from '../middleware/errorHandler';
 import { MAIL_ATTACHMENTS_DIR } from '../utils/uploads';
-import { clip, isViewableType, makePreview, pickNewUids, safeContentType } from '../utils/mail';
+import {
+  clip, isViewableType, makePreview, pickNewUids, replyReferences, safeContentType, textToHtml,
+} from '../utils/mail';
 import { pushService, pushInBackground } from './push.service';
 
 /**
- * Приём почты из ящиков компании по IMAP (только «Входящие», только чтение).
+ * Приём почты из ящиков компании по IMAP (только «Входящие», только чтение) и отправка по SMTP.
  * Ящики — env.mailAccounts (MAIL_*, MAIL2_*); письма каждого помечены его адресом (MailMessage.account).
  *
  * У каждого ящика своё постоянное соединение: сервер почты сам сообщает о новом письме (IDLE), и оно
@@ -309,6 +313,47 @@ async function withWritableConnection<T>(account: MailAccount, fn: (imap: ImapFl
   }
 }
 
+/** Папка «Отправленные», если в ящике нет пометки \Sent */
+const SENT_FOLDERS = ['INBOX.Sent', 'Sent', 'INBOX.Sent Messages', 'Sent Messages', 'Отправленные'];
+
+/** Файл, приложенный к письму из CRM */
+export interface OutgoingAttachment {
+  filename: string;
+  content: Buffer;
+  contentType: string;
+}
+
+export interface OutgoingMail {
+  /** Ящик-отправитель (MAIL_USER / MAIL2_USER) */
+  account: string;
+  to: string[];
+  cc: string[];
+  subject: string;
+  text: string;
+  /** Письмо из CRM, на которое отвечаем: цепочка In-Reply-To / References */
+  replyToId?: string;
+  attachments: OutgoingAttachment[];
+}
+
+/** Копия отправленного письма — в «Отправленные» ящика, чтобы его было видно в почте на телефоне */
+async function saveToSent(account: MailAccount, raw: Buffer): Promise<boolean> {
+  try {
+    return await withWritableConnection(account, async (imap) => {
+      const boxes = await imap.list();
+      const sent = boxes.find(b => b.specialUse === '\\Sent') ?? boxes.find(b => SENT_FOLDERS.includes(b.path));
+      if (!sent) {
+        logger.warn('Почта: в ящике нет папки «Отправленные», копия письма не сохранена', { user: account.user });
+        return false;
+      }
+      await imap.append(sent.path, raw, ['\\Seen']);
+      return true;
+    });
+  } catch (err) {
+    logger.warn('Почта: не удалось сохранить копию в «Отправленные»', { user: account.user, err: err instanceof Error ? err.message : String(err) });
+    return false;
+  }
+}
+
 /** Письма, сохранённые до появления нескольких ящиков, — первого ящика (MAIL_USER) */
 async function assignLegacyRows(user: string) {
   const [messages, states] = await Promise.all([
@@ -459,6 +504,58 @@ export const mailService = {
       }
     });
     await mailService.delete(id);
+  },
+
+  /**
+   * Отправка письма из CRM по SMTP от имени ящика. Копия кладётся в «Отправленные» ящика;
+   * не получилось — письмо всё равно отправлено (savedToSent: false)
+   */
+  async send(input: OutgoingMail) {
+    const account = findAccount(input.account);
+    const { config } = account;
+
+    let inReplyTo: string | undefined;
+    let references: string | undefined;
+    if (input.replyToId) {
+      const original = await prisma.mailMessage.findUnique({ where: { id: input.replyToId }, select: { messageId: true } });
+      if (!original) throw new AppError('Письмо, на которое вы отвечаете, не найдено', 404);
+      inReplyTo = original.messageId ?? undefined;
+      references = replyReferences(original.messageId);
+    }
+
+    const raw = await new MailComposer({
+      from: config.fromName ? { name: config.fromName, address: config.user } : config.user,
+      to: input.to,
+      cc: input.cc.length ? input.cc : undefined,
+      subject: input.subject,
+      text: input.text,
+      html: textToHtml(input.text),
+      inReplyTo,
+      references,
+      attachments: input.attachments.map(a => ({ filename: a.filename, content: a.content, contentType: a.contentType })),
+    }).compile().build();
+
+    const transport = nodemailer.createTransport({
+      host: config.smtpHost,
+      port: config.smtpPort,
+      secure: config.smtpPort === 465,
+      auth: { user: config.user, pass: config.password },
+      connectionTimeout: 20 * 1000,
+      greetingTimeout: 20 * 1000,
+      socketTimeout: 60 * 1000,
+    });
+    try {
+      await transport.sendMail({ envelope: { from: config.user, to: [...input.to, ...input.cc] }, raw });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      logger.warn('Почта: не удалось отправить письмо', { user: config.user, host: config.smtpHost, err: message });
+      throw new AppError(`Не удалось отправить письмо: ${message.slice(0, 200)}`, 502);
+    } finally {
+      transport.close();
+    }
+    logger.info('Почта: письмо отправлено', { user: config.user, recipients: input.to.length + input.cc.length });
+
+    return { savedToSent: await saveToSent(account, raw) };
   },
 
   async attachment(id: string) {

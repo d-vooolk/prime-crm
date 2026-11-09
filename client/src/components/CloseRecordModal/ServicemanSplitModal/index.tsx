@@ -5,6 +5,7 @@ import type { ServicemanSplitEntry } from '@/types';
 import { formatPrice } from '@/utils/formatters';
 import { useNotify } from '@/hooks/useNotify';
 import { ItemRow, validateSplit } from '../closeDeal.utils';
+import { ServicemanOption, renderServicemanOption, servicemanLabelRender } from '@/components/ServicemanBadge';
 import styles from './ServicemanSplitModal.module.scss';
 
 interface Props {
@@ -12,7 +13,7 @@ interface Props {
   item: ItemRow | undefined;
   /** Исполнитель записи — первый в разделении, если у позиции сотрудник не выбран */
   defaultServiceman: string;
-  employeeOptions: { value: string; label: string }[];
+  employeeOptions: ServicemanOption[];
   onCancel: () => void;
   onSave: (entries: ServicemanSplitEntry[]) => void;
 }
@@ -74,6 +75,8 @@ export const ServicemanSplitModal: React.FC<Props> = ({ open, item, defaultServi
               value={entry.name || undefined}
               onChange={v => update(idx, { name: v })}
               options={employeeOptions}
+              optionRender={renderServicemanOption}
+              labelRender={servicemanLabelRender(employeeOptions)}
             />
             <InputNumber
               className={styles.entryAmount}

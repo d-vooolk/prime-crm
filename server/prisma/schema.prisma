@@ -318,6 +318,12 @@ model Equipment {
   recordItems    RecordItem[]
 }
 
+enum ServicemanBadge {
+  EMPLOYEE // Сотрудник
+  ADMIN    // Администратор
+  OTHER    // Другое
+}
+
 model Serviceman {
   id             String   @id @default(cuid())
   name           String   @unique
@@ -336,6 +342,8 @@ model Serviceman {
   showInDashboard Boolean  @default(true)
   // Начисления учитываются в «Зарплатном фонде» бухгалтерии; снимают, например, у учредителей
   inSalaryFund   Boolean   @default(true)
+  // Значок рядом с ФИО в списках выбора исполнителя (сотрудник, администратор, другое)
+  badge          ServicemanBadge?
   profitPercent  Float     @default(0)
   birthday       DateTime?
   createdAt      DateTime  @default(now())

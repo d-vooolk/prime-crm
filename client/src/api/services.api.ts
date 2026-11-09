@@ -1,5 +1,5 @@
 import http from './http';
-import { Category, ClientSource, RepairType, RepairTypeFaqItem, RepairTypeLink, Equipment, Serviceman, CompanySettings, DocumentTemplate, SmsSettings, SmsConnectionInfo } from '@/types';
+import { Category, ClientSource, RepairType, RepairTypeFaqItem, RepairTypeLink, Equipment, Serviceman, ServicemanBadgeType, CompanySettings, DocumentTemplate, SmsSettings, SmsConnectionInfo } from '@/types';
 
 export interface ServicemanPayload {
   name?: string;
@@ -12,6 +12,8 @@ export interface ServicemanPayload {
   /** Участвует в дашборде (карточки, пьедестал, упущенная прибыль) */
   showInDashboard?: boolean;
   inSalaryFund?: boolean;
+  /** Значок в списках выбора исполнителя; null — без значка */
+  badge?: ServicemanBadgeType | null;
   birthday?: string | null;
   profitPercent?: number;
   /** Оклад: меняется с текущего расчётного периода, прошлые месяцы не пересчитываются */

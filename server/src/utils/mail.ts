@@ -42,3 +42,46 @@ export function pickNewUids(uids: number[], lastUid: number, limit: number): num
   // Слишком много новых (первый запуск, сменилась папка) — берём самые свежие
   return fresh.length > limit ? fresh.slice(fresh.length - limit) : fresh;
 }
+
+/** Адреса получателей из строки «a@b.by, Имя <c@d.by>; e@f.by»: только адреса, без повторов */
+export function parseRecipients(value: string | null | undefined): string[] {
+  if (!value) return [];
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const part of value.split(/[,;\n]/)) {
+    const raw = part.trim();
+    if (!raw) continue;
+    const address = (raw.match(/<([^<>]+)>\s*$/)?.[1] ?? raw).trim();
+    const key = address.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(address);
+  }
+  return result;
+}
+
+const EMAIL = /^[^\s@<>,;"]+@[^\s@<>,;"]+\.[^\s@<>,;"]+$/;
+export const isEmailAddress = (value: string) => EMAIL.test(value);
+
+/** Тема ответа: «Re: тема» без повторных «Re:» */
+export function replySubject(subject: string | null | undefined): string {
+  const base = (subject ?? '').trim();
+  if (!base) return 'Re:';
+  return /^re\s*:/i.test(base) ? base : `Re: ${base}`;
+}
+
+/** Цепочка References ответа: старая цепочка + Message-ID письма, на которое отвечаем */
+export function replyReferences(messageId: string | null | undefined, references?: string | null): string | undefined {
+  const ids = [...(references ?? '').split(/\s+/), messageId ?? ''].map(s => s.trim()).filter(Boolean);
+  return ids.length ? [...new Set(ids)].join(' ') : undefined;
+}
+
+/** HTML письма из обычного текста: экранирование и переносы строк */
+export function textToHtml(text: string): string {
+  const escaped = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+  return `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5">${escaped.replace(/\r?\n/g, '<br>')}</div>`;
+}

@@ -1,0 +1,58 @@
+@use '@/styles/variables' as *;
+
+// Вид как у вкладок antd: подчёркнутая выбранная вкладка, общая линия снизу
+.bar {
+  display: flex;
+  gap: 28px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--color-border);
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  @include mobile {
+    gap: 20px;
+  }
+}
+
+.tab {
+  flex-shrink: 0;
+  position: relative;
+  padding: 12px 0;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: nowrap;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: color 0.2s;
+
+  &:hover {
+    color: var(--color-text-primary);
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2px;
+    background: transparent;
+    transition: background-color 0.2s;
+  }
+}
+
+.active {
+  color: var(--color-text-primary);
+  font-weight: 600;
+
+  &::after {
+    background: var(--color-brand);
+  }
+}

@@ -1,4 +1,5 @@
 import { ForeignCurrency, ServicemanSplitEntry } from '@/types';
+import { ServicemanOption } from '@/components/ServicemanBadge';
 
 export interface SelectedService {
   serviceId: string;
@@ -107,7 +108,7 @@ export interface ServiceRowContext {
   openSplit: (row: SelectedService) => void;
   cancelSplit: (serviceId: string) => void;
   equipmentOptions: { value: string; label: string }[];
-  employeeOptions: { value: string; label: string }[];
+  employeeOptions: ServicemanOption[];
   /** Основной мастер записи (шаг 1) — подставляется, пока сотрудник по услуге не выбран */
   defaultServiceman: string;
   prepaymentLocked?: boolean;

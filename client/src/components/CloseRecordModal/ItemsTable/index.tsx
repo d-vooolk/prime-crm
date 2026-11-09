@@ -4,6 +4,7 @@ import { TeamOutlined } from '@ant-design/icons';
 import cn from 'classnames';
 import { formatPrice } from '@/utils/formatters';
 import { ItemRow, PaymentTotals, isSplit } from '../closeDeal.utils';
+import { ServicemanOption, renderServicemanOption, servicemanLabelRender } from '@/components/ServicemanBadge';
 import styles from './ItemsTable.module.scss';
 
 interface Props {
@@ -11,7 +12,7 @@ interface Props {
   totals: PaymentTotals;
   /** Колонка сотрудников и разделение — только если есть исполнители */
   hasEmployees: boolean;
-  employeeOptions: { value: string; label: string }[];
+  employeeOptions: ServicemanOption[];
   onChangeServiceman: (itemId: string, name: string) => void;
   onOpenSplit: (row: ItemRow) => void;
   onCancelSplit: (itemId: string) => void;
@@ -98,6 +99,8 @@ export const ItemsTable: React.FC<Props> = ({
             placeholder="Сотрудник"
             onChange={(v: string) => onChangeServiceman(row.itemId, v)}
             options={employeeOptions}
+            optionRender={renderServicemanOption}
+            labelRender={servicemanLabelRender(employeeOptions)}
           />
         );
       },

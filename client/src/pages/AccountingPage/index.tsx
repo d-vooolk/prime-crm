@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Badge, Grid, Tabs } from 'antd';
 import { useSearchParams } from 'react-router-dom';
 import dayjs, { Dayjs } from 'dayjs';
@@ -23,6 +23,7 @@ import { FounderSalaryTab } from './tabs/FounderSalaryTab';
 import { StatsTab } from './tabs/StatsTab';
 import { VdfTab } from './tabs/VdfTab';
 import { useVdfPendingCount } from './hooks/useAccountingData';
+import { ScrollTabBar } from './parts/ScrollTabBar';
 import styles from './AccountingPage.module.scss';
 
 /**
@@ -95,10 +96,23 @@ export const AccountingPage: React.FC = () => {
     ] : []),
   ];
 
+  const linkedTab = params.get('tab');
+  const [tab, setTab] = useState(linkedTab);
+  // Пуш со ссылкой на вкладку, когда бухгалтерия уже открыта
+  useEffect(() => {
+    if (linkedTab) setTab(linkedTab);
+  }, [linkedTab]);
+  const activeKey = tabItems.some(t => t.key === tab) ? tab ?? undefined : tabItems[0]?.key;
+
   return (
     <div className={styles.page}>
       <h1 className={styles.pageTitle}>Бухгалтерия</h1>
-      <Tabs items={tabItems} defaultActiveKey={params.get('tab') ?? undefined} />
+      <Tabs
+        items={tabItems}
+        activeKey={activeKey}
+        onChange={setTab}
+        renderTabBar={() => <ScrollTabBar items={tabItems} activeKey={activeKey} onChange={setTab} />}
+      />
     </div>
   );
 };

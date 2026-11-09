@@ -3,6 +3,7 @@ import { Button, Checkbox, Empty, Popconfirm, Space, Table, Tag } from 'antd';
 import { EditOutlined, StopOutlined, UndoOutlined } from '@ant-design/icons';
 import cn from 'classnames';
 import { Serviceman } from '@/types';
+import { ServicemanBadge } from '@/components/ServicemanBadge';
 import { formatPrice } from '@/utils/formatters';
 import { UNDISMISSABLE_ROLE } from '@/utils/roles';
 import { birthdayInfo } from '../servicesPage.utils';
@@ -98,6 +99,7 @@ export const ServicemanList: React.FC<Props> = ({
               <div className={styles.mobileCardTop}>
                 <div className={styles.mobileCardInfo}>
                   <div className={styles.mobileCardName}>
+                    <ServicemanBadge badge={row.badge} />
                     <span>{row.name}</span>
                     {row.role && <Tag className={styles.tag}>{row.role}</Tag>}
                   </div>
@@ -138,6 +140,7 @@ export const ServicemanList: React.FC<Props> = ({
       render: (name: string, row: Serviceman) => (
         <div>
           <div className={styles.nameRow}>
+            <ServicemanBadge badge={row.badge} />
             <span className={styles.strong}>{name}</span>
             {row.role && <Tag className={styles.tag}>{row.role}</Tag>}
           </div>

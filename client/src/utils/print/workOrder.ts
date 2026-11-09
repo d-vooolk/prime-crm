@@ -19,7 +19,7 @@ ____________________________________________________________________`;
 export function printWorkOrder(record: Record, settings?: CompanySettings, templateContent?: string): void {
   const total = record.items.reduce((s, i) => s + i.price * i.quantity, 0);
   const docNum = record.documentNumber || record.id.slice(-8).toUpperCase();
-  const createdDate = formatDate(record.createdAt);
+  const orderDate = formatDate(record.scheduledAt);
   const legalText = (templateContent ?? DEFAULT_WORK_ORDER_TEMPLATE)
     .split('\n')
     .map(line => line.trim() ? `<p style="margin-bottom:4px">${line}</p>` : '<br>')
@@ -44,7 +44,7 @@ export function printWorkOrder(record: Record, settings?: CompanySettings, templ
   const html = `<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8">${printStyles}</head><body>
 
     <h1>Заявка на проведение работ</h1>
-    <p class="subtitle">№ ${docNum} от ${createdDate}</p>
+    <p class="subtitle">№ ${docNum} от ${orderDate}</p>
 
     <div class="two-col">
       <div>

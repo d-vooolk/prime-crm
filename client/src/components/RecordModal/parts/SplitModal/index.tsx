@@ -6,6 +6,7 @@ import { formatPrice } from '@/utils/formatters';
 import { useNotify } from '@/hooks/useNotify';
 import { SelectedService } from '../../types';
 import { initialSplitEntries, validateSplit } from '../../calc';
+import { ServicemanOption, renderServicemanOption, servicemanLabelRender } from '@/components/ServicemanBadge';
 import styles from './SplitModal.module.scss';
 
 interface Props {
@@ -14,7 +15,7 @@ interface Props {
   /** Чистая прибыль позиции — больше неё разделить нельзя */
   netProfit: number;
   defaultServiceman: string;
-  employeeOptions: { value: string; label: string }[];
+  employeeOptions: ServicemanOption[];
   onSave: (serviceId: string, entries: ServicemanSplitEntry[]) => void;
   onCancel: () => void;
 }
@@ -73,6 +74,8 @@ export const SplitModal: React.FC<Props> = ({ item, netProfit, defaultServiceman
               value={entry.name || undefined}
               onChange={v => updateEntry(idx, { name: v })}
               options={employeeOptions}
+              optionRender={renderServicemanOption}
+              labelRender={servicemanLabelRender(employeeOptions)}
               optionFilterProp="label"
               showSearch
             />

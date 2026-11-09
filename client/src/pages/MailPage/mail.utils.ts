@@ -31,3 +31,20 @@ export function buildMailSrcDoc(html: string): string {
     + `<style>body{margin:0;padding:12px;font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:#111827;background:#fff;word-wrap:break-word}img{max-width:100%;height:auto}table{max-width:100%}</style>`
     + `</head><body>${html}</body></html>`;
 }
+
+/** Тема ответа: «Re: тема» без повторных «Re:» */
+export function replySubject(subject: string | null | undefined): string {
+  const base = (subject ?? '').trim();
+  if (!base) return 'Re: ';
+  return /^re\s*:/i.test(base) ? base : `Re: ${base}`;
+}
+
+/** Цитата исходного письма под ответом: «12.10.2026 14:05, Иван <a@b.by>:» и строки с «> » */
+export function buildReplyQuote(
+  msg: { fromName: string | null; fromAddress: string | null; date: string },
+  text: string,
+): string {
+  const who = msg.fromName && msg.fromAddress ? `${msg.fromName} <${msg.fromAddress}>` : senderLabel(msg);
+  const body = text.trim().split(/\r?\n/).map(line => (line ? `> ${line}` : '>')).join('\n');
+  return `\n\n${dayjs(msg.date).format('DD.MM.YYYY HH:mm')}, ${who}:\n${body}`;
+}

@@ -10,3 +10,9 @@
   gap: var(--spacing-sm);
   margin-bottom: 12px;
 }
+
+.badgeOption {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}

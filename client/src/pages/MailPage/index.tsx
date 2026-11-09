@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Alert, Badge, Button, Empty, Input, Pagination, Segmented, Spin, Tooltip } from 'antd';
-import { CheckOutlined, PaperClipOutlined, ReloadOutlined } from '@ant-design/icons';
+import { CheckOutlined, EditOutlined, PaperClipOutlined, ReloadOutlined } from '@ant-design/icons';
 import cn from 'classnames';
 import { mailApi } from '@/api/mail.api';
 import { useInvalidateMail, useMailList, useMailStatus } from '@/hooks/useMail';
 import { useNotify } from '@/hooks/useNotify';
 import { LoadError } from '@/components/Shared/LoadError';
 import { MailMessageDrawer } from './MailMessageDrawer';
+import { MailComposeModal, MailDraft } from './MailComposeModal';
 import { formatMailDate, senderLabel } from './mail.utils';
 import styles from './MailPage.module.scss';
 
@@ -25,6 +26,7 @@ export const MailPage: React.FC = () => {
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [draft, setDraft] = useState<MailDraft | null>(null);
   const notify = useNotify();
   const invalidate = useInvalidateMail();
   const { data: status } = useMailStatus();
@@ -77,6 +79,11 @@ export const MailPage: React.FC = () => {
         <h1 className={styles.title}>Почта</h1>
         {accounts.length === 1 && <span className={styles.account}>{accounts[0].user}</span>}
         <div className={styles.headerActions}>
+          {accounts.length > 0 && (
+            <Button type="primary" icon={<EditOutlined />} onClick={() => setDraft({ account: current?.user })}>
+              Написать
+            </Button>
+          )}
           <Tooltip title={accounts.length > 1 ? 'Отметить все в этом ящике прочитанными' : 'Отметить все прочитанными'}>
             <Button icon={<CheckOutlined />} onClick={handleReadAll} />
           </Tooltip>
@@ -178,7 +185,8 @@ export const MailPage: React.FC = () => {
         />
       )}
 
-      <MailMessageDrawer id={openId} onClose={() => setOpenId(null)} />
+      <MailMessageDrawer id={openId} onClose={() => setOpenId(null)} onReply={setDraft} />
+      <MailComposeModal draft={draft} accounts={accounts.map(a => a.user)} onClose={() => setDraft(null)} />
     </div>
   );
 };
