@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  NAVIGATE_MESSAGE, PENDING_NAV_CACHE, PENDING_NAV_KEY, isAppUrl, takePending,
+  NAVIGATE_MESSAGE, PENDING_NAV_CACHE, PENDING_NAV_KEY, PENDING_NAV_POLL_MS, PENDING_NAV_WAIT_MS,
+  isAppUrl, takePending,
 } from '@/pwa/notificationNavigation';
 
 /** Уже выполненные переходы: сообщение и кеш несут одну ссылку, переходим по ней один раз */
@@ -31,13 +32,18 @@ export function useNotificationNavigation() {
 
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
-    let timer: ReturnType<typeof setTimeout> | undefined;
+    let poll: ReturnType<typeof setInterval> | undefined;
+    const stopPolling = () => {
+      clearInterval(poll);
+      poll = undefined;
+    };
 
     const go = (url: string, id?: string) => {
       if (id) {
         if (handled.has(id)) return;
         handled.add(id);
       }
+      stopPolling();
       navigateRef.current(url);
     };
 
@@ -58,12 +64,20 @@ export function useNotificationNavigation() {
       go(data.url, typeof data.id === 'string' ? data.id : undefined);
     };
 
-    // Service worker кладёт ссылку в кеш чуть позже, чем окно становится видимым, — смотрим ещё раз через секунду
+    // Service worker кладёт ссылку в кеш позже, чем окно становится видимым (на iPhone он
+    // при нажатии часто запускается с нуля), — после показа смотрим в кеш ещё несколько секунд
     const onVisible = () => {
       if (document.visibilityState !== 'visible') return;
+      stopPolling();
       checkPending();
-      clearTimeout(timer);
-      timer = setTimeout(checkPending, 1000);
+      const startedAt = Date.now();
+      poll = setInterval(() => {
+        if (document.visibilityState !== 'visible' || Date.now() - startedAt > PENDING_NAV_WAIT_MS) {
+          stopPolling();
+          return;
+        }
+        checkPending();
+      }, PENDING_NAV_POLL_MS);
     };
 
     navigator.serviceWorker.addEventListener('message', onMessage);
@@ -73,7 +87,7 @@ export function useNotificationNavigation() {
     window.addEventListener('pageshow', onVisible);
     onVisible();
     return () => {
-      clearTimeout(timer);
+      stopPolling();
       navigator.serviceWorker.removeEventListener('message', onMessage);
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('focus', onVisible);

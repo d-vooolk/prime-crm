@@ -104,6 +104,14 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const url = (event.notification.data as { url?: string } | undefined)?.url || '/schedule';
   event.waitUntil((async () => {
+    // Ссылка сначала ложится в кеш — при любом исходе ниже: окно в фоне «заморожено» и сообщение
+    // может потерять, а на iPhone свёрнутое приложение иногда не попадает в matchAll, и openWindow()
+    // лишь разворачивает его, не переходя по ссылке. Приложение забирает её, когда снова видно
+    const pending: PendingNavigation = { id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, url, at: Date.now() };
+    await caches.open(PENDING_NAV_CACHE)
+      .then(cache => cache.put(PENDING_NAV_KEY, new Response(JSON.stringify(pending), { headers: { 'Content-Type': 'application/json' } })))
+      .catch(() => undefined);
+
     // Уже открытое окно приложения — переводим его на нужную страницу, иначе открываем новое.
     // Переход делает само приложение по сообщению (useNotificationNavigation): WindowClient.navigate()
     // не работает в окне, которым этот service worker не управляет, и на iOS, а заодно перезагружал бы страницу
@@ -111,19 +119,11 @@ self.addEventListener('notificationclick', (event) => {
     const sameOrigin = windows.filter(w => new URL(w.url).origin === self.location.origin);
     const existing = sameOrigin.find(w => w.focused) ?? sameOrigin.find(w => w.visibilityState === 'visible') ?? sameOrigin[0];
     if (existing) {
-      // Сообщение — до focus(): на iOS focus() может не завершиться, и переход не случался.
-      // Окно в фоне «заморожено» и сообщение может потерять — ссылка ещё и ждёт в кеше,
-      // приложение заберёт её, когда снова станет видно
-      const pending: PendingNavigation = { id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, url, at: Date.now() };
+      // Сообщение — до focus(): на iOS focus() может не завершиться, и переход не случался
       existing.postMessage({ type: NAVIGATE_MESSAGE, url, id: pending.id });
-      await Promise.all([
-        caches.open(PENDING_NAV_CACHE)
-          .then(cache => cache.put(PENDING_NAV_KEY, new Response(JSON.stringify(pending), { headers: { 'Content-Type': 'application/json' } })))
-          .catch(() => undefined),
-        existing.focus().catch(() => undefined),
-      ]);
+      await existing.focus().catch(() => undefined);
       return;
     }
-    await self.clients.openWindow(url);
+    await self.clients.openWindow(url).catch(() => null);
   })());
 });

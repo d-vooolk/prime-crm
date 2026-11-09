@@ -11,6 +11,12 @@ export const PENDING_NAV_CACHE = 'prime-pending-nav';
 export const PENDING_NAV_KEY = '/__pending-navigation';
 /** Ссылка из кеша старше этого не используется — пуш нажали давно, приложение открыли само */
 export const PENDING_NAV_TTL_MS = 60 * 1000;
+/**
+ * Сколько приложение после показа ждёт ссылку в кеше: на iPhone окно разворачивается раньше,
+ * чем просыпается service worker, и ссылка появляется через секунду-другую
+ */
+export const PENDING_NAV_WAIT_MS = 10 * 1000;
+export const PENDING_NAV_POLL_MS = 400;
 
 export interface PendingNavigation {
   id: string;
