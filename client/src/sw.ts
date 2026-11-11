@@ -13,7 +13,10 @@ import { registerRoute, NavigationRoute } from 'workbox-routing';
 import { CacheFirst, NetworkFirst, StaleWhileRevalidate } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
-import { NAVIGATE_MESSAGE, PENDING_NAV_CACHE, PENDING_NAV_KEY, PendingNavigation } from './pwa/notificationNavigation';
+import {
+  NAVIGATE_MESSAGE, NOTIFICATIONS_SYNC_MESSAGE, isFreshSync, PENDING_NAV_CACHE, PENDING_NAV_KEY, SHOWN_NOTIFICATIONS_KEY, TAPPED_QUERY_MESSAGE,
+  PendingNavigation, ShownNotification, addShown, isAppUrl, parseShown, pickTapped, splitVanished,
+} from './pwa/notificationNavigation';
 
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision: string | null }> };
 
@@ -73,12 +76,54 @@ registerRoute(
   }),
 );
 
+/** Запомненные показанные уведомления (pwa/notificationNavigation.ts, iPhone с приложением в фоне) */
+async function readShown(): Promise<ShownNotification[]> {
+  const cache = await caches.open(PENDING_NAV_CACHE);
+  const res = await cache.match(SHOWN_NOTIFICATIONS_KEY);
+  return parseShown(res ? await res.json() : null, Date.now());
+}
+
+async function writeShown(list: ShownNotification[]) {
+  const cache = await caches.open(PENDING_NAV_CACHE);
+  await cache.put(SHOWN_NOTIFICATIONS_KEY, new Response(JSON.stringify(list), { headers: { 'Content-Type': 'application/json' } }));
+}
+
+async function forgetShown(id: string) {
+  const list = await readShown();
+  if (list.some(n => n.id === id)) await writeShown(list.filter(n => n.id !== id));
+}
+
+const notificationId = (n: Notification) => (n.data as { id?: unknown } | null)?.id;
+
+/** Убрать из списка исчезнувшие с экрана уведомления и вернуть их */
+async function takeVanished(): Promise<ShownNotification[]> {
+  const list = await readShown();
+  if (!list.length) return [];
+  const displayed = await self.registration.getNotifications();
+  const ids = new Set(displayed.map(notificationId).filter((id): id is string => typeof id === 'string'));
+  const { kept, vanished } = splitVanished(list, ids, Date.now());
+  if (vanished.length) await writeShown(kept);
+  return vanished;
+}
+
 self.addEventListener('message', (event) => {
   // Новая версия ждёт — пользователь нажал «Обновить»
   if (event.data?.type === 'SKIP_WAITING') void self.skipWaiting();
   // Выход из аккаунта: данные прошлого пользователя не должны остаться на устройстве
   if (event.data?.type === 'CLEAR_USER_CACHE') {
     event.waitUntil(Promise.all([caches.delete(API_CACHE), caches.delete(UPLOADS_CACHE)]).then(() => undefined));
+  }
+  // Приложение уходит в фон: уведомления, убранные при открытом приложении, нажатием не считаем
+  if (event.data?.type === NOTIFICATIONS_SYNC_MESSAGE && isFreshSync(event.data.at, Date.now())) {
+    event.waitUntil(takeVanished().then(() => undefined).catch(() => undefined));
+  }
+  // Приложение вернулось из фона: не нажали ли уведомление (на iPhone notificationclick тогда не приходит)
+  if (event.data?.type === TAPPED_QUERY_MESSAGE) {
+    const port = event.ports[0];
+    event.waitUntil(takeVanished()
+      .then(vanished => pickTapped(vanished))
+      .catch(() => null)
+      .then((tapped) => { port?.postMessage(tapped ? { id: tapped.id, url: tapped.url } : null); }));
   }
 });
 
@@ -91,26 +136,42 @@ self.addEventListener('push', (event) => {
   } catch {
     if (event.data) data.body = event.data.text();
   }
-  event.waitUntil(self.registration.showNotification(data.title, {
-    body: data.body,
+  const shown: ShownNotification = {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    url: isAppUrl(data.url) ? data.url : '/schedule',
     tag: data.tag,
-    icon: '/icons/icon-192.png',
-    badge: '/icons/maskable-192.png',
-    data: { url: data.url || '/schedule' },
-  }));
+    at: Date.now(),
+  };
+  event.waitUntil((async () => {
+    await self.registration.showNotification(data.title, {
+      body: data.body,
+      tag: data.tag,
+      icon: '/icons/icon-192.png',
+      badge: '/icons/maskable-192.png',
+      data: { url: shown.url, id: shown.id },
+    });
+    // Запоминаем, только если браузер честно отдаёт список показанных уведомлений:
+    // иначе любое уведомление выглядело бы «исчезнувшим», то есть нажатым
+    const displayed = await self.registration.getNotifications();
+    if (!displayed.some(n => notificationId(n) === shown.id)) return;
+    await writeShown(addShown(await readShown(), shown, Date.now()));
+  })().catch(() => undefined));
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url = (event.notification.data as { url?: string } | undefined)?.url || '/schedule';
+  const data = event.notification.data as { url?: string; id?: string } | undefined;
+  const url = data?.url || '/schedule';
   event.waitUntil((async () => {
     // Ссылка сначала ложится в кеш — при любом исходе ниже: окно в фоне «заморожено» и сообщение
     // может потерять, а на iPhone свёрнутое приложение иногда не попадает в matchAll, и openWindow()
     // лишь разворачивает его, не переходя по ссылке. Приложение забирает её, когда снова видно
-    const pending: PendingNavigation = { id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, url, at: Date.now() };
+    // id уведомления — тот же, что вернёт проверка исчезнувших: переход по нему случится один раз
+    const pending: PendingNavigation = { id: data?.id ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`, url, at: Date.now() };
     await caches.open(PENDING_NAV_CACHE)
       .then(cache => cache.put(PENDING_NAV_KEY, new Response(JSON.stringify(pending), { headers: { 'Content-Type': 'application/json' } })))
       .catch(() => undefined);
+    if (data?.id) await forgetShown(data.id).catch(() => undefined);
 
     // Уже открытое окно приложения — переводим его на нужную страницу, иначе открываем новое.
     // Переход делает само приложение по сообщению (useNotificationNavigation): WindowClient.navigate()
@@ -126,4 +187,10 @@ self.addEventListener('notificationclick', (event) => {
     }
     await self.clients.openWindow(url).catch(() => null);
   })());
+});
+
+// Уведомление смахнули (Android, компьютер) — нажатием его потом не считаем
+self.addEventListener('notificationclose', (event) => {
+  const id = notificationId(event.notification);
+  if (typeof id === 'string') event.waitUntil(forgetShown(id).catch(() => undefined));
 });
