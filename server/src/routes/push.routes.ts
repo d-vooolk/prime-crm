@@ -8,5 +8,6 @@ router.get('/public-key', pushController.publicKey);
 router.post('/subscribe', pushController.subscribe);
 router.post('/unsubscribe', pushController.unsubscribe);
 router.post('/test', pushController.test);
+router.get('/recent', pushController.recent);
 
 export default router;

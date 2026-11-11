@@ -1,4 +1,5 @@
 import http from './http';
+import type { RecentPush } from '@/pwa/notificationNavigation';
 
 export const pushApi = {
   /** null — пуши на сервере не настроены */
@@ -12,4 +13,8 @@ export const pushApi = {
     http.post('/push/unsubscribe', { endpoint }),
 
   test: () => http.post('/push/test'),
+
+  /** Последний пуш, пришедший, пока приложение было свёрнуто hiddenFor мс (iPhone, см. useNotificationNavigation) */
+  recent: (hiddenFor: number) =>
+    http.get<{ data: RecentPush | null }>('/push/recent', { params: { hiddenFor: Math.round(hiddenFor) } }).then(r => r.data.data),
 };

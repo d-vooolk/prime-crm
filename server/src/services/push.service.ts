@@ -1,6 +1,8 @@
+import { randomUUID } from 'crypto';
 import webpush from 'web-push';
 import { prisma } from '../prisma/client';
 import { logger } from '../utils/logger';
+import { recentPushes } from '../utils/recentPushes';
 import { ROLE_LEVEL, ROLES } from '../utils/roles';
 import { dealPayments, dealServicemen } from './accounting/salaryCalc';
 
@@ -54,7 +56,12 @@ export const pushService = {
   async sendToUsers(userIds: string[], payload: PushPayload) {
     if (!userIds.length || !ensureConfigured()) return;
     const subs = await prisma.pushSubscription.findMany({ where: { userId: { in: [...new Set(userIds)] } } });
-    const body = JSON.stringify(payload);
+    if (!subs.length) return;
+    // id — общий у уведомления на телефоне и записи в recentPushes: приложение переходит по нему один раз
+    const id = randomUUID();
+    const url = payload.url || '/schedule';
+    recentPushes.remember(subs.map(s => s.userId), { id, url, title: payload.title, body: payload.body, at: Date.now() });
+    const body = JSON.stringify({ ...payload, url, id });
     await Promise.all(subs.map(async (s) => {
       try {
         await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, body, { TTL: 60 * 60 * 12 });

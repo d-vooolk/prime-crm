@@ -4,6 +4,7 @@ import { pushService } from '../services/push.service';
 import { parse } from '../middleware/validate';
 import { AppError } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
+import { recentPushes } from '../utils/recentPushes';
 
 const subscriptionSchema = z.object({
   endpoint: z.string().url().max(2000),
@@ -29,6 +30,17 @@ export const pushController = {
   },
 
   /** Проверочное уведомление себе на все свои устройства */
+  /**
+   * Последний пуш, пришедший пользователю, пока приложение было свёрнуто (hiddenFor — сколько мс).
+   * Время считается от часов сервера: часы телефона могут расходиться
+   */
+  async recent(req: Request, res: Response) {
+    const { hiddenFor } = parse(z.object({ hiddenFor: z.coerce.number().int().min(0).max(24 * 60 * 60 * 1000) }), req.query);
+    const now = Date.now();
+    const push = recentPushes.latestSince(req.user!.id, now - hiddenFor, now);
+    res.json({ data: push && { id: push.id, url: push.url, title: push.title, body: push.body, ageMs: now - push.at } });
+  },
+
   async test(req: Request, res: Response) {
     if (!pushService.publicKey()) throw new AppError('Пуш-уведомления на сервере не настроены', 400);
     // Через 5 секунд: успеть свернуть приложение и проверить переход по нажатию из фона

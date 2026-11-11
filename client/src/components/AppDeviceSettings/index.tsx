@@ -57,7 +57,7 @@ export const AppDeviceSettings: React.FC = () => {
   };
 
   const showNavLog = () => {
-    readNavLog().then(setNavLog).catch(e => notify.error(e, 'Не удалось прочитать журнал'));
+    setNavLog(readNavLog());
   };
 
   const copyNavLog = () => {
