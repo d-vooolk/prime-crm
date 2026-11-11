@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Button, Switch } from 'antd';
+import { Alert, Button, Modal, Switch } from 'antd';
 import { BellOutlined, DownloadOutlined, MobileOutlined } from '@ant-design/icons';
 import { usePwaStore } from '@/store/pwaStore';
 import { pushApi } from '@/api/push.api';
 import { useNotify } from '@/hooks/useNotify';
+import { readNavLog } from '@/hooks/useNotificationNavigation';
 import {
   disablePush, enablePush, getPushSubscription, isIos, isPushEnabledHere, isPushSupported, isStandalone, promptInstall,
 } from '@/pwa';
@@ -18,6 +19,7 @@ export const AppDeviceSettings: React.FC = () => {
   const installPrompt = usePwaStore(s => s.installPrompt);
   const [pushOn, setPushOn] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [navLog, setNavLog] = useState<string[] | null>(null);
   const standalone = isStandalone();
   const ios = isIos();
 
@@ -48,10 +50,20 @@ export const AppDeviceSettings: React.FC = () => {
   const sendTest = async () => {
     try {
       await pushApi.test();
-      notify.toast.success('Проверочное уведомление отправлено');
+      notify.toast.success('Уведомление придёт через 5 секунд — сверните приложение и нажмите на него, откроется расписание');
     } catch (e) {
       notify.error(e, 'Не удалось отправить уведомление');
     }
+  };
+
+  const showNavLog = () => {
+    readNavLog().then(setNavLog).catch(e => notify.error(e, 'Не удалось прочитать журнал'));
+  };
+
+  const copyNavLog = () => {
+    navigator.clipboard.writeText((navLog ?? []).join('\n'))
+      .then(() => notify.toast.success('Журнал скопирован'))
+      .catch(e => notify.error(e, 'Не удалось скопировать'));
   };
 
   const install = async () => {
@@ -90,10 +102,19 @@ export const AppDeviceSettings: React.FC = () => {
           <div className={styles.hint}>Новые записи, напоминания заметок, заканчивающиеся товары на складе</div>
         </div>
         <div className={styles.actions}>
+          {pushOn && <Button size="small" onClick={showNavLog}>Журнал</Button>}
           {pushOn && <Button size="small" onClick={sendTest}>Проверить</Button>}
           <Switch checked={pushOn} loading={busy} onChange={togglePush} disabled={!isPushSupported() && !ios} />
         </div>
       </div>
+      <Modal
+        title="Журнал уведомлений"
+        open={!!navLog}
+        onCancel={() => setNavLog(null)}
+        footer={<Button onClick={copyNavLog}>Скопировать</Button>}
+      >
+        <pre className={styles.log}>{navLog?.length ? navLog.join('\n') : 'Пусто'}</pre>
+      </Modal>
       {ios && !standalone && (
         <div className={styles.note}>На iPhone уведомления работают только в установленном приложении (iOS 16.4 и новее).</div>
       )}

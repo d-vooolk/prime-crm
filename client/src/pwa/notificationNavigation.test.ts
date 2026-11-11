@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  isAppUrl, takePending, PENDING_NAV_TTL_MS, addShown, splitVanished, pickTapped, parseShown, isFreshSync,
+  isAppUrl, takePending, PENDING_NAV_TTL_MS, addShown, splitVanished, pickTapped, parseShown, isFreshSync, latestArrived, parseResumeAnswer, appendLog, NAV_LOG_MAX,
   SHOWN_TTL_MS, SYNC_MAX_DELAY_MS,
 } from './notificationNavigation';
 
@@ -38,8 +38,8 @@ describe('takePending', () => {
 
 describe('показанные уведомления (iPhone, приложение в фоне)', () => {
   const now = 10_000_000;
-  const a = { id: 'a', url: '/schedule?record=1', tag: 'record-1', at: now - 5000 };
-  const b = { id: 'b', url: '/leads', tag: 'site-lead-2', at: now - 1000 };
+  const a = { id: 'a', url: '/schedule?record=1', tag: 'record-1', at: now - 5000, listed: true };
+  const b = { id: 'b', url: '/leads', tag: 'site-lead-2', at: now - 1000, listed: true };
 
   it('то же tag заменяет прежнее уведомление', () => {
     const next = addShown([a], { ...a, id: 'a2', at: now }, now);
@@ -55,6 +55,28 @@ describe('показанные уведомления (iPhone, приложен�
   it('исчезло несколько («Очистить всё») или ничего — перехода нет', () => {
     expect(pickTapped(splitVanished([a, b], new Set(), now).vanished)).toBeNull();
     expect(pickTapped(splitVanished([a, b], new Set(['a', 'b']), now).vanished)).toBeNull();
+  });
+
+  it('без списка на экране (unlisted) исчезновение не считается нажатием', () => {
+    const c = { ...a, listed: false };
+    expect(splitVanished([c], new Set(), now)).toEqual({ kept: [c], vanished: [] });
+  });
+
+  it('плашка — последнее пришедшее, пока приложение было в фоне', () => {
+    expect(latestArrived([a, b], now - 2000)).toEqual(b);
+    expect(latestArrived([a, b], now)).toBeNull();
+  });
+
+  it('ответ service worker разбирается безопасно', () => {
+    expect(parseResumeAnswer({ tapped: { id: 'a', url: '/x' }, arrived: null })).toEqual({ tapped: { id: 'a', url: '/x' }, arrived: null });
+    expect(parseResumeAnswer({ tapped: { id: 'a', url: 'https://evil.com' } })).toEqual({ tapped: null, arrived: null });
+    expect(parseResumeAnswer('мусор')).toEqual({ tapped: null, arrived: null });
+  });
+
+  it('журнал ограничен по длине', () => {
+    const log = Array.from({ length: NAV_LOG_MAX }, (_, i) => String(i));
+    expect(appendLog(log, 'new')).toHaveLength(NAV_LOG_MAX);
+    expect(appendLog('мусор', 'x')).toEqual(['x']);
   });
 
   it('старое и битое отбрасывается', () => {

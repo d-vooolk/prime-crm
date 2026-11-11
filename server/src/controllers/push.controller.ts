@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { pushService } from '../services/push.service';
 import { parse } from '../middleware/validate';
 import { AppError } from '../middleware/errorHandler';
+import { logger } from '../utils/logger';
 
 const subscriptionSchema = z.object({
   endpoint: z.string().url().max(2000),
@@ -30,12 +31,16 @@ export const pushController = {
   /** Проверочное уведомление себе на все свои устройства */
   async test(req: Request, res: Response) {
     if (!pushService.publicKey()) throw new AppError('Пуш-уведомления на сервере не настроены', 400);
-    await pushService.sendToUsers([req.user!.id], {
-      title: 'Prime CRM',
-      body: 'Уведомления работают 👍',
-      url: '/settings',
-      tag: 'push-test',
-    });
+    // Через 5 секунд: успеть свернуть приложение и проверить переход по нажатию из фона
+    const userId = req.user!.id;
+    setTimeout(() => {
+      pushService.sendToUsers([userId], {
+        title: 'Prime CRM',
+        body: 'Уведомления работают 👍 Нажмите — откроется расписание',
+        url: '/schedule',
+        tag: 'push-test',
+      }).catch((err: unknown) => logger.error('Проверочный пуш не отправлен', { err }));
+    }, 5000);
     res.json({ success: true });
   },
 };
