@@ -17,12 +17,14 @@ interface Props {
   paymentSplitCard: number | null;
   onOpenPaymentSplit: () => void;
   onCancelPaymentSplit: () => void;
+  /** Исправленный акт для раздельной оплаты */
+  onOpenCorrectedAct: () => void;
 }
 
 /** Оплата остатка: валюта, расчётный счёт, раздельная оплата нал/безнал. Рендерится внутри Form. */
 export const PaymentSection: React.FC<Props> = ({
   totals, currencyByn, currencyParts, currencyOpen, onOpenCurrency, onChangeCurrency,
-  paymentSplitCard, onOpenPaymentSplit, onCancelPaymentSplit,
+  paymentSplitCard, onOpenPaymentSplit, onCancelPaymentSplit, onOpenCorrectedAct,
 }) => {
   const { remaining, rubleRemaining } = totals;
 
@@ -68,6 +70,9 @@ export const PaymentSection: React.FC<Props> = ({
             <div className={styles.splitSummary}>
               <span>💵 Наличные: <strong>{formatPrice(roundMoney(rubleRemaining - paymentSplitCard))}</strong></span>
               <span>💳 Безнал: <strong>{formatPrice(paymentSplitCard)}</strong></span>
+              <Button size="small" className={styles.splitAct} onClick={onOpenCorrectedAct}>
+                Исправить акт
+              </Button>
               <Button type="text" size="small" className={styles.splitCancel} onClick={onCancelPaymentSplit}>
                 Отменить
               </Button>

@@ -1,4 +1,4 @@
-import type { Record, ServicemanSplitEntry } from '@/types';
+import type { Deal, Record, ServicemanSplitEntry } from '@/types';
 import { roundMoney } from '@/utils/formatters';
 
 /** Позиция записи в окне закрытия сделки: с чистой прибылью и сотрудником */
@@ -100,4 +100,46 @@ export function validateSplit(entries: ServicemanSplitEntry[], netProfit: number
   const total = valid.reduce((s, e) => s + (e.amount || 0), 0);
   if (netProfit != null && total > netProfit + 0.01) return { ok: false, reason: 'exceeds', total };
   return { ok: true, entries: valid };
+}
+
+/** Строка исправленного акта: позиция записи, в акте ли она и её сумма (цена × кол-во) */
+export interface ActLine {
+  itemId: string;
+  included: boolean;
+  amount: number;
+}
+
+export const actLinesOf = (record: Pick<Record, 'items'>): ActLine[] =>
+  record.items.map(i => ({ itemId: i.id, included: true, amount: roundMoney(i.price * i.quantity) }));
+
+export const actLinesTotal = (lines: ActLine[]) =>
+  roundMoney(lines.reduce((s, l) => s + (l.included ? l.amount : 0), 0));
+
+/**
+ * Запись для печати исправленного акта (при раздельной оплате): только оставленные позиции
+ * с новыми суммами, итог — их сумма, модули — оставленных позиций. Нигде не сохраняется.
+ * Поля сделки — из формы закрытия: сделка может быть ещё не закрыта
+ */
+export function correctedActRecord(
+  record: Record,
+  lines: ActLine[],
+  form: { defects?: string; recommendations?: string; warranty?: string },
+): Record {
+  const items = record.items.flatMap(item => {
+    const line = lines.find(l => l.itemId === item.id);
+    if (!line?.included) return [];
+    return [{ ...item, price: line.amount / item.quantity }];
+  });
+  const equipment = [...new Map(items.flatMap(i => (i.equipment ? [[i.equipment.id, i.equipment] as const] : []))).values()];
+  const deal: Deal = {
+    id: record.deal?.id ?? '',
+    recordId: record.id,
+    isPaidByBankTransfer: record.deal?.isPaidByBankTransfer ?? false,
+    closedAt: record.deal?.closedAt ?? new Date().toISOString(),
+    finalPrice: actLinesTotal(lines),
+    recommendations: form.recommendations || undefined,
+    warranty: form.warranty || undefined,
+    equipment: equipment.map(e => ({ equipment: e })),
+  };
+  return { ...record, defects: form.defects || undefined, items, deal };
 }

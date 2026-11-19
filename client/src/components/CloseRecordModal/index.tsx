@@ -7,17 +7,19 @@ import { hasStaffAndCash } from '@/utils/roles';
 import { useAllServicemen, useClientSources } from '@/hooks/useReferenceData';
 import { Record, CompanySettings, CurrencyPart } from '@/types';
 import { recordsApi } from '@/api/records.api';
+import { roundMoney } from '@/utils/formatters';
 import { currencyPartsByn, currencyPartsValid } from '@/components/CurrencyConverter';
 import { printCompletionAct } from '@/utils/print';
 import { DEFAULT_WARRANTY, WARRANTY_OPTIONS } from '@/utils/print/warranty';
 import { DealCelebration } from '../DealCelebration';
 import { loadPrintData } from '../RecordDetailModal/printData';
 import { actTemplatesOf, pickActTemplate } from '../RecordDetailModal/documentTemplates';
-import { ItemRow, buildItemRows, itemsMissingServiceman, paymentTotals, splitPayment } from './closeDeal.utils';
+import { ActLine, ItemRow, buildItemRows, correctedActRecord, itemsMissingServiceman, paymentTotals, splitPayment } from './closeDeal.utils';
 import { ItemsTable } from './ItemsTable';
 import { PaymentSection } from './PaymentSection';
 import { ServicemanSplitModal } from './ServicemanSplitModal';
 import { PaymentSplitModal } from './PaymentSplitModal';
+import { CorrectedActModal } from './CorrectedActModal';
 import { toServicemanOption } from '@/components/ServicemanBadge';
 import styles from './CloseRecordModal.module.scss';
 
@@ -64,6 +66,9 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
   // Часть остатка, оплаченная валютой, и открыт ли блок валюты
   const [currencyParts, setCurrencyParts] = useState<CurrencyPart[]>([]);
   const [currencyOpen, setCurrencyOpen] = useState(false);
+  // Исправленный акт при раздельной оплате — только печать, без сохранения
+  const [correctedActOpen, setCorrectedActOpen] = useState(false);
+  const [correctedActLoading, setCorrectedActLoading] = useState(false);
 
   // Источник клиента — обязателен для закрытия; повторяет поле из записи, чтобы не возвращаться в неё
   const { data: clientSources } = useClientSources();
@@ -203,6 +208,21 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
     }
   };
 
+  const printCorrectedAct = async (lines: ActLine[]) => {
+    setCorrectedActLoading(true);
+    try {
+      const values = form.getFieldsValue();
+      const actRecord = correctedActRecord(record, lines, values);
+      const { settings, templates } = await loadPrintData(queryClient);
+      printCompletionAct(actRecord, settings, pickActTemplate(actRecord, actTemplatesOf(templates))?.content);
+      setCorrectedActOpen(false);
+    } catch (e) {
+      notify.error(e, 'Не удалось распечатать акт');
+    } finally {
+      setCorrectedActLoading(false);
+    }
+  };
+
   const changeCurrencyParts = useCallback((parts: CurrencyPart[]) => {
     setCurrencyParts(parts);
     // Разбивка нал/карта считалась от прежнего остатка
@@ -240,6 +260,16 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
           setPaymentSplitCard(card);
           setPaymentSplitOpen(false);
         }}
+      />
+
+      <CorrectedActModal
+        open={correctedActOpen}
+        record={record}
+        cashAmount={roundMoney(totals.rubleRemaining - (paymentSplitCard ?? 0))}
+        cardAmount={paymentSplitCard ?? 0}
+        loading={correctedActLoading}
+        onCancel={() => setCorrectedActOpen(false)}
+        onPrint={printCorrectedAct}
       />
 
       <Modal
@@ -321,6 +351,7 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
               paymentSplitCard={paymentSplitCard}
               onOpenPaymentSplit={() => setPaymentSplitOpen(true)}
               onCancelPaymentSplit={() => setPaymentSplitCard(null)}
+              onOpenCorrectedAct={() => setCorrectedActOpen(true)}
             />
           )}
 

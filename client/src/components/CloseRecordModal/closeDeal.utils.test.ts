@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { Record, RecordItem } from '@/types';
 import {
-  ItemRow, buildItemRows, itemsMissingServiceman, paymentTotals, splitPayment, validateSplit,
+  ItemRow, actLinesOf, actLinesTotal, buildItemRows, correctedActRecord, itemsMissingServiceman, paymentTotals,
+  splitPayment, validateSplit,
 } from './closeDeal.utils';
 
 type ItemPatch = Omit<Partial<RecordItem>, 'service'> & { service?: Partial<RecordItem['service']> };
@@ -120,5 +121,35 @@ describe('validateSplit', () => {
   it('отбрасывает строки без имени', () => {
     const res = validateSplit([{ name: 'А', amount: 50 }, { name: '', amount: 0 }, { name: 'Б', amount: 50 }], 100);
     expect(res).toEqual({ ok: true, entries: [{ name: 'А', amount: 50 }, { name: 'Б', amount: 50 }] });
+  });
+});
+
+describe('исправленный акт', () => {
+  const lamp = { id: 'e1', name: 'Bi-LED', warranty: '2 года' };
+  const full = {
+    id: 'r1', defects: 'старое', items: [
+      item({ id: 'a', price: 50, quantity: 2, equipment: lamp }),
+      item({ id: 'b', price: 300, equipment: { id: 'e2', name: 'Линза' } }),
+    ],
+  } as unknown as Record;
+
+  it('строки по умолчанию — все позиции с их суммами', () => {
+    expect(actLinesOf(full)).toEqual([
+      { itemId: 'a', included: true, amount: 100 },
+      { itemId: 'b', included: true, amount: 300 },
+    ]);
+  });
+
+  it('убранная позиция и её модуль не попадают в акт, итог — по новым суммам', () => {
+    const lines = [{ itemId: 'a', included: true, amount: 150 }, { itemId: 'b', included: false, amount: 300 }];
+    expect(actLinesTotal(lines)).toBe(150);
+    const act = correctedActRecord(full, lines, { warranty: '1 месяц', defects: '' });
+    expect(act.items.map(i => [i.id, i.price, i.quantity])).toEqual([['a', 75, 2]]);
+    expect(act.deal?.finalPrice).toBe(150);
+    expect(act.deal?.warranty).toBe('1 месяц');
+    expect(act.deal?.equipment).toEqual([{ equipment: lamp }]);
+    expect(act.defects).toBeUndefined();
+    // Исходная запись не меняется
+    expect(full.items).toHaveLength(2);
   });
 });

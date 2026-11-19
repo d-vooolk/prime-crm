@@ -41,6 +41,7 @@
 
 .splitSummary {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
   margin-bottom: var(--spacing-md);
@@ -50,7 +51,10 @@
   font-size: 13px;
 }
 
-.splitCancel {
+.splitAct {
   margin-left: auto;
+}
+
+.splitCancel {
   color: var(--color-text-secondary) !important;
 }
