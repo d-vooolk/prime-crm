@@ -49,7 +49,7 @@ const legalFields = {
   legalCompanyName: text(500), legalAddress: text(1000), legalActualAddress: text(1000), legalPostalAddress: text(1000),
   legalBankDetails: text(2000), legalBic: text(50), legalUnp: text(50), legalOkpo: text(50), legalPhone: text(100), legalEmail: text(200),
   legalRepresentativePosition: text(300), legalRepresentativePositionGenitive: text(300),
-  legalRepresentative: text(300), legalRepresentativeGenitive: text(300), legalBasis: text(500), legalVin: text(50), legalEndDate: text(50),
+  legalRepresentative: text(300), legalRepresentativeGenitive: text(300), legalBasis: text(500), legalVin: text(50), legalEndDate: text(50), legalWarranty: text(100),
   executorSignatoryName: text(300), executorSignatoryNameGenitive: text(300),
   executorSignatoryPosition: text(300), executorSignatoryPositionGenitive: text(300), executorSignatoryBasis: text(500),
 };

@@ -30,7 +30,7 @@ const RECORD_INCLUDE = {
 } as const;
 
 /** SMS отправляется в фоне: ответ не ждёт sms.by, а ошибка не роняет процесс */
-function sendSmsInBackground(recordId: string, type: 'ON_CREATE' | 'REVIEW_REQUEST') {
+function sendSmsInBackground(recordId: string, type: 'ON_CREATE') {
   smsService.sendForRecord(recordId, type).catch(err => logger.error('Не удалось отправить SMS', { recordId, type, err }));
 }
 
@@ -78,6 +78,7 @@ export interface CreateRecordDto {
   legalBasis?: string | null;
   legalVin?: string | null;
   legalEndDate?: string | null;
+  legalWarranty?: string | null;
   executorSignatoryName?: string | null;
   executorSignatoryNameGenitive?: string | null;
   executorSignatoryPosition?: string | null;
@@ -226,7 +227,7 @@ export const recordsService = {
       legalBankDetails, legalBic, legalUnp, legalOkpo, legalPhone, legalEmail,
       legalRepresentativePosition, legalRepresentativePositionGenitive,
       legalRepresentative, legalRepresentativeGenitive,
-      legalBasis, legalVin, legalEndDate,
+      legalBasis, legalVin, legalEndDate, legalWarranty,
       executorSignatoryName, executorSignatoryNameGenitive,
       executorSignatoryPosition, executorSignatoryPositionGenitive, executorSignatoryBasis,
     } = data;
@@ -288,7 +289,7 @@ export const recordsService = {
           legalBankDetails, legalBic, legalUnp, legalOkpo, legalPhone, legalEmail,
           legalRepresentativePosition, legalRepresentativePositionGenitive,
           legalRepresentative, legalRepresentativeGenitive,
-          legalBasis, legalVin, legalEndDate,
+          legalBasis, legalVin, legalEndDate, legalWarranty,
           executorSignatoryName, executorSignatoryNameGenitive,
           executorSignatoryPosition, executorSignatoryPositionGenitive, executorSignatoryBasis,
           items: {
@@ -347,7 +348,7 @@ export const recordsService = {
       'legalCompanyName', 'legalAddress', 'legalActualAddress', 'legalPostalAddress',
       'legalBankDetails', 'legalBic', 'legalUnp', 'legalOkpo', 'legalPhone', 'legalEmail',
       'legalRepresentativePosition', 'legalRepresentativePositionGenitive',
-      'legalRepresentative', 'legalRepresentativeGenitive', 'legalBasis', 'legalVin', 'legalEndDate',
+      'legalRepresentative', 'legalRepresentativeGenitive', 'legalBasis', 'legalVin', 'legalEndDate', 'legalWarranty',
       'executorSignatoryName', 'executorSignatoryNameGenitive',
       'executorSignatoryPosition', 'executorSignatoryPositionGenitive', 'executorSignatoryBasis',
     ] as const;
@@ -563,8 +564,7 @@ export const recordsService = {
       });
     });
 
-    // Повторные закрытия отсекаются и веткой выше, и правилом «отзыв один раз на запись» в sms.service
-    sendSmsInBackground(id, 'REVIEW_REQUEST');
+    // Запрос отзыва уходит через 15 минут — smsService.runReviewRequestCheck (раз в минуту, index.ts)
     const closed = await recordsService.findById(id);
     // Сотрудникам — сколько они заработали на сделке (только при первом закрытии). В облегчённом режиме ЗП нет
     const authorId = currentContext()?.userId;

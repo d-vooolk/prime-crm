@@ -36,10 +36,19 @@ const applyTemplate = (template: string, vars: TemplateVars) => {
 
 /**
  * Типы, которые отправляются не более одного раза за всю жизнь записи.
- * Запрос отзыва уходит при закрытии сделки, а сделку можно закрывать
+ * Запрос отзыва уходит после закрытия сделки, а сделку можно закрывать
  * и редактировать многократно — клиент не должен получить его дважды.
  */
 const ONCE_PER_RECORD: SmsType[] = ['REVIEW_REQUEST'];
+
+/** Запрос отзыва уходит не сразу при закрытии сделки, а через 15 минут */
+export const REVIEW_REQUEST_DELAY_MS = 15 * 60 * 1000;
+// Сделки, закрытые раньше, не догоняем: после долгого простоя сервера или включения SMS
+// клиенты, давно уехавшие из сервиса, запрос отзыва не получают
+const REVIEW_REQUEST_WINDOW_MS = 3 * 60 * 60 * 1000;
+
+// Проверка ещё идёт (sms.by отвечает долго) — следующая не стартует, чтобы не отправить дважды
+let reviewCheckRunning = false;
 
 export type SendResult = 'sent' | 'failed' | 'skipped' | 'disabled';
 
@@ -151,6 +160,35 @@ export const smsService = {
       }
     } catch (e) {
       console.error('[SMS] runReminderCheck error:', e); // eslint-disable-line no-console
+    }
+  },
+
+  /** Запрос отзыва по сделкам, закрытым 15 минут назад и раньше (проверка раз в минуту) */
+  async runReviewRequestCheck() {
+    if (reviewCheckRunning) return;
+    reviewCheckRunning = true;
+    try {
+      const settings = await prisma.smsSettings.findFirst();
+      if (!settings?.enabled) return;
+
+      const now = Date.now();
+      const records = await prisma.record.findMany({
+        where: {
+          status: 'CLOSED',
+          deal: { closedAt: { gte: new Date(now - REVIEW_REQUEST_WINDOW_MS), lte: new Date(now - REVIEW_REQUEST_DELAY_MS) } },
+          // Любая попытка (и неудачная) — не повторяем каждую минуту; повторно можно отправить вручную
+          smsLogs: { none: { type: 'REVIEW_REQUEST' } },
+        },
+        select: { id: true },
+      });
+
+      for (const r of records) {
+        await smsService.sendForRecord(r.id, 'REVIEW_REQUEST');
+      }
+    } catch (e) {
+      console.error('[SMS] runReviewRequestCheck error:', e); // eslint-disable-line no-console
+    } finally {
+      reviewCheckRunning = false;
     }
   },
 };

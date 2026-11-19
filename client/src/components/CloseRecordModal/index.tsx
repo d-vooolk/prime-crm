@@ -9,6 +9,7 @@ import { Record, CompanySettings, CurrencyPart } from '@/types';
 import { recordsApi } from '@/api/records.api';
 import { currencyPartsByn, currencyPartsValid } from '@/components/CurrencyConverter';
 import { printCompletionAct } from '@/utils/print';
+import { DEFAULT_WARRANTY, WARRANTY_OPTIONS } from '@/utils/print/warranty';
 import { DealCelebration } from '../DealCelebration';
 import { loadPrintData } from '../RecordDetailModal/printData';
 import { actTemplatesOf, pickActTemplate } from '../RecordDetailModal/documentTemplates';
@@ -28,16 +29,6 @@ interface Props {
   onClose: () => void;
   onSuccess: () => void;
 }
-
-const WARRANTY_OPTIONS = [
-  { value: 'Без гарантии', label: 'Без гарантии' },
-  { value: '1 месяц', label: '1 месяц' },
-  { value: '6 месяцев', label: '6 месяцев' },
-  { value: '1 год', label: '1 год' },
-];
-
-// Подставляется в новую сделку; у уже закрытых берётся сохранённое значение
-const DEFAULT_WARRANTY = '1 месяц';
 
 export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuccess }) => {
   const screens = useBreakpoint();
@@ -104,11 +95,13 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
       setCurrencyOpen(!!record.deal.currencyPayments?.length);
     } else {
       form.resetFields();
-      // Недостатки могли записать в карточке до закрытия. Юрлицо платит по расчётному счёту
+      // Недостатки могли записать в карточке до закрытия. Юрлицо платит по расчётному счёту,
+      // гарантия у него — указанная при оформлении (она уже в договоре)
       form.setFieldsValue({
         defects: record.defects || '',
         clientSourceId: record.clientSourceId ?? undefined,
         isPaidByBankTransfer: !!record.isLegalEntity,
+        ...(record.isLegalEntity && record.legalWarranty && { warranty: record.legalWarranty }),
       });
       setPaymentSplitCard(null);
       setCurrencyParts([]);

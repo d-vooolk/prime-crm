@@ -5,6 +5,7 @@ import { ClientSource, Serviceman } from '@/types';
 import { useClientSources, useServicemen } from '@/hooks/useReferenceData';
 import { useAuthStore } from '@/store/authStore';
 import { hasStaffAndCash } from '@/utils/roles';
+import { DEFAULT_WARRANTY, WARRANTY_OPTIONS } from '@/utils/print/warranty';
 import { RecordFormData } from '../../types';
 import { renderServicemanOption, servicemanLabelRender, toServicemanOption } from '@/components/ServicemanBadge';
 import styles from './ScheduleFields.module.scss';
@@ -35,6 +36,11 @@ export const ScheduleFields: React.FC<Props> = ({ data, onChange }) => {
       if (def) onChange({ receptionist: def.name });
     }
   }, [servicemen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Юр. лицу гарантия на работу указывается сразу — она печатается в договоре
+  useEffect(() => {
+    if (data.isLegalEntity && !data.legalWarranty) onChange({ legalWarranty: DEFAULT_WARRANTY });
+  }, [data.isLegalEntity]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const employeeOptions = servicemen.filter(s => s.isPerformer && !s.isDismissed).map(toServicemanOption);
   const receptionistOptions = servicemen.filter(s => s.isReceptionist && !s.isDismissed).map(toServicemanOption);
@@ -134,6 +140,19 @@ export const ScheduleFields: React.FC<Props> = ({ data, onChange }) => {
                 value={data.legalEndDate ? dayjs(data.legalEndDate) : null}
                 onChange={(d: Dayjs | null) => onChange({ legalEndDate: d?.toISOString() || '' })}
                 format="DD.MM.YYYY"
+              />
+            </Form.Item>
+          </Col>
+        )}
+        {data.isLegalEntity && (
+          <Col xs={24} sm={8}>
+            {/* На модули — гарантия производителя из справочника оборудования */}
+            <Form.Item label="Гарантия на работу" required>
+              <Select
+                value={data.legalWarranty || undefined}
+                onChange={v => onChange({ legalWarranty: v })}
+                placeholder="Выберите срок гарантии"
+                options={WARRANTY_OPTIONS}
               />
             </Form.Item>
           </Col>

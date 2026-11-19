@@ -39,6 +39,7 @@ export const Step3Summary: React.FC<Props> = ({ data }) => {
             {data.legalUnp && <Descriptions.Item label="УНП">{data.legalUnp}</Descriptions.Item>}
             {data.legalBic && <Descriptions.Item label="БИК">{data.legalBic}</Descriptions.Item>}
             {data.legalOkpo && <Descriptions.Item label="ОКПО">{data.legalOkpo}</Descriptions.Item>}
+            {data.legalWarranty && <Descriptions.Item label="Гарантия на работу">{data.legalWarranty}</Descriptions.Item>}
           </Descriptions>
         </>
       )}

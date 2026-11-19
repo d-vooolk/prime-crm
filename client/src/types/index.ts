@@ -247,6 +247,7 @@ export interface Record {
   legalBasis?: string;
   legalVin?: string;
   legalEndDate?: string;
+  legalWarranty?: string;
   executorSignatoryName?: string;
   executorSignatoryNameGenitive?: string;
   executorSignatoryPosition?: string;

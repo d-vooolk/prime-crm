@@ -44,6 +44,7 @@ export function recordToFormData(record: CrmRecord): RecordFormData {
     legalBasis: record.legalBasis || '',
     legalVin: record.legalVin || '',
     legalEndDate: record.legalEndDate || '',
+    legalWarranty: record.legalWarranty || '',
     executorSignatoryName: record.executorSignatoryName || '',
     executorSignatoryNameGenitive: record.executorSignatoryNameGenitive || '',
     executorSignatoryPosition: record.executorSignatoryPosition || '',
@@ -80,6 +81,7 @@ export function missingClientFields(data: RecordFormData): string[] {
   if (!data.carYear) missing.push('год автомобиля');
   if (!data.date) missing.push('дата');
   if (!data.time) missing.push('время');
+  if (data.isLegalEntity && !data.legalWarranty) missing.push('гарантия на работу');
   return missing;
 }
 
@@ -144,6 +146,7 @@ export function buildRecordPayload(data: RecordFormData, clientId: string): Crea
     legalBasis: data.legalBasis,
     legalVin: data.legalVin,
     legalEndDate: data.legalEndDate,
+    legalWarranty: data.legalWarranty,
     executorSignatoryName: data.executorSignatoryName,
     executorSignatoryNameGenitive: data.executorSignatoryNameGenitive,
     executorSignatoryPosition: data.executorSignatoryPosition,

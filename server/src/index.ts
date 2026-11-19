@@ -130,6 +130,8 @@ app.listen(env.port, async () => {
 
 // Проверка напоминаний каждые 5 минут
 setInterval(() => void runSafely('SMS-напоминания', () => smsService.runReminderCheck()), 5 * 60 * 1000);
+// Запрос отзыва через 15 минут после закрытия сделки — проверка каждую минуту
+setInterval(() => void runSafely('SMS-запросы отзыва', () => smsService.runReviewRequestCheck()), 60 * 1000);
 // Напоминания заметок пушем — проверка каждую минуту
 setInterval(() => void runSafely('напоминания заметок', () => sendDueNoteReminders()), 60 * 1000);
 // Фото и видео записей хранятся год — раз в сутки удаляем просроченные

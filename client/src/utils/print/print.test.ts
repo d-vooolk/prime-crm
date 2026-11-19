@@ -3,6 +3,8 @@ import { numberToRussianWords } from './numberToWords';
 import { escapeHtml, multiline } from './shared';
 import { fillWarrantyTerm, NO_WARRANTY } from './warranty';
 import { buildMemoHtml } from './actMemoLayout';
+import { contractWarrantyClauses } from './serviceContract';
+import { Record } from '@/types';
 
 describe('numberToRussianWords', () => {
   it('ноль и простые числа', () => {
@@ -71,5 +73,40 @@ describe('buildMemoHtml', () => {
 
   it('закрывает список в конце', () => {
     expect(buildMemoHtml('- один')).toBe('<ul><li>один</li></ul>');
+  });
+});
+
+describe('contractWarrantyClauses', () => {
+  const module = (id: string, name: string, warranty?: string) => ({ id, name, warranty });
+  const base = { items: [] as Record['items'], deal: undefined, legalWarranty: undefined as string | undefined };
+
+  it('срок на работу не указан — прочерк', () => {
+    expect(contractWarrantyClauses(base)).toEqual([
+      'Гарантийный срок на оказанные Услуги составляет ____ с даты подписания акта приема-сдачи Услуг.',
+    ]);
+  });
+
+  it('срок на работу и модули из позиций записи без повторов', () => {
+    const items = [
+      { equipment: module('e1', 'Bi-LED X', '2 года') },
+      { equipment: module('e1', 'Bi-LED X', '2 года') },
+      { equipment: module('e2', 'Линза Y') },
+      { equipment: null },
+    ] as unknown as Record['items'];
+    expect(contractWarrantyClauses({ ...base, items, legalWarranty: '6 месяцев' })).toEqual([
+      'Гарантийный срок на оказанные Услуги составляет 6 месяцев и исчисляется с даты подписания акта приема-сдачи Услуг.',
+      'На установленные модули «Bi-LED X» действует гарантия производителя — 2 года.',
+      'На установленные модули «Линза Y» действует гарантия производителя на его условиях.',
+    ]);
+  });
+
+  it('без гарантии; у закрытой сделки — её оборудование и срок, если у записи нет своего', () => {
+    expect(contractWarrantyClauses({ ...base, legalWarranty: NO_WARRANTY })[0])
+      .toBe('Гарантия на оказанные Услуги не предоставляется.');
+    const deal = { warranty: '1 год', equipment: [{ equipment: module('e3', 'Z', '1 год') }] } as unknown as Record['deal'];
+    expect(contractWarrantyClauses({ ...base, deal })).toEqual([
+      'Гарантийный срок на оказанные Услуги составляет 1 год и исчисляется с даты подписания акта приема-сдачи Услуг.',
+      'На установленные модули «Z» действует гарантия производителя — 1 год.',
+    ]);
   });
 });

@@ -1,8 +1,35 @@
 import { Record, CompanySettings } from '@/types';
 import { formatDate, formatPrice } from '../formatters';
-import { openPrintWindow } from './shared';
+import { escapeHtml, openPrintWindow } from './shared';
 import { numberToRussianWords } from './numberToWords';
 import { buildCustomerBlock, buildExecutorBlock, legalDocStyles } from './legalShared';
+import { NO_WARRANTY } from './warranty';
+
+// ─── Гарантия ─────────────────────────────────────────────────────────────────
+
+/**
+ * Пункты раздела «Гарантийные обязательства» (без номеров). На работу — срок, указанный
+ * для юр. лица при оформлении (у старых записей — из сделки), на модули — гарантия
+ * производителя из справочника оборудования (у закрытой сделки — её оборудование)
+ */
+export function contractWarrantyClauses(record: Pick<Record, 'legalWarranty' | 'items' | 'deal'>): string[] {
+  const warranty = record.legalWarranty || record.deal?.warranty;
+  const work = !warranty
+    ? 'Гарантийный срок на оказанные Услуги составляет ____ с даты подписания акта приема-сдачи Услуг.'
+    : warranty === NO_WARRANTY
+      ? 'Гарантия на оказанные Услуги не предоставляется.'
+      : `Гарантийный срок на оказанные Услуги составляет ${warranty} и исчисляется с даты подписания акта приема-сдачи Услуг.`;
+
+  const equipment = record.deal
+    ? record.deal.equipment.map(de => de.equipment)
+    : record.items.flatMap(i => (i.equipment ? [i.equipment] : []));
+  const unique = [...new Map(equipment.map(e => [e.id, e])).values()];
+  const modules = unique.map(e => e.warranty
+    ? `На установленные модули «${e.name}» действует гарантия производителя — ${e.warranty}.`
+    : `На установленные модули «${e.name}» действует гарантия производителя на его условиях.`);
+
+  return [work, ...modules];
+}
 
 // ─── Договор ──────────────────────────────────────────────────────────────────
 
@@ -45,6 +72,10 @@ export function printServiceContract(record: Record, settings?: CompanySettings)
 
   // Подпись заказчика снизу — именит. падеж
   const customerSig = [repPosition, repName].filter(Boolean).join(' ');
+
+  const warrantyClauses = contractWarrantyClauses(record)
+    .map((text, i) => `<div class="clause">4.${i + 1}. ${escapeHtml(text)}</div>`)
+    .join('');
 
   const executorBlock = buildExecutorBlock(settings);
   const customerBlock = buildCustomerBlock(record);
@@ -93,15 +124,20 @@ export function printServiceContract(record: Record, settings?: CompanySettings)
     </div>
 
     <div class="section">
-      <div class="section-title">4. Прочие условия</div>
-      <div class="clause">4.1. Споры и разногласия, которые могут возникнуть при исполнении настоящего договора, будут по возможности разрешаться путем переговоров между сторонами.</div>
-      <div class="clause">4.2. В случае невозможности разрешения споров путем переговоров стороны после реализации предусмотренной законодательством процедуры досудебного урегулирования разногласий передают их на рассмотрение в суд по месту нахождения Заказчика.</div>
-      <div class="clause">4.2. Любые изменения и дополнения к настоящему договору действительны лишь при условии, что они совершены в письменной форме и подписаны уполномоченными на то представителями сторон. Приложения к настоящему договору составляют его неотъемлемую часть.</div>
-      <div class="clause">4.3. Настоящий договор составлен в двух экземплярах. Оба экземпляра идентичны и имеют одинаковую силу. У каждой из сторон находится один экземпляр настоящего договора.</div>
+      <div class="section-title">4. Гарантийные обязательства</div>
+      ${warrantyClauses}
+    </div>
+
+    <div class="section">
+      <div class="section-title">5. Прочие условия</div>
+      <div class="clause">5.1. Споры и разногласия, которые могут возникнуть при исполнении настоящего договора, будут по возможности разрешаться путем переговоров между сторонами.</div>
+      <div class="clause">5.2. В случае невозможности разрешения споров путем переговоров стороны после реализации предусмотренной законодательством процедуры досудебного урегулирования разногласий передают их на рассмотрение в суд по месту нахождения Заказчика.</div>
+      <div class="clause">5.3. Любые изменения и дополнения к настоящему договору действительны лишь при условии, что они совершены в письменной форме и подписаны уполномоченными на то представителями сторон. Приложения к настоящему договору составляют его неотъемлемую часть.</div>
+      <div class="clause">5.4. Настоящий договор составлен в двух экземплярах. Оба экземпляра идентичны и имеют одинаковую силу. У каждой из сторон находится один экземпляр настоящего договора.</div>
     </div>
 
     <div class="section" style="page-break-before:always;padding-top:15mm">
-      <div class="section-title">5. Реквизиты и подписи сторон</div>
+      <div class="section-title">6. Реквизиты и подписи сторон</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:8px">
         <div class="req-block">
           <strong>Исполнитель:</strong><br>

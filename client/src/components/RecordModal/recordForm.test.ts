@@ -25,6 +25,10 @@ describe('missingClientFields', () => {
       'ФИО клиента', 'номер телефона', 'марка автомобиля', 'модель автомобиля', 'год автомобиля', 'дата', 'время',
     ]);
   });
+  it('юр. лицу нужна гарантия на работу', () => {
+    expect(missingClientFields({ ...filled, isLegalEntity: true })).toEqual(['гарантия на работу']);
+    expect(missingClientFields({ ...filled, isLegalEntity: true, legalWarranty: '1 месяц' })).toEqual([]);
+  });
 });
 
 describe('servicemanAssignment', () => {

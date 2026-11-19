@@ -72,6 +72,7 @@ export interface RecordFormData {
   legalBasis?: string;
   legalVin?: string;
   legalEndDate?: string;
+  legalWarranty?: string;
   executorSignatoryName?: string;
   executorSignatoryNameGenitive?: string;
   executorSignatoryPosition?: string;

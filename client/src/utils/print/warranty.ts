@@ -9,6 +9,12 @@ export const COMPLETION_ACT_ACCEPTANCE = `С объёмом работ согл�
 
 export const NO_WARRANTY = 'Без гарантии';
 
+/** Варианты гарантии на работу: при закрытии сделки и для юр. лица при оформлении записи */
+export const WARRANTY_OPTIONS = [NO_WARRANTY, '1 месяц', '6 месяцев', '1 год'].map(v => ({ value: v, label: v }));
+
+// Подставляется в новую сделку и в новую запись юр. лица
+export const DEFAULT_WARRANTY = '1 месяц';
+
 // Варианты из CloseRecordModal в родительном падеже — «в течение 1 месяца»
 export const WARRANTY_GENITIVE: { [term: string]: string } = {
   '1 месяц': '1 месяца',
