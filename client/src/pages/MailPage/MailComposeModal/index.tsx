@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Button, Form, Grid, Input, Modal, Select, Upload } from 'antd';
 import { CloseOutlined, PaperClipOutlined, SendOutlined } from '@ant-design/icons';
 import { mailApi } from '@/api/mail.api';
@@ -46,9 +46,14 @@ export const MailComposeModal: React.FC<Props> = ({ draft, accounts, onClose }) 
   const [sending, setSending] = useState(false);
   const notify = useNotify();
   const invalidate = useInvalidateMail();
+  // Список ящиков приходит заново при каждом обновлении почты (раз в минуту) —
+  // форма заполняется только при открытии черновика, иначе набранное стирается
+  const accountsRef = useRef(accounts);
+  accountsRef.current = accounts;
 
   useEffect(() => {
     if (!draft) return;
+    const accounts = accountsRef.current;
     form.setFieldsValue({
       account: draft.account && accounts.includes(draft.account) ? draft.account : accounts[0],
       to: draft.to ?? '',
@@ -58,7 +63,7 @@ export const MailComposeModal: React.FC<Props> = ({ draft, accounts, onClose }) 
     });
     setFiles([]);
     setShowCc(false);
-  }, [draft, accounts, form]);
+  }, [draft, form]);
 
   const totalSize = files.reduce((s, f) => s + f.size, 0);
 
