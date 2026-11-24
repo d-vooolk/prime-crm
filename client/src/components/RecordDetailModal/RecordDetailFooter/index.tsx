@@ -73,6 +73,10 @@ export const RecordDetailFooter: React.FC<Props> = ({
   const smsButton = (mobile: boolean) => (
     <Dropdown
       trigger={['click']}
+      // Кнопка у нижнего края: открытое вниз меню уходит за экран, и браузер прокручивает
+      // к нему окно записи — на телефоне оно уезжало вверх. Поэтому меню всегда над кнопкой
+      placement={mobile ? 'top' : 'topLeft'}
+      autoAdjustOverflow={false}
       disabled={smsBusy}
       menu={{
         items: smsOptions.map(o => ({
