@@ -152,12 +152,25 @@
 
 .editActions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: var(--spacing-sm);
   margin-top: var(--spacing-sm);
 
   @include mobile {
     :global(.ant-btn) { flex: 1; }
+  }
+}
+
+// Нейросеть — слева, отмена и сохранение — справа
+.polishActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  margin-right: auto;
+
+  @include mobile {
+    width: 100%;
   }
 }
 

@@ -14,6 +14,10 @@ export const wikiApi = {
   saveContent: (key: WikiKey, sectionId: string | null, content: string) =>
     http.put<{ data: WikiEntry }>('/wiki/entry', { ...key, sectionId, content }).then(r => r.data.data),
 
+  /** Исправить ошибки и пунктуацию нейросетью; ничего не сохраняет */
+  polishText: (text: string) =>
+    http.post<{ data: { text: string } }>('/wiki/polish', { text }, { timeout: 60_000 }).then(r => r.data.data.text),
+
   uploadMedia: (key: WikiKey, sectionId: string | null, file: File, onProgress?: (percent: number) => void) => {
     const form = new FormData();
     // Поля ключа — до файла: так multer разберёт их раньше, чем начнёт писать файл

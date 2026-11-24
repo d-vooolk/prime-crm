@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   Button, Input, Upload, Popconfirm, Progress, Empty, Divider,
 } from 'antd';
-import { EditOutlined, UploadOutlined, DeleteOutlined } from '@ant-design/icons';
+import { EditOutlined, UploadOutlined, DeleteOutlined, ThunderboltOutlined, UndoOutlined } from '@ant-design/icons';
 import { useQueryClient } from '@tanstack/react-query';
 import cn from 'classnames';
 import { wikiApi } from '@/api/wiki.api';
@@ -81,6 +81,9 @@ export const WikiSectionPanel: React.FC<Props> = ({
   const [editing, setEditing] = useState(!content);
   const [draft, setDraft] = useState(content);
   const [saving, setSaving] = useState(false);
+  const [polishing, setPolishing] = useState(false);
+  // Текст до правки нейросетью — чтобы вернуть, если результат не понравился
+  const [beforePolish, setBeforePolish] = useState<string | null>(null);
   const [uploads, setUploads] = useState<UploadState[]>([]);
 
   // Загрузки идут пачкой и параллельно: считаем активные, чтобы в конце пачки один раз
@@ -97,12 +100,40 @@ export const WikiSectionPanel: React.FC<Props> = ({
 
   const startEdit = () => {
     setDraft(content);
+    setBeforePolish(null);
     setEditing(true);
   };
 
   const cancelEdit = () => {
     setDraft(content);
+    setBeforePolish(null);
     setEditing(!content);
+  };
+
+  /** Ошибки и пунктуацию правит нейросеть; результат только подставляется в поле — сохраняет человек */
+  const polish = async () => {
+    const source = draft;
+    setPolishing(true);
+    try {
+      const polished = await wikiApi.polishText(source);
+      if (polished.trim() === source.trim()) {
+        notify.success('Ошибок не найдено');
+        return;
+      }
+      setBeforePolish(source);
+      setDraft(polished);
+      notify.success('Текст поправлен — проверьте и сохраните');
+    } catch (e) {
+      notify.error(e, 'Не удалось поправить текст');
+    } finally {
+      setPolishing(false);
+    }
+  };
+
+  const undoPolish = () => {
+    if (beforePolish === null) return;
+    setDraft(beforePolish);
+    setBeforePolish(null);
   };
 
   const save = async () => {
@@ -111,6 +142,7 @@ export const WikiSectionPanel: React.FC<Props> = ({
       const saved = await wikiApi.saveContent(carKey, sectionId, draft);
       setEntry(prev => mergeMedia(prev, saved));
       setEditing(!sectionContent(saved, sectionId));
+      setBeforePolish(null);
       notify.success('Сохранено');
       onChanged();
       // Описанный раздел уходит из «упущенной прибыли»
@@ -210,10 +242,19 @@ export const WikiSectionPanel: React.FC<Props> = ({
             onChange={e => setDraft(e.target.value)}
             autoSize={{ minRows: 8, maxRows: 30 }}
             placeholder={placeholder}
+            disabled={polishing}
           />
           <div className={styles.editActions}>
+            <div className={styles.polishActions}>
+              <Button icon={<ThunderboltOutlined />} loading={polishing} disabled={!draft.trim()} onClick={polish}>
+                Поправить нейросетью
+              </Button>
+              {beforePolish !== null && !polishing && (
+                <Button icon={<UndoOutlined />} onClick={undoPolish}>Вернуть как было</Button>
+              )}
+            </div>
             {!!content && <Button onClick={cancelEdit}>Отмена</Button>}
-            <Button type="primary" loading={saving} onClick={save} disabled={draft === content}>
+            <Button type="primary" loading={saving} onClick={save} disabled={draft === content || polishing}>
               Сохранить
             </Button>
           </div>

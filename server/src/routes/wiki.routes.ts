@@ -14,6 +14,8 @@ const manager = requireRole(ROLES.MANAGER);
 router.get('/entries', wikiController.listEntries);
 router.get('/entry', wikiController.getEntry);
 router.put('/entry', wikiController.saveContent);
+// Поправить текст нейросетью (через vdf.by) — только возвращает исправленный текст
+router.post('/polish', wikiController.polish);
 router.post('/media', uploadMedia, wikiController.uploadMedia);
 router.delete('/media/:id', wikiController.deleteMedia);
 

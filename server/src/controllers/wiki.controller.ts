@@ -6,6 +6,7 @@ import { AppError } from '../middleware/errorHandler';
 import { parse } from '../middleware/validate';
 import { wikiService, isWikiReviewer, WikiKey } from '../services/wiki.service';
 import { vdfCatalogService } from '../services/vdfCatalog.service';
+import { polishText, MAX_POLISH_TEXT } from '../services/textPolish.service';
 import { decodeOriginalName, WIKI_MEDIA_DIR } from '../utils/uploads';
 import type { UploadedMedia } from '../utils/mediaUpload';
 import { createImageVariants } from '../utils/wikiImages';
@@ -28,6 +29,10 @@ const requestChangesSchema = z.object({
 });
 
 const revisionStatusSchema = z.object({ status: z.enum(['PENDING', 'REWORK', 'DONE']).default('PENDING') });
+
+const polishSchema = z.object({
+  text: z.string().trim().min(1, 'Нет текста').max(MAX_POLISH_TEXT, `Текст длиннее ${MAX_POLISH_TEXT} знаков — поправьте его частями`),
+});
 
 const rewardSchema = z.object({
   amount: z.number().positive('Сумма премии должна быть больше нуля').finite().optional(),
@@ -72,6 +77,12 @@ export const wikiController = {
     if (typeof content !== 'string') throw new AppError('Нет текста', 400);
     const entry = await wikiService.saveContent(parseKey(key), parse(sectionIdSchema, sectionId), content, req.user!);
     res.json({ data: entry });
+  },
+
+  /** Текст из поля правки → нейросеть; ничего не сохраняет, результат подставляется в поле */
+  async polish(req: Request, res: Response) {
+    const { text } = parse(polishSchema, req.body);
+    res.json({ data: { text: await polishText(text) } });
   },
 
   async uploadMedia(req: Request, res: Response) {
