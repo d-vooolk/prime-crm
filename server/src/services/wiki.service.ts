@@ -27,7 +27,7 @@ export interface WikiKey {
 }
 
 /** Замечание проверяющего: что доработать */
-interface ReviewNote {
+export interface ReviewNote {
   text: string;
   byName: string;
   at: string;
