@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { AppError } from '../middleware/errorHandler';
 import { parse } from '../middleware/validate';
 import { wikiService, isWikiReviewer, WikiKey } from '../services/wiki.service';
+import { wikiProposalsService } from '../services/wikiProposals.service';
 import { vdfCatalogService } from '../services/vdfCatalog.service';
 import { polishText, MAX_POLISH_TEXT } from '../services/textPolish.service';
 import { decodeOriginalName, WIKI_MEDIA_DIR } from '../utils/uploads';
@@ -166,6 +167,19 @@ export const wikiController = {
   async markReviewed(req: Request, res: Response) {
     requireReviewer(req);
     await wikiService.markReviewed(String(req.params.id), req.user!);
+    res.json({ data: { ok: true } });
+  },
+
+  /** Предложение оптовика vdf.by: принять — дописать в карточку, отклонить — удалить его файлы */
+  async acceptProposal(req: Request, res: Response) {
+    requireReviewer(req);
+    await wikiProposalsService.accept(String(req.params.id), req.user!);
+    res.json({ data: { ok: true } });
+  },
+
+  async rejectProposal(req: Request, res: Response) {
+    requireReviewer(req);
+    await wikiProposalsService.reject(String(req.params.id), req.user!);
     res.json({ data: { ok: true } });
   },
 

@@ -68,6 +68,14 @@ export const wikiApi = {
   getPendingCount: () =>
     http.get<{ data: { count: number } }>('/wiki/revisions/pending-count').then(r => r.data.data.count),
 
+  /** Предложение оптовика vdf.by: дописать в карточку */
+  acceptProposal: (id: string) =>
+    http.post(`/wiki/revisions/${id}/accept`),
+
+  /** Предложение оптовика vdf.by: отклонить, его файлы удаляются */
+  rejectProposal: (id: string) =>
+    http.post(`/wiki/revisions/${id}/reject`),
+
   requestChanges: (id: string, comment: string) =>
     http.post(`/wiki/revisions/${id}/request-changes`, { comment }),
 

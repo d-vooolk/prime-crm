@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Card, Button, Segmented, Tag, Popconfirm, Empty, Spin, Tooltip, Alert, InputNumber, Input,
 } from 'antd';
-import { GiftOutlined, CheckOutlined, BookOutlined, RollbackOutlined } from '@ant-design/icons';
+import { GiftOutlined, CheckOutlined, BookOutlined, RollbackOutlined, CloseOutlined, LinkOutlined, ShopOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { diffWordsWithSpace } from 'diff';
 import { wikiApi } from '@/api/wiki.api';
@@ -12,6 +12,7 @@ import { useNotify } from '@/hooks/useNotify';
 import { formatPrice } from '@/utils/formatters';
 import { getErrorMessage } from '@/utils/errors';
 import { WikiPhotoGallery } from './WikiPhotoGallery';
+import { ProductThumb } from './WikiProductPicker';
 import styles from './WikiPage.module.scss';
 
 interface Props {
@@ -107,6 +108,33 @@ const RevisionCard: React.FC<{
     }
   };
 
+  const reworkButton = (
+    <Popconfirm
+      title="Вернуть на доработку?"
+      description={(
+        <div className={styles.rewardForm}>
+          <div>{r.authorName} получит замечание, исправит раздел и снова отправит на проверку.</div>
+          <Input.TextArea
+            className={styles.reworkInput}
+            value={comment}
+            onChange={e => setComment(e.target.value)}
+            autoSize={{ minRows: 3, maxRows: 10 }}
+            maxLength={3000}
+            placeholder="Что нужно доработать"
+            autoFocus
+          />
+        </div>
+      )}
+      okText="Вернуть"
+      cancelText="Отмена"
+      okButtonProps={{ disabled: !comment.trim() }}
+      onOpenChange={open => { if (open) setComment(''); }}
+      onConfirm={() => act(() => wikiApi.requestChanges(r.id, comment.trim()), `Возвращено на доработку: ${r.authorName}`)}
+    >
+      <Button icon={<RollbackOutlined />} loading={busy}>На доработку</Button>
+    </Popconfirm>
+  );
+
   const addedPhotos = r.addedMedia.filter(m => m.type === 'PHOTO');
   const addedVideos = r.addedMedia.filter(m => m.type === 'VIDEO');
   const textChanged = r.prevContent !== r.newContent;
@@ -117,7 +145,9 @@ const RevisionCard: React.FC<{
         <div>
           <div className={styles.revisionCar}>{carTitle(r)}</div>
           <div className={styles.revisionMeta}>
-            {r.authorName}{r.authorRole ? ` (${r.authorRole})` : ''} · {dayjs(r.updatedAt).format('DD.MM.YYYY HH:mm')}
+            {r.isExternal && <ShopOutlined />} {r.authorName}{r.authorRole ? ` (${r.authorRole})` : ''}
+            {r.isExternal && r.authorPhone && <> · <a href={`tel:${r.authorPhone}`}>{r.authorPhone}</a></>}
+            {' · '}{dayjs(r.updatedAt).format('DD.MM.YYYY HH:mm')}
           </div>
         </div>
         <Button
@@ -141,7 +171,12 @@ const RevisionCard: React.FC<{
         {r.status === 'REWARDED' && (
           <Tag color="gold">{rewardLabel(r)} · {r.reviewedByName}</Tag>
         )}
-        {r.status === 'REVIEWED' && <Tag>Просмотрено · {r.reviewedByName}</Tag>}
+        {r.isExternal && r.status !== 'REVIEWED' && r.status !== 'REJECTED' && (
+          <Tag color="purple">Предложение оптовика — в карточке появится после «Принять»</Tag>
+        )}
+        {r.addedProducts.length > 0 && <Tag color="green">+{r.addedProducts.length} товар(ов)</Tag>}
+        {r.status === 'REVIEWED' && <Tag>{r.isExternal ? 'Принято' : 'Просмотрено'} · {r.reviewedByName}</Tag>}
+        {r.status === 'REJECTED' && <Tag color="red">Отклонено · {r.reviewedByName}</Tag>}
         {r.status === 'CHANGES_REQUESTED' && <Tag color="orange">На доработке у автора</Tag>}
         {r.status === 'PENDING' && r.reviewNotes.length > 0 && <Tag color="blue">Исправлено после замечаний</Tag>}
       </div>
@@ -162,6 +197,23 @@ const RevisionCard: React.FC<{
         </>
       )}
 
+      {r.addedProducts.length > 0 && (
+        <>
+          <div className={styles.revisionMediaLabel}>Товары</div>
+          <ul className={styles.productList}>
+            {r.addedProducts.map(p => (
+              <li key={p.id} className={styles.productRow}>
+                <ProductThumb src={p.imageUrl} />
+                <a className={styles.productLink} href={p.url} target="_blank" rel="noreferrer">
+                  {p.title}
+                  <LinkOutlined className={styles.productLinkIcon} />
+                </a>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
       {r.removedMedia.length > 0 && (
         <>
           <div className={styles.revisionMediaLabel}>Удалённые файлы</div>
@@ -175,34 +227,34 @@ const RevisionCard: React.FC<{
         </>
       )}
 
-      {r.status !== 'REWARDED' && (
+      {r.isExternal && (r.status === 'PENDING' || r.status === 'CHANGES_REQUESTED') && (
         <div className={styles.revisionActions}>
-          {r.status === 'PENDING' && (
-            <Popconfirm
-              title="Вернуть на доработку?"
-              description={(
-                <div className={styles.rewardForm}>
-                  <div>{r.authorName} получит замечание, исправит раздел и снова отправит на проверку.</div>
-                  <Input.TextArea
-                    className={styles.reworkInput}
-                    value={comment}
-                    onChange={e => setComment(e.target.value)}
-                    autoSize={{ minRows: 3, maxRows: 10 }}
-                    maxLength={3000}
-                    placeholder="Что нужно доработать"
-                    autoFocus
-                  />
-                </div>
-              )}
-              okText="Вернуть"
-              cancelText="Отмена"
-              okButtonProps={{ disabled: !comment.trim() }}
-              onOpenChange={open => { if (open) setComment(''); }}
-              onConfirm={() => act(() => wikiApi.requestChanges(r.id, comment.trim()), `Возвращено на доработку: ${r.authorName}`)}
-            >
-              <Button icon={<RollbackOutlined />} loading={busy}>На доработку</Button>
-            </Popconfirm>
-          )}
+          {r.status === 'PENDING' && reworkButton}
+          <Popconfirm
+            title="Отклонить предложение?"
+            description="Текст не попадёт в вики, фото, видео и товары удалятся"
+            okText="Отклонить"
+            cancelText="Отмена"
+            okButtonProps={{ danger: true }}
+            onConfirm={() => act(() => wikiApi.rejectProposal(r.id), 'Предложение отклонено')}
+          >
+            <Button danger icon={<CloseOutlined />} loading={busy}>Отклонить</Button>
+          </Popconfirm>
+          <Popconfirm
+            title="Принять в вики?"
+            description="Текст допишется в конец раздела, фото, видео и товары появятся в карточке"
+            okText="Принять"
+            cancelText="Отмена"
+            onConfirm={() => act(() => wikiApi.acceptProposal(r.id), `Принято в вики: ${r.authorName}`)}
+          >
+            <Button type="primary" icon={<CheckOutlined />} loading={busy}>Принять</Button>
+          </Popconfirm>
+        </div>
+      )}
+
+      {!r.isExternal && r.status !== 'REWARDED' && r.status !== 'REJECTED' && (
+        <div className={styles.revisionActions}>
+          {r.status === 'PENDING' && reworkButton}
           {(r.status === 'PENDING' || r.status === 'CHANGES_REQUESTED') && (
             <Button icon={<CheckOutlined />} loading={busy} onClick={() => act(() => wikiApi.markReviewed(r.id), 'Отмечено как просмотренное')}>
               Просмотрено

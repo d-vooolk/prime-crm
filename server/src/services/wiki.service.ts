@@ -8,6 +8,7 @@ import { WIKI_MEDIA_DIR, WIKI_MEDIA_URL } from '../utils/uploads';
 import { ImageVariants, removeVariants, variantUrl } from '../utils/wikiImages';
 import { vdfCatalogService } from './vdfCatalog.service';
 import { pushService, pushInBackground } from './push.service';
+import { appendProposalText } from './wikiProposals.logic';
 
 /** Кто проверяет правки вики и назначает за них премию. Их собственные правки на проверку не попадают. */
 const REVIEWER_ROLES = ['Создатель', 'Директор', 'Менеджер'];
@@ -33,9 +34,9 @@ interface ReviewNote {
 }
 
 /** Правка ещё у автора: ждёт проверки или доработки — в неё копятся новые изменения */
-const OPEN_STATUSES = ['PENDING', 'CHANGES_REQUESTED'] as const;
+export const OPEN_STATUSES = ['PENDING', 'CHANGES_REQUESTED'] as const;
 
-interface MediaRef {
+export interface MediaRef {
   id: string;
   type: WikiMediaType;
   filename: string;
@@ -50,10 +51,11 @@ export interface UploadedFile {
   variants?: ImageVariants;
 }
 
+// Файлы и товары из предложений оптовиков (revisionId) не видны, пока правку не приняли
 const entryInclude = {
-  media: { orderBy: { createdAt: 'asc' } },
+  media: { where: { revisionId: null }, orderBy: { createdAt: 'asc' } },
   sections: { select: { sectionId: true, content: true, updatedByName: true, updatedAt: true } },
-  products: { orderBy: { createdAt: 'asc' } },
+  products: { where: { revisionId: null }, orderBy: { createdAt: 'asc' } },
 } satisfies Prisma.WikiEntryInclude;
 
 type EntryWithMedia = Prisma.WikiEntryGetPayload<{ include: typeof entryInclude }>;
@@ -61,7 +63,7 @@ type EntryWithMedia = Prisma.WikiEntryGetPayload<{ include: typeof entryInclude 
 type MediaRow = Prisma.WikiMediaGetPayload<object>;
 
 /** Ссылки на оригинал и сжатые варианты. Нет варианта — null, фронт возьмёт оригинал. */
-function mediaWithUrls(m: MediaRow) {
+export function mediaWithUrls(m: MediaRow) {
   const { thumbFilename, mediumFilename, displayFilename, ...rest } = m;
   return {
     ...rest,
@@ -77,7 +79,7 @@ function withUrls(entry: EntryWithMedia) {
 }
 
 /** Удаляет оригинал вместе со сжатыми вариантами. */
-function removeFile(filename: string) {
+export function removeFile(filename: string) {
   fs.promises.unlink(path.join(WIKI_MEDIA_DIR, filename)).catch(() => {});
   void removeVariants(filename);
 }
@@ -101,7 +103,7 @@ export async function resolveCarNames(key: WikiKey) {
   return { markName: model.mark.name, modelName: model.name, generationName: generationLabel(generation) };
 }
 
-async function getOrCreateEntry(key: WikiKey) {
+export async function getOrCreateEntry(key: WikiKey) {
   const existing = await prisma.wikiEntry.findUnique({ where: { markId_modelId_generationId: key } });
   if (existing) return existing;
   const names = await resolveCarNames(key);
@@ -114,15 +116,15 @@ async function getOrCreateEntry(key: WikiKey) {
 }
 
 /** Раздел карточки; null — «Общее» (WikiEntry.content) */
-type SectionId = string | null;
+export type SectionId = string | null;
 
-async function assertSection(sectionId: SectionId) {
+export async function assertSection(sectionId: SectionId) {
   if (sectionId && !(await prisma.wikiSection.findUnique({ where: { id: sectionId } }))) {
     throw new AppError('Раздел вики не найден', 400);
   }
 }
 
-async function readContent(entryId: string, sectionId: SectionId) {
+export async function readContent(entryId: string, sectionId: SectionId) {
   if (!sectionId) {
     return (await prisma.wikiEntry.findUniqueOrThrow({ where: { id: entryId }, select: { content: true } })).content;
   }
@@ -133,15 +135,15 @@ async function readContent(entryId: string, sectionId: SectionId) {
   return row?.content ?? '';
 }
 
-function asMediaRefs(value: Prisma.JsonValue | null): MediaRef[] {
+export function asMediaRefs(value: Prisma.JsonValue | null): MediaRef[] {
   return Array.isArray(value) ? (value as unknown as MediaRef[]) : [];
 }
 
-function asReviewNotes(value: Prisma.JsonValue | null): ReviewNote[] {
+export function asReviewNotes(value: Prisma.JsonValue | null): ReviewNote[] {
   return Array.isArray(value) ? (value as unknown as ReviewNote[]) : [];
 }
 
-const revisionEntrySelect = {
+export const revisionEntrySelect = {
   markId: true, modelId: true, generationId: true,
   markName: true, modelName: true, generationName: true,
 } as const;
@@ -220,7 +222,7 @@ async function trackRevision(
   });
 }
 
-function toRef(m: { id: string; type: WikiMediaType; filename: string; originalName: string }): MediaRef {
+export function toRef(m: { id: string; type: WikiMediaType; filename: string; originalName: string }): MediaRef {
   return { id: m.id, type: m.type, filename: m.filename, originalName: m.originalName };
 }
 
@@ -240,7 +242,7 @@ function currentSalaryMonth(now = new Date()) {
  */
 let writeQueue: Promise<unknown> = Promise.resolve();
 
-function serialized<T>(fn: () => Promise<T>): Promise<T> {
+export function serialized<T>(fn: () => Promise<T>): Promise<T> {
   const run = writeQueue.then(fn, fn);
   writeQueue = run.catch(() => {});
   return run;
@@ -263,7 +265,7 @@ export const wikiService = {
         id: true, markId: true, modelId: true, generationId: true,
         markName: true, modelName: true, generationName: true,
         updatedAt: true, updatedByName: true,
-        _count: { select: { media: true } },
+        _count: { select: { media: { where: { revisionId: null } } } },
         content: true,
         sections: { select: { content: true } },
       },
@@ -407,15 +409,23 @@ export const wikiService = {
   async listRevisions(status: 'PENDING' | 'REWORK' | 'DONE') {
     const revisions = await prisma.wikiRevision.findMany({
       where: status === 'DONE'
-        ? { status: { in: ['REVIEWED', 'REWARDED'] } }
+        ? { status: { in: ['REVIEWED', 'REWARDED', 'REJECTED'] } }
         : { status: status === 'PENDING' ? 'PENDING' : 'CHANGES_REQUESTED' },
       orderBy: status === 'DONE' ? { reviewedAt: 'desc' } : { updatedAt: 'desc' },
       take: status === 'DONE' ? 100 : undefined,
       include: {
         entry: { select: revisionEntrySelect },
         section: { select: { name: true } },
+        // Предложения оптовиков до принятия: их файлы и товары ещё скрыты в вики
+        proposalMedia: { orderBy: { createdAt: 'asc' } },
+        proposalProducts: { orderBy: { createdAt: 'asc' } },
       },
     });
+
+    // Неодобренное предложение оптовика: разница — текущий текст раздела и он же с дописанным блоком
+    const openProposals = revisions.filter(r => r.isExternal && (r.status === 'PENDING' || r.status === 'CHANGES_REQUESTED'));
+    const currentText = new Map<string, string>();
+    for (const r of openProposals) currentText.set(r.id, await readContent(r.entryId, r.sectionId));
 
     // Добавленные файлы ещё лежат в вики — берём из БД их сжатые варианты для превью
     const addedIds = revisions.flatMap(r => asMediaRefs(r.addedMedia).map(m => m.id));
@@ -436,18 +446,35 @@ export const wikiService = {
       };
     };
 
-    return revisions.map(({ section, ...r }) => ({
-      ...r,
-      sectionName: section?.name ?? null,
-      reviewNotes: asReviewNotes(r.reviewNotes),
-      addedMedia: asMediaRefs(r.addedMedia).map(refWithUrls),
-      removedMedia: asMediaRefs(r.removedMedia).map(m => ({ ...m, url: `${WIKI_MEDIA_URL}/${m.filename}` })),
-    }));
+    return revisions.map(({ section, proposalMedia, proposalProducts, ...r }) => {
+      const current = currentText.get(r.id);
+      const proposal = current !== undefined
+        ? {
+          prevContent: current,
+          newContent: appendProposalText(current, r.proposalText ?? ''),
+          addedMedia: proposalMedia.map(m => {
+            const { thumbUrl, mediumUrl, url, placeholder, width, height } = mediaWithUrls(m);
+            return { ...toRef(m), url, thumbUrl, mediumUrl, placeholder, width, height };
+          }),
+          addedProducts: proposalProducts,
+        }
+        : null;
+      return {
+        ...r,
+        sectionName: section?.name ?? null,
+        reviewNotes: asReviewNotes(r.reviewNotes),
+        addedMedia: asMediaRefs(r.addedMedia).map(refWithUrls),
+        addedProducts: [] as typeof proposalProducts,
+        removedMedia: asMediaRefs(r.removedMedia).map(m => ({ ...m, url: `${WIKI_MEDIA_URL}/${m.filename}` })),
+        ...proposal,
+      };
+    });
   },
 
   async markReviewed(id: string, reviewer: AuthPayload) {
     const revision = await prisma.wikiRevision.findUnique({ where: { id } });
     if (!revision) throw new AppError('Правка не найдена', 404);
+    if (revision.isExternal) throw new AppError('Предложение оптовика — примите или отклоните его', 400);
     if (!(OPEN_STATUSES as readonly string[]).includes(revision.status)) throw new AppError('Правка уже проверена', 400);
     await prisma.wikiRevision.update({
       where: { id },
@@ -471,6 +498,8 @@ export const wikiService = {
     });
     if (updated.count === 0) throw new AppError('Правку уже проверили', 400);
 
+    // Оптовик vdf.by увидит замечание в личном кабинете магазина — пуша у него нет
+    if (revision.isExternal) return;
     const { entry } = revision;
     const car = [entry.markName, entry.modelName, entry.generationName].filter(Boolean).join(' ')
       + (revision.section ? ` · ${revision.section.name}` : '');
@@ -507,6 +536,7 @@ export const wikiService = {
     const revision = await prisma.wikiRevision.findUnique({ where: { id }, include: { entry: true, section: true } });
     if (!revision) throw new AppError('Правка не найдена', 404);
     if (revision.status === 'REWARDED') throw new AppError('Премия за эту правку уже назначена', 400);
+    if (revision.isExternal) throw new AppError('Премия за вики — только сотрудникам', 400);
 
     const settings = await this.getSettings();
     const bonus = amount ?? settings.bonusAmount;

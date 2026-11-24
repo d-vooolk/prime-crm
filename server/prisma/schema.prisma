@@ -898,11 +898,15 @@ model WikiMedia {
   displayFilename String? // JPEG-копия HEIC: её показывает браузер вместо оригинала
   mediumFilename  String?
   variantsVersion Int           @default(0) // версия параметров сжатия, 0 — ещё не обрабатывали
+  // Файл из предложения оптовика vdf.by: в карточке не виден, пока правку не приняли; null — опубликован
+  revisionId      String?
   entry           WikiEntry     @relation(fields: [entryId], references: [id], onDelete: Cascade)
   section         WikiSection?  @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  revision        WikiRevision? @relation(fields: [revisionId], references: [id], onDelete: Cascade)
 
   @@index([entryId])
   @@index([sectionId])
+  @@index([revisionId])
 }
 
 // Товар магазина vdf.by, прикреплённый к разделу карточки (ссылка на сайт).
@@ -918,23 +922,32 @@ model WikiProduct {
   imageUrl    String?
   addedByName String?
   createdAt   DateTime     @default(now())
+  // Товар из предложения оптовика vdf.by: не виден, пока правку не приняли; null — опубликован
+  revisionId  String?
   entry       WikiEntry    @relation(fields: [entryId], references: [id], onDelete: Cascade)
   section     WikiSection? @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  revision    WikiRevision? @relation(fields: [revisionId], references: [id], onDelete: Cascade)
 
   @@index([entryId])
   @@index([sectionId])
+  @@index([revisionId])
 }
 
 enum WikiRevisionStatus {
+  DRAFT    // предложение оптовика vdf.by, ещё не отправлено на проверку
   PENDING  // ждёт проверки
   CHANGES_REQUESTED // возвращена автору на доработку с замечанием
   REVIEWED // просмотрено без премии
   REWARDED // назначена премия
+  REJECTED // предложение оптовика отклонено — его файлы и товары удалены
 }
 
 // Правка сотрудника. Пока правка не проверена (или на доработке), последующие сохранения того же автора
 // по тому же разделу карточки дописываются в неё: prevContent остаётся исходным, newContent обновляется.
 // На доработке правка ждёт, пока автор сам не отправит её на проверку снова.
+// Предложение оптовика vdf.by (isExternal) устроено иначе: в карточку ничего не пишется, пока его не приняли.
+// Текст — блок proposalText, который при «Принять» дописывается в конец раздела; файлы и товары лежат
+// в вики с revisionId и не видны. prevContent/newContent заполняются в момент принятия.
 model WikiRevision {
   id                 String             @id @default(cuid())
   entryId            String
@@ -948,6 +961,9 @@ model WikiRevision {
   addedMedia         Json?              // [{ id, type, filename, originalName }]
   removedMedia       Json?              // [{ id, type, filename, originalName }]
   reviewNotes        Json?              // замечания проверяющих по кругам доработки: [{ text, byName, at }]
+  isExternal         Boolean            @default(false) // оптовик vdf.by: authorId — «vdf:<id покупателя>»
+  proposalText       String?            // дописываемый оптовиком блок текста
+  authorPhone        String?            // телефон оптовика — связаться по правке
   status             WikiRevisionStatus @default(PENDING)
   reviewedByName     String?
   reviewedAt         DateTime?
@@ -958,9 +974,12 @@ model WikiRevision {
   updatedAt          DateTime           @updatedAt
   entry              WikiEntry          @relation(fields: [entryId], references: [id], onDelete: Cascade)
   section            WikiSection?       @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+  proposalMedia      WikiMedia[]
+  proposalProducts   WikiProduct[]
 
   @@index([status])
   @@index([entryId])
+  @@index([authorId])
 }
 
 model WikiSettings {

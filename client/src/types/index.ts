@@ -562,8 +562,11 @@ export interface WikiMediaRef {
   height?: number | null;
 }
 
-/** CHANGES_REQUESTED — возвращена автору на доработку */
-export type WikiRevisionStatus = 'PENDING' | 'CHANGES_REQUESTED' | 'REVIEWED' | 'REWARDED';
+/**
+ * CHANGES_REQUESTED — возвращена автору на доработку. DRAFT и REJECTED — только у предложений
+ * оптовиков vdf.by (черновик не виден проверяющим; отклонённое — файлы удалены)
+ */
+export type WikiRevisionStatus = 'DRAFT' | 'PENDING' | 'CHANGES_REQUESTED' | 'REVIEWED' | 'REWARDED' | 'REJECTED';
 
 /** Замечание проверяющего: что доработать */
 export interface WikiReviewNote {
@@ -596,6 +599,11 @@ export interface WikiRevision {
   addedMedia: WikiMediaRef[];
   removedMedia: WikiMediaRef[];
   status: WikiRevisionStatus;
+  /** Предложение оптовика vdf.by: до «Принять» в карточку ничего не попало, премии нет */
+  isExternal: boolean;
+  authorPhone?: string | null;
+  /** Товары, которые оптовик предлагает прикрепить (до принятия) */
+  addedProducts: WikiProduct[];
   /** Замечания по кругам доработки, последнее — в конце */
   reviewNotes: WikiReviewNote[];
   reviewedByName?: string | null;

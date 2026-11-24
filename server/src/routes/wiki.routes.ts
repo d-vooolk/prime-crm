@@ -29,6 +29,9 @@ router.get('/revisions/pending-count', wikiController.pendingCount);
 router.post('/revisions/:id/review', wikiController.markReviewed);
 router.post('/revisions/:id/reward', wikiController.reward);
 router.post('/revisions/:id/request-changes', wikiController.requestChanges);
+// Предложения оптовиков vdf.by
+router.post('/revisions/:id/accept', wikiController.acceptProposal);
+router.post('/revisions/:id/reject', wikiController.rejectProposal);
 // Возвращённые на доработку — автору: посмотреть замечания и отправить снова
 router.get('/revisions/rework', wikiController.listRework);
 router.post('/revisions/:id/resubmit', wikiController.resubmit);

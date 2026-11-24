@@ -116,9 +116,9 @@ export const employeesBoardService = {
         select: {
           markId: true, modelId: true, generationId: true,
           sections: { select: { sectionId: true, content: true, createdAt: true, updatedAt: true, updatedByName: true } },
-          media: { where: { sectionId: { not: null } }, select: { sectionId: true, createdAt: true, uploadedByName: true } },
+          media: { where: { sectionId: { not: null }, revisionId: null }, select: { sectionId: true, createdAt: true, uploadedByName: true } },
           revisions: {
-            where: { authorName: { in: names }, sectionId: { not: null } },
+            where: { authorName: { in: names }, sectionId: { not: null }, isExternal: false },
             select: { sectionId: true, authorName: true, updatedAt: true },
           },
         },
