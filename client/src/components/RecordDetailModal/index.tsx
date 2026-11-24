@@ -21,6 +21,13 @@ import { RecordHero } from './RecordHero';
 import { RecordOpportunities } from './RecordOpportunities';
 import styles from './RecordDetailModal.module.scss';
 
+const SMS_SENT_LABELS: { [K in SmsKind]: string } = {
+  ON_CREATE: 'SMS о записи',
+  REMINDER: 'Напоминание о записи',
+  CAR_READY: 'SMS «Авто готово»',
+  REVIEW_REQUEST: 'SMS запроса отзыва',
+};
+
 const { useBreakpoint } = Grid;
 
 interface Props {
@@ -122,7 +129,7 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
     try {
       const { result } = await recordsApi.sendSms(record.id, type);
       if (result === 'sent') {
-        notify.toast.success(type === 'CAR_READY' ? 'SMS «Авто готово» отправлено' : 'SMS запроса отзыва отправлено');
+        notify.toast.success(`${SMS_SENT_LABELS[type]} отправлено`);
       } else if (result === 'skipped') {
         notify.toast.info('Запрос отзыва по этой записи уже отправлялся — повторно не отправляем');
       } else if (result === 'disabled') {

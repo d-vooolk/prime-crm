@@ -106,7 +106,7 @@ function forViewer<T extends { client: { id: string; name: string; phone: string
   return stripped as T;
 }
 
-const smsSchema = z.object({ type: z.enum(['CAR_READY', 'REVIEW_REQUEST'], { errorMap: () => ({ message: 'Неизвестный тип SMS' }) }) });
+const smsSchema = z.object({ type: z.enum(['ON_CREATE', 'REMINDER', 'CAR_READY', 'REVIEW_REQUEST'], { errorMap: () => ({ message: 'Неизвестный тип SMS' }) }) });
 const defectsSchema = z.object({ defects: z.string().max(10000).nullable() });
 const salaryMonthSchema = z.object({
   servicemanName: z.string().trim().min(1, 'Укажите сотрудника'),

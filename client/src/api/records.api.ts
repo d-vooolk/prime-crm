@@ -1,5 +1,5 @@
 import http from './http';
-import { Record, ForeignCurrency, CurrencyPart, RecordMedia } from '@/types';
+import { Record, ForeignCurrency, CurrencyPart, RecordMedia, SmsType } from '@/types';
 
 export interface CompanySuggestion {
   legalCompanyName: string;
@@ -141,7 +141,7 @@ export const recordsApi = {
   searchCompanies: (search: string) =>
     http.get<{ data: CompanySuggestion[] }>('/records/companies', { params: { search } }).then(r => r.data.data),
 
-  sendSms: (id: string, type: 'CAR_READY' | 'REVIEW_REQUEST') =>
+  sendSms: (id: string, type: SmsType) =>
     http.post<{ ok: boolean; result: 'sent' | 'failed' | 'skipped' | 'disabled' }>(
       `/records/${id}/send-sms`, { type },
     ).then(r => r.data),

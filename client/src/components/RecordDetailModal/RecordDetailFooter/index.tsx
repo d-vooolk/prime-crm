@@ -1,13 +1,14 @@
 import React from 'react';
-import { Button, Popconfirm, Tooltip } from 'antd';
+import { App, Button, Dropdown, Popconfirm, Tooltip } from 'antd';
 import {
   PrinterOutlined, CheckCircleOutlined, CloseCircleOutlined,
   DeleteOutlined, ReloadOutlined, CalendarOutlined, CarOutlined, StarOutlined,
+  MessageOutlined, BellOutlined, DownOutlined,
 } from '@ant-design/icons';
-import type { Record } from '@/types';
+import type { Record, SmsType } from '@/types';
 import styles from './RecordDetailFooter.module.scss';
 
-export type SmsKind = 'CAR_READY' | 'REVIEW_REQUEST';
+export type SmsKind = SmsType;
 
 interface Props {
   record: Record;
@@ -34,6 +35,7 @@ export const RecordDetailFooter: React.FC<Props> = ({
   onEdit, onCancel, onCloseDeal, onRestore, onDelete, onSendSms,
   onPrintWorkOrder, onPrintAct, onPrintContract, onPrintInvoice,
 }) => {
+  const { modal } = App.useApp();
   const editable = r.status === 'ACTIVE' || r.status === 'CLOSED';
 
   const deleteConfirm = (button: React.ReactNode) => (
@@ -58,26 +60,40 @@ export const RecordDetailFooter: React.FC<Props> = ({
     );
   }
 
-  // На десктопе — иконка с подсказкой, на телефоне подсказка мешает нажатию, поэтому кнопка с текстом
-  const carReadyButton = (withTooltip: boolean) => {
-    const button = withTooltip
-      ? <Button icon={<CarOutlined />} loading={smsSending === 'CAR_READY'} />
-      : (
-        <Button icon={<CarOutlined />} loading={smsSending === 'CAR_READY'} className={styles.footerMobileFlex}>
-          Авто готово
-        </Button>
-      );
-    return (
-      <Popconfirm
-        title="Отправить SMS «Авто готово»?"
-        description={`На номер ${r.client.phone}`}
-        onConfirm={() => onSendSms('CAR_READY')}
-        okText="Отправить" cancelText="Отмена"
-      >
-        {withTooltip ? <Tooltip title="Авто готово">{button}</Tooltip> : button}
-      </Popconfirm>
-    );
-  };
+  // SMS вручную — в т.ч. повторно, если автоматическое о записи или напоминание не дошло.
+  // О записи и напоминание — только пока запись активна
+  const smsOptions: { type: SmsKind; label: string; icon: React.ReactNode }[] = [
+    { type: 'CAR_READY', label: 'Авто готово', icon: <CarOutlined /> },
+    ...(r.status === 'ACTIVE' ? [
+      { type: 'ON_CREATE' as const, label: 'SMS о записи', icon: <MessageOutlined /> },
+      { type: 'REMINDER' as const, label: 'Напоминание о записи', icon: <BellOutlined /> },
+    ] : []),
+  ];
+  const smsBusy = smsSending !== null && smsSending !== 'REVIEW_REQUEST';
+  const smsButton = (mobile: boolean) => (
+    <Dropdown
+      trigger={['click']}
+      disabled={smsBusy}
+      menu={{
+        items: smsOptions.map(o => ({
+          key: o.type,
+          label: o.label,
+          icon: o.icon,
+          onClick: () => modal.confirm({
+            title: `Отправить «${o.label}»?`,
+            content: `На номер ${r.client.phone}`,
+            okText: 'Отправить',
+            cancelText: 'Отмена',
+            onOk: () => onSendSms(o.type),
+          }),
+        })),
+      }}
+    >
+      <Button icon={<MessageOutlined />} loading={smsBusy} className={mobile ? styles.footerMobileFlex : undefined}>
+        SMS <DownOutlined />
+      </Button>
+    </Dropdown>
+  );
 
   // Запрос отзыва — только на десктопе
   const reviewButton = (
@@ -120,10 +136,10 @@ export const RecordDetailFooter: React.FC<Props> = ({
             <Button type="primary" icon={<ReloadOutlined />} block>Восстановить</Button>
           </Popconfirm>
         )}
-        {/* SMS «Авто готово» + Удалить. Печать заявки и запрос отзыва на телефоне не нужны */}
+        {/* SMS + Удалить. Печать заявки и запрос отзыва на телефоне не нужны */}
         {!isEmployee && (editable || canDelete) && (
           <div className={styles.footerMobileRow}>
-            {editable && carReadyButton(false)}
+            {editable && smsButton(true)}
             {canDelete && deleteConfirm(
               <Button danger icon={<DeleteOutlined />} className={styles.footerMobileFlex}>Удалить</Button>,
             )}
@@ -142,7 +158,7 @@ export const RecordDetailFooter: React.FC<Props> = ({
         <div className={styles.footerSecondary}>
           {editable && (
             <>
-              {carReadyButton(true)}
+              {smsButton(false)}
               {reviewButton}
             </>
           )}
