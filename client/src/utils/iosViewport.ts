@@ -71,16 +71,24 @@ function currentState(): ViewportState {
 /** Клавиатура сейчас нужна — сдвиг экрана под неё не трогаем */
 export const isTyping = () => opensKeyboard(fieldOf(document.activeElement));
 
+// На сенсорном экране было поле с клавиатурой — iOS могла прокрутить к нему обёртки модалок
+let keyboardWasOpen = false;
+
 /**
  * Вернуть экран на место. scrollTo(0, 0) при window.scrollY = 0 iOS может проигнорировать,
  * поэтому, если сдвиг остался, «толкаем» прокрутку на пиксель туда и обратно — после этого
- * WebKit пересчитывает visualViewport. Обёртки модалок antd тоже возвращаем наверх:
- * iOS прокручивает их к полю даже при overflow: hidden, и заголовок с крестиком уезжает.
+ * WebKit пересчитывает visualViewport. Обёртки модалок antd возвращаем наверх только после
+ * клавиатуры: iOS прокручивает их к полю даже при overflow: hidden, и заголовок с крестиком
+ * уезжает. Без клавиатуры прокрутку модалки не трогаем — иначе любое нажатие кнопки внизу
+ * длинной модалки (уход фокуса) подбрасывало её к началу.
  */
 export function resetViewportShift() {
-  document.querySelectorAll<HTMLElement>('.ant-modal-wrap').forEach(wrap => {
-    if (wrap.scrollTop) wrap.scrollTop = 0;
-  });
+  if (keyboardWasOpen && !isTyping()) {
+    keyboardWasOpen = false;
+    document.querySelectorAll<HTMLElement>('.ant-modal-wrap').forEach(wrap => {
+      if (wrap.scrollTop) wrap.scrollTop = 0;
+    });
+  }
   if (!isViewportShifted(currentState())) return;
   window.scrollTo(0, 0);
   if (isViewportShifted(currentState())) {
@@ -103,11 +111,19 @@ export function watchViewportShift(): () => void {
     }, 300);
   };
 
+  // Мышь и физическая клавиатура экран не сдвигают
+  const touch = window.matchMedia('(pointer: coarse)').matches;
+  const onFocusIn = () => {
+    if (touch && isTyping()) keyboardWasOpen = true;
+  };
+
   const vv = window.visualViewport;
+  document.addEventListener('focusin', onFocusIn);
   document.addEventListener('focusout', schedule);
   vv?.addEventListener('resize', schedule);
   return () => {
     clearTimeout(timer);
+    document.removeEventListener('focusin', onFocusIn);
     document.removeEventListener('focusout', schedule);
     vv?.removeEventListener('resize', schedule);
   };
