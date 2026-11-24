@@ -923,12 +923,14 @@ model WikiProduct {
 
 enum WikiRevisionStatus {
   PENDING  // ждёт проверки
+  CHANGES_REQUESTED // возвращена автору на доработку с замечанием
   REVIEWED // просмотрено без премии
   REWARDED // назначена премия
 }
 
-// Правка сотрудника. Пока правка не проверена, последующие сохранения того же автора
+// Правка сотрудника. Пока правка не проверена (или на доработке), последующие сохранения того же автора
 // по тому же разделу карточки дописываются в неё: prevContent остаётся исходным, newContent обновляется.
+// На доработке правка ждёт, пока автор сам не отправит её на проверку снова.
 model WikiRevision {
   id                 String             @id @default(cuid())
   entryId            String
@@ -941,6 +943,7 @@ model WikiRevision {
   newContent         String
   addedMedia         Json?              // [{ id, type, filename, originalName }]
   removedMedia       Json?              // [{ id, type, filename, originalName }]
+  reviewNotes        Json?              // замечания проверяющих по кругам доработки: [{ text, byName, at }]
   status             WikiRevisionStatus @default(PENDING)
   reviewedByName     String?
   reviewedAt         DateTime?

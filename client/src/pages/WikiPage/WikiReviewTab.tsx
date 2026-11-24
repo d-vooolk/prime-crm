@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Card, Button, Segmented, Tag, Popconfirm, Empty, Spin, Tooltip, Alert, InputNumber,
+  Card, Button, Segmented, Tag, Popconfirm, Empty, Spin, Tooltip, Alert, InputNumber, Input,
 } from 'antd';
-import { GiftOutlined, CheckOutlined, BookOutlined } from '@ant-design/icons';
+import { GiftOutlined, CheckOutlined, BookOutlined, RollbackOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { diffWordsWithSpace } from 'diff';
 import { wikiApi } from '@/api/wiki.api';
-import { WikiKey, WikiRevision } from '@/types';
+import { WikiKey, WikiReviewNote, WikiRevision } from '@/types';
 import { useWikiStore } from '@/store/wikiStore';
 import { useNotify } from '@/hooks/useNotify';
 import { formatPrice } from '@/utils/formatters';
@@ -52,6 +52,26 @@ const DiffView: React.FC<{ prev: string; next: string }> = ({ prev, next }) => {
   );
 };
 
+type ReviewStatus = 'PENDING' | 'REWORK' | 'DONE';
+
+const EMPTY_TEXT: Record<ReviewStatus, string> = {
+  PENDING: 'Новых правок нет',
+  REWORK: 'На доработке ничего нет',
+  DONE: 'Проверенных правок пока нет',
+};
+
+/** Замечания проверяющих по кругам доработки — последнее снизу */
+export const ReviewNotes: React.FC<{ notes: WikiReviewNote[] }> = ({ notes }) => (
+  <div className={styles.reviewNotes}>
+    {notes.map((n, i) => (
+      <div key={i} className={styles.reviewNote}>
+        <div className={styles.reviewNoteMeta}>Замечание · {n.byName} · {dayjs(n.at).format('DD.MM.YYYY HH:mm')}</div>
+        <div className={styles.reviewNoteText}>{n.text}</div>
+      </div>
+    ))}
+  </div>
+);
+
 const RevisionCard: React.FC<{
   revision: WikiRevision;
   bonusAmount: number;
@@ -64,6 +84,7 @@ const RevisionCard: React.FC<{
   const [amount, setAmount] = useState<number | null>(bonusAmount > 0 ? bonusAmount : null);
   const isAmountValid = amount !== null && amount > 0;
   const isChanged = isAmountValid && bonusAmount > 0 && !sameAmount(amount, bonusAmount);
+  const [comment, setComment] = useState('');
 
   const stats = useMemo(() => {
     const parts = diffWordsWithSpace(r.prevContent, r.newContent);
@@ -121,7 +142,11 @@ const RevisionCard: React.FC<{
           <Tag color="gold">{rewardLabel(r)} · {r.reviewedByName}</Tag>
         )}
         {r.status === 'REVIEWED' && <Tag>Просмотрено · {r.reviewedByName}</Tag>}
+        {r.status === 'CHANGES_REQUESTED' && <Tag color="orange">На доработке у автора</Tag>}
+        {r.status === 'PENDING' && r.reviewNotes.length > 0 && <Tag color="blue">Исправлено после замечаний</Tag>}
       </div>
+
+      {r.reviewNotes.length > 0 && <ReviewNotes notes={r.reviewNotes} />}
 
       {textChanged && <DiffView prev={r.prevContent} next={r.newContent} />}
 
@@ -153,6 +178,32 @@ const RevisionCard: React.FC<{
       {r.status !== 'REWARDED' && (
         <div className={styles.revisionActions}>
           {r.status === 'PENDING' && (
+            <Popconfirm
+              title="Вернуть на доработку?"
+              description={(
+                <div className={styles.rewardForm}>
+                  <div>{r.authorName} получит замечание, исправит раздел и снова отправит на проверку.</div>
+                  <Input.TextArea
+                    className={styles.reworkInput}
+                    value={comment}
+                    onChange={e => setComment(e.target.value)}
+                    autoSize={{ minRows: 3, maxRows: 10 }}
+                    maxLength={3000}
+                    placeholder="Что нужно доработать"
+                    autoFocus
+                  />
+                </div>
+              )}
+              okText="Вернуть"
+              cancelText="Отмена"
+              okButtonProps={{ disabled: !comment.trim() }}
+              onOpenChange={open => { if (open) setComment(''); }}
+              onConfirm={() => act(() => wikiApi.requestChanges(r.id, comment.trim()), `Возвращено на доработку: ${r.authorName}`)}
+            >
+              <Button icon={<RollbackOutlined />} loading={busy}>На доработку</Button>
+            </Popconfirm>
+          )}
+          {(r.status === 'PENDING' || r.status === 'CHANGES_REQUESTED') && (
             <Button icon={<CheckOutlined />} loading={busy} onClick={() => act(() => wikiApi.markReviewed(r.id), 'Отмечено как просмотренное')}>
               Просмотрено
             </Button>
@@ -218,7 +269,7 @@ const RevisionCard: React.FC<{
 
 export const WikiReviewTab: React.FC<Props> = ({ bonusAmount, onOpenCar }) => {
   const refreshPendingCount = useWikiStore(s => s.refreshPendingCount);
-  const [status, setStatus] = useState<'PENDING' | 'DONE'>('PENDING');
+  const [status, setStatus] = useState<ReviewStatus>('PENDING');
   const [revisions, setRevisions] = useState<WikiRevision[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -250,9 +301,10 @@ export const WikiReviewTab: React.FC<Props> = ({ bonusAmount, onOpenCar }) => {
       <div className={styles.reviewToolbar}>
         <Segmented
           value={status}
-          onChange={v => setStatus(v as 'PENDING' | 'DONE')}
+          onChange={v => setStatus(v as ReviewStatus)}
           options={[
             { value: 'PENDING', label: 'На проверке' },
+            { value: 'REWORK', label: 'На доработке' },
             { value: 'DONE', label: 'Проверенные' },
           ]}
         />
@@ -274,7 +326,7 @@ export const WikiReviewTab: React.FC<Props> = ({ bonusAmount, onOpenCar }) => {
 
       <Spin spinning={loading}>
         {loadError ? null : revisions.length === 0 ? (
-          <Empty description={status === 'PENDING' ? 'Новых правок нет' : 'Проверенных правок пока нет'} />
+          <Empty description={EMPTY_TEXT[status]} />
         ) : (
           <div className={styles.revisionList}>
             {revisions.map(r => (

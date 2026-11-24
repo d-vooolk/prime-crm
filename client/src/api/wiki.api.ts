@@ -1,6 +1,6 @@
 import http from './http';
 import {
-  VdfCatalogCategory, VdfCatalogList, VdfFrameType, WikiEntry, WikiEntrySummary, WikiKey, WikiMedia, WikiRevision, WikiSection, WikiSettings,
+  VdfCatalogCategory, VdfCatalogList, VdfFrameType, WikiEntry, WikiEntrySummary, WikiKey, WikiMedia, WikiReworkItem, WikiRevision, WikiSection, WikiSettings,
 } from '@/types';
 
 export const wikiApi = {
@@ -57,11 +57,22 @@ export const wikiApi = {
   removeProduct: (id: string) =>
     http.delete(`/wiki/products/${id}`),
 
-  getRevisions: (status: 'PENDING' | 'DONE') =>
+  /** REWORK — возвращённые авторам на доработку */
+  getRevisions: (status: 'PENDING' | 'REWORK' | 'DONE') =>
     http.get<{ data: WikiRevision[] }>('/wiki/revisions', { params: { status } }).then(r => r.data.data),
 
   getPendingCount: () =>
     http.get<{ data: { count: number } }>('/wiki/revisions/pending-count').then(r => r.data.data.count),
+
+  requestChanges: (id: string, comment: string) =>
+    http.post(`/wiki/revisions/${id}/request-changes`, { comment }),
+
+  /** Свои правки, возвращённые на доработку */
+  getRework: () =>
+    http.get<{ data: WikiReworkItem[] }>('/wiki/revisions/rework').then(r => r.data.data),
+
+  resubmit: (id: string) =>
+    http.post(`/wiki/revisions/${id}/resubmit`),
 
   markReviewed: (id: string) =>
     http.post(`/wiki/revisions/${id}/review`),

@@ -23,6 +23,12 @@ function parseKey(source: unknown): WikiKey {
 }
 
 // Сумму премии проверяющий может уменьшить (частичная оплата) или изменить; без суммы — из настроек
+const requestChangesSchema = z.object({
+  comment: z.string().trim().min(1, 'Напишите, что нужно доработать').max(3000),
+});
+
+const revisionStatusSchema = z.object({ status: z.enum(['PENDING', 'REWORK', 'DONE']).default('PENDING') });
+
 const rewardSchema = z.object({
   amount: z.number().positive('Сумма премии должна быть больше нуля').finite().optional(),
 });
@@ -135,19 +141,36 @@ export const wikiController = {
   },
 
   async pendingCount(req: Request, res: Response) {
-    const count = isWikiReviewer(req.user!) ? await wikiService.pendingCount() : 0;
+    // Проверяющим — правки на проверке, сотрудникам — свои правки, возвращённые на доработку
+    const count = isWikiReviewer(req.user!) ? await wikiService.pendingCount() : await wikiService.reworkCount(req.user!);
     res.json({ data: { count } });
   },
 
   async listRevisions(req: Request, res: Response) {
     requireReviewer(req);
-    const status = req.query.status === 'DONE' ? 'DONE' : 'PENDING';
+    const { status } = parse(revisionStatusSchema, req.query);
     res.json({ data: await wikiService.listRevisions(status) });
   },
 
   async markReviewed(req: Request, res: Response) {
     requireReviewer(req);
     await wikiService.markReviewed(String(req.params.id), req.user!);
+    res.json({ data: { ok: true } });
+  },
+
+  async requestChanges(req: Request, res: Response) {
+    requireReviewer(req);
+    const { comment } = parse(requestChangesSchema, req.body);
+    await wikiService.requestChanges(String(req.params.id), comment, req.user!);
+    res.json({ data: { ok: true } });
+  },
+
+  async listRework(req: Request, res: Response) {
+    res.json({ data: await wikiService.listRework(req.user!) });
+  },
+
+  async resubmit(req: Request, res: Response) {
+    await wikiService.resubmit(String(req.params.id), req.user!);
     res.json({ data: { ok: true } });
   },
 

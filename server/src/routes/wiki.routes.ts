@@ -26,6 +26,10 @@ router.get('/revisions', wikiController.listRevisions);
 router.get('/revisions/pending-count', wikiController.pendingCount);
 router.post('/revisions/:id/review', wikiController.markReviewed);
 router.post('/revisions/:id/reward', wikiController.reward);
+router.post('/revisions/:id/request-changes', wikiController.requestChanges);
+// Возвращённые на доработку — автору: посмотреть замечания и отправить снова
+router.get('/revisions/rework', wikiController.listRework);
+router.post('/revisions/:id/resubmit', wikiController.resubmit);
 
 // Разделы карточки и услуги, после которых раздел нужно заполнить (Настройки → Упущенная прибыль)
 router.get('/sections', wikiController.listSections);

@@ -562,7 +562,25 @@ export interface WikiMediaRef {
   height?: number | null;
 }
 
-export type WikiRevisionStatus = 'PENDING' | 'REVIEWED' | 'REWARDED';
+/** CHANGES_REQUESTED — возвращена автору на доработку */
+export type WikiRevisionStatus = 'PENDING' | 'CHANGES_REQUESTED' | 'REVIEWED' | 'REWARDED';
+
+/** Замечание проверяющего: что доработать */
+export interface WikiReviewNote {
+  text: string;
+  byName: string;
+  at: string;
+}
+
+/** Правка, возвращённая сотруднику на доработку */
+export interface WikiReworkItem {
+  id: string;
+  sectionId: string | null;
+  sectionName: string | null;
+  reviewNotes: WikiReviewNote[];
+  updatedAt: string;
+  entry: WikiKey & { markName: string; modelName: string; generationName?: string | null };
+}
 
 export interface WikiRevision {
   id: string;
@@ -578,6 +596,8 @@ export interface WikiRevision {
   addedMedia: WikiMediaRef[];
   removedMedia: WikiMediaRef[];
   status: WikiRevisionStatus;
+  /** Замечания по кругам доработки, последнее — в конце */
+  reviewNotes: WikiReviewNote[];
   reviewedByName?: string | null;
   reviewedAt?: string | null;
   bonusAmount?: number | null;

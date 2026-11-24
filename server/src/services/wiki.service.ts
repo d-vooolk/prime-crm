@@ -7,6 +7,7 @@ import type { AuthPayload } from '../middleware/auth.middleware';
 import { WIKI_MEDIA_DIR, WIKI_MEDIA_URL } from '../utils/uploads';
 import { ImageVariants, removeVariants, variantUrl } from '../utils/wikiImages';
 import { vdfCatalogService } from './vdfCatalog.service';
+import { pushService, pushInBackground } from './push.service';
 
 /** Кто проверяет правки вики и назначает за них премию. Их собственные правки на проверку не попадают. */
 const REVIEWER_ROLES = ['Создатель', 'Директор', 'Менеджер'];
@@ -23,6 +24,16 @@ export interface WikiKey {
   modelId: string;
   generationId: string;
 }
+
+/** Замечание проверяющего: что доработать */
+interface ReviewNote {
+  text: string;
+  byName: string;
+  at: string;
+}
+
+/** Правка ещё у автора: ждёт проверки или доработки — в неё копятся новые изменения */
+const OPEN_STATUSES = ['PENDING', 'CHANGES_REQUESTED'] as const;
 
 interface MediaRef {
   id: string;
@@ -126,6 +137,22 @@ function asMediaRefs(value: Prisma.JsonValue | null): MediaRef[] {
   return Array.isArray(value) ? (value as unknown as MediaRef[]) : [];
 }
 
+function asReviewNotes(value: Prisma.JsonValue | null): ReviewNote[] {
+  return Array.isArray(value) ? (value as unknown as ReviewNote[]) : [];
+}
+
+const revisionEntrySelect = {
+  markId: true, modelId: true, generationId: true,
+  markName: true, modelName: true, generationName: true,
+} as const;
+
+/** Ссылка сразу на раздел карточки — для пуша автору */
+function wikiUrl(entry: WikiKey, sectionId: SectionId) {
+  const params = new URLSearchParams({ mark: entry.markId, model: entry.modelId, generation: entry.generationId });
+  if (sectionId) params.set('section', sectionId);
+  return `/wiki?${params}`;
+}
+
 /**
  * Фиксирует правку сотрудника для проверки. Пока правка не проверена, всё, что автор
  * меняет в этом разделе карточки, копится в одной записи — проверяющий видит итоговую разницу.
@@ -140,7 +167,7 @@ async function trackRevision(
   if (isWikiReviewer(user)) return;
 
   const pending = await prisma.wikiRevision.findFirst({
-    where: { entryId, sectionId, authorId: user.id, status: 'PENDING' },
+    where: { entryId, sectionId, authorId: user.id, status: { in: [...OPEN_STATUSES] } },
   });
 
   const current = await readContent(entryId, sectionId);
@@ -160,7 +187,8 @@ async function trackRevision(
   const isEmpty = prevContent === newContent && addedMedia.length === 0 && removedMedia.length === 0;
 
   if (pending) {
-    if (isEmpty) {
+    // На доработке правку не удаляем, даже если автор всё откатил: замечание должно остаться
+    if (isEmpty && pending.status === 'PENDING') {
       await prisma.wikiRevision.delete({ where: { id: pending.id } });
       return;
     }
@@ -311,7 +339,7 @@ export const wikiService = {
     await trackRevision(media.entryId, media.sectionId, user, { removed: toRef(media) });
     // Файл с диска не удаляем, если на него ссылается правка на проверке — проверяющий должен его увидеть
     const referenced = await prisma.wikiRevision.count({
-      where: { entryId: media.entryId, status: 'PENDING', removedMedia: { array_contains: [{ id: media.id }] } },
+      where: { entryId: media.entryId, status: { in: [...OPEN_STATUSES] }, removedMedia: { array_contains: [{ id: media.id }] } },
     });
     if (!referenced) removeFile(media.filename);
   },
@@ -353,18 +381,38 @@ export const wikiService = {
     return prisma.wikiRevision.count({ where: { status: 'PENDING' } });
   },
 
-  async listRevisions(status: 'PENDING' | 'DONE') {
+  /** Правки сотрудника, возвращённые ему на доработку — счётчик в меню */
+  async reworkCount(user: AuthPayload) {
+    return prisma.wikiRevision.count({ where: { authorId: user.id, status: 'CHANGES_REQUESTED' } });
+  },
+
+  /** Возвращённые сотруднику правки: где и что доработать */
+  async listRework(user: AuthPayload) {
     const revisions = await prisma.wikiRevision.findMany({
-      where: status === 'PENDING' ? { status: 'PENDING' } : { status: { in: ['REVIEWED', 'REWARDED'] } },
-      orderBy: status === 'PENDING' ? { updatedAt: 'desc' } : { reviewedAt: 'desc' },
-      take: status === 'PENDING' ? undefined : 100,
+      where: { authorId: user.id, status: 'CHANGES_REQUESTED' },
+      orderBy: { updatedAt: 'desc' },
+      select: {
+        id: true, sectionId: true, reviewNotes: true, updatedAt: true,
+        entry: { select: revisionEntrySelect },
+        section: { select: { name: true } },
+      },
+    });
+    return revisions.map(({ section, reviewNotes, ...r }) => ({
+      ...r,
+      sectionName: section?.name ?? null,
+      reviewNotes: asReviewNotes(reviewNotes),
+    }));
+  },
+
+  async listRevisions(status: 'PENDING' | 'REWORK' | 'DONE') {
+    const revisions = await prisma.wikiRevision.findMany({
+      where: status === 'DONE'
+        ? { status: { in: ['REVIEWED', 'REWARDED'] } }
+        : { status: status === 'PENDING' ? 'PENDING' : 'CHANGES_REQUESTED' },
+      orderBy: status === 'DONE' ? { reviewedAt: 'desc' } : { updatedAt: 'desc' },
+      take: status === 'DONE' ? 100 : undefined,
       include: {
-        entry: {
-          select: {
-            markId: true, modelId: true, generationId: true,
-            markName: true, modelName: true, generationName: true,
-          },
-        },
+        entry: { select: revisionEntrySelect },
         section: { select: { name: true } },
       },
     });
@@ -391,6 +439,7 @@ export const wikiService = {
     return revisions.map(({ section, ...r }) => ({
       ...r,
       sectionName: section?.name ?? null,
+      reviewNotes: asReviewNotes(r.reviewNotes),
       addedMedia: asMediaRefs(r.addedMedia).map(refWithUrls),
       removedMedia: asMediaRefs(r.removedMedia).map(m => ({ ...m, url: `${WIKI_MEDIA_URL}/${m.filename}` })),
     }));
@@ -399,12 +448,55 @@ export const wikiService = {
   async markReviewed(id: string, reviewer: AuthPayload) {
     const revision = await prisma.wikiRevision.findUnique({ where: { id } });
     if (!revision) throw new AppError('Правка не найдена', 404);
-    if (revision.status !== 'PENDING') throw new AppError('Правка уже проверена', 400);
+    if (!(OPEN_STATUSES as readonly string[]).includes(revision.status)) throw new AppError('Правка уже проверена', 400);
     await prisma.wikiRevision.update({
       where: { id },
       data: { status: 'REVIEWED', reviewedByName: reviewer.name, reviewedAt: new Date() },
     });
     await this.cleanupRemovedFiles(revision.id);
+  },
+
+  /** Вернуть правку автору с замечанием: он дорабатывает раздел и сам отправляет снова */
+  async requestChanges(id: string, comment: string, reviewer: AuthPayload) {
+    const revision = await prisma.wikiRevision.findUnique({
+      where: { id },
+      include: { entry: { select: revisionEntrySelect }, section: { select: { name: true } } },
+    });
+    if (!revision) throw new AppError('Правка не найдена', 404);
+    if (revision.status !== 'PENDING') throw new AppError('Вернуть на доработку можно только правку на проверке', 400);
+    const notes = [...asReviewNotes(revision.reviewNotes), { text: comment, byName: reviewer.name, at: new Date().toISOString() }];
+    const updated = await prisma.wikiRevision.updateMany({
+      where: { id, status: 'PENDING' },
+      data: { status: 'CHANGES_REQUESTED', reviewNotes: notes as unknown as Prisma.InputJsonValue },
+    });
+    if (updated.count === 0) throw new AppError('Правку уже проверили', 400);
+
+    const { entry } = revision;
+    const car = [entry.markName, entry.modelName, entry.generationName].filter(Boolean).join(' ')
+      + (revision.section ? ` · ${revision.section.name}` : '');
+    pushInBackground(() => pushService.sendToUsers([revision.authorId], {
+      title: 'Wiki: нужна доработка',
+      body: `${car}\n${comment}`.slice(0, 200),
+      url: wikiUrl(entry, revision.sectionId),
+      tag: `wiki-rework-${revision.id}`,
+    }));
+  },
+
+  /** Автор исправил замечания и отправляет правку на проверку снова */
+  resubmit(id: string, user: AuthPayload) {
+    return serialized(async () => {
+      const revision = await prisma.wikiRevision.findUnique({ where: { id } });
+      if (!revision || revision.authorId !== user.id) throw new AppError('Правка не найдена', 404);
+      if (revision.status !== 'CHANGES_REQUESTED') throw new AppError('Правка уже отправлена на проверку', 400);
+      const isEmpty = revision.prevContent === revision.newContent
+        && asMediaRefs(revision.addedMedia).length === 0 && asMediaRefs(revision.removedMedia).length === 0;
+      // Автор откатил все свои изменения — проверять нечего
+      if (isEmpty) {
+        await prisma.wikiRevision.delete({ where: { id } });
+        return;
+      }
+      await prisma.wikiRevision.update({ where: { id }, data: { status: 'PENDING' } });
+    });
   },
 
   /**

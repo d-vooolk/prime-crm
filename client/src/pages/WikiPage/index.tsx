@@ -10,6 +10,7 @@ import { isEmployee } from '@/utils/roles';
 import { WikiCarsTab } from './WikiCarsTab';
 import { WikiReviewTab } from './WikiReviewTab';
 import { WikiMissedBanner } from './WikiMissedBanner';
+import { WikiReworkBanner } from './WikiReworkBanner';
 import styles from './WikiPage.module.scss';
 
 /**
@@ -122,6 +123,10 @@ export const WikiPage: React.FC = () => {
       {/* Упущенная премия за вики — только сотрудникам, по своим авто */}
       {isEmployee(user) && (
         <WikiMissedBanner selected={{ markId, modelId, generationId }} sectionId={sectionId} onSelect={selectCar} />
+      )}
+      {/* Возвращённые на доработку правки — их автору (правки проверяющих не проверяются) */}
+      {!reviewer && (
+        <WikiReworkBanner selected={{ markId, modelId, generationId }} sectionId={sectionId} onSelect={selectCar} />
       )}
       <Tabs activeKey={tab} onChange={setTab} items={items} destroyOnHidden />
     </div>
