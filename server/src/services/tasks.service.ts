@@ -1,19 +1,25 @@
 import { prisma } from '../prisma/client';
 import { AppError } from '../middleware/errorHandler';
 import type { AuthPayload } from '../middleware/auth.middleware';
-import { ROLE_LEVEL, ROLES } from '../utils/roles';
+import { hasRole, ROLE_LEVEL, ROLES } from '../utils/roles';
 import { pushService, pushInBackground } from './push.service';
 
 export type TaskTab = 'mine' | 'given' | 'done';
 
-/** Задания ставят и получают менеджеры и выше */
-const ASSIGNEE_ROLES = Object.keys(ROLE_LEVEL).filter(r => ROLE_LEVEL[r] <= ROLE_LEVEL[ROLES.MANAGER]);
+/**
+ * Кому можно поставить задание: менеджер и выше — любому работающему сотруднику с ролью,
+ * сотрудник — сотрудникам и менеджерам (администраторам), директорам и создателю — нет
+ */
+export function assigneeRolesFor(user: Pick<AuthPayload, 'isMaster' | 'role'>): string[] {
+  if (hasRole(user, ROLES.MANAGER)) return Object.keys(ROLE_LEVEL);
+  return [ROLES.EMPLOYEE, ROLES.MANAGER];
+}
 
 const include = { assignee: { select: { id: true, name: true } } } as const;
 
-async function findAssignee(assigneeId: string) {
+async function findAssignee(assigneeId: string, user: AuthPayload) {
   const assignee = await prisma.serviceman.findFirst({
-    where: { id: assigneeId, isDismissed: false, role: { in: ASSIGNEE_ROLES } },
+    where: { id: assigneeId, isDismissed: false, role: { in: assigneeRolesFor(user) } },
     select: { id: true },
   });
   if (!assignee) throw new AppError('Этому сотруднику нельзя поставить задание', 400);
@@ -42,17 +48,17 @@ export const tasksService = {
     return prisma.task.count({ where: { assigneeId: user.id, isDone: false } });
   },
 
-  /** Кому можно поставить задание — работающие менеджеры и выше (и сам себе) */
-  async assignees() {
+  /** Кому этот пользователь может поставить задание (и сам себе) */
+  async assignees(user: AuthPayload) {
     return prisma.serviceman.findMany({
-      where: { isDismissed: false, role: { in: ASSIGNEE_ROLES } },
+      where: { isDismissed: false, role: { in: assigneeRolesFor(user) } },
       select: { id: true, name: true, role: true },
       orderBy: { name: 'asc' },
     });
   },
 
   async create(data: { text: string; assigneeId: string }, user: AuthPayload) {
-    const assignee = await findAssignee(data.assigneeId);
+    const assignee = await findAssignee(data.assigneeId, user);
     const task = await prisma.task.create({
       data: { text: data.text, authorId: user.id, authorName: user.name, assigneeId: assignee.id },
       include,
@@ -74,7 +80,7 @@ export const tasksService = {
     if (!task) throw new AppError('Задание не найдено', 404);
     if (task.authorId !== user.id) throw new AppError('Изменить задание может только тот, кто его поставил', 403);
     if (task.isDone) throw new AppError('Выполненное задание изменить нельзя', 400);
-    const assignee = task.assigneeId === data.assigneeId ? { id: task.assigneeId } : await findAssignee(data.assigneeId);
+    const assignee = task.assigneeId === data.assigneeId ? { id: task.assigneeId } : await findAssignee(data.assigneeId, user);
     const updated = await prisma.task.update({
       where: { id },
       data: { text: data.text, assigneeId: assignee.id },

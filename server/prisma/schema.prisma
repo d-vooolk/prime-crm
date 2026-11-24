@@ -607,8 +607,12 @@ model SalaryAdjustment {
   type           SalaryAdjustmentType
   amount         Decimal @db.Decimal(14, 2)
   reason         String
+  // Расчётный месяц ЗП, в котором штраф или премия учитываются
   year           Int
   month          Int
+  // Месяц, в котором начислено изначально, если перенесено в другой (иконка в расчёте ЗП); null — не переносили
+  originYear     Int?
+  originMonth    Int?
   createdAt      DateTime              @default(now())
   serviceman     Serviceman            @relation(fields: [servicemanName], references: [name], onUpdate: Cascade, onDelete: Restrict)
 

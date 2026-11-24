@@ -53,6 +53,7 @@ router.get('/leaders', hidden, accountingController.getLeaders);
 router.get('/missed-wiki', hidden, accountingController.getMissedWiki);
 router.post('/salary-adjustments', hidden, manager, accountingController.createAdjustment);
 router.delete('/salary-adjustments/:id', hidden, manager, accountingController.deleteAdjustment);
+router.patch('/salary-adjustments/:id/month', hidden, manager, accountingController.setAdjustmentMonth);
 router.post('/salary-payments', hidden, manager, accountingController.createSalaryPayment);
 router.delete('/salary-payments/:id', hidden, manager, accountingController.deleteSalaryPayment);
 router.get('/founder-salaries', hidden, director, accountingController.getFounderSalaries);

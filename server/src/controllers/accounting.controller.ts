@@ -82,6 +82,11 @@ const adjustmentSchema = z.object({
   month: monthSchema,
 });
 
+// Расчётный месяц штрафа или премии; null — сбросить перенос
+const adjustmentMonthSchema = z.object({
+  salaryMonth: z.object({ year: yearSchema, month: monthSchema }).nullable(),
+});
+
 const salaryPaymentSchema = z.object({
   servicemanName: requiredText(150, 'Выберите сотрудника'),
   year: yearSchema,
@@ -229,6 +234,11 @@ export const accountingController = {
   async createAdjustment(req: Request, res: Response) {
     const data = parse(adjustmentSchema, req.body);
     res.status(201).json({ data: await salaryService.createAdjustment(data) });
+  },
+
+  async setAdjustmentMonth(req: Request, res: Response) {
+    const { salaryMonth } = parse(adjustmentMonthSchema, req.body);
+    res.json({ data: await salaryService.setAdjustmentMonth(String(req.params.id), salaryMonth) });
   },
 
   async deleteAdjustment(req: Request, res: Response) {

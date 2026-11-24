@@ -34,6 +34,8 @@ export interface SalaryAdjustment {
   reason: string;
   year: number;
   month: number;
+  /** Перенесено из этого месяца; null — не переносили */
+  transferredFrom: { year: number; month: number } | null;
   createdAt: string;
 }
 
@@ -155,6 +157,10 @@ export const accountingApi = {
 
   createAdjustment: (data: { servicemanName: string; type: 'FINE' | 'BONUS'; amount: number; reason: string; year: number; month: number }) =>
     http.post<{ data: SalaryAdjustment }>('/accounting/salary-adjustments', data).then(r => r.data.data),
+
+  /** Перенести штраф или премию в расчёт другого месяца; null — сбросить перенос */
+  setAdjustmentMonth: (id: string, salaryMonth: { year: number; month: number } | null) =>
+    http.patch<{ data: SalaryAdjustment }>(`/accounting/salary-adjustments/${id}/month`, { salaryMonth }).then(r => r.data.data),
 
   deleteAdjustment: (id: string) =>
     http.delete(`/accounting/salary-adjustments/${id}`),

@@ -97,8 +97,11 @@ export const canSeeMail = isCreatorOrAbove;
 export const canSeeSiteLeads = isManagerOrAbove;
 
 // ─── Задания и контакты ────────────────────────────
-/** Задания друг другу — пока только у администратора (менеджера) и выше (на сервере — routes/tasks.routes.ts) */
-export const canSeeTasks = isManagerOrAbove;
+/**
+ * Задания друг другу — у всех. Кому можно поставить, решает сервер (tasks.service assigneeRolesFor):
+ * менеджер и выше — любому, сотрудник — сотрудникам и менеджерам
+ */
+export const canSeeTasks = (u: Subject) => !!u;
 /** Полезные контакты компании (на сервере — routes/contacts.routes.ts) */
 export const canSeeContacts = isManagerOrAbove;
 

@@ -42,3 +42,12 @@
 
 .fineAmount { color: var(--color-error); }
 .bonusAmount { color: var(--color-success); }
+
+.transferredFrom {
+  color: var(--color-text-secondary);
+}
+
+// Перенесено в другой месяц — иконка подсвечена, как у работ по записям
+.transferred {
+  color: var(--color-primary);
+}

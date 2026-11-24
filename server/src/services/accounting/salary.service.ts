@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../prisma/client';
 import { AppError } from '../../middleware/errorHandler';
-import { baseSalaryFor, effectiveSalaryMonth, monthsWithBaseSalary, SalaryMonth } from '../salaryRates';
+import { baseSalaryFor, effectiveSalaryMonth, monthsWithBaseSalary, SalaryMonth, transferredAdjustmentMonth } from '../salaryRates';
 import { EMPLOYEE_SALARY_PREFIX, MONTH_NAMES_SHORT, roundMoney } from './shared';
 import {
   adjustedTotal, effectivePercent, paymentFor, paymentType, salaryFundTotals, salaryMonthFor, salaryPeriod, servicemanShare,
@@ -34,6 +34,8 @@ export interface SalaryAdjustmentDto {
   reason: string;
   year: number;
   month: number;
+  /** Перенесено из этого месяца; null — не переносили */
+  transferredFrom: SalaryMonth | null;
   createdAt: string;
 }
 
@@ -161,6 +163,7 @@ export const salaryService = {
       reason: a.reason,
       year: a.year,
       month: a.month,
+      transferredFrom: a.originYear && a.originMonth ? { year: a.originYear, month: a.originMonth } : null,
       createdAt: a.createdAt.toISOString(),
     }));
     const total = adjustedTotal(totalPayment, baseSalary, adjustments);
@@ -327,6 +330,13 @@ export const salaryService = {
   async createAdjustment(data: { servicemanName: string; type: 'FINE' | 'BONUS'; amount: number; reason: string; year: number; month: number }) {
     const { servicemanName, ...rest } = data;
     return prisma.salaryAdjustment.create({ data: { ...rest, serviceman: { connect: { name: servicemanName } } } });
+  },
+
+  /** Перенос штрафа или премии в расчёт другого месяца — как перенос работ по сделке */
+  async setAdjustmentMonth(id: string, target: SalaryMonth | null) {
+    const adjustment = await prisma.salaryAdjustment.findUnique({ where: { id } });
+    if (!adjustment) throw new AppError('Начисление не найдено', 404);
+    return prisma.salaryAdjustment.update({ where: { id }, data: transferredAdjustmentMonth(adjustment, target) });
   },
 
   async deleteAdjustment(id: string) {

@@ -61,6 +61,7 @@ export const SalaryTab: React.FC<Props> = ({ user, isMobile, canSeeCashflow, can
     : '';
 
   const openTransfer = (row: SalaryRecord) => setTransfer({
+    kind: 'record',
     recordId: row.recordId,
     servicemanName: employee,
     closedAt: row.closedAt,
@@ -153,7 +154,19 @@ export const SalaryTab: React.FC<Props> = ({ user, isMobile, canSeeCashflow, can
             canTransfer={canSeeCashflow}
             onTransfer={openTransfer}
           />
-          <SalaryAdjustments adjustments={salaryData.adjustments} canDelete={!employeeMode} />
+          <SalaryAdjustments
+            adjustments={salaryData.adjustments}
+            canDelete={!employeeMode}
+            canTransfer={canSeeCashflow}
+            onTransfer={adj => setTransfer({
+              kind: 'adjustment',
+              adjustmentId: adj.id,
+              servicemanName: adj.servicemanName,
+              type: adj.type,
+              current: { year: adj.year, month: adj.month },
+              transferredFrom: adj.transferredFrom,
+            })}
+          />
           <SalaryPayments payments={salaryData.payments} canDelete={canSeeCashflow} />
           <SalaryTotals salaryData={salaryData} isMobile={isMobile} />
         </>

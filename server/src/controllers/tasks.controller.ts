@@ -21,8 +21,8 @@ export const tasksController = {
     res.json({ data: { count: await tasksService.mineCount(req.user!) } });
   },
 
-  async assignees(_req: Request, res: Response) {
-    res.json({ data: await tasksService.assignees() });
+  async assignees(req: Request, res: Response) {
+    res.json({ data: await tasksService.assignees(req.user!) });
   },
 
   async create(req: Request, res: Response) {

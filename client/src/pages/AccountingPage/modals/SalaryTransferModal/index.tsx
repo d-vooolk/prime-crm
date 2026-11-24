@@ -2,18 +2,33 @@ import React, { useEffect, useState } from 'react';
 import { Button, DatePicker, Modal, Space } from 'antd';
 import dayjs, { Dayjs } from 'dayjs';
 import { recordsApi } from '@/api/records.api';
+import { accountingApi } from '@/api/accounting.api';
 import { useNotify } from '@/hooks/useNotify';
 import { effectiveSalaryMonth, SALARY_PERIOD_START_DAY } from '@/utils/salary';
 import { useInvalidateAccounting } from '../../hooks/useAccountingData';
 import styles from './SalaryTransferModal.module.scss';
 
-export interface SalaryTransferTarget {
-  recordId: string;
-  /** Чья доля переносится: остальные участники сделки остаются в своём месяце */
-  servicemanName: string;
-  closedAt: string;
-  transferredTo: { year: number; month: number } | null;
-}
+type SalaryMonth = { year: number; month: number };
+
+/** Что переносится: работы сотрудника в закрытой записи или штраф / премия */
+export type SalaryTransferTarget =
+  | {
+    kind: 'record';
+    recordId: string;
+    /** Чья доля переносится: остальные участники сделки остаются в своём месяце */
+    servicemanName: string;
+    closedAt: string;
+    transferredTo: SalaryMonth | null;
+  }
+  | {
+    kind: 'adjustment';
+    adjustmentId: string;
+    servicemanName: string;
+    type: 'FINE' | 'BONUS';
+    /** Месяц, где начисление учитывается сейчас */
+    current: SalaryMonth;
+    transferredFrom: SalaryMonth | null;
+  };
 
 interface Props {
   /** Переносимая запись; null — модалка закрыта */
@@ -21,7 +36,7 @@ interface Props {
   onClose: () => void;
 }
 
-const toMonth = (m: { year: number; month: number }) => dayjs().year(m.year).month(m.month - 1).startOf('month');
+const toMonth = (m: SalaryMonth) => dayjs().year(m.year).month(m.month - 1).startOf('month');
 
 /** Даты расчётного месяца: с 25-го прошлого по 24-е этого */
 const periodLabel = (month: Dayjs) =>
@@ -37,20 +52,24 @@ export const SalaryTransferModal: React.FC<Props> = ({ target, onClose }) => {
   // Уже перенесено — показываем выбранный месяц, иначе предлагаем следующий после месяца закрытия
   useEffect(() => {
     if (!target) return;
+    if (target.kind === 'adjustment') {
+      setMonth(target.transferredFrom ? toMonth(target.current) : toMonth(target.current).add(1, 'month'));
+      return;
+    }
     setMonth(target.transferredTo
       ? toMonth(target.transferredTo)
       : effectiveSalaryMonth(dayjs(target.closedAt)).add(1, 'month'));
   }, [target]);
 
+  const isTransferred = target?.kind === 'adjustment' ? !!target.transferredFrom : !!target?.transferredTo;
+
   const save = async (salaryMonth: Dayjs | null, successText: string) => {
     if (!target) return;
     setSaving(true);
     try {
-      await recordsApi.setSalaryMonth(
-        target.recordId,
-        target.servicemanName,
-        salaryMonth ? { year: salaryMonth.year(), month: salaryMonth.month() + 1 } : null,
-      );
+      const value = salaryMonth ? { year: salaryMonth.year(), month: salaryMonth.month() + 1 } : null;
+      if (target.kind === 'adjustment') await accountingApi.setAdjustmentMonth(target.adjustmentId, value);
+      else await recordsApi.setSalaryMonth(target.recordId, target.servicemanName, value);
       notify.toast.success(successText);
       onClose();
       invalidate('salary', 'salaryHistory');
@@ -73,7 +92,7 @@ export const SalaryTransferModal: React.FC<Props> = ({ target, onClose }) => {
       destroyOnHidden
       footer={(_, { OkBtn, CancelBtn }) => (
         <Space className={styles.footer}>
-          <Button danger disabled={!target?.transferredTo} onClick={() => save(null, 'Перенос сброшен')}>
+          <Button danger disabled={!isTransferred} onClick={() => save(null, 'Перенос сброшен')}>
             Сбросить перенос
           </Button>
           <Space>
@@ -83,11 +102,19 @@ export const SalaryTransferModal: React.FC<Props> = ({ target, onClose }) => {
         </Space>
       )}
     >
-      <p className={styles.hint}>
-        В расчёт какого месяца перенести работы сотрудника {target?.servicemanName} по этой записи.
-        У других сотрудников, работавших в записи, месяц не изменится.
-        Касса и приходно-расходная таблица не изменятся.
-      </p>
+      {target?.kind === 'adjustment' ? (
+        <p className={styles.hint}>
+          В расчёт какого месяца перенести {target.type === 'FINE' ? 'штраф' : 'премию'} сотрудника {target.servicemanName}.
+          {target.transferredFrom && ` Начислено в ${toMonth(target.transferredFrom).format('MMMM YYYY')}.`}
+          {' '}Касса и приходно-расходная таблица не изменятся.
+        </p>
+      ) : (
+        <p className={styles.hint}>
+          В расчёт какого месяца перенести работы сотрудника {target?.servicemanName} по этой записи.
+          У других сотрудников, работавших в записи, месяц не изменится.
+          Касса и приходно-расходная таблица не изменятся.
+        </p>
+      )}
       <DatePicker
         picker="month"
         className={styles.fullWidth}

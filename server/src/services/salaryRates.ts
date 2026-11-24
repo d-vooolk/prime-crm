@@ -59,3 +59,24 @@ export async function setBaseSalary(servicemanId: string, amount: number) {
     create: { servicemanId, ...period, amount },
   });
 }
+
+/**
+ * Новый месяц штрафа или премии при переносе. Исходный месяц запоминается при первом переносе;
+ * target null или исходный месяц — перенос сброшен (origin снова пустой).
+ */
+export function transferredAdjustmentMonth(
+  current: SalaryMonth & { originYear: number | null; originMonth: number | null },
+  target: SalaryMonth | null,
+) {
+  const origin = current.originYear && current.originMonth
+    ? { year: current.originYear, month: current.originMonth }
+    : { year: current.year, month: current.month };
+  const next = target ?? origin;
+  const isOrigin = next.year === origin.year && next.month === origin.month;
+  return {
+    year: next.year,
+    month: next.month,
+    originYear: isOrigin ? null : origin.year,
+    originMonth: isOrigin ? null : origin.month,
+  };
+}
