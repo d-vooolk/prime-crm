@@ -11,6 +11,7 @@ router.get('/', tasksController.list);
 router.get('/count', tasksController.mineCount);
 router.get('/assignees', tasksController.assignees);
 router.post('/', tasksController.create);
+router.patch('/:id', tasksController.update);
 router.post('/:id/done', tasksController.setDone);
 router.delete('/:id', tasksController.delete);
 

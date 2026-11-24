@@ -11,6 +11,15 @@ const ASSIGNEE_ROLES = Object.keys(ROLE_LEVEL).filter(r => ROLE_LEVEL[r] <= ROLE
 
 const include = { assignee: { select: { id: true, name: true } } } as const;
 
+async function findAssignee(assigneeId: string) {
+  const assignee = await prisma.serviceman.findFirst({
+    where: { id: assigneeId, isDismissed: false, role: { in: ASSIGNEE_ROLES } },
+    select: { id: true },
+  });
+  if (!assignee) throw new AppError('Этому сотруднику нельзя поставить задание', 400);
+  return assignee;
+}
+
 /** Задания друг другу: «Мне», «От меня» и выполненные (свои и поставленные), последние 100 */
 export const tasksService = {
   async list(tab: TaskTab, user: AuthPayload) {
@@ -43,11 +52,7 @@ export const tasksService = {
   },
 
   async create(data: { text: string; assigneeId: string }, user: AuthPayload) {
-    const assignee = await prisma.serviceman.findFirst({
-      where: { id: data.assigneeId, isDismissed: false, role: { in: ASSIGNEE_ROLES } },
-      select: { id: true },
-    });
-    if (!assignee) throw new AppError('Этому сотруднику нельзя поставить задание', 400);
+    const assignee = await findAssignee(data.assigneeId);
     const task = await prisma.task.create({
       data: { text: data.text, authorId: user.id, authorName: user.name, assigneeId: assignee.id },
       include,
@@ -61,6 +66,31 @@ export const tasksService = {
       }));
     }
     return task;
+  },
+
+  /** Править текст и исполнителя может только автор и только пока задание не выполнено */
+  async update(id: string, data: { text: string; assigneeId: string }, user: AuthPayload) {
+    const task = await prisma.task.findUnique({ where: { id } });
+    if (!task) throw new AppError('Задание не найдено', 404);
+    if (task.authorId !== user.id) throw new AppError('Изменить задание может только тот, кто его поставил', 403);
+    if (task.isDone) throw new AppError('Выполненное задание изменить нельзя', 400);
+    const assignee = task.assigneeId === data.assigneeId ? { id: task.assigneeId } : await findAssignee(data.assigneeId);
+    const updated = await prisma.task.update({
+      where: { id },
+      data: { text: data.text, assigneeId: assignee.id },
+      include,
+    });
+    // Новому исполнителю — как о новом задании, прежнему — об изменённом
+    const reassigned = assignee.id !== task.assigneeId;
+    if (assignee.id !== user.id && (reassigned || data.text !== task.text)) {
+      pushInBackground(() => pushService.sendToUsers([assignee.id], {
+        title: reassigned ? `Задание от ${user.name}` : `${user.name} изменил(а) задание`,
+        body: data.text.slice(0, 160),
+        url: '/tasks',
+        tag: `task-${task.id}`,
+      }));
+    }
+    return updated;
   },
 
   /** Отметить выполненным (или вернуть) может исполнитель или автор */

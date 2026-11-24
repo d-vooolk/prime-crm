@@ -34,6 +34,9 @@ export const tasksApi = {
   create: (data: { text: string; assigneeId: string }) =>
     http.post<{ data: Task }>('/tasks', data).then(r => r.data.data),
 
+  update: (id: string, data: { text: string; assigneeId: string }) =>
+    http.patch<{ data: Task }>(`/tasks/${id}`, data).then(r => r.data.data),
+
   setDone: (id: string, done: boolean) =>
     http.post<{ data: Task }>(`/tasks/${id}/done`, { done }).then(r => r.data.data),
 

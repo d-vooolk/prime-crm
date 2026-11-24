@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Button, Empty, Form, Input, Modal, Popconfirm, Segmented, Select, Spin } from 'antd';
-import { CheckOutlined, DeleteOutlined, PlusOutlined, RollbackOutlined, SendOutlined } from '@ant-design/icons';
+import { CheckOutlined, DeleteOutlined, EditOutlined, PlusOutlined, RollbackOutlined, SendOutlined } from '@ant-design/icons';
 import cn from 'classnames';
 import { Task, tasksApi, TaskTab } from '@/api/tasks.api';
 import { useInvalidateTasks, useTaskAssignees, useTasks, useTasksMineCount } from '@/hooks/useTasks';
@@ -30,29 +30,38 @@ export const TasksPage: React.FC = () => {
   const { data: tasks = [], isLoading, isError, error, refetch } = useTasks(tab);
   const { data: mineCount = 0 } = useTasksMineCount();
   const [formOpen, setFormOpen] = useState(false);
+  /** Задание, которое правит автор; null — новое */
+  const [editing, setEditing] = useState<Task | null>(null);
   const { data: assignees = [], isLoading: assigneesLoading } = useTaskAssignees(formOpen);
   const [sending, setSending] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [form] = Form.useForm<TaskFormValues>();
 
-  // Новое задание — по умолчанию себе (если пользователь есть в списке)
+  // Новое задание — по умолчанию себе (если пользователь есть в списке), правка — текущие текст и исполнитель
   useEffect(() => {
     if (!formOpen) return;
     form.resetFields();
-    if (user && assignees.some(a => a.id === user.id)) form.setFieldsValue({ assigneeId: user.id });
-  }, [formOpen, assignees, user, form]);
+    if (editing) form.setFieldsValue({ text: editing.text, assigneeId: editing.assigneeId });
+    else if (user && assignees.some(a => a.id === user.id)) form.setFieldsValue({ assigneeId: user.id });
+  }, [formOpen, editing, assignees, user, form]);
+
+  const openForm = (task: Task | null) => {
+    setEditing(task);
+    setFormOpen(true);
+  };
 
   const handleSend = async () => {
     const values = await form.validateFields().catch(() => null);
     if (!values) return;
     setSending(true);
     try {
-      await tasksApi.create(values);
-      notify.toast.success('Задание отправлено');
+      if (editing) await tasksApi.update(editing.id, values);
+      else await tasksApi.create(values);
+      notify.toast.success(editing ? 'Задание изменено' : 'Задание отправлено');
       setFormOpen(false);
       await invalidate();
     } catch (e) {
-      notify.error(e, 'Не удалось отправить задание');
+      notify.error(e, editing ? 'Не удалось изменить задание' : 'Не удалось отправить задание');
     } finally {
       setSending(false);
     }
@@ -94,7 +103,7 @@ export const TasksPage: React.FC = () => {
     <div className={styles.page}>
       <div className={styles.header}>
         <h1 className={styles.title}>Задания</h1>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setFormOpen(true)}>Новое задание</Button>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => openForm(null)}>Новое задание</Button>
       </div>
 
       <Segmented<TaskTab>
@@ -139,9 +148,14 @@ export const TasksPage: React.FC = () => {
                   </Button>
                 )}
                 {task.authorId === user?.id && (
-                  <Popconfirm title="Удалить задание?" okText="Удалить" cancelText="Отмена" onConfirm={() => handleDelete(task)}>
-                    <Button type="text" size="small" danger icon={<DeleteOutlined />} aria-label="Удалить" />
-                  </Popconfirm>
+                  <span className={styles.authorActions}>
+                    {!task.isDone && (
+                      <Button type="text" size="small" icon={<EditOutlined />} aria-label="Изменить" onClick={() => openForm(task)} />
+                    )}
+                    <Popconfirm title="Удалить задание?" okText="Удалить" cancelText="Отмена" onConfirm={() => handleDelete(task)}>
+                      <Button type="text" size="small" danger icon={<DeleteOutlined />} aria-label="Удалить" />
+                    </Popconfirm>
+                  </span>
                 )}
               </div>
             </article>
@@ -150,11 +164,11 @@ export const TasksPage: React.FC = () => {
       )}
 
       <Modal
-        title="Новое задание"
+        title={editing ? 'Изменить задание' : 'Новое задание'}
         open={formOpen}
         onCancel={() => setFormOpen(false)}
         onOk={handleSend}
-        okText="Отправить"
+        okText={editing ? 'Сохранить' : 'Отправить'}
         cancelText="Отмена"
         okButtonProps={{ loading: sending, icon: <SendOutlined /> }}
         destroyOnHidden

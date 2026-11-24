@@ -130,9 +130,9 @@ export const SourcesTab: React.FC<Props> = ({ canSeeRevenue }) => {
               <XAxis dataKey="month" tick={{ fontSize: 12 }} />
               <YAxis allowDecimals={false} tick={{ fontSize: 12 }} width={32} />
               <Tooltip />
-              <Legend formatter={(v: string) => nameOf(v)} />
+              <Legend />
               {sourceKeys.map(k => (
-                <Bar key={k} dataKey={k} name={k} stackId="sources" fill={colorOf(k)} />
+                <Bar key={k} dataKey={k} name={nameOf(k)} stackId="sources" fill={colorOf(k)} />
               ))}
             </BarChart>
           </ResponsiveContainer>

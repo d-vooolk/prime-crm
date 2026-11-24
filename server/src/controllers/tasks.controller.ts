@@ -8,6 +8,7 @@ const createSchema = z.object({
   text: requiredText(5000, 'Напишите задание'),
   assigneeId: id,
 });
+const updateSchema = createSchema;
 const doneSchema = z.object({ done: z.boolean() });
 
 export const tasksController = {
@@ -26,6 +27,10 @@ export const tasksController = {
 
   async create(req: Request, res: Response) {
     res.status(201).json({ data: await tasksService.create(parse(createSchema, req.body), req.user!) });
+  },
+
+  async update(req: Request, res: Response) {
+    res.json({ data: await tasksService.update(parse(id, req.params.id), parse(updateSchema, req.body), req.user!) });
   },
 
   async setDone(req: Request, res: Response) {
