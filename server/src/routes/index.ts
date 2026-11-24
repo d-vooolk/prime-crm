@@ -14,6 +14,8 @@ import securityRouter from './security.routes';
 import integrationsRouter from './integrations.routes';
 import mailRouter from './mail.routes';
 import siteLeadsRouter from './siteLeads.routes';
+import contactsRouter from './contacts.routes';
+import tasksRouter from './tasks.routes';
 import { authMiddleware } from '../middleware/auth.middleware';
 import { hiddenInLiteMode } from '../utils/liteMode';
 
@@ -39,5 +41,7 @@ router.use('/push', pushRouter);
 router.use('/security', securityRouter);
 router.use('/mail', mailRouter);
 router.use('/site-leads', siteLeadsRouter);
+router.use('/contacts', contactsRouter);
+router.use('/tasks', tasksRouter);
 
 export default router;

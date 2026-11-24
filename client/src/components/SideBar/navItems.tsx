@@ -8,6 +8,8 @@ import {
   FileTextOutlined,
   MailOutlined,
   InboxOutlined,
+  CheckSquareOutlined,
+  ContactsOutlined,
 } from '@ant-design/icons';
 
 export interface NavItem {
@@ -27,6 +29,8 @@ export const NAV_ITEMS: NavItem[] = [
   { path: '/wiki', label: 'Wiki', icon: <BookOutlined /> },
   { path: '/accounting', label: 'Бухгалтерия', icon: <AccountBookOutlined /> },
   { path: '/notes', label: 'Заметки', icon: <FileTextOutlined /> },
+  { path: '/tasks', label: 'Задания', icon: <CheckSquareOutlined /> },
+  { path: '/contacts', label: 'Контакты', icon: <ContactsOutlined /> },
   { path: '/mail', label: 'Почта', icon: <MailOutlined /> },
   { path: '/settings', label: 'Настройки', icon: <SettingOutlined /> },
 ];

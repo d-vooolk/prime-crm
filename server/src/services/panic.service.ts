@@ -41,8 +41,8 @@ export const PANIC_WIPE_TABLES = [
   // Деньги
   'FounderSalary', 'EmployeeSalaryPayment', 'SalaryAdjustment', 'SalaryRate',
   'MonthlyRevenue', 'MonthlyRecordCount', 'VdfOrderPayment', 'VdfOrder',
-  // Журнал изменений денег, заметки, подписки устройств
-  'AuditLog', 'Note', 'PushSubscription',
+  // Журнал изменений денег, заметки, задания, подписки устройств
+  'AuditLog', 'Note', 'Task', 'PushSubscription',
   // Заявки с сайта (имя, телефон; фото — в uploads). Новые принимаются как обычно
   'SiteLead',
   // Вики (файлы — в uploads)

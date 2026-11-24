@@ -16,7 +16,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useAuthSync } from '@/hooks/useAuthSync';
 import { PwaUpdateNotice } from '@/components/PwaUpdateNotice';
 import { queryClient } from '@/lib/queryClient';
-import { canSeeMail, canSeeNotes, canSeePath, canSeeSiteLeads } from '@/utils/roles';
+import { canSeeContacts, canSeeMail, canSeeNotes, canSeePath, canSeeSiteLeads, canSeeTasks } from '@/utils/roles';
 import { lightTheme, darkTheme } from '@/config/antdTheme';
 
 dayjs.locale('ru');
@@ -29,6 +29,8 @@ const SettingsPage = lazy(() => import('@/pages/SettingsPage').then(m => ({ defa
 const AccountingPage = lazy(() => import('@/pages/AccountingPage').then(m => ({ default: m.AccountingPage })));
 const NotesPage = lazy(() => import('@/pages/NotesPage').then(m => ({ default: m.NotesPage })));
 const LeadsPage = lazy(() => import('@/pages/LeadsPage').then(m => ({ default: m.LeadsPage })));
+const TasksPage = lazy(() => import('@/pages/TasksPage').then(m => ({ default: m.TasksPage })));
+const ContactsPage = lazy(() => import('@/pages/ContactsPage').then(m => ({ default: m.ContactsPage })));
 const MailPage = lazy(() => import('@/pages/MailPage').then(m => ({ default: m.MailPage })));
 
 const App: React.FC = () => {
@@ -81,6 +83,8 @@ const App: React.FC = () => {
                     <Route path="accounting" element={<AccountingPage />} />
                     <Route path="notes" element={canSeeNotes(user) ? <NotesPage /> : <Navigate to="/schedule" replace />} />
                     <Route path="leads" element={canSeeSiteLeads(user) ? <LeadsPage /> : <Navigate to="/schedule" replace />} />
+                    <Route path="tasks" element={canSeeTasks(user) ? <TasksPage /> : <Navigate to="/schedule" replace />} />
+                    <Route path="contacts" element={canSeeContacts(user) ? <ContactsPage /> : <Navigate to="/schedule" replace />} />
                     <Route path="mail" element={canSeeMail(user) ? <MailPage /> : <Navigate to="/schedule" replace />} />
                     <Route path="settings" element={<SettingsPage />} />
                   </Route>

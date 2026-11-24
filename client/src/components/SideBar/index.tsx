@@ -10,10 +10,11 @@ import { useAuthStore } from '@/store/authStore';
 import { useWikiStore } from '@/store/wikiStore';
 import { Logo } from '@/components/Logo';
 import { recordsApi } from '@/api/records.api';
-import { canSeeMail, canSeePath, canSeeSiteLeads, isManagerOrAbove } from '@/utils/roles';
+import { canSeeMail, canSeePath, canSeeSiteLeads, canSeeTasks, isManagerOrAbove } from '@/utils/roles';
 import { useStockLowCount } from '@/hooks/useStock';
 import { useMailUnreadCount } from '@/hooks/useMail';
 import { useSiteLeadsNewCount } from '@/hooks/useSiteLeads';
+import { useTasksMineCount } from '@/hooks/useTasks';
 import { useOnAppResume } from '@/hooks/useAppResume';
 import { NAV_ITEMS, NavItem } from './navItems';
 import { useNavPrefsStore } from '@/store/navPrefsStore';
@@ -35,10 +36,13 @@ export const SideBar: React.FC = () => {
   const { data: mailUnreadCount = 0 } = useMailUnreadCount(canSeeMail(user));
   // Новые заявки с сайта — менеджерам и выше
   const { data: leadsNewCount = 0 } = useSiteLeadsNewCount(canSeeSiteLeads(user));
+  // Невыполненные задания мне
+  const { data: tasksMineCount = 0 } = useTasksMineCount(canSeeTasks(user));
   const navIcon = (item: NavItem) => {
     if (item.path === '/wiki') return <Badge count={wikiPendingCount} size="small">{item.icon}</Badge>;
     if (item.path === '/mail') return <Badge count={mailUnreadCount} size="small">{item.icon}</Badge>;
     if (item.path === '/leads') return <Badge count={leadsNewCount} size="small">{item.icon}</Badge>;
+    if (item.path === '/tasks') return <Badge count={tasksMineCount} size="small">{item.icon}</Badge>;
     if (item.path === '/settings') return <Badge count={lowStockCount} size="small" color="var(--color-warning)">{item.icon}</Badge>;
     return item.icon;
   };
@@ -65,7 +69,8 @@ export const SideBar: React.FC = () => {
   const moreActive = moreItems.some(item => location.pathname.startsWith(item.path));
   // Бейджи пунктов меню «Ещё» видны и на самой кнопке: заявки и письма важнее склада
   const inMore = (path: string) => moreItems.some(item => item.path === path);
-  const moreUrgentCount = (inMore('/leads') ? leadsNewCount : 0) + (inMore('/mail') ? mailUnreadCount : 0);
+  const moreUrgentCount = (inMore('/leads') ? leadsNewCount : 0) + (inMore('/mail') ? mailUnreadCount : 0)
+    + (inMore('/tasks') ? tasksMineCount : 0);
   const moreWarnCount = inMore('/settings') ? lowStockCount : 0;
   const moreIcon = moreUrgentCount > 0
     ? <Badge count={moreUrgentCount} size="small"><AppstoreOutlined /></Badge>
@@ -220,6 +225,9 @@ export const SideBar: React.FC = () => {
             )}
             {item.path === '/leads' && leadsNewCount > 0 && (
               <span className={styles.moreItemHint}>{leadsNewCount} новых</span>
+            )}
+            {item.path === '/tasks' && tasksMineCount > 0 && (
+              <span className={styles.moreItemHint}>{tasksMineCount} новых</span>
             )}
           </NavLink>
         ))}

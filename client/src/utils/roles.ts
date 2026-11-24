@@ -96,6 +96,12 @@ export const canSeeMail = isCreatorOrAbove;
 /** Заявки из формы prime-auto.by разбирают те, кто создаёт записи (на сервере — routes/siteLeads.routes.ts) */
 export const canSeeSiteLeads = isManagerOrAbove;
 
+// ─── Задания и контакты ────────────────────────────
+/** Задания друг другу — пока только у администратора (менеджера) и выше (на сервере — routes/tasks.routes.ts) */
+export const canSeeTasks = isManagerOrAbove;
+/** Полезные контакты компании (на сервере — routes/contacts.routes.ts) */
+export const canSeeContacts = isManagerOrAbove;
+
 // ─── Навигация ─────────────────────────────────────
 /** Сотруднику доступны только эти разделы */
 // Дашборд сотруднику — только пьедестал, своя карточка и упущенная прибыль (DashboardPage)
@@ -107,6 +113,8 @@ export const canSeePath = (u: Subject, path: string) => {
   if (path === '/mail') return canSeeMail(u);
   if (path === '/notes') return canSeeNotes(u);
   if (path === '/leads') return canSeeSiteLeads(u);
+  if (path === '/tasks') return canSeeTasks(u);
+  if (path === '/contacts') return canSeeContacts(u);
   return !isEmployee(u) || EMPLOYEE_ALLOWED_PATHS.includes(path);
 };
 

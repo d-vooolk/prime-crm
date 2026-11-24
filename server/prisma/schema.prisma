@@ -351,6 +351,7 @@ model Serviceman {
   birthday       DateTime?
   createdAt      DateTime  @default(now())
   notes          Note[]
+  tasks          Task[]
   salaryRates    SalaryRate[]
   // Ссылки по ФИО (см. Record.serviceman) — для каскадного переименования
   recordsAsServiceman   Record[]                @relation("RecordServiceman")
@@ -722,6 +723,35 @@ model Note {
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
   serviceman   Serviceman   @relation(fields: [servicemanId], references: [id], onDelete: Cascade)
+}
+
+// Полезные контакты (поставщики, службы, партнёры) — раздел «Контакты», менеджер и выше
+model Contact {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+}
+
+// Задание сотруднику — раздел «Задания», менеджер и выше. Автор без внешнего ключа:
+// задание может поставить и мастер-доступ, у которого нет строки в Serviceman
+model Task {
+  id         String     @id @default(cuid())
+  text       String
+  authorId   String
+  authorName String
+  assigneeId String
+  assignee   Serviceman @relation(fields: [assigneeId], references: [id], onDelete: Cascade)
+  isDone     Boolean    @default(false)
+  doneAt     DateTime?
+  createdAt  DateTime   @default(now())
+
+  @@index([assigneeId, isDone])
+  @@index([authorId, isDone])
 }
 
 // --- Локальный справочник автомобилей ---

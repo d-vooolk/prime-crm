@@ -34,6 +34,14 @@ const ClientPageLink: React.FC<{ token: string }> = ({ token }) => {
 /** Клиент, юрлицо, автомобиль и данные записи */
 export const RecordInfo: React.FC<Props> = ({ record: r, isEmployee, onOpenHistory, onOpenWiki }) => (
   <>
+    {/* Примечание — первым и цитатой: внизу среди данных записи его не замечали */}
+    {r.notes && (
+      <blockquote className={styles.notes}>
+        <span className={styles.notesLabel}>Примечание</span>
+        {r.notes}
+      </blockquote>
+    )}
+
     {/* Сотрудникам данные клиента и историю посещений не показываем */}
     {!isEmployee && (
       <>
@@ -129,8 +137,6 @@ export const RecordInfo: React.FC<Props> = ({ record: r, isEmployee, onOpenHisto
         <Descriptions.Item label="Источник клиента">{r.clientSource.name}</Descriptions.Item>
       )}
     </Descriptions>
-
-    {r.notes && <p className={styles.notes}>📌 {r.notes}</p>}
 
     <RecordMediaGallery recordId={r.id} />
   </>
