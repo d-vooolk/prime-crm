@@ -19,6 +19,7 @@ import { ActTemplateModal } from './ActTemplateModal';
 import { CancelPrepaidModal } from './CancelPrepaidModal';
 import { RecordHero } from './RecordHero';
 import { RecordOpportunities } from './RecordOpportunities';
+import { ClientPageLink } from './ClientPageLink';
 import styles from './RecordDetailModal.module.scss';
 
 const SMS_SENT_LABELS: { [K in SmsKind]: string } = {
@@ -229,6 +230,8 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
         <RecordItems record={r} isEmployee={isEmployee} />
         {/* Допродажи — только руководителям и пока запись в работе */}
         {canSeeOpportunities(user) && r.status === 'ACTIVE' && <RecordOpportunities record={r} />}
+        {/* Страница для клиента — под допродажами; сотрудникам данные клиента не показываем */}
+        {!isEmployee && r.status === 'ACTIVE' && r.publicToken && <ClientPageLink token={r.publicToken} />}
       </Modal>
 
       <RecordModal

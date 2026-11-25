@@ -1,0 +1,59 @@
+@use '@/styles/variables' as *;
+
+.links {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  vertical-align: middle;
+
+  @include mobile {
+    gap: var(--spacing-md);
+  }
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  color: var(--color-on-messenger);
+  transition: transform 0.15s ease, filter 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+
+  svg {
+    width: 58%;
+    height: 58%;
+    fill: currentColor;
+  }
+
+  &:hover {
+    color: var(--color-on-messenger);
+    filter: brightness(1.1);
+  }
+
+  &:active {
+    transform: scale(0.92);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+
+  // Под палец: не меньше 40 px
+  @include mobile {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+.telegram {
+  background: var(--color-telegram);
+}
+
+.viber {
+  background: var(--color-viber);
+}

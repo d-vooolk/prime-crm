@@ -1,10 +1,10 @@
 import React from 'react';
-import { Button, Descriptions, Divider, Typography } from 'antd';
-import { HistoryOutlined, BookOutlined, PictureOutlined, LinkOutlined } from '@ant-design/icons';
-import { useCompanySettings } from '@/hooks/useReferenceData';
+import { Button, Descriptions, Divider } from 'antd';
+import { HistoryOutlined, BookOutlined, PictureOutlined } from '@ant-design/icons';
 import type { Record } from '@/types';
 import { formatDate, formatTime } from '@/utils/formatters';
 import { RecordMediaGallery } from '@/components/RecordMediaGallery';
+import { MessengerLinks } from '@/components/MessengerLinks';
 import { TWO_COLUMNS } from '@/config/descriptions';
 import styles from './RecordInfo.module.scss';
 
@@ -14,22 +14,6 @@ interface Props {
   onOpenHistory: () => void;
   onOpenWiki: () => void;
 }
-
-/**
- * Ссылка на страницу записи для клиента (zapis.prime-auto.by/<код>).
- * Страница живёт, только пока запись активна.
- */
-const ClientPageLink: React.FC<{ token: string }> = ({ token }) => {
-  const { data: settings } = useCompanySettings();
-  if (!settings?.publicRecordUrl) return null;
-  const url = `${settings.publicRecordUrl}/${token}`;
-  return (
-    <div className={styles.clientPage}>
-      <LinkOutlined />
-      <Typography.Link href={url} target="_blank" rel="noreferrer noopener">Страница для клиента</Typography.Link>
-    </div>
-  );
-};
 
 /** Клиент, юрлицо, автомобиль и данные записи */
 export const RecordInfo: React.FC<Props> = ({ record: r, isEmployee, onOpenHistory, onOpenWiki }) => (
@@ -51,9 +35,12 @@ export const RecordInfo: React.FC<Props> = ({ record: r, isEmployee, onOpenHisto
             {r.client.name}
           </Descriptions.Item>
           <Descriptions.Item label="Телефон">
-            <a href={`tel:${r.client.phone}`} rel="noreferrer noopener">
-              {r.client.phone}
-            </a>
+            <span className={styles.phone}>
+              <a href={`tel:${r.client.phone}`} rel="noreferrer noopener">
+                {r.client.phone}
+              </a>
+              <MessengerLinks phone={r.client.phone} />
+            </span>
           </Descriptions.Item>
         </Descriptions>
         <Button
@@ -65,7 +52,6 @@ export const RecordInfo: React.FC<Props> = ({ record: r, isEmployee, onOpenHisto
         >
           История посещений клиента
         </Button>
-        {r.status === 'ACTIVE' && r.publicToken && <ClientPageLink token={r.publicToken} />}
       </>
     )}
 

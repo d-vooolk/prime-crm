@@ -39,10 +39,15 @@
   color: var(--color-text-secondary);
 }
 
-.clientPage {
-  display: flex;
+// Номер и иконки мессенджеров в строку; на узком экране иконки уходят ниже
+.phone {
+  display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--spacing-sm);
-  color: var(--color-accent);
-  font-size: 14px;
+  column-gap: var(--spacing-md);
+  row-gap: var(--spacing-sm);
+
+  @include mobile {
+    font-size: 15px;
+  }
 }
