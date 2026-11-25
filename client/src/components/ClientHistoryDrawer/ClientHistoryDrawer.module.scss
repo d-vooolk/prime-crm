@@ -125,6 +125,10 @@
   gap: var(--spacing-md);
 }
 
+.openRecord {
+  align-self: flex-start;
+}
+
 .detailsInfo {
   margin-bottom: 0;
 }

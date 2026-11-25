@@ -18,6 +18,8 @@ interface Props {
    * прямо в панели — чтобы не открывать модалку поверх модалки.
    */
   onSelectRecord?: (recordId: string) => void;
+  /** Кнопка «Открыть карточку» в раскрытом визите (кроме текущего) */
+  onOpenRecord?: (recordId: string) => void;
   /** Изменение значения заставляет перечитать клиента (после правки записи) */
   refreshKey?: number;
 }
@@ -130,7 +132,7 @@ const VisitSummary: React.FC<{ record: CrmRecord; isCurrent: boolean }> = ({ rec
 };
 
 /** Подробности визита — услуги, суммы, мастер, гарантия */
-const VisitDetails: React.FC<{ record: CrmRecord }> = ({ record }) => {
+const VisitDetails: React.FC<{ record: CrmRecord; onOpen?: () => void }> = ({ record, onOpen }) => {
   const total = itemsTotal(record.items);
   const prepaid = itemsPrepaid(record.items);
 
@@ -198,12 +200,16 @@ const VisitDetails: React.FC<{ record: CrmRecord }> = ({ record }) => {
           </>
         )}
       </div>
+
+      {onOpen && (
+        <Button className={styles.openRecord} onClick={onOpen}>Открыть карточку записи</Button>
+      )}
     </div>
   );
 };
 
 export const ClientHistoryDrawer: React.FC<Props> = ({
-  clientId, open, onClose, currentRecordId, onSelectRecord, refreshKey,
+  clientId, open, onClose, currentRecordId, onSelectRecord, onOpenRecord, refreshKey,
 }) => {
   const [client, setClient] = useState<ClientWithRecords | null>(null);
   const [loading, setLoading] = useState(false);
@@ -305,7 +311,12 @@ export const ClientHistoryDrawer: React.FC<Props> = ({
               items={records.map(r => ({
                 key: r.id,
                 label: <VisitSummary record={r} isCurrent={r.id === currentRecordId} />,
-                children: <VisitDetails record={r} />,
+                children: (
+                  <VisitDetails
+                    record={r}
+                    onOpen={onOpenRecord && r.id !== currentRecordId ? () => onOpenRecord(r.id) : undefined}
+                  />
+                ),
               }))}
             />
           )}

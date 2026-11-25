@@ -165,6 +165,13 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
     navigate(`/wiki?${params}`);
   };
 
+  // Карточку другого визита открывает расписание по ссылке (как из пуша) — на любой странице
+  const openOtherRecord = (recordId: string) => {
+    setHistoryOpen(false);
+    onClose();
+    navigate(`/schedule?record=${recordId}`);
+  };
+
   return (
     <>
       <Modal
@@ -240,12 +247,13 @@ export const RecordDetailModal: React.FC<Props> = ({ record, open, onClose, onRe
       />
 
       {/* Без onSelectRecord — подробности раскрываются внутри панели,
-          чтобы не открывать вторую карточку записи поверх текущей */}
+          чтобы не открывать вторую карточку записи поверх текущей; карточку визита — кнопкой */}
       <ClientHistoryDrawer
         clientId={r.clientId}
         open={historyOpen}
         onClose={() => setHistoryOpen(false)}
         currentRecordId={r.id}
+        onOpenRecord={openOtherRecord}
       />
 
       <ActTemplateModal
