@@ -3,6 +3,7 @@ import { List, Table, Tag } from 'antd';
 import { PhoneOutlined, UserOutlined } from '@ant-design/icons';
 import type { Car, Client } from '@/types';
 import { formatDate } from '@/utils/formatters';
+import { MessengerLinks } from '@/components/MessengerLinks';
 import { carLabel, matchedCars, telHref } from '../clientsHelpers';
 import styles from './ClientsList.module.scss';
 
@@ -67,14 +68,17 @@ export const ClientsList: React.FC<Props> = ({
                 </span>
               </div>
               {/* Тап по номеру звонит, тап по остальной карточке открывает историю */}
-              <a
-                href={telHref(client.phone)}
-                className={styles.mobilePhone}
-                onClick={e => e.stopPropagation()}
-              >
-                <PhoneOutlined />
-                {client.phone}
-              </a>
+              <div className={styles.mobilePhoneRow}>
+                <a
+                  href={telHref(client.phone)}
+                  className={styles.mobilePhone}
+                  onClick={e => e.stopPropagation()}
+                >
+                  <PhoneOutlined />
+                  {client.phone}
+                </a>
+                <MessengerLinks phone={client.phone} />
+              </div>
               {recordFilterActive ? renderMatchedRecords(client) : client.cars.length > 0 && (
                 <div className={styles.mobileCars}>
                   {client.cars.map(car => renderCarTag(car, styles.mobileCarTag))}
@@ -99,7 +103,17 @@ export const ClientsList: React.FC<Props> = ({
         </span>
       ),
     },
-    { title: 'Телефон', dataIndex: 'phone', key: 'phone' },
+    {
+      title: 'Телефон',
+      dataIndex: 'phone',
+      key: 'phone',
+      render: (phone: string) => (
+        <span className={styles.phone}>
+          {phone}
+          <MessengerLinks phone={phone} />
+        </span>
+      ),
+    },
     {
       title: 'Автомобили',
       key: 'cars',

@@ -8,6 +8,7 @@ import { recordsApi } from '@/api/records.api';
 import { useInvalidateSiteLeads, useSiteLeads, useSiteLeadsNewCount } from '@/hooks/useSiteLeads';
 import { useNotify } from '@/hooks/useNotify';
 import { LoadError } from '@/components/Shared/LoadError';
+import { MessengerLinks } from '@/components/MessengerLinks';
 import { RecordModal } from '@/components/RecordModal';
 import { RecordDetailModal } from '@/components/RecordDetailModal';
 import { Record as CrmRecord } from '@/types';
@@ -109,9 +110,12 @@ export const LeadsPage: React.FC = () => {
                 <span className={styles.muted}>{formatDateTime(lead.createdAt)}</span>
               </div>
 
-              <a className={styles.phone} href={telHref(lead.phone)}>
-                <PhoneOutlined /> {lead.phone}
-              </a>
+              <div className={styles.phoneRow}>
+                <a className={styles.phone} href={telHref(lead.phone)}>
+                  <PhoneOutlined /> {lead.phone}
+                </a>
+                <MessengerLinks phone={lead.phone} />
+              </div>
 
               {lead.message && <p className={styles.message}>{lead.message}</p>}
 

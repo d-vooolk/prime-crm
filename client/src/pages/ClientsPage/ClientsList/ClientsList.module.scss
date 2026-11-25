@@ -77,6 +77,22 @@
   color: var(--color-primary);
 }
 
+.mobilePhoneRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--spacing-md);
+  row-gap: var(--spacing-sm);
+}
+
+.phone {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--spacing-md);
+  row-gap: var(--spacing-xs);
+}
+
 .mobileCars {
   display: flex;
   flex-wrap: wrap;

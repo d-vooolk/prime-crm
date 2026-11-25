@@ -4,6 +4,7 @@ import { clientsApi } from '@/api/clients.api';
 import { ClientWithRecords, Record as CrmRecord, RecordItem } from '@/types';
 import { formatDate, formatTime, formatPrice } from '@/utils/formatters';
 import { getErrorMessage } from '@/utils/errors';
+import { MessengerLinks } from '@/components/MessengerLinks';
 import styles from './ClientHistoryDrawer.module.scss';
 
 interface Props {
@@ -255,7 +256,12 @@ export const ClientHistoryDrawer: React.FC<Props> = ({
       ) : (
         <>
           <Descriptions size="small" column={1}>
-            <Descriptions.Item label="Телефон">{client.phone}</Descriptions.Item>
+            <Descriptions.Item label="Телефон">
+              <span className={styles.phone}>
+                {client.phone}
+                <MessengerLinks phone={client.phone} />
+              </span>
+            </Descriptions.Item>
             {client.notes && (
               <Descriptions.Item label="Примечание">{client.notes}</Descriptions.Item>
             )}

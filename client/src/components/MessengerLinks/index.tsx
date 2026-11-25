@@ -23,17 +23,18 @@ const ViberGlyph: React.FC = () => (
 
 /**
  * Иконки Telegram и Viber рядом с телефоном клиента — открывают чат с этим номером.
- * На телефоне кнопки крупнее (под палец), подсказки только на компьютере.
+ * Контурные, цветом текста темы. На телефоне кнопки крупнее (под палец), подсказки только на компьютере.
+ * Клик не всплывает: иконки стоят и в строках/карточках, которые сами открываются по клику.
  */
 export const MessengerLinks: React.FC<Props> = ({ phone }) => {
   const digits = messengerPhone(phone);
   if (!digits) return null;
   return (
-    <span className={styles.links}>
+    <span className={styles.links} onClick={e => e.stopPropagation()}>
       <Tooltip title="Написать в Telegram" trigger="hover">
         {/* Новая вкладка: в установленном приложении ссылка не уводит окно CRM */}
         <a
-          className={`${styles.link} ${styles.telegram}`}
+          className={styles.link}
           href={telegramHref(digits)}
           target="_blank"
           rel="noreferrer noopener"
@@ -45,7 +46,7 @@ export const MessengerLinks: React.FC<Props> = ({ phone }) => {
       <Tooltip title="Написать в Viber" trigger="hover">
         {/* viber:// открывает приложение — без новой вкладки, иначе на компьютере остаётся пустая */}
         <a
-          className={`${styles.link} ${styles.viber}`}
+          className={styles.link}
           href={viberHref(digits)}
           aria-label="Написать в Viber"
         >

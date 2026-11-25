@@ -83,6 +83,14 @@
   white-space: nowrap;
 }
 
+.phoneRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--spacing-md);
+  row-gap: var(--spacing-sm);
+}
+
 .phone {
   font-family: var(--font-display);
   font-size: 17px;

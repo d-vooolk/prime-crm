@@ -190,3 +190,12 @@
 .performerLabel {
   color: var(--color-text-primary);
 }
+
+// Номер и иконки мессенджеров в строку; на узком экране иконки уходят ниже
+.phone {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--spacing-md);
+  row-gap: var(--spacing-sm);
+}

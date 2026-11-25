@@ -18,20 +18,22 @@
   flex-shrink: 0;
   width: 30px;
   height: 30px;
+  border: 1.5px solid var(--color-text-primary);
   border-radius: 50%;
-  color: var(--color-on-messenger);
-  transition: transform 0.15s ease, filter 0.15s ease;
+  color: var(--color-text-primary);
+  background: transparent;
+  transition: transform 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   -webkit-tap-highlight-color: transparent;
 
   svg {
-    width: 58%;
-    height: 58%;
+    width: 56%;
+    height: 56%;
     fill: currentColor;
   }
 
   &:hover {
-    color: var(--color-on-messenger);
-    filter: brightness(1.1);
+    border-color: var(--color-brand);
+    color: var(--color-brand);
   }
 
   &:active {
@@ -48,12 +50,4 @@
     width: 40px;
     height: 40px;
   }
-}
-
-.telegram {
-  background: var(--color-telegram);
-}
-
-.viber {
-  background: var(--color-viber);
 }
