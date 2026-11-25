@@ -9,7 +9,7 @@ import { statsService } from '../services/accounting/stats.service';
 import { debtsService } from '../services/accounting/debts.service';
 import { parseExpenseCategoryField } from './expenses.controller';
 import { AppError } from '../middleware/errorHandler';
-import { parse, positiveMoney, money, dateString, requiredText, optionalText } from '../middleware/validate';
+import { parse, positiveMoney, money, dateString, requiredText, optionalText, nullableText } from '../middleware/validate';
 import { currencyService } from '../services/currency.service';
 import { currencyAccountingService } from '../services/currencyAccounting.service';
 import { hasRole, ROLES } from '../utils/roles';
@@ -54,6 +54,14 @@ const depositSchema = z.object({
 const withdrawalSchema = depositSchema.extend({
   description: optionalText(500),
   person: requiredText(150, 'Выберите, кто забирает'),
+});
+
+// Правка операции капитала: пустое описание/изыматель — стереть
+const capitalUpdateSchema = z.object({
+  date: dateString().optional(),
+  amount: positiveMoney().optional(),
+  description: nullableText(500),
+  person: nullableText(150),
 });
 
 const capitalTransferSchema = z.object({
@@ -183,6 +191,16 @@ export const accountingController = {
   async createWithdrawal(req: Request, res: Response) {
     const data = parse(withdrawalSchema, req.body);
     res.status(201).json({ data: await capitalService.createWithdrawal(data) });
+  },
+
+  async updateCapitalTransaction(req: Request, res: Response) {
+    const data = parse(capitalUpdateSchema, req.body);
+    res.json({ data: await capitalService.updateTransaction(String(req.params.id), data) });
+  },
+
+  async deleteCapitalTransaction(req: Request, res: Response) {
+    await capitalService.deleteTransaction(String(req.params.id));
+    res.status(204).end();
   },
 
   async createCapitalTransfer(req: Request, res: Response) {

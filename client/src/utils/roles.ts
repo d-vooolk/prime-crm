@@ -57,6 +57,8 @@ export const canSeeDebts = isManagerOrAbove;
 /** Расчёт ЗП, ЗП учредителей, статистика, VDF */
 export const canSeeSalary = (u: Subject) => !isLite(u);
 export const canEditTransactions = isCreatorOrAbove;
+/** Правка и удаление сумм капитала */
+export const canEditCapital = isCreatorOrAbove;
 export const canSeeClientName = isManagerOrAbove;
 
 // ─── Дашборд ───────────────────────────────────────

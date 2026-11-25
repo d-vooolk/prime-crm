@@ -5,6 +5,7 @@ import dayjs, { Dayjs } from 'dayjs';
 import { useAuthStore } from '@/store/authStore';
 import {
   canEditTransactions as canEditTransactionsFor,
+  canEditCapital,
   canSeeCapital as canSeeCapitalFor,
   canSeeCashflow as canSeeCashflowFor,
   canSeeClientName as canSeeClientNameFor,
@@ -77,7 +78,7 @@ export const AccountingPage: React.FC = () => {
         children: <VdfTab />,
       },
     ] : []),
-    ...(canSeeCapital ? [{ key: 'capital', label: 'Капитал', children: <CapitalTab /> }] : []),
+    ...(canSeeCapital ? [{ key: 'capital', label: 'Капитал', children: <CapitalTab canEdit={canEditCapital(user)} /> }] : []),
     ...(canSeeSalary ? [{
       key: 'salary',
       label: 'Расчёт ЗП',

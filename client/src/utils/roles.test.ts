@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ROLES, canDeleteRecord, canEditNote, canEditServicemanRole, canEditTransactions, canSeeCapital,
+  ROLES, canDeleteRecord, canEditNote, canEditServicemanRole, canEditTransactions, canEditCapital, canSeeCapital,
   canSeeCashflow, canSeeDebts, canSeeIncomeRs, canSeeOpportunities, canSeePath, canSeeSalary, getAssignableRoles,
   getRoleLevel, getUserLevel, hasStaffAndCash, isEmployee, isWikiReviewer,
 } from './roles';
@@ -23,6 +23,12 @@ describe('доступ к бухгалтерии', () => {
   it('правка операций — только Создатель', () => {
     expect(canEditTransactions(u(ROLES.CREATOR))).toBe(true);
     expect(canEditTransactions(u(ROLES.DIRECTOR))).toBe(false);
+  });
+
+  it('правка и удаление сумм капитала — только Создатель', () => {
+    expect(canEditCapital(u(ROLES.CREATOR))).toBe(true);
+    expect(canEditCapital(u(ROLES.DIRECTOR))).toBe(false);
+    expect(canEditCapital(u(ROLES.MANAGER))).toBe(false);
   });
 });
 

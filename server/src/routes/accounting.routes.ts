@@ -11,7 +11,7 @@ const router = Router();
  * Права повторяют вкладки бухгалтерии в интерфейсе:
  *  - менеджер: касса, приход РС, долги, выплата ЗП, премии/штрафы, заказы сотрудников из vdf.by;
  *  - директор: капитал, ЗП учредителей, статистика, правка и удаление долгов;
- *  - создатель: правка и удаление операций кассы;
+ *  - создатель: правка и удаление операций кассы и капитала;
  *  - сотрудник: только своя зарплата (проверка в контроллере) и курсы валют.
  */
 const manager = requireRole(ROLES.MANAGER);
@@ -33,6 +33,9 @@ router.get('/capital', hidden, director, accountingController.getCapital);
 router.get('/capital/balance', hidden, director, accountingController.getCapitalBalance);
 router.post('/capital/deposit', hidden, director, accountingController.createDeposit);
 router.post('/capital/withdrawal', hidden, director, accountingController.createWithdrawal);
+// Правят и удаляют суммы капитала только создатели; касса и долги при этом не меняются
+router.patch('/capital/:id', hidden, creator, accountingController.updateCapitalTransaction);
+router.delete('/capital/:id', hidden, creator, accountingController.deleteCapitalTransaction);
 // Отчисление в капитал делают из кассы — доступно менеджерам
 router.post('/capital/transfer', hidden, manager, accountingController.createCapitalTransfer);
 router.get('/rates', accountingController.getRates);

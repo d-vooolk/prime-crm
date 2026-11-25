@@ -114,6 +114,13 @@ export const accountingApi = {
   createWithdrawal: (data: { date: string; amount: number; currency: Currency; description?: string; person: string }) =>
     http.post<{ data: CapitalTransaction }>('/accounting/capital/withdrawal', data).then(r => r.data.data),
 
+  /** Правка операции капитала (только Создатель): касса и долги не меняются */
+  updateCapitalTransaction: (id: string, data: { date?: string; amount?: number; description?: string | null; person?: string | null }) =>
+    http.patch<{ data: CapitalTransaction }>(`/accounting/capital/${id}`, data).then(r => r.data.data),
+
+  deleteCapitalTransaction: (id: string) =>
+    http.delete(`/accounting/capital/${id}`),
+
   /** Расход из кассы, который пополняет капитал в BYN или в купленной на него валюте */
   createCapitalTransfer: (data: {
     date: string; amountByn: number; currency: Currency; currencyAmount?: number; person: string; description?: string;
