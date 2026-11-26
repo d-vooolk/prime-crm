@@ -59,6 +59,19 @@ export function itemsMissingServiceman(rows: ItemRow[]): ItemRow[] {
   return rows.filter(i => !i.isProduct && !isSplit(i) && !i.servicemanName);
 }
 
+/**
+ * Выбран основной сотрудник: он проставляется в услуги без сотрудника и в те, где стоял
+ * прежний основной. Заполненные другими, разделённые и товары не меняются; очистка поля позиции не трогает
+ */
+export function applyMainServiceman(rows: ItemRow[], prev: string, next: string): ItemRow[] {
+  if (!next) return rows;
+  return rows.map(i => {
+    if (i.isProduct || isSplit(i)) return i;
+    if (i.servicemanName && i.servicemanName !== prev) return i;
+    return { ...i, servicemanName: next };
+  });
+}
+
 export interface PaymentTotals {
   total: number;
   prepaidCash: number;

@@ -14,13 +14,13 @@ import { DEFAULT_WARRANTY, WARRANTY_OPTIONS } from '@/utils/print/warranty';
 import { DealCelebration } from '../DealCelebration';
 import { loadPrintData } from '../RecordDetailModal/printData';
 import { actTemplatesOf, pickActTemplate } from '../RecordDetailModal/documentTemplates';
-import { ActLine, ItemRow, buildItemRows, correctedActRecord, itemsMissingServiceman, paymentTotals, splitPayment } from './closeDeal.utils';
+import { ActLine, ItemRow, applyMainServiceman, buildItemRows, correctedActRecord, itemsMissingServiceman, paymentTotals, splitPayment } from './closeDeal.utils';
 import { ItemsTable } from './ItemsTable';
 import { PaymentSection } from './PaymentSection';
 import { ServicemanSplitModal } from './ServicemanSplitModal';
 import { PaymentSplitModal } from './PaymentSplitModal';
 import { CorrectedActModal } from './CorrectedActModal';
-import { toServicemanOption } from '@/components/ServicemanBadge';
+import { renderServicemanOption, servicemanLabelRender, toServicemanOption } from '@/components/ServicemanBadge';
 import styles from './CloseRecordModal.module.scss';
 
 const { useBreakpoint } = Grid;
@@ -40,6 +40,8 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
   // Сумма и автомобиль для анимации закрытия; null — анимации нет
   const [celebration, setCelebration] = useState<{ amount: number; caption: string } | null>(null);
   const [items, setItems] = useState<ItemRow[]>([]);
+  // Основной сотрудник записи: выбранный здесь сохраняется в запись вместе с закрытием
+  const [mainServiceman, setMainServiceman] = useState('');
   // В облегчённом режиме (после тревожной кнопки) источников клиента нет, оплата — только по РС
   const withCash = hasStaffAndCash(useAuthStore(s => s.user));
 
@@ -86,6 +88,7 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
   useEffect(() => {
     if (!open) return;
     setItems(buildItemRows(record));
+    setMainServiceman(record.serviceman ?? '');
 
     if (record.deal) {
       form.setFieldsValue({
@@ -114,6 +117,11 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
     }
   }, [open, record, form]);
 
+  const changeMainServiceman = (name: string) => {
+    setItems(prev => applyMainServiceman(prev, mainServiceman, name));
+    setMainServiceman(name);
+  };
+
   const updateItemServiceman = (itemId: string, servicemanName: string) => {
     setItems(prev => prev.map(i => i.itemId === itemId ? { ...i, servicemanName, split: null } : i));
   };
@@ -124,7 +132,7 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
   };
 
   const cancelSplit = (itemId: string) => {
-    setItems(prev => prev.map(i => i.itemId === itemId ? { ...i, split: null, servicemanName: record.serviceman ?? '' } : i));
+    setItems(prev => prev.map(i => i.itemId === itemId ? { ...i, split: null, servicemanName: mainServiceman } : i));
   };
 
   const hasEmployees = employees.length > 0;
@@ -156,6 +164,7 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
       await recordsApi.update(record.id, {
         // Старые закрытые сделки могли быть без источника — пустое поле их не трогает
         ...(values.clientSourceId ? { clientSourceId: values.clientSourceId } : {}),
+        ...(mainServiceman !== (record.serviceman ?? '') ? { serviceman: mainServiceman } : {}),
         items: items.map(i => ({
           serviceId: i.serviceId,
           price: i.price,
@@ -245,7 +254,7 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
       <ServicemanSplitModal
         open={splitOpen}
         item={splitItem}
-        defaultServiceman={record.serviceman ?? ''}
+        defaultServiceman={mainServiceman}
         employeeOptions={employeeOptions}
         onCancel={() => setSplitOpen(false)}
         onSave={saveSplit}
@@ -290,6 +299,20 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
       >
         <Form form={form} layout="vertical">
           <Divider orientation="left" className={styles.divider}>Перечень работ</Divider>
+
+          {hasEmployees && (
+            <Form.Item label="Основной сотрудник">
+              <Select
+                value={mainServiceman || undefined}
+                onChange={(v?: string) => changeMainServiceman(v ?? '')}
+                placeholder="Выберите сотрудника"
+                allowClear
+                options={employeeOptions}
+                optionRender={renderServicemanOption}
+                labelRender={servicemanLabelRender(employeeOptions)}
+              />
+            </Form.Item>
+          )}
 
           {items.length === 0 ? (
             <Empty description="Нет услуг" className={styles.empty} />

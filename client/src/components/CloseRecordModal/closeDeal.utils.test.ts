@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Record, RecordItem } from '@/types';
 import {
-  ItemRow, actLinesOf, actLinesTotal, buildItemRows, correctedActRecord, itemsMissingServiceman, paymentTotals,
+  ItemRow, actLinesOf, applyMainServiceman, actLinesTotal, buildItemRows, correctedActRecord, itemsMissingServiceman, paymentTotals,
   splitPayment, validateSplit,
 } from './closeDeal.utils';
 
@@ -76,6 +76,41 @@ describe('itemsMissingServiceman', () => {
       row({ itemId: 'd' }),
     ];
     expect(itemsMissingServiceman(rows).map(r => r.itemId)).toEqual(['a']);
+  });
+});
+
+describe('applyMainServiceman', () => {
+  const names = (rows: ItemRow[]) => rows.map(r => r.servicemanName);
+  const pair = [{ name: 'А', amount: 1 }, { name: 'Б', amount: 1 }];
+
+  it('без основного и без сотрудников — проставляет во все услуги', () => {
+    const rows = [row({ itemId: 'a', servicemanName: '' }), row({ itemId: 'b', servicemanName: '' })];
+    expect(names(applyMainServiceman(rows, '', 'Пётр'))).toEqual(['Пётр', 'Пётр']);
+  });
+
+  it('без основного — заполняет только пустые', () => {
+    const rows = [row({ itemId: 'a', servicemanName: '' }), row({ itemId: 'b', servicemanName: 'Иван' })];
+    expect(names(applyMainServiceman(rows, '', 'Пётр'))).toEqual(['Пётр', 'Иван']);
+  });
+
+  it('все распределены — ничего не меняет', () => {
+    const rows = [row({ itemId: 'a', servicemanName: 'Иван' }), row({ itemId: 'b', servicemanName: 'Олег' })];
+    expect(names(applyMainServiceman(rows, '', 'Пётр'))).toEqual(['Иван', 'Олег']);
+  });
+
+  it('смена основного — меняет позиции прежнего основного, остальных не трогает', () => {
+    const rows = [row({ itemId: 'a', servicemanName: 'Иван' }), row({ itemId: 'b', servicemanName: 'Олег' })];
+    expect(names(applyMainServiceman(rows, 'Иван', 'Пётр'))).toEqual(['Пётр', 'Олег']);
+  });
+
+  it('товары, разделённые услуги и очистка основного не меняются', () => {
+    const rows = [
+      row({ itemId: 'a', servicemanName: '', isProduct: true }),
+      row({ itemId: 'b', servicemanName: '', split: pair }),
+    ];
+    expect(names(applyMainServiceman(rows, '', 'Пётр'))).toEqual(['', '']);
+    const filled = [row({ servicemanName: 'Иван' })];
+    expect(applyMainServiceman(filled, 'Иван', '')).toBe(filled);
   });
 });
 
