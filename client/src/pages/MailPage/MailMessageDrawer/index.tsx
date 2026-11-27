@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Button, Drawer, Grid, Popconfirm, Space, Spin, Tooltip } from 'antd';
 import { DeleteOutlined, EyeInvisibleOutlined, PaperClipOutlined, RollbackOutlined, StopOutlined } from '@ant-design/icons';
+import { useQueryClient } from '@tanstack/react-query';
 import { mailApi } from '@/api/mail.api';
-import { useInvalidateMail, useMailMessage } from '@/hooks/useMail';
+import { mailKeys, useInvalidateMail, useMailMessage } from '@/hooks/useMail';
 import { useNotify } from '@/hooks/useNotify';
 import { formatDateTime } from '@/utils/formatters';
 import { MailAttachment } from '@/types';
@@ -24,6 +25,7 @@ export const MailMessageDrawer: React.FC<Props> = ({ id, onClose, onReply }) => 
   const isMobile = !Grid.useBreakpoint().md;
   const { data: msg, isLoading } = useMailMessage(id);
   const invalidate = useInvalidateMail();
+  const queryClient = useQueryClient();
   const notify = useNotify();
   const [downloading, setDownloading] = useState<string | null>(null);
 
@@ -59,12 +61,15 @@ export const MailMessageDrawer: React.FC<Props> = ({ id, onClose, onReply }) => 
     });
   };
 
+  // Открытие письма (GET) отмечает его прочитанным. Сначала закрываем окно и убираем письмо из кеша,
+  // иначе обновление после отметки перезапросит открытое письмо и сервер снова сделает его прочитанным
   const markUnread = async () => {
     if (!msg) return;
+    onClose();
+    queryClient.removeQueries({ queryKey: mailKeys.message(msg.id) });
     try {
       await mailApi.setRead(msg.id, false);
       await invalidate();
-      onClose();
     } catch (e) {
       notify.error(e, 'Не удалось отметить письмо');
     }
