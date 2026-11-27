@@ -1,8 +1,9 @@
 import React from 'react';
-import { Descriptions, Divider, Table, Tag } from 'antd';
+import { Descriptions, Divider, Table, Tag, Tooltip } from 'antd';
 import type { Record, RecordItem } from '@/types';
 import { formatDate, formatPrice } from '@/utils/formatters';
 import { TWO_COLUMNS } from '@/config/descriptions';
+import { PAYMENT_METHOD_LABELS, paymentMethodOf } from './paymentMethod';
 import styles from './RecordItems.module.scss';
 
 interface Props {
@@ -16,6 +17,8 @@ export const RecordItems: React.FC<Props> = ({ record: r, isEmployee }) => {
     ? r.deal.finalPrice
     : r.items.reduce((s, i) => s + i.price * i.quantity, 0);
   const totalPrepaid = r.deal ? 0 : r.items.reduce((s, i) => s + (i.prepaidAmount || 0), 0);
+  const paymentMethod = paymentMethodOf(r);
+  const payment = paymentMethod && PAYMENT_METHOD_LABELS[paymentMethod];
 
   const columns = [
     {
@@ -77,8 +80,16 @@ export const RecordItems: React.FC<Props> = ({ record: r, isEmployee }) => {
                 </div>
               </>
             )}
-            <div className={styles.grandTotal}>
-              {r.deal ? 'Итого: ' : 'Предв. итого: '}{formatPrice(total)}
+            <div className={styles.grandTotalRow}>
+              {/* Способ оплаты закрытой сделки: Н / Б / Р / В */}
+              {payment && (
+                <Tooltip title={payment.title}>
+                  <span className={styles.paymentBadge} aria-label={payment.title}>{payment.letter}</span>
+                </Tooltip>
+              )}
+              <div className={styles.grandTotal}>
+                {r.deal ? 'Итого: ' : 'Предв. итого: '}{formatPrice(total)}
+              </div>
             </div>
           </div>
         )}

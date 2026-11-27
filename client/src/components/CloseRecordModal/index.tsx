@@ -84,6 +84,8 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
 
   const notify = useNotify();
   const [form] = Form.useForm();
+  // Сделка уже закрыта — повторное сохранение: без анимации и печати акта (он есть внизу карточки)
+  const isResave = !!record.deal;
 
   useEffect(() => {
     if (!open) return;
@@ -189,6 +191,13 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
         currencyPayments: currencyParts,
       });
 
+      if (isResave) {
+        notify.toast.success('Сделка сохранена');
+        onClose();
+        onSuccess();
+        return;
+      }
+
       const [freshRecord, { settings, templates }] = await Promise.all([
         recordsApi.getById(record.id),
         loadPrintData(queryClient),
@@ -211,7 +220,7 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
         }
       }, 2400);
     } catch (e: unknown) {
-      notify.error(e, 'Не удалось закрыть сделку');
+      notify.error(e, isResave ? 'Не удалось сохранить сделку' : 'Не удалось закрыть сделку');
     } finally {
       setLoading(false);
     }
@@ -284,7 +293,7 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
       <Modal
         open={open}
         onCancel={onClose}
-        title="Закрыть сделку"
+        title={isResave ? 'Сделка' : 'Закрыть сделку'}
         width={hasEmployees ? 820 : 620}
         footer={null}
         destroyOnHidden
@@ -381,7 +390,7 @@ export const CloseRecordModal: React.FC<Props> = ({ record, open, onClose, onSuc
           <div className={styles.footer}>
             <Button onClick={onClose}>Отмена</Button>
             <Button type="primary" loading={loading} onClick={handleClose}>
-              Завершить сделку
+              {isResave ? 'Сохранить' : 'Завершить сделку'}
             </Button>
           </div>
         </Form>

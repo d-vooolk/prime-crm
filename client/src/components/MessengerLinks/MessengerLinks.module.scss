@@ -5,9 +5,13 @@
   align-items: center;
   gap: var(--spacing-sm);
   vertical-align: middle;
+  // Кнопки выше строки текста: без отрицательных полей они растягивают строку,
+  // и телефон рядом съезжает вниз относительно подписи «Телефон»
+  margin-block: -4px;
 
   @include mobile {
     gap: var(--spacing-md);
+    margin-block: -9px;
   }
 }
 
