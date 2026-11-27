@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Popconfirm, Space, Tag } from 'antd';
+import { Button, Popconfirm, Space, Tag, Tooltip } from 'antd';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { CashTransaction } from '@/types';
@@ -20,8 +20,16 @@ export const incomeColumns: ColumnsType<CashTransaction> = [
     title: 'Клиент / Источник', key: 'client', width: 160, ellipsis: true,
     render: (_, r) => {
       if (r.type === 'MANUAL_INCOME') return <Tag color="blue">Ввод: {r.description}</Tag>;
+      // Погашение долга — транзит через кассу, в выручку месяца не входит
+      if (r.debtPayment) {
+        return (
+          <Tooltip title="Погашение долга — не входит в выручку месяца">
+            <Tag color="gold">{r.description ?? 'Погашение долга'} · не выручка</Tag>
+          </Tooltip>
+        );
+      }
       if (r.clientName) return r.clientName;
-      // приход без клиента (например, погашение долга) — показываем назначение
+      // приход без клиента — показываем назначение
       return r.description ? <Tag color="gold">{r.description}</Tag> : '—';
     },
   },

@@ -1,13 +1,16 @@
 import { prisma } from '../../prisma/client';
-import { MONTH_NAMES, MONTH_NAMES_SHORT } from './shared';
+import { MONTH_NAMES, MONTH_NAMES_SHORT, REVENUE_INCOME_WHERE } from './shared';
 
 /** Помесячная выручка и число закрытых записей (с ручными поправками за месяц) */
 export const statsService = {
   async getMonthlyRevenue() {
-    const allTransactions = await prisma.cashTransaction.findMany();
+    // Без погашений долгов — они проходят через кассу транзитом
+    const allTransactions = await prisma.cashTransaction.findMany({
+      where: REVENUE_INCOME_WHERE,
+      select: { date: true, amount: true },
+    });
     const calcMap = new Map<string, number>();
     for (const tx of allTransactions) {
-      if (tx.type !== 'INCOME' && tx.type !== 'MANUAL_INCOME' && tx.type !== 'INCOME_RS') continue;
       const d = new Date(tx.date);
       const year = d.getFullYear();
       const month = d.getMonth() + 1;

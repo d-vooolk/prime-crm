@@ -1,5 +1,6 @@
 import { prisma } from '../prisma/client';
 import { parseDay, nextDay } from '../utils/date';
+import { REVENUE_INCOME_WHERE } from './accounting/shared';
 
 type Period = 'day' | 'week' | 'month' | 'quarter' | 'year';
 
@@ -55,10 +56,13 @@ export const analyticsService = {
     // Revenue — sum of income cash transactions, honoring monthly overrides for whole months
     const revenueOverrides = await prisma.monthlyRevenue.findMany();
     const revenueOverrideMap = new Map(revenueOverrides.map(o => [`${o.year}-${String(o.month).padStart(2, '0')}`, o.amount]));
-    const txs = await prisma.cashTransaction.findMany({ where: { date: { gte: from, lte: to } } });
+    // Погашения долгов в выручку не входят — только транзит через кассу
+    const txs = await prisma.cashTransaction.findMany({
+      where: { ...REVENUE_INCOME_WHERE, date: { gte: from, lte: to } },
+      select: { date: true, amount: true },
+    });
     let totalRevenue = 0;
     for (const tx of txs) {
-      if (tx.type !== 'INCOME' && tx.type !== 'MANUAL_INCOME' && tx.type !== 'INCOME_RS') continue;
       const key = monthKey(new Date(tx.date));
       if (wholeMonths.has(key) && revenueOverrideMap.has(key)) continue;
       totalRevenue += tx.amount;
